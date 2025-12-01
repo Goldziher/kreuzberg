@@ -500,7 +500,7 @@ checksum = "55248b47b0caf0546f7988906588779981c43bb1bc9d0c44087278f80cdb44ba"
 
 [[package]]
 name = "benchmark-harness"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "ahash",
  "async-trait",
@@ -1696,7 +1696,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "e2e-rust"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "async-trait",
  "hex",
@@ -3040,7 +3040,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "ahash",
  "anyhow",
@@ -3115,7 +3115,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-cli"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -3130,7 +3130,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-e2e-generator"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3147,7 +3147,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-ffi"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "async-trait",
  "cbindgen",
@@ -3161,7 +3161,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-node"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3178,7 +3178,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-py"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "async-trait",
  "html-to-markdown-rs",
@@ -3193,7 +3193,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-rb"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "async-trait",
  "html-to-markdown-rs",
@@ -3221,7 +3221,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-tesseract"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.5"
 dependencies = [
  "cc",
  "cmake",
@@ -4433,9 +4433,9 @@ dependencies = [
  "console_error_panic_hook",
  "console_log",
  "image",
- "itertools 0.12.1",
+ "itertools 0.14.0",
  "js-sys",
- "libloading 0.8.9",
+ "libloading 0.7.4",
  "log",
  "maybe-owned",
  "once_cell",
