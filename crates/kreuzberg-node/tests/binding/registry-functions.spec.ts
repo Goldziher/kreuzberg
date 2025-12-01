@@ -10,7 +10,7 @@
  * - ExtractionConfig.fromFile, ExtractionConfig.discover
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	__resetBindingForTests,
 	__setBindingForTests,
@@ -298,13 +298,29 @@ describe("unregisterOcrBackend", () => {
 });
 
 describe("clearOcrBackends", () => {
-	it("should clear all OCR backends", () => {
-		const beforeClear = listOcrBackends();
-		expect(beforeClear.length).toBeGreaterThan(0);
+	it("should clear all custom OCR backends while preserving default backends", () => {
+		const initialBackends = listOcrBackends();
+		expect(initialBackends.length).toBeGreaterThan(0);
 
-		clearOcrBackends();
-		const afterClear = listOcrBackends();
-		expect(afterClear.length).toBe(0);
+		const customBackend: OcrBackendProtocol = {
+			name: () => "test_clear_backend",
+			supportedLanguages: () => ["en"],
+			processImage: async (imageBytes: Uint8Array, language: string) => ({
+				content: "test",
+				mime_type: "text/plain",
+				metadata: {},
+				tables: [],
+			}),
+		};
+
+		registerOcrBackend(customBackend);
+		const afterRegister = listOcrBackends();
+		expect(afterRegister).toContain("test_clear_backend");
+
+		unregisterOcrBackend("test_clear_backend");
+		const afterUnregister = listOcrBackends();
+		expect(afterUnregister).not.toContain("test_clear_backend");
+		expect(afterUnregister.length).toBe(initialBackends.length);
 	});
 });
 
