@@ -67,8 +67,11 @@ import type {
 	ValidatorProtocol,
 } from "./types.js";
 
+import type { PanicContext } from "./errors.js";
+
 export {
 	CacheError,
+	ErrorCode,
 	ImageProcessingError,
 	KreuzbergError,
 	MissingDependencyError,
@@ -76,6 +79,7 @@ export {
 	ParsingError,
 	PluginError,
 	ValidationError,
+	type PanicContext,
 } from "./errors.js";
 export { GutenOcrBackend } from "./ocr/guten-ocr.js";
 export * from "./types.js";
@@ -1650,6 +1654,72 @@ export function listEmbeddingPresets(): string[] {
 export function getEmbeddingPreset(name: string): EmbeddingPreset | null {
 	const binding = getBinding();
 	return binding.getEmbeddingPreset(name);
+}
+
+/**
+ * Get the error code for the last FFI error.
+ *
+ * Returns the FFI error code as an integer. This is useful for programmatic error handling
+ * and distinguishing between different types of failures in native code.
+ *
+ * Error codes:
+ * - 0: Success (no error)
+ * - 1: GenericError
+ * - 2: Panic
+ * - 3: InvalidArgument
+ * - 4: IoError
+ * - 5: ParsingError
+ * - 6: OcrError
+ * - 7: MissingDependency
+ *
+ * @returns The integer error code
+ *
+ * @example
+ * ```typescript
+ * import { extractFile, getLastErrorCode, ErrorCode } from '@kreuzberg/node';
+ *
+ * try {
+ *   const result = await extractFile('document.pdf');
+ * } catch (error) {
+ *   const code = getLastErrorCode();
+ *   if (code === ErrorCode.Panic) {
+ *     console.error('Native code panic detected');
+ *   }
+ * }
+ * ```
+ */
+export function getLastErrorCode(): number {
+	const binding = getBinding();
+	return binding.getLastErrorCode();
+}
+
+/**
+ * Get panic context information if the last error was a panic.
+ *
+ * Returns detailed information about a panic in native code, or null if the last error was not a panic.
+ * This provides debugging information when native code panics.
+ *
+ * @returns A `PanicContext` object with file, line, function, message, and timestamp_secs, or null if no panic context is available
+ *
+ * @example
+ * ```typescript
+ * import { extractFile, getLastPanicContext } from '@kreuzberg/node';
+ *
+ * try {
+ *   const result = await extractFile('document.pdf');
+ * } catch (error) {
+ *   const context = getLastPanicContext();
+ *   if (context) {
+ *     console.error(`Panic at ${context.file}:${context.line}`);
+ *     console.error(`In function: ${context.function}`);
+ *     console.error(`Message: ${context.message}`);
+ *   }
+ * }
+ * ```
+ */
+export function getLastPanicContext(): PanicContext | null {
+	const binding = getBinding();
+	return binding.getLastPanicContext();
 }
 
 export const __version__ = "4.0.0-rc.4";

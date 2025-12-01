@@ -40,7 +40,7 @@ impl std::error::Error for PdfError {}
 impl From<lopdf::Error> for PdfError {
     fn from(err: lopdf::Error) -> Self {
         match err {
-            lopdf::Error::IO(_) => panic!("lopdf IO errors should not be converted to PdfError - let them bubble up"),
+            lopdf::Error::IO(io_err) => PdfError::IOError(io_err.to_string()),
             _ => PdfError::InvalidPdf(err.to_string()),
         }
     }

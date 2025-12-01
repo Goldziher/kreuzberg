@@ -36,6 +36,8 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_FREE_RESULT;
     static final MethodHandle KREUZBERG_FREE_BATCH_RESULT;
     static final MethodHandle KREUZBERG_LAST_ERROR;
+    static final MethodHandle KREUZBERG_LAST_ERROR_CODE;
+    static final MethodHandle KREUZBERG_LAST_PANIC_CONTEXT;
     static final MethodHandle KREUZBERG_VERSION;
     static final MethodHandle KREUZBERG_CLONE_STRING;
     static final MethodHandle KREUZBERG_REGISTER_POST_PROCESSOR;
@@ -213,6 +215,16 @@ final class KreuzbergFFI {
 
             KREUZBERG_LAST_ERROR = linkFunction(
                 "kreuzberg_last_error",
+                FunctionDescriptor.of(ValueLayout.ADDRESS)
+            );
+
+            KREUZBERG_LAST_ERROR_CODE = linkFunction(
+                "kreuzberg_last_error_code",
+                FunctionDescriptor.of(ValueLayout.JAVA_INT)
+            );
+
+            KREUZBERG_LAST_PANIC_CONTEXT = linkFunction(
+                "kreuzberg_last_panic_context",
                 FunctionDescriptor.of(ValueLayout.ADDRESS)
             );
 
@@ -498,5 +510,39 @@ final class KreuzbergFFI {
      */
     static MemorySegment allocateCString(Arena arena, String str) {
         return arena.allocateFrom(str);
+    }
+
+    /**
+     * Gets the last error code from the FFI layer.
+     *
+     * @return the error code as an integer
+     * @throws Throwable if the FFI call fails unexpectedly
+     */
+    static int getLastErrorCode() throws Throwable {
+        return (int) KREUZBERG_LAST_ERROR_CODE.invoke();
+    }
+
+    /**
+     * Gets the panic context from the FFI layer.
+     *
+     * @return a PanicContext if a panic occurred, or null if no panic
+     * @throws Throwable if the FFI call fails unexpectedly
+     */
+    static PanicContext getLastPanicContext() throws Throwable {
+        MemorySegment result = (MemorySegment) KREUZBERG_LAST_PANIC_CONTEXT.invoke();
+        if (result != null && result.address() != 0) {
+            String jsonString = readCString(result);
+            try {
+                KREUZBERG_FREE_STRING.invoke(result);
+            } catch (Exception ex) {
+                // Cleanup errors are silently ignored as the panic context
+                // has already been extracted (e.g., memory already freed)
+                System.err.println("Failed to free panic context: " + ex);
+            }
+            if (jsonString != null) {
+                return PanicContext.fromJson(jsonString);
+            }
+        }
+        return null;
     }
 }

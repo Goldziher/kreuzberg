@@ -18,11 +18,11 @@ crate-type = ["cdylib"]
 kreuzberg = { path = "../kreuzberg", features = ["full", "embeddings"] }
 napi = { version = "3", default-features = false, features = ["napi8", "async", "serde-json"] }
 napi-derive = "3"
-tokio = { version = "1.48.0", features = ["rt", "macros"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-async-trait = "0.1"
-base64 = "0.22"
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+base64 = { workspace = true }
 html-to-markdown-rs = { version = "2.9.2", default-features = false }
 
 [build-dependencies]

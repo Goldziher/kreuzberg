@@ -2,6 +2,7 @@
 name = "kreuzberg-tesseract"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 description = "Rust bindings for Tesseract OCR with cross-compilation, C++17, and caching improvements"
 license.workspace = true
@@ -9,22 +10,15 @@ repository.workspace = true
 homepage = "https://kreuzberg.dev"
 documentation = "https://docs.kreuzberg.dev"
 readme = "README.md"
-keywords = [
-    "tesseract",
-    "ocr",
-    "bindings",
-    "vision",
-    "recognition",
-]
+keywords = ["tesseract", "ocr", "bindings", "vision", "recognition"]
 categories = ["external-ffi-bindings", "computer-vision", "text-processing"]
 build = "build.rs"
 links = "kreuzberg_tesseract"
-rust-version = "1.91.0"
 exclude = ["tessdata/*", "third_party/*"]
 
 [dependencies]
 libc = "0.2.177"
-thiserror = "2.0.17"
+thiserror = { workspace = true }
 
 [dev-dependencies]
 image = "0.25.9"
@@ -34,9 +28,11 @@ criterion = { version = "0.8.0", features = ["html_reports"] }
 [build-dependencies]
 cc = { version = "1.2.48", optional = true }
 cmake = { version = "0.1.54", optional = true }
-reqwest = { version = "0.12.24", default-features = false, features = ["blocking", "rustls-tls"], optional = true }
+reqwest = { version = "0.12.24", default-features = false, features = [
+    "blocking",
+    "rustls-tls",
+], optional = true }
 zip = { version = "6.0.0", optional = true }
-
 
 [features]
 default = ["static-linking"]

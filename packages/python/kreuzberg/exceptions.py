@@ -5,7 +5,83 @@ for debugging information.
 """
 
 import json
+from dataclasses import dataclass
+from enum import IntEnum
 from typing import Any
+
+
+class ErrorCode(IntEnum):
+    """Error codes from the Kreuzberg FFI layer.
+
+    Attributes:
+        SUCCESS: No error occurred
+        GENERIC_ERROR: Generic/unknown error
+        PANIC: A panic occurred in the library
+        INVALID_ARGUMENT: Invalid argument provided
+        IO_ERROR: I/O operation failed
+        PARSING_ERROR: Document parsing failed
+        OCR_ERROR: OCR processing failed
+        MISSING_DEPENDENCY: Required dependency not found
+
+    Example:
+        >>> from kreuzberg import get_last_error_code, ErrorCode
+        >>> code = get_last_error_code()
+        >>> if code == ErrorCode.PANIC:
+        ...     print("A panic occurred")
+    """
+
+    SUCCESS = 0
+    GENERIC_ERROR = 1
+    PANIC = 2
+    INVALID_ARGUMENT = 3
+    IO_ERROR = 4
+    PARSING_ERROR = 5
+    OCR_ERROR = 6
+    MISSING_DEPENDENCY = 7
+
+
+@dataclass(frozen=True, slots=True)
+class PanicContext:
+    """Structured panic context information from FFI layer.
+
+    Attributes:
+        file: Source file where panic occurred
+        line: Line number in source file
+        function: Function name where panic occurred
+        message: Panic message
+        timestamp_secs: Unix timestamp (seconds since epoch) when panic occurred
+
+    Example:
+        >>> import json
+        >>> from kreuzberg import get_last_panic_context, PanicContext
+        >>> context_json = get_last_panic_context()
+        >>> if context_json:
+        ...     data = json.loads(context_json)
+        ...     context = PanicContext(**data)
+        ...     print(f"Panic at {context.file}:{context.line}")
+    """
+
+    file: str
+    line: int
+    function: str
+    message: str
+    timestamp_secs: int
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "PanicContext":
+        """Parse panic context from JSON string.
+
+        Args:
+            json_str: JSON string with panic context (as returned by get_last_panic_context)
+
+        Returns:
+            PanicContext dataclass instance
+
+        Raises:
+            ValueError: If JSON is invalid or missing required fields
+        """
+        data = json.loads(json_str)
+        return cls(**data)
 
 
 class KreuzbergError(Exception):

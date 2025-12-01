@@ -3,9 +3,9 @@ name = "kreuzberg-ffi"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
+authors.workspace = true
 description = "C FFI bindings for Kreuzberg document intelligence library"
-license = "MIT"
+license.workspace = true
 repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://kreuzberg.dev"
 documentation = "https://docs.rs/kreuzberg-ffi"
@@ -19,9 +19,9 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 kreuzberg = { path = "../kreuzberg", features = ["full"] }
 serde_json = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-async-trait = "0.1.89"
-tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros", "sync"] }
+serde = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
 html-to-markdown-rs = { version = "2.9.2", default-features = false, optional = true }
 
 [build-dependencies]

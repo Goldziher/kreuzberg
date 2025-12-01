@@ -481,6 +481,69 @@ void kreuzberg_free_result(struct CExtractionResult *result);
 const char *kreuzberg_last_error(void);
 
 /**
+ * Get the error code for the last error.
+ *
+ * Returns the error code as an i32. Error codes are defined in ErrorCode enum:
+ * - 0: Success (no error)
+ * - 1: GenericError
+ * - 2: Panic
+ * - 3: InvalidArgument
+ * - 4: IoError
+ * - 5: ParsingError
+ * - 6: OcrError
+ * - 7: MissingDependency
+ *
+ * # Safety
+ *
+ * This function is thread-safe and always safe to call.
+ *
+ * # Example (C)
+ *
+ * ```c
+ * CExtractionResult* result = kreuzberg_extract_file_sync(path);
+ * if (result == NULL) {
+ *     int32_t code = kreuzberg_last_error_code();
+ *     if (code == 2) {
+ *         // A panic occurred
+ *     }
+ * }
+ * ```
+ */
+int32_t kreuzberg_last_error_code(void);
+
+/**
+ * Get the panic context for the last error (if it was a panic).
+ *
+ * Returns a JSON string containing panic context information, or NULL if
+ * the last error was not a panic.
+ *
+ * The JSON structure contains:
+ * - file: Source file where panic occurred
+ * - line: Line number
+ * - function: Function name
+ * - message: Panic message
+ * - timestamp_secs: Unix timestamp (seconds since epoch)
+ *
+ * # Safety
+ *
+ * The returned string must be freed with kreuzberg_free_string().
+ *
+ * # Example (C)
+ *
+ * ```c
+ * CExtractionResult* result = kreuzberg_extract_file_sync(path);
+ * if (result == NULL && kreuzberg_last_error_code() == 2) {
+ *     const char* context = kreuzberg_last_panic_context();
+ *     if (context != NULL) {
+ *         printf("Panic context: %s\n", context);
+ *         kreuzberg_free_string((char*)context);
+ *     }
+ * }
+ * ```
+ */
+char *kreuzberg_last_panic_context(void);
+
+/**
  * Get the library version string.
  *
  * # Safety

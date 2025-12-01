@@ -68,6 +68,7 @@ tasks:
   format:
     desc: Format code for all languages (with modifications)
     cmds:
+      - task: toml:format
       - task: rust:format
       - task: python:format
       - task: ruby:format
@@ -78,6 +79,7 @@ tasks:
   format:check:
     desc: Check code formatting without modifications
     cmds:
+      - task: toml:format:check
       - task: rust:format:check
       - task: python:format:check
       - task: ruby:format:check
@@ -86,10 +88,12 @@ tasks:
       - task: go:format:check
       - task: csharp:format:check
   rust:install:
-    desc: Install Rust toolchain
+    desc: Install Rust toolchain and tools (rustup, cargo-install, taplo)
     cmds:
       - echo "Rust toolchain is typically installed via rustup"
       - rustc --version
+      - echo "Installing taplo for TOML formatting (brew install taplo on macOS, or cargo install taplo-cli --locked)..."
+      - which taplo || cargo install taplo-cli --locked
   rust:build:
     desc: Build all Rust crates
     cmds:
@@ -116,6 +120,36 @@ tasks:
     desc: Check Rust code formatting without modifications
     cmds:
       - cargo fmt --all -- --check
+  toml:format:
+    desc: Format TOML files with taplo
+    cmds:
+      - |
+        taplo format \
+          Cargo.toml \
+          pyproject.toml \
+          rustfmt.toml \
+          .cargo/config.toml \
+          crates/*/Cargo.toml \
+          tools/*/Cargo.toml \
+          e2e/rust/Cargo.toml \
+          packages/ruby/ext/kreuzberg_rb/native/Cargo.toml \
+          crates/*/cbindgen.toml \
+          examples/*.toml 2>/dev/null || true
+  toml:format:check:
+    desc: Check TOML formatting without modifications
+    cmds:
+      - |
+        taplo format --check \
+          Cargo.toml \
+          pyproject.toml \
+          rustfmt.toml \
+          .cargo/config.toml \
+          crates/*/Cargo.toml \
+          tools/*/Cargo.toml \
+          e2e/rust/Cargo.toml \
+          packages/ruby/ext/kreuzberg_rb/native/Cargo.toml \
+          crates/*/cbindgen.toml \
+          examples/*.toml 2>/dev/null
   rust:doc:
     desc: Generate Rust documentation
     cmds:

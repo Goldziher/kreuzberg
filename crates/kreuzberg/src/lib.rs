@@ -39,6 +39,7 @@ pub mod core;
 pub mod error;
 pub mod extraction;
 pub mod extractors;
+pub mod panic_context;
 pub mod plugins;
 pub mod text;
 pub mod types;

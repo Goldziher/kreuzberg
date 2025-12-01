@@ -11,10 +11,7 @@ members = [
     "tools/e2e-generator",
     "e2e/rust",
 ]
-default-members = [
-    "crates/kreuzberg",
-    "crates/kreuzberg-cli",
-]
+default-members = ["crates/kreuzberg", "crates/kreuzberg-cli"]
 resolver = "2"
 
 [patch.crates-io]
@@ -32,8 +29,35 @@ repository = "https://github.com/Goldziher/kreuzberg"
 homepage = "https://kreuzberg.dev"
 
 [workspace.dependencies]
-serde_json = "1.0"
-serde = "1.0"
+# Core async runtime
+tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }
+
+# Serialization
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.145" }
+
+# Error handling
+thiserror = "2.0.17"
+anyhow = "1.0"
+
+# Async utilities
+async-trait = "0.1.89"
+
+# Tracing/observability
+tracing = "0.1"
+
+# Utilities
+ahash = "0.8.12"
+base64 = "0.22.1"
+hex = "0.4.3"
+num_cpus = "1.17.0"
+
+# CLI
+clap = { version = "4.5", features = ["derive", "color", "suggestions"] }
+
+# Testing (dev)
+tempfile = "3.23.0"
+criterion = { version = "0.7", features = ["html_reports"] }
 
 [profile.release]
 lto = "thin"

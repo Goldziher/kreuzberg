@@ -102,12 +102,18 @@ from kreuzberg._internal_bindings import (
 from kreuzberg._internal_bindings import (
     extract_file_sync as extract_file_sync_impl,
 )
+from kreuzberg._internal_bindings import (
+    get_last_error_code,
+    get_last_panic_context,
+)
 from kreuzberg.exceptions import (
     CacheError,
+    ErrorCode,
     ImageProcessingError,
     KreuzbergError,
     MissingDependencyError,
     OCRError,
+    PanicContext,
     ParsingError,
     PluginError,
     ValidationError,
@@ -132,6 +138,7 @@ __all__ = [
     "EmbeddingConfig",
     "EmbeddingModelType",
     "EmbeddingPreset",
+    "ErrorCode",
     "ExtractedImage",
     "ExtractedTable",
     "ExtractionConfig",
@@ -145,6 +152,7 @@ __all__ = [
     "MissingDependencyError",
     "OCRError",
     "OcrConfig",
+    "PanicContext",
     "ParsingError",
     "PdfConfig",
     "PluginError",
@@ -170,6 +178,8 @@ __all__ = [
     "extract_file_sync",
     "get_embedding_preset",
     "get_extensions_for_mime",
+    "get_last_error_code",
+    "get_last_panic_context",
     "list_document_extractors",
     "list_embedding_presets",
     "list_ocr_backends",

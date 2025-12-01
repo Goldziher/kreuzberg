@@ -16,6 +16,8 @@ typedef struct ExtractionConfig ExtractionConfig;
 // Workaround for Windows clang-cl: Redeclare functions that clang-cl misidentifies
 // This prevents cgo from trying to infer their types via __typeof__
 const char *kreuzberg_last_error(void);
+int32_t kreuzberg_last_error_code(void);
+char *kreuzberg_last_panic_context(void);
 const char *kreuzberg_version(void);
 
 // Function declarations for explicit type resolution on Windows
@@ -213,6 +215,33 @@ func LibraryVersion() string {
 	return C.GoString(C.kreuzberg_version())
 }
 
+// LastErrorCode returns the error code from the last FFI call.
+// Returns 0 (Success) if no error occurred.
+func LastErrorCode() ErrorCode {
+	return ErrorCode(C.kreuzberg_last_error_code())
+}
+
+// LastPanicContext returns the panic context from the last FFI call if it was a panic.
+// Returns nil if the last error was not a panic or if no panic context is available.
+func LastPanicContext() *PanicContext {
+	panicPtr := C.kreuzberg_last_panic_context()
+	if panicPtr == nil {
+		return nil
+	}
+	defer C.kreuzberg_free_string(panicPtr)
+
+	panicJSON := C.GoString(panicPtr)
+	if panicJSON == "" {
+		return nil
+	}
+
+	var ctx PanicContext
+	if err := json.Unmarshal([]byte(panicJSON), &ctx); err != nil {
+		return nil
+	}
+	return &ctx
+}
+
 func convertCResult(cRes *C.CExtractionResult) (*ExtractionResult, error) {
 	result := &ExtractionResult{
 		Content:  C.GoString(cRes.content),
@@ -315,7 +344,26 @@ func lastError() error {
 	if errPtr == nil {
 		return newRuntimeError("unknown error", nil)
 	}
-	return classifyNativeError(C.GoString(errPtr))
+
+	errMsg := C.GoString(errPtr)
+	code := ErrorCode(C.kreuzberg_last_error_code())
+
+	var panicCtx *PanicContext
+	if code == ErrorCodePanic {
+		panicPtr := C.kreuzberg_last_panic_context()
+		if panicPtr != nil {
+			defer C.kreuzberg_free_string(panicPtr)
+			panicJSON := C.GoString(panicPtr)
+			if panicJSON != "" {
+				var ctx PanicContext
+				if err := json.Unmarshal([]byte(panicJSON), &ctx); err == nil {
+					panicCtx = &ctx
+				}
+			}
+		}
+	}
+
+	return classifyNativeError(errMsg, code, panicCtx)
 }
 
 func stringPtr(value string) *string {
