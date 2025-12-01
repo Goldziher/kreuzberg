@@ -30,7 +30,7 @@ impl PanicContext {
     /// * `panic_info` - The panic payload to extract message from
     pub fn new(file: &'static str, line: u32, function: &'static str, panic_info: &dyn Any) -> Self {
         // Catch panic from SystemTime::now() to prevent panic-in-panic scenario
-        let timestamp = std::panic::catch_unwind(|| SystemTime::now()).unwrap_or(UNIX_EPOCH);
+        let timestamp = std::panic::catch_unwind(SystemTime::now).unwrap_or(UNIX_EPOCH);
 
         Self {
             file,

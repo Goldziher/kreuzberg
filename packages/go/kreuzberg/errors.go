@@ -86,11 +86,11 @@ type KreuzbergError interface {
 }
 
 type baseError struct {
-	kind        ErrorKind
-	message     string
-	cause       error
-	panicCtx    *PanicContext
-	nativeCode  ErrorCode
+	kind       ErrorKind
+	message    string
+	cause      error
+	panicCtx   *PanicContext
+	nativeCode ErrorCode
 }
 
 func (e *baseError) Error() string {

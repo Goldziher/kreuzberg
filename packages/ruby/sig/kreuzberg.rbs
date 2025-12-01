@@ -401,6 +401,10 @@ module Kreuzberg
   # Config loading (native method)
   def self._config_from_file_native: (String path) -> Hash[Symbol, untyped]
 
+  # Error introspection (native methods)
+  def self._last_error_code_native: () -> Integer
+  def self._last_panic_context_json_native: () -> String?
+
   # Plugin registration
   def self.register_post_processor: (String name, _PostProcessor processor, ?stage: Symbol?) -> void
   def self.unregister_post_processor: (String name) -> void
@@ -447,7 +451,11 @@ module Kreuzberg
       ) -> void
       def to_s: () -> String
       def to_h: () -> Hash[Symbol, String | Integer]
-      def self.from_json: (String json_string) -> PanicContext?
+      def self.from_json: (String) -> PanicContext?
+
+      private
+
+      def self.with_defaults: (Hash[Symbol, untyped] sliced) -> {file: String, line: Integer, function: String, message: String, timestamp_secs: Integer}
     end
 
     class Error < StandardError

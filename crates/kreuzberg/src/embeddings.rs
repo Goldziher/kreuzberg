@@ -99,6 +99,7 @@ use lazy_static::lazy_static;
 /// - The models live until process exit
 /// - We never manually deallocate the leaked memory
 /// - Mutex provides interior mutability for the embed() method
+///
 /// Thread-safe wrapper for leaked TextEmbedding that allows interior mutability.
 ///
 /// This wrapper holds a raw pointer to a leaked `TextEmbedding` and provides
@@ -123,7 +124,7 @@ impl LeakedModel {
     /// This is safe to call only when:
     /// 1. The caller has exclusive access (guaranteed by Mutex in MODEL_CACHE)
     /// 2. The pointer is valid (guaranteed by Box::into_raw and never deallocating)
-    #[allow(unsafe_code)]
+    #[allow(unsafe_code, clippy::mut_from_ref)]
     unsafe fn get_mut(&self) -> &mut TextEmbedding {
         // SAFETY: Caller guarantees exclusive access via Mutex, pointer is valid for program lifetime
         unsafe { &mut *self.ptr }

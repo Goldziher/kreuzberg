@@ -44,10 +44,22 @@ module Kreuzberg
         return nil if json_string.nil? || json_string.empty?
 
         data = JSON.parse(json_string, symbolize_names: true)
-        new(**data.slice(:file, :line, :function, :message, :timestamp_secs))
+        sliced = data.slice(:file, :line, :function, :message, :timestamp_secs)
+        new(**with_defaults(sliced))
       rescue JSON::ParserError
         nil
       end
+
+      def self.with_defaults(sliced)
+        {
+          file: sliced[:file] || '',
+          line: sliced[:line] || 0,
+          function: sliced[:function] || '',
+          message: sliced[:message] || '',
+          timestamp_secs: sliced[:timestamp_secs] || 0
+        }
+      end
+      private_class_method :with_defaults
     end
 
     # Base error class for all Kreuzberg errors
