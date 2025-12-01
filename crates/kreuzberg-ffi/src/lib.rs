@@ -6,8 +6,8 @@
 mod panic_shield;
 
 pub use panic_shield::{
-    clear_structured_error, get_last_error_code, get_last_error_message, get_last_panic_context,
-    set_structured_error, ErrorCode, StructuredError,
+    ErrorCode, StructuredError, clear_structured_error, get_last_error_code, get_last_error_message,
+    get_last_panic_context, set_structured_error,
 };
 
 use std::cell::RefCell;
@@ -490,49 +490,41 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
     } = result;
 
     // Convert required fields to C strings with RAII guards
-    let content_guard = CStringGuard::new(
-        CString::new(content)
-            .map_err(|e| format!("Failed to convert content to C string: {}", e))?
-    );
+    let content_guard =
+        CStringGuard::new(CString::new(content).map_err(|e| format!("Failed to convert content to C string: {}", e))?);
 
     let mime_type_guard = CStringGuard::new(
-        CString::new(mime_type)
-            .map_err(|e| format!("Failed to convert MIME type to C string: {}", e))?
+        CString::new(mime_type).map_err(|e| format!("Failed to convert MIME type to C string: {}", e))?,
     );
 
     // Convert optional metadata fields to C strings with RAII guards
     let language_guard = match &metadata.language {
         Some(lang) => Some(CStringGuard::new(
-            CString::new(lang.as_str())
-                .map_err(|e| format!("Failed to convert language to C string: {}", e))?
+            CString::new(lang.as_str()).map_err(|e| format!("Failed to convert language to C string: {}", e))?,
         )),
         None => None,
     };
 
     let date_guard = match &metadata.date {
         Some(d) => Some(CStringGuard::new(
-            CString::new(d.as_str())
-                .map_err(|e| format!("Failed to convert date to C string: {}", e))?
+            CString::new(d.as_str()).map_err(|e| format!("Failed to convert date to C string: {}", e))?,
         )),
         None => None,
     };
 
     let subject_guard = match &metadata.subject {
         Some(subj) => Some(CStringGuard::new(
-            CString::new(subj.as_str())
-                .map_err(|e| format!("Failed to convert subject to C string: {}", e))?
+            CString::new(subj.as_str()).map_err(|e| format!("Failed to convert subject to C string: {}", e))?,
         )),
         None => None,
     };
 
     // Serialize tables to JSON with RAII guard
     let tables_json_guard = if !tables.is_empty() {
-        let json = serde_json::to_string(&tables)
-            .map_err(|e| format!("Failed to serialize tables to JSON: {}", e))?;
-        Some(CStringGuard::new(
-            CString::new(json)
-                .map_err(|e| format!("Failed to convert tables JSON to C string: {}", e))?
-        ))
+        let json = serde_json::to_string(&tables).map_err(|e| format!("Failed to serialize tables to JSON: {}", e))?;
+        Some(CStringGuard::new(CString::new(json).map_err(|e| {
+            format!("Failed to convert tables JSON to C string: {}", e)
+        })?))
     } else {
         None
     };
@@ -542,47 +534,43 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         Some(langs) if !langs.is_empty() => {
             let json = serde_json::to_string(&langs)
                 .map_err(|e| format!("Failed to serialize detected languages to JSON: {}", e))?;
-            Some(CStringGuard::new(
-                CString::new(json)
-                    .map_err(|e| format!("Failed to convert detected languages JSON to C string: {}", e))?
-            ))
-        },
+            Some(CStringGuard::new(CString::new(json).map_err(|e| {
+                format!("Failed to convert detected languages JSON to C string: {}", e)
+            })?))
+        }
         _ => None,
     };
 
     // Serialize metadata to JSON with RAII guard
     let metadata_json_guard = {
-        let json = serde_json::to_string(&metadata)
-            .map_err(|e| format!("Failed to serialize metadata to JSON: {}", e))?;
-        Some(CStringGuard::new(
-            CString::new(json)
-                .map_err(|e| format!("Failed to convert metadata JSON to C string: {}", e))?
-        ))
+        let json =
+            serde_json::to_string(&metadata).map_err(|e| format!("Failed to serialize metadata to JSON: {}", e))?;
+        Some(CStringGuard::new(CString::new(json).map_err(|e| {
+            format!("Failed to convert metadata JSON to C string: {}", e)
+        })?))
     };
 
     // Serialize chunks to JSON with RAII guard
     let chunks_json_guard = match chunks {
         Some(chunks) if !chunks.is_empty() => {
-            let json = serde_json::to_string(&chunks)
-                .map_err(|e| format!("Failed to serialize chunks to JSON: {}", e))?;
-            Some(CStringGuard::new(
-                CString::new(json)
-                    .map_err(|e| format!("Failed to convert chunks JSON to C string: {}", e))?
-            ))
-        },
+            let json =
+                serde_json::to_string(&chunks).map_err(|e| format!("Failed to serialize chunks to JSON: {}", e))?;
+            Some(CStringGuard::new(CString::new(json).map_err(|e| {
+                format!("Failed to convert chunks JSON to C string: {}", e)
+            })?))
+        }
         _ => None,
     };
 
     // Serialize images to JSON with RAII guard
     let images_json_guard = match images {
         Some(images) if !images.is_empty() => {
-            let json = serde_json::to_string(&images)
-                .map_err(|e| format!("Failed to serialize images to JSON: {}", e))?;
-            Some(CStringGuard::new(
-                CString::new(json)
-                    .map_err(|e| format!("Failed to convert images JSON to C string: {}", e))?
-            ))
-        },
+            let json =
+                serde_json::to_string(&images).map_err(|e| format!("Failed to serialize images to JSON: {}", e))?;
+            Some(CStringGuard::new(CString::new(json).map_err(|e| {
+                format!("Failed to convert images JSON to C string: {}", e)
+            })?))
+        }
         _ => None,
     };
 

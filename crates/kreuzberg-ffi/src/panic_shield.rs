@@ -79,12 +79,7 @@ pub fn get_last_error_message() -> Option<String> {
 
 /// Gets the last error code.
 pub fn get_last_error_code() -> ErrorCode {
-    LAST_STRUCTURED_ERROR.with(|last| {
-        last.borrow()
-            .as_ref()
-            .map(|e| e.code)
-            .unwrap_or(ErrorCode::Success)
-    })
+    LAST_STRUCTURED_ERROR.with(|last| last.borrow().as_ref().map(|e| e.code).unwrap_or(ErrorCode::Success))
 }
 
 /// Gets the last panic context if the last error was a panic.
@@ -137,15 +132,9 @@ macro_rules! ffi_panic_guard {
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
             Ok(result) => result,
             Err(panic_info) => {
-                let context = kreuzberg::panic_context::PanicContext::new(
-                    file!(),
-                    line!(),
-                    $function_name,
-                    panic_info.as_ref(),
-                );
-                $crate::panic_shield::set_structured_error($crate::panic_shield::StructuredError::from_panic(
-                    context,
-                ));
+                let context =
+                    kreuzberg::panic_context::PanicContext::new(file!(), line!(), $function_name, panic_info.as_ref());
+                $crate::panic_shield::set_structured_error($crate::panic_shield::StructuredError::from_panic(context));
                 std::ptr::null_mut()
             }
         }
@@ -161,15 +150,9 @@ macro_rules! ffi_panic_guard_bool {
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
             Ok(result) => result,
             Err(panic_info) => {
-                let context = kreuzberg::panic_context::PanicContext::new(
-                    file!(),
-                    line!(),
-                    $function_name,
-                    panic_info.as_ref(),
-                );
-                $crate::panic_shield::set_structured_error($crate::panic_shield::StructuredError::from_panic(
-                    context,
-                ));
+                let context =
+                    kreuzberg::panic_context::PanicContext::new(file!(), line!(), $function_name, panic_info.as_ref());
+                $crate::panic_shield::set_structured_error($crate::panic_shield::StructuredError::from_panic(context));
                 false
             }
         }
@@ -235,9 +218,7 @@ mod tests {
 
     #[test]
     fn test_ffi_panic_guard_success() {
-        let result = crate::ffi_panic_guard!("test_success", {
-            Box::into_raw(Box::new(42))
-        });
+        let result = crate::ffi_panic_guard!("test_success", { Box::into_raw(Box::new(42)) });
         assert!(!result.is_null());
         unsafe {
             assert_eq!(*result, 42);

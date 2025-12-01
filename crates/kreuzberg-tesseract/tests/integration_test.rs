@@ -468,8 +468,7 @@ fn test_dynamic_image_setting() {
         .expect("Failed to set whitelist");
 
     // Load an existing digits image for reliable OCR testing
-    let (image_data, width, height) = load_test_image("digits.png")
-        .expect("Failed to load test digits image");
+    let (image_data, width, height) = load_test_image("digits.png").expect("Failed to load test digits image");
 
     // Set the image data first
     // IMPORTANT: Image must be set before calling SetSourceResolution
@@ -479,8 +478,7 @@ fn test_dynamic_image_setting() {
     // Set DPI AFTER setting image for better OCR accuracy
     // Note: SetSourceResolution must be called after SetImage, otherwise Tesseract
     // returns a warning and produces no OCR output
-    api.set_source_resolution(300)
-        .expect("Failed to set source resolution");
+    api.set_source_resolution(300).expect("Failed to set source resolution");
 
     // Get the recognized text
     let text = api.get_utf8_text().expect("Failed to get text");

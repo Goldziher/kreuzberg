@@ -68,11 +68,7 @@ fn get_panic_context() -> Option<String> {
         let context = c_str.to_string_lossy().to_string();
         kreuzberg_free_string(ctx_ptr as *mut std::ffi::c_char);
 
-        if context.is_empty() {
-            None
-        } else {
-            Some(context)
-        }
+        if context.is_empty() { None } else { Some(context) }
     }
 }
 
@@ -287,10 +283,10 @@ fn ruby_value_to_json(value: Value) -> Result<serde_json::Value, Error> {
         return Ok(serde_json::Value::Number(serde_json::Number::from(unsigned)));
     }
 
-    if let Ok(float) = f64::try_convert(value) {
-        if let Some(num) = serde_json::Number::from_f64(float) {
-            return Ok(serde_json::Value::Number(num));
-        }
+    if let Ok(float) = f64::try_convert(value)
+        && let Some(num) = serde_json::Number::from_f64(float)
+    {
+        return Ok(serde_json::Value::Number(num));
     }
 
     if let Ok(sym) = Symbol::try_convert(value) {
@@ -665,10 +661,10 @@ fn parse_keyword_config(ruby: &Ruby, hash: RHash) -> Result<RustKeywordConfig, E
         }
     }
 
-    if let Some(val) = get_kw(ruby, hash, "language") {
-        if !val.is_nil() {
-            config.language = Some(symbol_to_string(val)?);
-        }
+    if let Some(val) = get_kw(ruby, hash, "language")
+        && !val.is_nil()
+    {
+        config.language = Some(symbol_to_string(val)?);
     }
 
     if let Some(val) = get_kw(ruby, hash, "yake_params")

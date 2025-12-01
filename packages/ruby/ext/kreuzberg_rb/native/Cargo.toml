@@ -22,7 +22,7 @@ default = []
 
 [dependencies]
 async-trait = { workspace = true }
-kreuzberg = { version = "4.0.0-rc.3", features = ["full", "embeddings"] }
+kreuzberg = { version = "4.0.0-rc.4", features = ["full", "embeddings"] }
 magnus = { git = "https://github.com/matsadler/magnus", rev = "f6db11769efb517427bf7f121f9c32e18b059b38", features = [
     "rb-sys",
 ] }

@@ -136,10 +136,10 @@ fn group_chars_into_words(
     }
 
     // Finalize last word
-    if !current_word_chars.is_empty() {
-        if let Some(word) = finalize_word(&current_word_chars, page_height, min_confidence) {
-            words.push(word);
-        }
+    if !current_word_chars.is_empty()
+        && let Some(word) = finalize_word(&current_word_chars, page_height, min_confidence)
+    {
+        words.push(word);
     }
 
     Ok(words)
