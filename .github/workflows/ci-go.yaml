@@ -70,20 +70,43 @@ jobs:
       - name: Build FFI library
         run: cargo build -p kreuzberg-ffi --release
 
+      - name: Setup MinGW-w64 (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw --version=13.2.0 --allow-downgrade -y
+          # Remove Strawberry Perl GCC from PATH to avoid conflicts with MinGW
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
+          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+        shell: pwsh
+
       - name: Build Go bindings
         run: |
           cd packages/go
-          $ffiPath = (Resolve-Path "$PWD/../../target/release").Path
-          $workspace = (Resolve-Path "$PWD/../..").Path
+          $ffiPath = "$PWD/../../target/release"
+          $workspace = Resolve-Path "$PWD/../.."
           if ($IsWindows) {
+            # Use MinGW-w64 GCC instead of MSVC to avoid CGO flag incompatibility
+            # See: https://github.com/golang/go/issues/75683
+            $env:CC = "gcc"
+            $env:CXX = "g++"
+            $env:AR = "ar"
             $env:PATH = "$ffiPath;$env:PATH"
             $env:CGO_CFLAGS = "-I$workspace/crates/kreuzberg-ffi -O2"
+            $env:CGO_LDFLAGS = "-L$ffiPath -lkreuzberg_ffi"
             $env:CGO_CXXFLAGS = $env:CGO_CFLAGS
-            # MSVC linker expects /LIBPATH and explicit .lib file
-            $libPath = Join-Path $ffiPath "kreuzberg_ffi.lib"
-            $env:CGO_LDFLAGS = "/LIBPATH:$ffiPath $libPath"
+
+            # Verify MinGW setup
+            Write-Host "=== MinGW Diagnostics ==="
+            Write-Host "GCC version:"
+            & gcc --version
+            Write-Host "`nGCC location:"
+            & where.exe gcc
+            Write-Host "`nCGO environment:"
+            Write-Host "CC=$env:CC"
+            Write-Host "CXX=$env:CXX"
             Write-Host "CGO_CFLAGS=$env:CGO_CFLAGS"
             Write-Host "CGO_LDFLAGS=$env:CGO_LDFLAGS"
+            Write-Host "========================`n"
           } else {
             $env:LD_LIBRARY_PATH = "$ffiPath;$env:LD_LIBRARY_PATH"
             $env:DYLD_LIBRARY_PATH = "$ffiPath;$env:DYLD_LIBRARY_PATH"
