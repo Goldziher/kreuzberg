@@ -26,14 +26,14 @@ High-performance document intelligence library for Java with native Rust binding
 <dependency>
     <groupId>dev.kreuzberg</groupId>
     <artifactId>kreuzberg</artifactId>
-    <version>4.0.0-rc.3</version>
+    <version>4.0.0-rc.4</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```gradle
-implementation 'dev.kreuzberg:kreuzberg:4.0.0-rc.3'
+implementation 'dev.kreuzberg:kreuzberg:4.0.0-rc.4'
 ```
 
 ## Usage

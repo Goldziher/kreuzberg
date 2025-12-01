@@ -1,6 +1,6 @@
 {
   "name": "kreuzberg",
-  "version": "4.0.0-rc.3",
+  "version": "4.0.0-rc.4",
   "description": "High-performance document intelligence library for TypeScript/Node.js. Extract text, metadata, and structured data from PDFs, Office documents, images, and 50+ formats. Powered by Rust core for 10-50x speed improvements.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -76,7 +76,7 @@
     "README.md"
   ],
   "dependencies": {
-    "kreuzberg-node": "4.0.0-rc.3",
+    "kreuzberg-node": "4.0.0-rc.4",
     "which": "^6.0.0"
   },
   "optionalDependencies": {

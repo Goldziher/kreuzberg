@@ -5,6 +5,30 @@ All notable changes to Kreuzberg will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0-rc.4] - 2025-12-01
+
+### Release Candidate 4 - Critical CI/CD and Build Fixes
+
+#### Bug Fixes
+
+**CI/CD Workflow Fixes**:
+- Fixed RubyGems action version (v2 doesn't exist, now using v1.0.0)
+- Fixed pnpm workspace configuration (replaced invalid `--cwd` flag with `-C`)
+- Fixed Docker environment variables (undefined `$LD_LIBRARY_PATH` in Dockerfiles)
+- Fixed Maven credentials timing (env vars now available when setup-java generates settings.xml)
+- Fixed Maven GPG configuration (modernized arguments to `--pinentry-mode=loopback` format)
+- Removed release notes update job from publish workflow (not needed)
+
+**Core Library Fixes**:
+- Fixed Tesseract OCR test failure (corrected API call ordering: set_image before set_source_resolution)
+- Fixed Go Windows CGO linking (build Rust FFI with x86_64-pc-windows-gnu target for MinGW compatibility)
+
+**Testing**:
+- All 24 Tesseract tests now pass (was 23/24 in rc.3)
+- Go bindings now build successfully on Windows
+
+---
+
 ## [4.0.0-rc.2] - 2025-11-30
 
 ### Release Candidate 2 - C# Support & Infrastructure Improvements
