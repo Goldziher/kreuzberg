@@ -442,6 +442,8 @@ jobs:
     outputs:
       kreuzberg_exists: ${{ steps.check.outputs.kreuzberg_exists }}
       tesseract_exists: ${{ steps.check.outputs.tesseract_exists }}
+      cli_exists: ${{ steps.check.outputs.cli_exists }}
+      exists: ${{ steps.check.outputs.all_exist }}
     steps:
       - name: Check crates.io for existing versions
         id: check
@@ -463,6 +465,21 @@ jobs:
             echo "::notice::Rust crate kreuzberg-tesseract ${version} already exists on crates.io"
           else
             echo "tesseract_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check kreuzberg-cli crate
+          if cargo search kreuzberg-cli --limit 1 | grep -q "kreuzberg-cli = \"${version}\""; then
+            echo "cli_exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Rust crate kreuzberg-cli ${version} already exists on crates.io"
+          else
+            echo "cli_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Set all_exist if all three crates exist
+          if [ "$(cat $GITHUB_OUTPUT | grep '_exists=true' | wc -l)" -eq 3 ]; then
+            echo "all_exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "all_exist=false" >> $GITHUB_OUTPUT
           fi
 
   python-wheels:
@@ -1505,10 +1522,12 @@ jobs:
   publish-crates:
     name: Publish crates.io packages
     needs: [prepare, check-cratesio]
-    # DISABLED: crates.io publishing disabled due to git dependencies (fastembed-rs, ort)
-    # Language bindings (PyPI, npm, RubyGems, Maven) still include full functionality
-    # Users should use git dependency: kreuzberg = { git = "https://github.com/Goldziher/kreuzberg" }
-    if: false
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_rust == 'true' &&
+      needs.check-cratesio.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
