@@ -742,7 +742,9 @@ jobs:
           target: ${{ matrix.settings.target }}
 
       - name: Install Node dependencies
-        run: pnpm install --cwd crates/kreuzberg-node
+        run: |
+          corepack enable
+          pnpm install --cwd crates/kreuzberg-node
 
       - name: Clean npm directory
         if: runner.os != 'Windows'
@@ -1715,14 +1717,18 @@ jobs:
       - name: Configure trusted publishing credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         uses: rubygems/configure-rubygems-credentials@v2
+        with:
+          api-token: ${{ secrets.RUBYGEMS_API_KEY }}
 
       - name: Verify RubyGems credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         run: |
           if [ ! -f ~/.gem/credentials ]; then
-            echo "::error::RubyGems credentials file not found"
+            echo "::error::RubyGems credentials file not found at ~/.gem/credentials"
+            ls -la ~/.gem/ || echo "~/.gem directory does not exist"
             exit 1
           fi
+          chmod 600 ~/.gem/credentials
 
       - name: Check RubyGems version
         id: rubygems_check
@@ -2058,13 +2064,12 @@ jobs:
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          user: ${{ secrets.NUGET_USERNAME }}
+          source-url: https://api.nuget.org/v3/index.json
 
       - name: Publish to NuGet
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         run: |
           dotnet nuget push "dist/*.nupkg" \
-            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
           echo "NuGet package published via trusted publishing." >> $GITHUB_STEP_SUMMARY
