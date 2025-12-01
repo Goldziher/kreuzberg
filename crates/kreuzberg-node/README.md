@@ -653,7 +653,7 @@ For comprehensive documentation, visit [https://kreuzberg.dev](https://kreuzberg
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](https://github.com/Goldziher/kreuzberg/blob/main/CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide](https://github.com/Goldziher/kreuzberg/blob/main/docs/contributing.md) for details.
 
 ## License
 
