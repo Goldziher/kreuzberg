@@ -1,4 +1,4 @@
-import type { ExtractionResult, PostProcessorProtocol, ProcessingStage } from "../../../src/index.js";
+import type { ExtractionResult, PostProcessorProtocol, ProcessingStage } from "../../../dist/index.js";
 
 type WrappedProcessor = {
 	name: () => string;

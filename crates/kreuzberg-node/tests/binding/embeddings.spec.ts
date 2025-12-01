@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractBytesSync } from "../../src/index.js";
+import { extractBytesSync } from "../../dist/index.js";
 import type { ExtractionConfig, JsChunkingConfig, JsEmbeddingConfig, JsEmbeddingModelType } from "../../src/types.js";
 
 describe("Embedding Configuration", () => {

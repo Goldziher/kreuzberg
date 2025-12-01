@@ -20,7 +20,7 @@ import {
 	type ProcessingStage,
 	registerPostProcessor,
 	unregisterPostProcessor,
-} from "../../src/index.js";
+} from "../../dist/index.js";
 import { createMockExtractionBinding } from "./helpers/mock-binding.js";
 
 class EarlyStageProcessor implements PostProcessorProtocol {

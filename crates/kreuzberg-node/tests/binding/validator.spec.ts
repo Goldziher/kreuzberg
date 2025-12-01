@@ -14,7 +14,7 @@ import {
 	registerValidator,
 	unregisterValidator,
 	type ValidatorProtocol,
-} from "../../src/index.js";
+} from "../../dist/index.js";
 
 describe("Validator Plugin System", () => {
 	beforeEach(() => {

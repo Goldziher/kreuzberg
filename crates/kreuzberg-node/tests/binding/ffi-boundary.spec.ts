@@ -6,7 +6,7 @@ import {
 	extractBytesSync,
 	extractFile,
 	extractFileSync,
-} from "../../src/index.js";
+} from "../../dist/index.js";
 
 describe("FFI Boundary Tests", () => {
 	describe("Large data handling", () => {

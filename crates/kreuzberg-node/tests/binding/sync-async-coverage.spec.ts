@@ -24,7 +24,7 @@ import {
 	extractBytesSync,
 	extractFile,
 	extractFileSync,
-} from "../../src/index.js";
+} from "../../dist/index.js";
 
 function getTestDocumentPath(relativePath: string): string {
 	const workspaceRoot = join(process.cwd(), "../..");

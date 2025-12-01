@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { extractBytes, extractBytesSync, extractFile } from "../../src/index.js";
+import { extractBytes, extractBytesSync, extractFile } from "../../dist/index.js";
 import { createZip } from "../helpers/integration-helpers.js";
 
 describe("Security Validation Tests", () => {

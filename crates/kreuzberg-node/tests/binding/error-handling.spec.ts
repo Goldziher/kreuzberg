@@ -12,7 +12,7 @@ import {
 	registerOcrBackend,
 	registerPostProcessor,
 	unregisterPostProcessor,
-} from "../../src/index.js";
+} from "../../dist/index.js";
 
 describe("Error Handling", () => {
 	describe("File extraction errors", () => {

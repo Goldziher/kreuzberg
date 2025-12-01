@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractBytes, extractBytesSync, extractFile, extractFileSync } from "../../src/index.js";
+import { extractBytes, extractBytesSync, extractFile, extractFileSync } from "../../dist/index.js";
 import { assertValidExtractionResult, createTempFile } from "../helpers/test-utils.js";
 
 describe("Basic Extraction - Sync", () => {

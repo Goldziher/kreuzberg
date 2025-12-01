@@ -1,12 +1,12 @@
 {
-	"name": "kreuzberg-smoke",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"check": "node smoke.mjs"
-	},
-	"dependencies": {
-		"@kreuzberg/node": "file:../../../crates/kreuzberg-node"
-	},
-	"version": "4.0.0-rc.2"
+  "name": "kreuzberg-smoke",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node smoke.mjs"
+  },
+  "dependencies": {
+    "@kreuzberg/node": "file:../../../crates/kreuzberg-node"
+  },
+  "version": "4.0.0-rc.3"
 }

@@ -494,7 +494,7 @@ dependencies = [
 
 [[package]]
 name = "benchmark-harness"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "ahash",
  "async-trait",
@@ -1680,7 +1680,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "e2e-rust"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "async-trait",
  "hex",
@@ -2547,7 +2547,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.62.2",
+ "windows-core",
 ]
 
 [[package]]
@@ -3024,7 +3024,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "ahash",
  "anyhow",
@@ -3099,7 +3099,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-cli"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -3114,7 +3114,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-e2e-generator"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3131,7 +3131,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-ffi"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "async-trait",
  "cbindgen",
@@ -3145,7 +3145,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-node"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3162,7 +3162,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-py"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "async-trait",
  "html-to-markdown-rs",
@@ -3177,7 +3177,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-rb"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "async-trait",
  "html-to-markdown-rs",
@@ -3205,7 +3205,7 @@ dependencies = [
 
 [[package]]
 name = "kreuzberg-tesseract"
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 dependencies = [
  "cc",
  "cmake",
@@ -4414,9 +4414,9 @@ dependencies = [
  "console_error_panic_hook",
  "console_log",
  "image",
- "itertools 0.14.0",
+ "itertools 0.12.1",
  "js-sys",
- "libloading 0.9.0",
+ "libloading 0.7.4",
  "log",
  "maybe-owned",
  "once_cell",
@@ -7810,7 +7810,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9babd3a767a4c1aef6900409f85f5d53ce2544ccdfaa86dad48c91782c6d6893"
 dependencies = [
  "windows-collections",
- "windows-core 0.61.2",
+ "windows-core",
  "windows-future",
  "windows-link 0.1.3",
  "windows-numerics",
@@ -7822,7 +7822,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3beeceb5e5cfd9eb1d76b381630e82c4241ccd0d27f1a39ed41b2760b255c5e8"
 dependencies = [
- "windows-core 0.61.2",
+ "windows-core",
 ]
 
 [[package]]
@@ -7839,25 +7839,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "windows-core"
-version = "0.62.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
-dependencies = [
- "windows-implement",
- "windows-interface",
- "windows-link 0.2.1",
- "windows-result 0.4.1",
- "windows-strings 0.5.1",
-]
-
-[[package]]
 name = "windows-future"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc6a41e98427b19fe4b73c550f060b59fa592d7d686537eebf9385621bfbad8e"
 dependencies = [
- "windows-core 0.61.2",
+ "windows-core",
  "windows-link 0.1.3",
  "windows-threading",
 ]
@@ -7902,7 +7889,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9150af68066c4c5c07ddc0ce30421554771e528bde427614c61038bc2c92c2b1"
 dependencies = [
- "windows-core 0.61.2",
+ "windows-core",
  "windows-link 0.1.3",
 ]
 

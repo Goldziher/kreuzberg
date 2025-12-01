@@ -39,7 +39,7 @@ import {
 	unregisterValidator,
 	type ValidatorProtocol,
 	validateMimeType,
-} from "../../src/index.js";
+} from "../../dist/index.js";
 import { createMockExtractionBinding } from "./helpers/mock-binding.js";
 
 describe("listPostProcessors", () => {

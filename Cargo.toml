@@ -23,7 +23,7 @@ kreuzberg-tesseract = { path = "crates/kreuzberg-tesseract" }
 rb-sys = { git = "https://github.com/oxidize-rb/rb-sys", rev = "acca8a7feac415f41f3773a940cbee2ae3167b94" }
 
 [workspace.package]
-version = "4.0.0-rc.2"
+version = "4.0.0-rc.3"
 edition = "2024"
 rust-version = "1.91"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]

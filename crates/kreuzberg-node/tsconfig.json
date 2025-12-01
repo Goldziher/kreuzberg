@@ -11,7 +11,7 @@
 		"declarationMap": true,
 		"sourceMap": true,
 		"outDir": "./dist",
-		"rootDir": "./src",
+		"rootDir": "./typescript",
 
 		// Strict Type-Checking Options (ALL enabled)
 		"strict": true,
@@ -51,6 +51,6 @@
 
 		"types": ["node"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.d.ts"],
+	"include": ["typescript/**/*.ts", "typescript/**/*.d.ts"],
 	"exclude": ["node_modules", "dist", "**/*.spec.ts", "tests/**/*"]
 }

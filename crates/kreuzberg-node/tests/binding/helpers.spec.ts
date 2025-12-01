@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { extractBytesSync, extractFileSync } from "../../src/index.js";
+import { extractBytesSync, extractFileSync } from "../../dist/index.js";
 
 function getTestDocumentPath(relativePath: string): string {
 	const workspaceRoot = join(process.cwd(), "../..");

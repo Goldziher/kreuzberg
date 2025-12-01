@@ -17,7 +17,7 @@ import {
 	extractBytes,
 	type PostProcessorProtocol,
 	registerPostProcessor,
-} from "../../src/index.js";
+} from "../../dist/index.js";
 import { createMockExtractionBinding } from "./helpers/mock-binding.js";
 
 class AsyncWordCountProcessor implements PostProcessorProtocol {

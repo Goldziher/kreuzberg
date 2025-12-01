@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CacheError, extractFile, ImageProcessingError, KreuzbergError, PluginError } from "../../src/index.js";
+import { CacheError, extractFile, ImageProcessingError, KreuzbergError, PluginError } from "../../dist/index.js";
 
 /**
  * Integration tests for error handling in real-world scenarios.

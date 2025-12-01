@@ -13,5 +13,11 @@ export default defineConfig({
 	sourcemap: true,
 	clean: true,
 	shims: true,
-	external: ["sharp", "@gutenye/ocr-node"],
+	external: [
+		"sharp",
+		"@gutenye/ocr-node",
+		/\.node$/,
+		/@kreuzberg\/node-.*/,
+		"../index.js",
+	],
 });

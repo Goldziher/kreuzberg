@@ -6,7 +6,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { __resetBindingForTests, __setBindingForTests, registerOcrBackend } from "../../src/index.js";
+import { __resetBindingForTests, __setBindingForTests, registerOcrBackend } from "../../dist/index.js";
 import type { OcrBackendProtocol } from "../../src/types.js";
 
 describe("OCR Backend Registration", () => {
