@@ -54,12 +54,18 @@ def update_package_json(file_path: Path, version: str) -> Tuple[bool, str, str]:
         data["version"] = version
         changed = True
 
-    if "optionalDependencies" in data:
-        for dep in data["optionalDependencies"]:
-            if dep.startswith("kreuzberg-"):
-                if data["optionalDependencies"][dep] != version:
-                    data["optionalDependencies"][dep] = version
-                    changed = True
+    def maybe_update(dep_section: str) -> None:
+        nonlocal changed
+        if dep_section not in data:
+            return
+
+        for dep_name, dep_version in list(data[dep_section].items()):
+            if dep_name.startswith(("kreuzberg-", "@kreuzberg/")) and dep_version != version:
+                data[dep_section][dep_name] = version
+                changed = True
+
+    for section in ("dependencies", "optionalDependencies", "devDependencies", "peerDependencies"):
+        maybe_update(section)
 
     if changed:
         file_path.write_text(json.dumps(data, indent=2) + "\n")
@@ -140,6 +146,36 @@ def update_cargo_toml(file_path: Path, version: str) -> Tuple[bool, str, str]:
     return True, old_version, version
 
 
+def update_text_file(file_path: Path, pattern: str, repl: str) -> Tuple[bool, str, str]:
+    """
+    Update a plain text file using regex substitution.
+
+    Returns: (changed, old_value, new_value)
+    """
+    content = file_path.read_text()
+    match = re.search(pattern, content, re.MULTILINE)
+    if match:
+        old_value = match.group(1) if match.groups() else match.group(0)
+    else:
+        old_value = "NOT FOUND"
+
+    new_content, count = re.subn(
+        pattern,
+        repl,
+        content,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    if count == 0:
+        return False, old_value, old_value
+
+    if new_content == content:
+        return False, old_value, old_value
+
+    file_path.write_text(new_content)
+    return True, old_value, repl
+
+
 def main():
     repo_root = get_repo_root()
 
@@ -184,6 +220,82 @@ def main():
     if ruby_version.exists():
         changed, old_ver, new_ver = update_ruby_version(ruby_version, version)
         rel_path = ruby_version.relative_to(repo_root)
+
+        if changed:
+            print(f"✓ {rel_path}: {old_ver} → {new_ver}")
+            updated_files.append(str(rel_path))
+        else:
+            unchanged_files.append(str(rel_path))
+
+    text_targets = [
+        (
+            repo_root / "packages/typescript/src/index.ts",
+            r'__version__ = "([^"]+)"',
+            f'__version__ = "{version}"',
+        ),
+        (
+            repo_root / "crates/kreuzberg-node/typescript/index.ts",
+            r'__version__ = "([^"]+)"',
+            f'__version__ = "{version}"',
+        ),
+        (
+            repo_root / "packages/typescript/tests/binding/cli.spec.ts",
+            r'kreuzberg-cli ([0-9A-Za-z\.\-]+)',
+            f'kreuzberg-cli {version}',
+        ),
+        (
+            repo_root / "crates/kreuzberg-node/tests/binding/cli.spec.ts",
+            r'kreuzberg-cli ([0-9A-Za-z\.\-]+)',
+            f'kreuzberg-cli {version}',
+        ),
+        (
+            repo_root / "packages/java/README.md",
+            r'\d+\.\d+\.\d+-rc\.\d+',
+            version,
+        ),
+        (
+            repo_root / "packages/go/README.md",
+            r'\d+\.\d+\.\d+-rc\.\d+',
+            version,
+        ),
+        (
+            repo_root / "packages/go/kreuzberg/doc.go",
+            r'\d+\.\d+\.\d+-rc\.\d+',
+            version,
+        ),
+        (
+            repo_root / "e2e/java/pom.xml",
+            r'(<artifactId>kreuzberg</artifactId>\s*<version>)([^<]+)(</version>)',
+            rf"\g<1>{version}\g<3>",
+        ),
+        (
+            repo_root / "tools/e2e-generator/src/java.rs",
+            r'(<artifactId>kreuzberg</artifactId>\s*<version>)([^<]+)(</version>)',
+            rf"\g<1>{version}\g<3>",
+        ),
+        (
+            repo_root / "e2e/java/pom.xml",
+            r'(<systemPath>\$\{project\.basedir\}/\.\./\.\./packages/java/target/kreuzberg-)[^<]+(\.jar</systemPath>)',
+            rf"\g<1>{version}\g<2>",
+        ),
+        (
+            repo_root / "tools/e2e-generator/src/java.rs",
+            r'(<systemPath>\$\{project\.basedir\}/\.\./\.\./packages/java/target/kreuzberg-)[^<]+(\.jar</systemPath>)',
+            rf"\g<1>{version}\g<2>",
+        ),
+        (
+            repo_root / "packages/csharp/Kreuzberg/Kreuzberg.csproj",
+            r"<Version>[^<]+</Version>",
+            f"<Version>{version}</Version>",
+        ),
+    ]
+
+    for path, pattern, repl in text_targets:
+        if not path.exists():
+            continue
+
+        changed, old_ver, new_ver = update_text_file(path, pattern, repl)
+        rel_path = path.relative_to(repo_root)
 
         if changed:
             print(f"✓ {rel_path}: {old_ver} → {new_ver}")

@@ -119,13 +119,13 @@
   },
   "optionalDependencies": {
     "@gutenye/ocr-node": "^1.4.8",
-    "@kreuzberg/darwin-arm64": "4.0.0-rc.2",
-    "@kreuzberg/darwin-x64": "4.0.0-rc.2",
-    "@kreuzberg/linux-arm-gnueabihf": "4.0.0-rc.2",
-    "@kreuzberg/linux-arm64-gnu": "4.0.0-rc.2",
-    "@kreuzberg/linux-x64-gnu": "4.0.0-rc.2",
-    "@kreuzberg/win32-arm64-msvc": "4.0.0-rc.2",
-    "@kreuzberg/win32-x64-msvc": "4.0.0-rc.2",
+    "@kreuzberg/darwin-arm64": "4.0.0-rc.3",
+    "@kreuzberg/darwin-x64": "4.0.0-rc.3",
+    "@kreuzberg/linux-arm-gnueabihf": "4.0.0-rc.3",
+    "@kreuzberg/linux-arm64-gnu": "4.0.0-rc.3",
+    "@kreuzberg/linux-x64-gnu": "4.0.0-rc.3",
+    "@kreuzberg/win32-arm64-msvc": "4.0.0-rc.3",
+    "@kreuzberg/win32-x64-msvc": "4.0.0-rc.3",
     "sharp": "^0.34.5"
   }
 }

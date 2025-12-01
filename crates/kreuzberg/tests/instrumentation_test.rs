@@ -118,7 +118,6 @@ async fn test_registry_instrumentation() {
 async fn test_span_hierarchy() {
     use kreuzberg::core::config::ExtractionConfig;
     use kreuzberg::core::extractor::extract_bytes;
-    use std::fs;
 
     let spans = Arc::new(Mutex::new(Vec::new()));
     let collector = SpanCollector { spans: spans.clone() };
