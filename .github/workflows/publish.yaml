@@ -2045,8 +2045,6 @@ jobs:
       needs.check-nuget.outputs.exists != 'true' &&
       needs.csharp-package.result == 'success'
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write  # Required for OIDC trusted publishing
     steps:
       - name: Download NuGet artifact
         uses: actions/download-artifact@v6
@@ -2059,20 +2057,14 @@ jobs:
         with:
           dotnet-version: "10.x"
 
-      - name: NuGet trusted publishing login
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        id: nuget-login
-        uses: NuGet/login@v1
-        with:
-          source-url: https://api.nuget.org/v3/index.json
-
       - name: Publish to NuGet
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         run: |
           dotnet nuget push "dist/*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
+            --api-key "${{ secrets.NUGET_API_KEY }}" \
             --skip-duplicate
-          echo "NuGet package published via trusted publishing." >> $GITHUB_STEP_SUMMARY
+          echo "NuGet package published." >> $GITHUB_STEP_SUMMARY
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
