@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GutenOcrBackend } from "../../src/ocr/guten-ocr.js";
+import { GutenOcrBackend } from "../../dist/index.js";
 
 describe("GutenOcrBackend", () => {
 	describe("Constructor and basic properties", () => {

@@ -22,14 +22,14 @@ function mockBinding(metadata: unknown): MockRawResult {
 
 describe("Binding conversion", () => {
 	afterEach(async () => {
-		const module = await import("../../src/index.js");
+		const module = await import("../../dist/index.js");
 		module.__resetBindingForTests();
 		vi.resetModules();
 		vi.clearAllMocks();
 	});
 
 	it("parses JSON metadata returned as a string", async () => {
-		const module = await import("../../src/index.js");
+		const module = await import("../../dist/index.js");
 		module.__setBindingForTests({
 			extractFileSync: vi.fn().mockReturnValue(mockBinding('{"key":"value"}')),
 		});
@@ -40,7 +40,7 @@ describe("Binding conversion", () => {
 	});
 
 	it("returns empty object for invalid JSON metadata", async () => {
-		const module = await import("../../src/index.js");
+		const module = await import("../../dist/index.js");
 		module.__setBindingForTests({
 			extractFileSync: vi.fn().mockReturnValue(mockBinding("{invalid")),
 		});
