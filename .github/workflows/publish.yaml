@@ -761,7 +761,7 @@ jobs:
       - name: Install Node dependencies
         run: |
           corepack enable
-          pnpm install --cwd crates/kreuzberg-node
+          pnpm install -C crates/kreuzberg-node
 
       - name: Clean npm directory
         if: runner.os != 'Windows'
@@ -1878,7 +1878,7 @@ jobs:
 
       - name: Install workspace dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: pnpm install --cwd crates/kreuzberg-node
+        run: pnpm install -C crates/kreuzberg-node
 
       - name: Pack platform packages
         run: |
@@ -2229,32 +2229,3 @@ jobs:
               f.write(f"release_summary={escaped}\n")
           EOF
 
-      - name: Checkout
-        if: needs.prepare.outputs.dry_run != 'true'
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.prepare.outputs.ref }}
-
-      - name: Update GitHub Release notes
-        if: needs.prepare.outputs.dry_run != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tag="${{ needs.prepare.outputs.tag }}"
-
-          # Get existing release notes
-          existing_notes=$(gh release view "$tag" --json body -q .body 2>/dev/null || echo "")
-
-          # Create the release if it doesn't exist
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "$tag" --notes "$existing_notes"
-          fi
-
-          # Append status summary to release notes
-          new_notes="${existing_notes}
-
----
-
-${{ steps.status.outputs.release_summary }}"
-
-          gh release edit "$tag" --notes "$new_notes"
