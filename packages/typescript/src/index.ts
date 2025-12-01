@@ -1652,4 +1652,4 @@ export function getEmbeddingPreset(name: string): EmbeddingPreset | null {
 	return binding.getEmbeddingPreset(name);
 }
 
-export const __version__ = "4.0.0-rc.3";
+export const __version__ = "4.0.0-rc.4";

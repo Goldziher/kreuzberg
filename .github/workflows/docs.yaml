@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - main
-    paths:
-      - docs/**
-      - mkdocs.yaml
-      - .github/workflows/docs.yaml
+#    paths:
+#      - docs/**
+#      - mkdocs.yaml
+#      - .github/workflows/docs.yaml
   workflow_dispatch:
 
 permissions:

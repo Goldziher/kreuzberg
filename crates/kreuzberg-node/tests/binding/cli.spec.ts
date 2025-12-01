@@ -15,7 +15,7 @@ describe("CLI", () => {
 	});
 
 	describe("CLI binary detection", () => {
-		it("should find kreuzberg-cli 4.0.0-rc.3 when available", () => {
+		it("should find kreuzberg-cli 4.0.0-rc.4 when available", () => {
 			const mockWhichSync = vi.mocked(which.sync);
 			const mockSpawnSync = vi.mocked(spawnSync);
 
@@ -34,7 +34,7 @@ describe("CLI", () => {
 			expect(result).toBe("/usr/local/bin/kreuzberg-cli");
 		});
 
-		it("should handle missing kreuzberg-cli 4.0.0-rc.3", () => {
+		it("should handle missing kreuzberg-cli 4.0.0-rc.4", () => {
 			const mockWhichSync = vi.mocked(which.sync);
 
 			mockWhichSync.mockImplementation(() => {
@@ -46,7 +46,7 @@ describe("CLI", () => {
 	});
 
 	describe("CLI argument passing", () => {
-		it("should pass arguments to kreuzberg-cli 4.0.0-rc.3", () => {
+		it("should pass arguments to kreuzberg-cli 4.0.0-rc.4", () => {
 			const mockWhichSync = vi.mocked(which.sync);
 			const mockSpawnSync = vi.mocked(spawnSync);
 
@@ -107,7 +107,7 @@ describe("CLI", () => {
 				status: 0,
 				pid: 12345,
 				output: [],
-				stdout: Buffer.from("kreuzberg-cli 4.0.0-rc.3"),
+				stdout: Buffer.from("kreuzberg-cli 4.0.0-rc.4"),
 				stderr: Buffer.from(""),
 				signal: null,
 			});

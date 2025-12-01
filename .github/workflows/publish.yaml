@@ -1735,7 +1735,7 @@ jobs:
 
       - name: Configure trusted publishing credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        uses: rubygems/configure-rubygems-credentials@v2
+        uses: rubygems/configure-rubygems-credentials@v1.0.0
         with:
           api-token: ${{ secrets.RUBYGEMS_API_KEY }}
 
@@ -1997,8 +1997,21 @@ jobs:
         with:
           cache-key-prefix: publish-maven
 
+      - name: Patch legacy Maven GPG arguments
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        run: |
+          set -euo pipefail
+          if grep -q '<arg>--pinentry-mode</arg>' packages/java/pom.xml; then
+            sed -i 's/<arg>--pinentry-mode<\/arg>\s*<arg>loopback<\/arg>/<arg>--pinentry-mode=loopback<\/arg>/g' packages/java/pom.xml
+            echo "Patched legacy GPG pinentry argument format in packages/java/pom.xml" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Setup Java
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
         uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -2008,7 +2021,7 @@ jobs:
           server-username: NEXUS_USERNAME
           server-password: NEXUS_PASSWORD
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.GPP_PASSPHRASE }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
       - name: Cache PDFium
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
@@ -2036,14 +2049,9 @@ jobs:
 
       - name: Release Maven package
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        env:
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
-          GPG: /usr/bin/gpg2
         run: |
           set -euo pipefail
-          mvn -f packages/java/pom.xml --batch-mode --no-transfer-progress -Dgpg.executable=/usr/bin/gpg2 clean deploy
+          mvn -f packages/java/pom.xml --batch-mode --no-transfer-progress clean deploy
 
       - name: Maven already published summary
         if: ${{ steps.maven_check.outputs.exists == 'true' }}
