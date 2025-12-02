@@ -43,10 +43,7 @@ jobs:
 
       - name: Ensure benchmark harness exists
         run: |
-          if [ ! -d tools/benchmark-harness ]; then
-            echo "::error::tools/benchmark-harness not found on branch ${GITHUB_REF}." >&2
-            exit 1
-          fi
+          bash scripts/benchmarks/ensure-benchmark-harness-exists.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -75,8 +72,7 @@ jobs:
       - name: Build workspace (native libs + harness)
         run: |
           set -euo pipefail
-          cargo build --workspace --release --all-features
-          cargo build --manifest-path tools/benchmark-harness/Cargo.toml --release
+          bash scripts/benchmarks/build-native-libs.sh
 
       - name: Upload target artifact
         uses: actions/upload-artifact@v5
@@ -107,7 +103,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -127,22 +123,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-native
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-native-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-native" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -173,7 +158,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -198,27 +183,15 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Python bindings
-        working-directory: packages/python
-        run: uv run maturin develop --release
+        run: bash scripts/benchmarks/build-python-bindings.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-python-sync
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-python-sync-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-python-sync" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -249,7 +222,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -274,27 +247,15 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Python bindings
-        working-directory: packages/python
-        run: uv run maturin develop --release
+        run: bash scripts/benchmarks/build-python-bindings.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-python-async
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-python-async-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-python-async" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -325,7 +286,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -350,27 +311,15 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Python bindings
-        working-directory: packages/python
-        run: uv run maturin develop --release
+        run: bash scripts/benchmarks/build-python-bindings.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-python-batch
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-python-batch-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-python-batch" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -401,7 +350,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -423,33 +372,17 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Node bindings and install locally
-        run: |
-          set -euo pipefail
-          cd crates/kreuzberg-node
-          pnpm install --no-optional
-          pnpm run build --target x86_64-unknown-linux-gnu
-          pkg=$(pnpm pack | tail -n1 | tr -d '\r')
-          cd ../..
-          pnpm install -w "crates/kreuzberg-node/${pkg}"
+        env:
+          TARGET: x86_64-unknown-linux-gnu
+        run: bash scripts/benchmarks/build-node-bindings.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-node-async
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-node-async-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-node-async" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -480,7 +413,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -502,33 +435,17 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Node bindings and install locally
-        run: |
-          set -euo pipefail
-          cd crates/kreuzberg-node
-          pnpm install --no-optional
-          pnpm run build --target x86_64-unknown-linux-gnu
-          pkg=$(pnpm pack | tail -n1 | tr -d '\r')
-          cd ../..
-          pnpm install -w "crates/kreuzberg-node/${pkg}"
+        env:
+          TARGET: x86_64-unknown-linux-gnu
+        run: bash scripts/benchmarks/build-node-bindings.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-node-batch
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-node-batch-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-node-batch" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -559,7 +476,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -583,29 +500,17 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Ruby native gem
-        uses: ./.github/actions/build-ruby-unix
-        with:
-          platform: x86_64-linux
-          build-source-gem: "false"
+        env:
+          PLATFORM: x86_64-linux
+        run: bash scripts/benchmarks/build-ruby-gem.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-ruby-sync
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-ruby-sync-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-ruby-sync" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -636,7 +541,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -660,29 +565,17 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Ruby native gem
-        uses: ./.github/actions/build-ruby-unix
-        with:
-          platform: x86_64-linux
-          build-source-gem: "false"
+        env:
+          PLATFORM: x86_64-linux
+        run: bash scripts/benchmarks/build-ruby-gem.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-ruby-batch
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-ruby-batch-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-ruby-batch" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -713,7 +606,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -743,22 +636,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-go-sync
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-go-sync-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-go-sync" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -789,7 +671,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -819,22 +701,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-go-batch
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-go-batch-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-go-batch" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -865,7 +736,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -890,27 +761,15 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build Java bindings
-        working-directory: packages/java
-        run: mvn -q -B -U package
+        run: bash scripts/benchmarks/build-java-package.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-java-sync
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-java-sync-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-java-sync" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -941,7 +800,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -965,27 +824,15 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Build C# bindings
-        working-directory: packages/csharp
-        run: dotnet build Benchmark/Benchmark.csproj -c Release
+        run: bash scripts/benchmarks/build-csharp-benchmark.sh
 
       - name: Run benchmark
         env:
+          FRAMEWORK: kreuzberg-csharp-sync
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/kreuzberg-csharp-sync-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "kreuzberg-csharp-sync" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -1016,7 +863,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1045,22 +892,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: docling
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/docling-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "docling" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -1091,7 +927,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1120,22 +956,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: docling-batch
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/docling-batch-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "docling-batch" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -1166,7 +991,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1195,22 +1020,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: markitdown
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/markitdown-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "markitdown" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -1241,7 +1055,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1270,22 +1084,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: unstructured
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/unstructured-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "unstructured" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()
@@ -1316,7 +1119,7 @@ jobs:
           path: target/release
 
       - name: Restore benchmark binary permissions
-        run: chmod +x ./target/release/benchmark-harness
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1345,22 +1148,11 @@ jobs:
 
       - name: Run benchmark
         env:
+          FRAMEWORK: extractous-python
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
-        run: |
-          set -euo pipefail
-          OUTPUT_DIR="benchmark-results/extractous-python-${{ matrix.mode }}"
-          rm -rf "${OUTPUT_DIR}"
-          MAX_CONCURRENT=$([[ "${{ matrix.mode }}" == "single-file" ]] && echo 1 || echo 4)
-
-          ./target/release/benchmark-harness \
-            run \
-            --fixtures tools/benchmark-harness/fixtures \
-            --frameworks "extractous-python" \
-            --output "${OUTPUT_DIR}" \
-            --iterations "${ITERATIONS}" \
-            --timeout "${TIMEOUT:-900}" \
-            --mode "${{ matrix.mode }}" \
-            --max-concurrent "${MAX_CONCURRENT}"
+        run: bash scripts/benchmarks/run-benchmark.sh
 
       - name: Upload artifacts
         if: always()

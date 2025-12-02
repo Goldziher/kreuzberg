@@ -91,9 +91,7 @@ jobs:
 
       - name: Build C# bindings
         shell: bash
-        run: |
-          cd packages/csharp
-          dotnet build Kreuzberg/Kreuzberg.csproj -c Release
+        run: scripts/ci/csharp/build-csharp.sh
 
       - name: Upload FFI library
         uses: actions/upload-artifact@v5
@@ -159,9 +157,7 @@ jobs:
         shell: bash
         env:
           KREUZBERG_FFI_DIR: ${{ github.workspace }}/target/release
-        run: |
-          cd packages/csharp
-          dotnet test Kreuzberg.Tests/Kreuzberg.Tests.csproj -c Release
+        run: scripts/ci/csharp/run-tests.sh
 
       - name: Install Task
         uses: ./.github/actions/install-task

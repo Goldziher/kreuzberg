@@ -95,61 +95,7 @@ jobs:
 
       - name: Build Node bindings
         shell: bash
-        run: |
-          cd crates/kreuzberg-node
-          set -euo pipefail
-          pnpm install
-          pnpm exec napi build --platform --release --target ${{ matrix.target }}
-          pnpm exec napi prepublish -t npm --no-gh-release
-          mkdir -p artifacts
-          # Collect artifacts from napi (if produced) and fallback to build outputs.
-          pnpm exec napi artifacts --output-dir ./artifacts || true
-          shopt -s nullglob globstar
-          mapfile -t artifacts < <(find artifacts npm target . -maxdepth 6 -type f -name "*.node")
-          if [ "${#artifacts[@]}" -eq 0 ]; then
-            echo "No .node artifacts produced under artifacts/, npm/**/, target/**/release, or workspace root" >&2
-            find . -maxdepth 4 -type f -name "*.node" || true
-            exit 1
-          fi
-          for f in "${artifacts[@]}"; do
-            dest="./$(basename "$f")"
-            if [ "$f" != "$dest" ]; then
-              cp "$f" "$dest"
-            fi
-          done
-          pnpm pack
-          # Repack tarball with the .node file for specific platforms
-          # This is needed because pnpm pack doesn't always include platform-specific .node files
-          pkg_tgz=$(ls kreuzberg-node-*.tgz | head -n1)
-          if [[ -n "$pkg_tgz" ]]; then
-            case "${{ matrix.target }}" in
-              x86_64-unknown-linux-gnu)
-                node_file="kreuzberg-node.linux-x64-gnu.node"
-                ;;
-              x86_64-pc-windows-msvc)
-                node_file="kreuzberg-node.win32-x64-msvc.node"
-                ;;
-              aarch64-pc-windows-msvc)
-                node_file="kreuzberg-node.win32-arm64-msvc.node"
-                ;;
-              x86_64-apple-darwin)
-                node_file="kreuzberg-node.darwin-x64.node"
-                ;;
-              aarch64-apple-darwin)
-                node_file="kreuzberg-node.darwin-arm64.node"
-                ;;
-              *)
-                node_file=""
-                ;;
-            esac
-            if [[ -n "$node_file" && -f "$node_file" ]]; then
-              tmpdir=$(mktemp -d)
-              tar xzf "$pkg_tgz" -C "$tmpdir"
-              cp "$node_file" "$tmpdir/package/"
-              tar czf "$pkg_tgz" -C "$tmpdir" package
-              rm -rf "$tmpdir"
-            fi
-          fi
+        run: scripts/ci/node/build-napi.sh ${{ matrix.target }}
 
       - name: Upload Node bindings
         uses: actions/upload-artifact@v5
@@ -243,50 +189,12 @@ jobs:
 
       - name: Unpack and install Node bindings
         shell: bash
-        run: |
-          cd crates/kreuzberg-node
-          # Extract the tarball to get the built .node file
-          pkg=$(ls kreuzberg-node-*.tgz | head -n 1)
-          if [ -z "$pkg" ]; then
-            echo "No kreuzberg-node tarball found" >&2
-            exit 1
-          fi
-          # Install the package from tarball in the TypeScript workspace
-          cd ../../packages/typescript
-          pnpm add "file:../../crates/kreuzberg-node/$pkg"
+        run: scripts/ci/node/unpack-bindings.sh
 
       - name: Run TypeScript tests
         shell: bash
         run: |
-          # Set library paths for PDFium and ONNX Runtime
-          if [[ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]]; then
-            case "${RUNNER_OS:-unknown}" in
-              Linux)
-                export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
-                ;;
-              macOS)
-                export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
-                export DYLD_FALLBACK_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_FALLBACK_LIBRARY_PATH:-}"
-                ;;
-              Windows)
-                export PATH="$KREUZBERG_PDFIUM_PREBUILT/bin;${PATH:-}"
-                ;;
-            esac
-          fi
-          if [[ -n "${ORT_LIB_LOCATION:-}" ]]; then
-            case "${RUNNER_OS:-unknown}" in
-              Linux)
-                export LD_LIBRARY_PATH="$ORT_LIB_LOCATION:${LD_LIBRARY_PATH:-}"
-                ;;
-              macOS)
-                export DYLD_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_LIBRARY_PATH:-}"
-                export DYLD_FALLBACK_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_FALLBACK_LIBRARY_PATH:-}"
-                ;;
-              Windows)
-                export PATH="$ORT_LIB_LOCATION;${PATH:-}"
-                ;;
-            esac
-          fi
+          source scripts/ci/node/setup-library-paths.sh
           cd packages/typescript
           if [ "${{ matrix.coverage }}" = "true" ]; then
             pnpm test:coverage
@@ -308,35 +216,7 @@ jobs:
       - name: Run E2E tests
         shell: bash
         run: |
-          # Set library paths for PDFium and ONNX Runtime
-          if [[ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]]; then
-            case "${RUNNER_OS:-unknown}" in
-              Linux)
-                export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
-                ;;
-              macOS)
-                export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
-                export DYLD_FALLBACK_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_FALLBACK_LIBRARY_PATH:-}"
-                ;;
-              Windows)
-                export PATH="$KREUZBERG_PDFIUM_PREBUILT/bin;${PATH:-}"
-                ;;
-            esac
-          fi
-          if [[ -n "${ORT_LIB_LOCATION:-}" ]]; then
-            case "${RUNNER_OS:-unknown}" in
-              Linux)
-                export LD_LIBRARY_PATH="$ORT_LIB_LOCATION:${LD_LIBRARY_PATH:-}"
-                ;;
-              macOS)
-                export DYLD_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_LIBRARY_PATH:-}"
-                export DYLD_FALLBACK_LIBRARY_PATH="$ORT_LIB_LOCATION:${DYLD_FALLBACK_LIBRARY_PATH:-}"
-                ;;
-              Windows)
-                export PATH="$ORT_LIB_LOCATION;${PATH:-}"
-                ;;
-            esac
-          fi
+          source scripts/ci/node/setup-library-paths.sh
           # Reinstall kreuzberg-node in packages/typescript after build to ensure E2E tests can resolve it
           cd packages/typescript && pnpm install && cd - > /dev/null
           task e2e:ts:test

@@ -103,9 +103,7 @@ jobs:
 
       - name: Clean previous wheel artifacts
         shell: bash
-        run: |
-          rm -rf target/wheels target/maturin
-          rm -f packages/python/kreuzberg/_internal_bindings.*
+        run: bash scripts/ci/python/clean-artifacts.sh
 
       - name: Build Python wheels
         uses: PyO3/maturin-action@v1
@@ -133,9 +131,7 @@ jobs:
 
       - name: Smoke test wheel
         shell: bash
-        run: |
-          pip install --no-index --find-links target/wheels/ kreuzberg
-          python -c "import kreuzberg; print(f'Kreuzberg version: {kreuzberg.__version__}')"
+        run: bash scripts/ci/python/smoke-test-wheel.sh
 
   build-python-sdist:
     name: Python Sdist
@@ -230,31 +226,20 @@ jobs:
 
       - name: Install wheel
         shell: bash
-        run: |
-          if ls dist/kreuzberg-*-manylinux*.whl 1> /dev/null 2>&1; then
-            python -m pip install dist/kreuzberg-*-manylinux*.whl
-          elif ls dist/kreuzberg-*-macos*.whl 1> /dev/null 2>&1; then
-            python -m pip install dist/kreuzberg-*-macos*.whl
-          elif ls dist/kreuzberg-*-win_amd64.whl 1> /dev/null 2>&1; then
-            python -m pip install dist/kreuzberg-*-win_amd64.whl
-          else
-            python -m pip install dist/kreuzberg-*.whl
-          fi
+        run: bash scripts/ci/python/install-wheel.sh
 
       - name: Install SpaCy model (Linux 3.10 only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
         run: |
           uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
+      - name: Setup library paths
+        shell: bash
+        run: bash scripts/ci/python/setup-library-paths.sh
+
       - name: Run Python tests
         shell: bash
-        run: |
-          cd packages/python
-          if [ "${{ matrix.coverage }}" = "true" ]; then
-            uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1
-          else
-            uv run pytest -vv --reruns 1 --reruns-delay 1
-          fi
+        run: bash scripts/ci/python/run-tests.sh "${{ matrix.coverage }}"
 
       - name: Upload coverage
         if: matrix.coverage

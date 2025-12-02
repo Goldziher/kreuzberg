@@ -84,15 +84,7 @@ jobs:
       - name: Configure bindgen compatibility headers (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
-        run: |
-          $includeRoot = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include"
-          $compat = "$includeRoot\msvc_compat"
-          $includeRoot = $includeRoot -replace '\\','/'
-          $compatForward = $compat -replace '\\','/'
-          $extra = "-I$includeRoot -I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
+        run: scripts/ci/rust/configure-bindgen-windows.ps1
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
@@ -100,9 +92,7 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Run unit tests
-        env:
-          TESSDATA_PREFIX: ${{ runner.os == 'Linux' && '/usr/share/tesseract-ocr/5/tessdata' || '' }}
-        run: cargo test --workspace --exclude kreuzberg-e2e-generator --exclude kreuzberg-rb --exclude kreuzberg-py --exclude kreuzberg-node --all-features
+        run: scripts/ci/rust/run-unit-tests.sh
         shell: bash
 
       - name: Cleanup Rust cache
@@ -203,18 +193,13 @@ jobs:
 
       - name: Package CLI (Unix)
         if: matrix.archive == 'tar.gz'
-        run: |
-          cd target/${{ matrix.target }}/release
-          tar czf kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }} kreuzberg
-          mv kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }} ../../..
+        run: scripts/ci/rust/package-cli-unix.sh ${{ matrix.target }}
         shell: bash
 
       - name: Package CLI (Windows)
         if: matrix.archive == 'zip'
         shell: pwsh
-        run: |
-          cd target/${{ matrix.target }}/release
-          Compress-Archive -Path kreuzberg.exe -DestinationPath ../../../kreuzberg-cli-${{ matrix.target }}.zip
+        run: scripts/ci/rust/package-cli-windows.ps1 -Target ${{ matrix.target }}
 
       - name: Upload CLI binary
         uses: actions/upload-artifact@v5
@@ -229,27 +214,10 @@ jobs:
 
       - name: Extract and test CLI (Unix)
         if: matrix.archive == 'tar.gz'
-        run: |
-          if [ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
-            if [ "${{ runner.os }}" = "macOS" ]; then
-              export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
-            else
-              export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
-            fi
-          fi
-          tar xzf kreuzberg-cli-${{ matrix.target }}.tar.gz
-          chmod +x kreuzberg
-          ./kreuzberg --version
-          ./kreuzberg --help
+        run: scripts/ci/rust/test-cli-unix.sh ${{ matrix.target }}
         shell: bash
 
       - name: Extract and test CLI (Windows)
         if: matrix.archive == 'zip'
         shell: pwsh
-        run: |
-          if ($Env:KREUZBERG_PDFIUM_PREBUILT) {
-            $env:PATH = "$Env:KREUZBERG_PDFIUM_PREBUILT\bin;" + $env:PATH
-          }
-          Expand-Archive -Path "kreuzberg-cli-${{ matrix.target }}.zip" -DestinationPath .
-          ./kreuzberg.exe --version
-          ./kreuzberg.exe --help
+        run: scripts/ci/rust/test-cli-windows.ps1 -Target ${{ matrix.target }}
