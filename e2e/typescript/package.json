@@ -1,0 +1,14 @@
+{
+	"name": "@kreuzberg/e2e-typescript",
+	"version": "4.0.0-rc.5",
+	"private": true,
+	"type": "module",
+	"description": "TypeScript E2E tests for Kreuzberg",
+	"scripts": {
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"vitest": "^4.0.14",
+		"@kreuzberg/node": "workspace:*"
+	}
+}
