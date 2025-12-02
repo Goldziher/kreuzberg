@@ -20,6 +20,24 @@ importers:
       '@emnapi/runtime':
         specifier: 1.7.1
         version: 1.7.1
+      '@octokit/core':
+        specifier: 4.0.0-rc.5
+        version: 7.0.6
+      esbuild:
+        specifier: 4.0.0-rc.5
+        version: 0.27.0
+      picomatch:
+        specifier: 4.0.0-rc.5
+        version: 4.0.3
+      postcss:
+        specifier: 8.5.6
+        version: 8.5.6
+      typanion:
+        specifier: 4.0.0-rc.5
+        version: 3.14.0
+      vite:
+        specifier: 4.0.0-rc.5
+        version: 7.2.6(@types/node@24.10.1)
       which:
         specifier: ^6.0.0
         version: 6.0.0
@@ -43,8 +61,8 @@ importers:
         specifier: ^7.0.1
         version: 7.0.1
       oxlint:
-        specifier: ^1.30.0
-        version: 1.30.0
+        specifier: ^1.31.0
+        version: 1.31.0
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
@@ -1246,43 +1264,43 @@ packages:
   '@octokit/types@16.0.0':
     resolution: {integrity: sha512-sKq+9r1Mm4efXW1FCk7hFSeJo4QKreL/tTbR0rz/qx/r1Oa2VV83LTA/H/MuCOX7uCIJmQVRKBcbmWoySjAnSg==}
 
-  '@oxlint/darwin-arm64@1.30.0':
-    resolution: {integrity: sha512-vIiTk1FBObXHvaG3WK/SpwCZP06fuHhSrn8mK2hEs2uSFWG63WgvLAHSGhI4U1X29JGf36zhfUzuKirDIVdKBQ==}
+  '@oxlint/darwin-arm64@1.31.0':
+    resolution: {integrity: sha512-HqoYNH5WFZRdqGUROTFGOdBcA9y/YdHNoR/ujlyVO53it+q96dujbgKEvlff/WEuo4LbDKBrKLWKTKvOd/VYdg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@oxlint/darwin-x64@1.30.0':
-    resolution: {integrity: sha512-DP4ueul8Vza52gJX1/+jyXQjUsgjmPe4Pq5uYOVa8k2V8cKRb2JzBls+DugbeP7yzKNTmlSp3J2mUnHQXuntLA==}
+  '@oxlint/darwin-x64@1.31.0':
+    resolution: {integrity: sha512-gNq+JQXBCkYKQhmJEgSNjuPqmdL8yBEX3v0sueLH3g5ym4OIrNO7ml1M7xzCs0zhINQCR9MsjMJMyBNaF1ed+g==}
     cpu: [x64]
     os: [darwin]
 
-  '@oxlint/linux-arm64-gnu@1.30.0':
-    resolution: {integrity: sha512-1e9NvTvjzG6t1tnUzNU9HZTVwNwhZw2BDQxwIsXV743g54BIkvyZNNXOEGic/Jw4IuIXHzpX3ztVWZaSzvDopg==}
+  '@oxlint/linux-arm64-gnu@1.31.0':
+    resolution: {integrity: sha512-cRmttpr3yHPwbrvtPNlv+0Zw2Oeh0cU902iMI4fFW9ylbW/vUAcz6DvzGMCYZbII8VDiwQ453SV5AA8xBgMbmw==}
     cpu: [arm64]
     os: [linux]
 
-  '@oxlint/linux-arm64-musl@1.30.0':
-    resolution: {integrity: sha512-szb5RB8Tbk756/z/GAdmUn+H1E2815BbcM7s6JZYQgyCJxR0RCL1yFXgKyz3BjIDqzR98Tw8H3g4TeJbN2etAg==}
+  '@oxlint/linux-arm64-musl@1.31.0':
+    resolution: {integrity: sha512-0p7vn0hdMdNPIUzemw8f1zZ2rRZ/963EkK3o4P0KUXOPgleo+J9ZIPH7gcHSHtyrNaBifN03wET1rH4SuWQYnA==}
     cpu: [arm64]
     os: [linux]
 
-  '@oxlint/linux-x64-gnu@1.30.0':
-    resolution: {integrity: sha512-yOWGu4a82yA8xLusaznW41IF5ZkvBNz/U++M2/tCYAQUoJKSfJuAS5AhApRMKZLKeX0Vmdagh0YwvC+e98QG0w==}
+  '@oxlint/linux-x64-gnu@1.31.0':
+    resolution: {integrity: sha512-vNIbpSwQ4dwN0CUmojG7Y91O3CXOf0Kno7DSTshk/JJR4+u8HNVuYVjX2qBRk0OMc4wscJbEd7wJCl0VJOoCOw==}
     cpu: [x64]
     os: [linux]
 
-  '@oxlint/linux-x64-musl@1.30.0':
-    resolution: {integrity: sha512-qL1902VF4EMTZTZdJEIzzUQ+UD0IbH+IW6dhYZXbP9nTXJnItW1fk4cyJq5zfUVu1IoVwKK2FP1jUMqEsBlWTw==}
+  '@oxlint/linux-x64-musl@1.31.0':
+    resolution: {integrity: sha512-4avnH09FJRTOT2cULdDPG0s14C+Ku4cnbNye6XO7rsiX6Bprz+aQblLA+1WLOr7UfC/0zF+jnZ9K5VyBBJy9Kw==}
     cpu: [x64]
     os: [linux]
 
-  '@oxlint/win32-arm64@1.30.0':
-    resolution: {integrity: sha512-QK6C1djHKI7g1l5g6W9vkz9sd+sn1QJe6PbaV2sWFjVVoT0tO6LWygVWaci09ZHYVJ+lnCbbaFEgZ9jQhIs05A==}
+  '@oxlint/win32-arm64@1.31.0':
+    resolution: {integrity: sha512-mQaD5H93OUpxiGjC518t5wLQikf0Ur5mQEKO2VoTlkp01gqmrQ+hyCLOzABlsAIAeDJD58S9JwNOw4KFFnrqdw==}
     cpu: [arm64]
     os: [win32]
 
-  '@oxlint/win32-x64@1.30.0':
-    resolution: {integrity: sha512-tbPnJIBUKke9KpceV+DpGyfN3LdhGaEPJHSuD4/mUEwP9Kk6IKSoDNih681RVGhgvaEZg3uHmQr6n9Uh0P3Yrg==}
+  '@oxlint/win32-x64@1.31.0':
+    resolution: {integrity: sha512-AS/h58HfloccRlVs7P3zbyZfxNS62JuE8/3fYGjkiRlR1ZoDxdqmz5QgLEn+YxxFUTMmclGAPMFHg9z2Pk315A==}
     cpu: [x64]
     os: [win32]
 
@@ -1938,8 +1956,8 @@ packages:
     resolution: {integrity: sha512-OBTsG0W8ddBVOeVVVychpVBS87A9YV5sa2hJ6lc025T97Le+J4v++PwSC4XFs1C62SWyNdof0Mh4KvnZgtt4aw==}
     os: [win32, darwin, linux]
 
-  oxlint@1.30.0:
-    resolution: {integrity: sha512-6Mcpj7Gn26QNRUpue9kRZKQg623mH10kLPl597sNCOfXeUZHTglrc2O54eskHMRA+tR7c0u73nW4GPwSFePLkA==}
+  oxlint@1.31.0:
+    resolution: {integrity: sha512-U+Z3VShi1zuLF2Hz/pm4vWJUBm5sDHjwSzj340tz4tS2yXg9H5PTipsZv+Yu/alg6Z7EM2cZPKGNBZAvmdfkQg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -2213,8 +2231,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  vite@7.2.4:
-    resolution: {integrity: sha512-NL8jTlbo0Tn4dUEXEsUg8KeyG/Lkmc4Fnzb8JXN/Ykm9G4HNImjtABMJgkQoVjOBN/j2WAwDTRytdqJbZsah7w==}
+  vite@7.2.6:
+    resolution: {integrity: sha512-tI2l/nFHC5rLh7+5+o7QjKjSR04ivXDF4jcgV0f/bTQ+OJiITy5S6gaynVsEM+7RqzufMnVbIon6Sr5x1SDYaQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -3190,28 +3208,28 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 27.0.0
 
-  '@oxlint/darwin-arm64@1.30.0':
+  '@oxlint/darwin-arm64@1.31.0':
     optional: true
 
-  '@oxlint/darwin-x64@1.30.0':
+  '@oxlint/darwin-x64@1.31.0':
     optional: true
 
-  '@oxlint/linux-arm64-gnu@1.30.0':
+  '@oxlint/linux-arm64-gnu@1.31.0':
     optional: true
 
-  '@oxlint/linux-arm64-musl@1.30.0':
+  '@oxlint/linux-arm64-musl@1.31.0':
     optional: true
 
-  '@oxlint/linux-x64-gnu@1.30.0':
+  '@oxlint/linux-x64-gnu@1.31.0':
     optional: true
 
-  '@oxlint/linux-x64-musl@1.30.0':
+  '@oxlint/linux-x64-musl@1.31.0':
     optional: true
 
-  '@oxlint/win32-arm64@1.30.0':
+  '@oxlint/win32-arm64@1.31.0':
     optional: true
 
-  '@oxlint/win32-x64@1.30.0':
+  '@oxlint/win32-x64@1.31.0':
     optional: true
 
   '@pkgjs/parseargs@0.11.0':
@@ -3342,13 +3360,13 @@ snapshots:
       chai: 6.2.1
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.14(vite@7.2.4(@types/node@24.10.1))':
+  '@vitest/mocker@4.0.14(vite@7.2.6(@types/node@24.10.1))':
     dependencies:
       '@vitest/spy': 4.0.14
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.2.4(@types/node@24.10.1)
+      vite: 7.2.6(@types/node@24.10.1)
 
   '@vitest/pretty-format@4.0.14':
     dependencies:
@@ -3848,16 +3866,16 @@ snapshots:
       onnxruntime-common: 1.23.2
     optional: true
 
-  oxlint@1.30.0:
+  oxlint@1.31.0:
     optionalDependencies:
-      '@oxlint/darwin-arm64': 1.30.0
-      '@oxlint/darwin-x64': 1.30.0
-      '@oxlint/linux-arm64-gnu': 1.30.0
-      '@oxlint/linux-arm64-musl': 1.30.0
-      '@oxlint/linux-x64-gnu': 1.30.0
-      '@oxlint/linux-x64-musl': 1.30.0
-      '@oxlint/win32-arm64': 1.30.0
-      '@oxlint/win32-x64': 1.30.0
+      '@oxlint/darwin-arm64': 1.31.0
+      '@oxlint/darwin-x64': 1.31.0
+      '@oxlint/linux-arm64-gnu': 1.31.0
+      '@oxlint/linux-arm64-musl': 1.31.0
+      '@oxlint/linux-x64-gnu': 1.31.0
+      '@oxlint/linux-x64-musl': 1.31.0
+      '@oxlint/win32-arm64': 1.31.0
+      '@oxlint/win32-x64': 1.31.0
 
   package-json-from-dist@1.0.1: {}
 
@@ -4200,7 +4218,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  vite@7.2.4(@types/node@24.10.1):
+  vite@7.2.6(@types/node@24.10.1):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -4215,7 +4233,7 @@ snapshots:
   vitest@4.0.14(@types/node@24.10.1):
     dependencies:
       '@vitest/expect': 4.0.14
-      '@vitest/mocker': 4.0.14(vite@7.2.4(@types/node@24.10.1))
+      '@vitest/mocker': 4.0.14(vite@7.2.6(@types/node@24.10.1))
       '@vitest/pretty-format': 4.0.14
       '@vitest/runner': 4.0.14
       '@vitest/snapshot': 4.0.14
@@ -4232,7 +4250,7 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.2.4(@types/node@24.10.1)
+      vite: 7.2.6(@types/node@24.10.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.1
