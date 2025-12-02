@@ -189,15 +189,34 @@ internal static partial class NativeMethods
     private static IntPtr LoadNativeLibrary()
     {
         var fileName = GetLibraryFileName();
-        foreach (var path in GetProbePaths(fileName))
+        var debug = Environment.GetEnvironmentVariable("KREUZBERG_BENCHMARK_DEBUG") == "true";
+        var probePaths = GetProbePaths(fileName).ToList();
+
+        if (debug)
+        {
+            System.Console.Error.WriteLine($"[DEBUG] Looking for native library: {fileName}");
+            System.Console.Error.WriteLine($"[DEBUG] Probe paths:");
+            foreach (var path in probePaths)
+            {
+                var exists = System.IO.File.Exists(path);
+                System.Console.Error.WriteLine($"[DEBUG]   {path} (exists: {exists})");
+            }
+        }
+
+        foreach (var path in probePaths)
         {
             if (NativeLibrary.TryLoad(path, out var handle))
             {
+                if (debug)
+                {
+                    System.Console.Error.WriteLine($"[DEBUG] Successfully loaded native library from: {path}");
+                }
                 return handle;
             }
         }
 
-        throw new DllNotFoundException($"Unable to locate {fileName}. Set KREUZBERG_FFI_DIR or place the library in target/release.");
+        var pathsStr = string.Join(", ", probePaths);
+        throw new DllNotFoundException($"Unable to locate {fileName}. Checked: {pathsStr}. Set KREUZBERG_FFI_DIR or place the library in target/release.");
     }
 
     private static IEnumerable<string> GetProbePaths(string fileName)
@@ -214,7 +233,20 @@ internal static partial class NativeMethods
         var cwd = Directory.GetCurrentDirectory();
         yield return Path.Combine(cwd, fileName);
 
-        // Walk up to workspace target/{release,debug}
+        // Also check CWD for target subdirectories
+        var cwdRelease = Path.Combine(cwd, "target", "release", fileName);
+        if (File.Exists(cwdRelease))
+        {
+            yield return cwdRelease;
+        }
+
+        var cwdDebug = Path.Combine(cwd, "target", "debug", fileName);
+        if (File.Exists(cwdDebug))
+        {
+            yield return cwdDebug;
+        }
+
+        // Walk up from base directory to workspace target/{release,debug}
         string? dir = AppContext.BaseDirectory;
         for (var i = 0; i < 5 && dir != null; i++)
         {
@@ -224,10 +256,10 @@ internal static partial class NativeMethods
                 yield return release;
             }
 
-            var debug = Path.Combine(dir, "target", "debug", fileName);
-            if (File.Exists(debug))
+            var debugPath = Path.Combine(dir, "target", "debug", fileName);
+            if (File.Exists(debugPath))
             {
-                yield return debug;
+                yield return debugPath;
             }
 
             dir = Directory.GetParent(dir)?.FullName;

@@ -419,6 +419,27 @@ final class KreuzbergFFI {
             libExt = ".so";
         }
 
+        // Check for KREUZBERG_FFI_DIR environment variable (set by benchmark harness)
+        String ffiDir = System.getenv("KREUZBERG_FFI_DIR");
+        if (ffiDir != null && !ffiDir.isEmpty()) {
+            java.nio.file.Path ffiPath = java.nio.file.Path.of(ffiDir);
+            java.nio.file.Path libPath = ffiPath.resolve(libName + libExt);
+            java.nio.file.Path pdfiumPath = ffiPath.resolve(pdfiumLibName + libExt);
+
+            if (java.nio.file.Files.exists(libPath)) {
+                try {
+                    // Load pdfium first if it exists
+                    if (java.nio.file.Files.exists(pdfiumPath)) {
+                        System.load(pdfiumPath.toAbsolutePath().toString());
+                    }
+                    System.load(libPath.toAbsolutePath().toString());
+                    return;
+                } catch (UnsatisfiedLinkError e) { // NOPMD - fallback on error
+                    // Fall through to try other locations
+                }
+            }
+        }
+
         // Try to load from classpath first (for packaged JAR)
         String resourcePath = "/" + libName + libExt;
         String pdfiumResourcePath = "/" + pdfiumLibName + libExt;

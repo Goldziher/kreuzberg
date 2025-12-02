@@ -201,7 +201,8 @@ pub fn create_ruby_sync_adapter() -> Result<SubprocessAdapter> {
     args.push(script_path.to_string_lossy().to_string());
     args.push("sync".to_string());
 
-    Ok(SubprocessAdapter::new("kreuzberg-ruby-sync", command, args, vec![]))
+    let env = build_library_env()?;
+    Ok(SubprocessAdapter::new("kreuzberg-ruby-sync", command, args, env))
 }
 
 /// Create Ruby batch adapter (batch_extract_file)
@@ -212,11 +213,12 @@ pub fn create_ruby_batch_adapter() -> Result<SubprocessAdapter> {
     args.push(script_path.to_string_lossy().to_string());
     args.push("batch".to_string());
 
+    let env = build_library_env()?;
     Ok(SubprocessAdapter::with_batch_support(
         "kreuzberg-ruby-batch",
         command,
         args,
-        vec![],
+        env,
     ))
 }
 
