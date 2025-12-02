@@ -63,6 +63,8 @@ runs:
           DOCKER_OPTS="--env TESSERACT_RS_CACHE_DIR=/io/.tesseract-cache/${{ inputs.label }}"
           DOCKER_OPTS="${DOCKER_OPTS} --env XDG_CACHE_HOME=/io/.xdg-cache/${{ inputs.label }}"
           DOCKER_OPTS="${DOCKER_OPTS} --env HOME=/io/.tesseract-home/${{ inputs.label }}"
+          DOCKER_OPTS="${DOCKER_OPTS} --env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu"
+          DOCKER_OPTS="${DOCKER_OPTS} --env OPENSSL_INCLUDE_DIR=/usr/include"
           echo "docker-options=${DOCKER_OPTS}" >> $GITHUB_OUTPUT
         else
           echo "TESSERACT_RS_CACHE_DIR=" >> $GITHUB_ENV
