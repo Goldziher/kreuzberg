@@ -235,7 +235,11 @@ pub fn create_go_sync_adapter() -> Result<SubprocessAdapter> {
         "kreuzberg_extract_go.go".to_string(),
         "sync".to_string(),
     ];
-    let env = build_library_env()?;
+    let mut env = build_library_env()?;
+    // Propagate debug flag to Go script
+    if env::var("KREUZBERG_BENCHMARK_DEBUG").is_ok() {
+        env.push(("KREUZBERG_BENCHMARK_DEBUG".to_string(), "true".to_string()));
+    }
     let mut adapter = SubprocessAdapter::new("kreuzberg-go-sync", command, args, env);
     adapter.set_working_dir(scripts_dir);
     Ok(adapter)
@@ -254,7 +258,11 @@ pub fn create_go_batch_adapter() -> Result<SubprocessAdapter> {
         "kreuzberg_extract_go.go".to_string(),
         "batch".to_string(),
     ];
-    let env = build_library_env()?;
+    let mut env = build_library_env()?;
+    // Propagate debug flag to Go script
+    if env::var("KREUZBERG_BENCHMARK_DEBUG").is_ok() {
+        env.push(("KREUZBERG_BENCHMARK_DEBUG".to_string(), "true".to_string()));
+    }
     let mut adapter = SubprocessAdapter::with_batch_support("kreuzberg-go-batch", command, args, env);
     adapter.set_working_dir(scripts_dir);
     Ok(adapter)
