@@ -9,7 +9,6 @@
 #
 # Debug output is written to stderr to avoid interfering with JSON output on stdout.
 
-require 'kreuzberg'
 require 'json'
 
 DEBUG = ENV.fetch('KREUZBERG_BENCHMARK_DEBUG', 'false') == 'true'
@@ -18,6 +17,48 @@ def debug_log(message)
   return unless DEBUG
   warn "[DEBUG] #{Time.now.iso8601(3)} - #{message}"
 end
+
+# Log library paths before loading gem (crucial for diagnosis)
+debug_log "=== Gem Initialization Debug Info ==="
+debug_log "RUBY_PLATFORM: #{RUBY_PLATFORM}"
+debug_log "RUBY_VERSION: #{RUBY_VERSION}"
+debug_log "LD_LIBRARY_PATH: #{ENV['LD_LIBRARY_PATH'] || 'NOT SET'}"
+debug_log "DYLD_LIBRARY_PATH: #{ENV['DYLD_LIBRARY_PATH'] || 'NOT SET'}"
+debug_log "LD_LIBRARY_PATH entries:"
+(ENV['LD_LIBRARY_PATH'] || '').split(':').filter_map { |p| p if File.directory?(p) }.each do |dir|
+  debug_log "  [OK] #{dir}"
+end
+(ENV['LD_LIBRARY_PATH'] || '').split(':').filter_map { |p| p unless File.directory?(p) || p.empty? }.each do |dir|
+  debug_log "  [MISSING] #{dir}"
+end
+
+# Load the gem and catch initialization errors with detailed diagnostics
+begin
+  debug_log "Loading kreuzberg gem..."
+  require 'kreuzberg'
+  debug_log "Successfully loaded kreuzberg gem"
+rescue LoadError => e
+  debug_log "FAILED to load kreuzberg gem: #{e.class} - #{e.message}"
+  debug_log "Backtrace:\n#{e.backtrace.join("\n")}"
+
+  # Try to diagnose the issue
+  debug_log "Attempting to find kreuzberg library files:"
+  require 'rbconfig'
+  gem_root = Gem.loaded_specs['kreuzberg_rb']&.gem_root
+  debug_log "Gem root: #{gem_root || 'NOT FOUND'}"
+
+  if gem_root
+    lib_dir = File.join(gem_root, 'lib')
+    debug_log "Lib directory: #{lib_dir} (exists: #{File.directory?(lib_dir)})"
+    if File.directory?(lib_dir)
+      debug_log "Contents:"
+      Dir.glob("#{lib_dir}/**/*").each { |f| debug_log "  - #{f}" }
+    end
+  end
+
+  raise
+end
+debug_log "=== Initialization Complete ===" if DEBUG
 
 def extract_sync(file_path)
   debug_log "=== SYNC EXTRACTION START ==="

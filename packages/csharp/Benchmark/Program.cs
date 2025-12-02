@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Kreuzberg;
 
+var debug = Environment.GetEnvironmentVariable("KREUZBERG_BENCHMARK_DEBUG") == "true";
 var argsSpan = args.AsSpan();
 string? filePath = null;
 int iterations = 5;
@@ -31,18 +32,79 @@ if (string.IsNullOrWhiteSpace(filePath))
     return 1;
 }
 
+if (debug)
+{
+    Console.Error.WriteLine("[DEBUG] Starting C# benchmark");
+    Console.Error.WriteLine($"[DEBUG] File: {filePath}");
+    Console.Error.WriteLine($"[DEBUG] Iterations: {iterations}");
+    Console.Error.WriteLine($"[DEBUG] KREUZBERG_FFI_DIR: {Environment.GetEnvironmentVariable("KREUZBERG_FFI_DIR") ?? "(not set)"}");
+    Console.Error.WriteLine($"[DEBUG] LD_LIBRARY_PATH: {Environment.GetEnvironmentVariable("LD_LIBRARY_PATH") ?? "(not set)"}");
+    Console.Error.WriteLine($"[DEBUG] DYLD_LIBRARY_PATH: {Environment.GetEnvironmentVariable("DYLD_LIBRARY_PATH") ?? "(not set)"}");
+    Console.Error.WriteLine($"[DEBUG] PATH: {Environment.GetEnvironmentVariable("PATH") ?? "(not set)"}");
+    Console.Error.WriteLine($"[DEBUG] AppContext.BaseDirectory: {AppContext.BaseDirectory}");
+}
+
+if (!File.Exists(filePath))
+{
+    Console.Error.WriteLine($"Error: File not found: {filePath}");
+    return 1;
+}
+
 var content = await File.ReadAllBytesAsync(filePath);
 var mimeType = GuessMimeType(filePath);
 
-// Warmup
-_ = KreuzbergClient.ExtractBytesSync(content, mimeType);
+if (debug)
+{
+    Console.Error.WriteLine($"[DEBUG] File size: {content.Length} bytes");
+    Console.Error.WriteLine($"[DEBUG] MIME type: {mimeType}");
+}
+
+try
+{
+    if (debug)
+    {
+        Console.Error.WriteLine("[DEBUG] Attempting warmup extraction...");
+    }
+    var warmupResult = KreuzbergClient.ExtractBytesSync(content, mimeType);
+    if (debug)
+    {
+        Console.Error.WriteLine($"[DEBUG] Warmup succeeded, extracted {warmupResult.Content.Length} chars");
+    }
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"Error during warmup: {ex.GetType().Name}: {ex.Message}");
+    if (debug)
+    {
+        Console.Error.WriteLine($"[DEBUG] Full exception: {ex}");
+    }
+    return 1;
+}
 
 var sw = System.Diagnostics.Stopwatch.StartNew();
 for (var i = 0; i < iterations; i++)
 {
-    _ = KreuzbergClient.ExtractBytesSync(content, mimeType);
+    try
+    {
+        _ = KreuzbergClient.ExtractBytesSync(content, mimeType);
+    }
+    catch (Exception ex)
+    {
+        sw.Stop();
+        Console.Error.WriteLine($"Error during iteration {i}: {ex.GetType().Name}: {ex.Message}");
+        if (debug)
+        {
+            Console.Error.WriteLine($"[DEBUG] Full exception: {ex}");
+        }
+        return 1;
+    }
 }
 sw.Stop();
+
+if (debug)
+{
+    Console.Error.WriteLine($"[DEBUG] Extraction completed in {sw.ElapsedMilliseconds}ms");
+}
 
 var elapsedSeconds = sw.Elapsed.TotalSeconds;
 var bytesProcessed = content.Length * (long)iterations;
