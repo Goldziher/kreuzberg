@@ -21,9 +21,26 @@ fi
 
 version="$1"
 package="@kreuzberg/node"
+max_attempts=3
+attempt=1
+package_found=false
 
-# npm view returns non-zero if version doesn't exist
-if npm view "${package}@${version}" version >/dev/null 2>&1; then
+while [ $attempt -le $max_attempts ]; do
+  echo "::debug::Checking npm for ${package}@${version} (attempt ${attempt}/${max_attempts})"
+
+  if npm view "${package}@${version}" version >/dev/null 2>&1; then
+    package_found=true
+    break
+  elif [ $attempt -lt $max_attempts ]; then
+    sleep_time=$((attempt * 5))
+    echo "::warning::npm check failed, retrying in ${sleep_time}s..."
+    sleep "$sleep_time"
+  fi
+
+  attempt=$((attempt + 1))
+done
+
+if [ "$package_found" = true ]; then
   echo "exists=true" >> "$GITHUB_OUTPUT"
   echo "::notice::Node package ${package}@${version} already exists on npm"
 else
