@@ -4,11 +4,11 @@
  */
 
 declare module "sharp" {
-	const sharp: any;
+	const sharp: unknown;
 	export default sharp;
 }
 
 declare module "@gutenye/ocr-node" {
-	const GutenOcr: any;
+	const GutenOcr: unknown;
 	export default GutenOcr;
 }

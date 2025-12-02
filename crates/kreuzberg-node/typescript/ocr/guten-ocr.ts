@@ -300,11 +300,12 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 			let height = 0;
 
 			try {
-				const sharp = await import("sharp").then((m: any) => m.default || m);
-				const image = sharp(buffer);
+				const sharpModule = await import("sharp");
+				const sharp = (sharpModule as unknown as { default?: unknown }).default || sharpModule;
+				const image = (sharp as (buffer: Buffer) => { metadata: () => Promise<Record<string, unknown>> })(buffer);
 				const metadata = await image.metadata();
-				width = metadata.width ?? 0;
-				height = metadata.height ?? 0;
+				width = ((metadata as Record<string, unknown>).width as number) ?? 0;
+				height = ((metadata as Record<string, unknown>).height as number) ?? 0;
 			} catch (metadataError) {
 				const error = metadataError as Error;
 				console.warn(`[Guten OCR] Unable to read image metadata via sharp: ${error.message}`);
