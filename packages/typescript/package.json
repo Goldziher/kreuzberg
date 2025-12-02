@@ -76,7 +76,7 @@
 		"README.md"
 	],
 	"dependencies": {
-		"kreuzberg-node": "4.0.0-rc.5",
+		"@kreuzberg/node": "workspace:*",
 		"which": "^6.0.0"
 	},
 	"optionalDependencies": {

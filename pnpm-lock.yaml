@@ -62,6 +62,50 @@ importers:
         specifier: ^0.34.5
         version: 0.34.5
 
+  packages/typescript:
+    dependencies:
+      '@kreuzberg/node':
+        specifier: workspace:*
+        version: link:../../crates/kreuzberg-node
+      which:
+        specifier: ^6.0.0
+        version: 6.0.0
+    devDependencies:
+      '@types/archiver':
+        specifier: ^7.0.0
+        version: 7.0.0
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.10.1
+      '@types/which':
+        specifier: ^3.0.4
+        version: 3.0.4
+      '@vitest/coverage-v8':
+        specifier: ^4.0.14
+        version: 4.0.14(vitest@4.0.14(@types/node@24.10.1))
+      archiver:
+        specifier: ^7.0.1
+        version: 7.0.1
+      oxlint:
+        specifier: ^1.30.0
+        version: 1.31.0
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.14
+        version: 4.0.14(@types/node@24.10.1)
+    optionalDependencies:
+      '@gutenye/ocr-node':
+        specifier: ^1.4.8
+        version: 1.4.8
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
+
 packages:
 
   '@babel/helper-string-parser@7.27.1':
