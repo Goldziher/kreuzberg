@@ -223,32 +223,44 @@ pub fn create_ruby_batch_adapter() -> Result<SubprocessAdapter> {
 /// Create Go sync adapter
 pub fn create_go_sync_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("kreuzberg_extract_go.go")?;
+    let scripts_dir = script_path
+        .parent()
+        .ok_or_else(|| crate::Error::Config("Unable to determine scripts directory".to_string()))?
+        .to_path_buf();
     let command = find_go()?;
     let args = vec![
         "run".to_string(),
-        script_path.to_string_lossy().to_string(),
+        "kreuzberg_extract_go.go".to_string(),
         "sync".to_string(),
     ];
     let env = build_library_env()?;
-    Ok(SubprocessAdapter::new("kreuzberg-go-sync", command, args, env))
+    let mut adapter = SubprocessAdapter::new("kreuzberg-go-sync", command, args, env);
+    adapter.set_working_dir(scripts_dir);
+    Ok(adapter)
 }
 
 /// Create Go batch adapter
 pub fn create_go_batch_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("kreuzberg_extract_go.go")?;
+    let scripts_dir = script_path
+        .parent()
+        .ok_or_else(|| crate::Error::Config("Unable to determine scripts directory".to_string()))?
+        .to_path_buf();
     let command = find_go()?;
     let args = vec![
         "run".to_string(),
-        script_path.to_string_lossy().to_string(),
+        "kreuzberg_extract_go.go".to_string(),
         "batch".to_string(),
     ];
     let env = build_library_env()?;
-    Ok(SubprocessAdapter::with_batch_support(
+    let mut adapter = SubprocessAdapter::with_batch_support(
         "kreuzberg-go-batch",
         command,
         args,
         env,
-    ))
+    );
+    adapter.set_working_dir(scripts_dir);
+    Ok(adapter)
 }
 
 /// Create Java sync adapter
@@ -263,6 +275,9 @@ pub fn create_java_sync_adapter() -> Result<SubprocessAdapter> {
         )));
     }
     let lib_dir = native_library_dir()?;
+    let lib_dir_str = lib_dir.to_string_lossy().to_string();
+    let mut env = build_library_env()?;
+    env.push(("KREUZBERG_FFI_DIR".to_string(), lib_dir_str.clone()));
     let args = vec![
         "--enable-native-access=ALL-UNNAMED".to_string(),
         format!("-Djava.library.path={}", lib_dir.display()),
@@ -271,7 +286,7 @@ pub fn create_java_sync_adapter() -> Result<SubprocessAdapter> {
         script_path.to_string_lossy().to_string(),
         "sync".to_string(),
     ];
-    Ok(SubprocessAdapter::new("kreuzberg-java-sync", command, args, vec![]))
+    Ok(SubprocessAdapter::new("kreuzberg-java-sync", command, args, env))
 }
 
 /// Create C# sync adapter
@@ -291,7 +306,9 @@ pub fn create_csharp_sync_adapter() -> Result<SubprocessAdapter> {
         "--".to_string(),
         "--file".to_string(),
     ];
-    let env = build_library_env()?;
+    let lib_dir = native_library_dir()?;
+    let mut env = build_library_env()?;
+    env.push(("KREUZBERG_FFI_DIR".to_string(), lib_dir.to_string_lossy().to_string()));
     Ok(SubprocessAdapter::new("kreuzberg-csharp-sync", command, args, env))
 }
 

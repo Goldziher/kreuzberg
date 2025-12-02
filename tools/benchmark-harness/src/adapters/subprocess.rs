@@ -25,6 +25,7 @@ pub struct SubprocessAdapter {
     args: Vec<String>,
     env: Vec<(String, String)>,
     supports_batch: bool,
+    working_dir: Option<PathBuf>,
 }
 
 impl SubprocessAdapter {
@@ -47,6 +48,7 @@ impl SubprocessAdapter {
             args,
             env,
             supports_batch: false,
+            working_dir: None,
         }
     }
 
@@ -72,7 +74,16 @@ impl SubprocessAdapter {
             args,
             env,
             supports_batch: true,
+            working_dir: None,
         }
+    }
+
+    /// Set the working directory for subprocess execution
+    ///
+    /// # Arguments
+    /// * `dir` - Directory path to change to before running the command
+    pub fn set_working_dir(&mut self, dir: PathBuf) {
+        self.working_dir = Some(dir);
     }
 
     /// Execute the extraction subprocess
@@ -80,6 +91,9 @@ impl SubprocessAdapter {
         let start = Instant::now();
 
         let mut cmd = Command::new(&self.command);
+        if let Some(dir) = &self.working_dir {
+            cmd.current_dir(dir);
+        }
         cmd.args(&self.args);
         cmd.arg(file_path.to_string_lossy().as_ref());
 
@@ -130,6 +144,9 @@ impl SubprocessAdapter {
         let start = Instant::now();
 
         let mut cmd = Command::new(&self.command);
+        if let Some(dir) = &self.working_dir {
+            cmd.current_dir(dir);
+        }
         cmd.args(&self.args);
 
         for path in file_paths {
