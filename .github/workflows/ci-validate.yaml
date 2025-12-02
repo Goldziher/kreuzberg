@@ -93,5 +93,5 @@ jobs:
           key: prek-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.pre-commit-config.yaml') }}-v2
 
       - name: Run lint
-        run: task lint
+        run: scripts/ci/validate/run-lint.sh
         shell: bash

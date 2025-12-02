@@ -95,20 +95,12 @@ jobs:
       - name: Install Ruby deps
         if: runner.os != 'Windows'
         shell: bash
-        run: |
-          cd packages/ruby
-          bundle config set deployment false
-          bundle config set path vendor/bundle
-          bundle install --jobs 4
+        run: scripts/ci/ruby/install-ruby-deps.sh
 
       - name: Install Ruby deps (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          cd packages/ruby
-          bundle config set deployment false
-          bundle config set path vendor/bundle
-          bundle install --jobs 4
+        run: scripts/ci/ruby/install-ruby-deps.ps1
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
@@ -128,68 +120,20 @@ jobs:
       - name: Configure bindgen compatibility headers (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
-        run: |
-          $includeRoot = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include"
-          $compat = "$includeRoot\msvc_compat"
-          $includeRoot = $includeRoot -replace '\\','/'
-          $compatForward = $compat -replace '\\','/'
-          $extra = "-I$includeRoot -I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
+        run: scripts/ci/ruby/configure-bindgen-windows.ps1
 
       - name: Vendor kreuzberg core crate
         shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf packages/ruby/vendor/kreuzberg
-          mkdir -p packages/ruby/vendor
-          cp -R crates/kreuzberg packages/ruby/vendor/kreuzberg
-          rm -rf packages/ruby/vendor/kreuzberg/.fastembed_cache
-          rm -rf packages/ruby/vendor/kreuzberg/target
-          find packages/ruby/vendor/kreuzberg -name '*.swp' -delete
-          find packages/ruby/vendor/kreuzberg -name '*.bak' -delete
-          find packages/ruby/vendor/kreuzberg -name '*.tmp' -delete
-          find packages/ruby/vendor/kreuzberg -name '*~' -delete
-          # Make vendored core crate installable without workspace context
-          sed -i.bak 's/^edition\\.workspace = true/edition = "2024"/' packages/ruby/vendor/kreuzberg/Cargo.toml
-          sed -i.bak 's/^rust-version\\.workspace = true/rust-version = "1.91"/' packages/ruby/vendor/kreuzberg/Cargo.toml
-          rm -f packages/ruby/vendor/kreuzberg/Cargo.toml.bak
-          core_version=$(awk -F '\"' '/^version =/ {print $2; exit}' crates/kreuzberg/Cargo.toml)
-          cat > packages/ruby/vendor/Cargo.toml <<'EOF'
-          [workspace]
-          members = ["kreuzberg"]
-
-          [workspace.package]
-          version = "__CORE_VERSION__"
-          edition = "2024"
-          rust-version = "1.91"
-          authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
-          license = "MIT"
-          repository = "https://github.com/Goldziher/kreuzberg"
-          homepage = "https://kreuzberg.dev"
-          EOF
-          sed -i.bak "s/__CORE_VERSION__/${core_version}/" packages/ruby/vendor/Cargo.toml
-          rm -f packages/ruby/vendor/Cargo.toml.bak
+        run: scripts/ci/ruby/vendor-kreuzberg-core.sh
 
       - name: Configure Tesseract build environment (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          # Set a clean temp directory for CMake builds to avoid FileTracker issues
-          $tempDir = "$env:GITHUB_WORKSPACE\temp"
-          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-          Add-Content -Path $env:GITHUB_ENV -Value "TEMP=$tempDir"
-          Add-Content -Path $env:GITHUB_ENV -Value "TMP=$tempDir"
-          # Use short path to avoid Windows MAX_PATH (260 char) issues with MSBuild FileTracker
-          Add-Content -Path $env:GITHUB_ENV -Value "TESSERACT_RS_CACHE_DIR=C:\tess"
-          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_VERBOSE_MAKEFILE=ON"
+        run: scripts/ci/ruby/configure-tesseract-windows.ps1
 
       - name: Build Ruby gem
         shell: bash
-        run: |
-          cd packages/ruby
-          bundle exec rake build
+        run: scripts/ci/ruby/build-gem.sh
 
       - name: Upload gem
         uses: actions/upload-artifact@v5
@@ -266,48 +210,24 @@ jobs:
       - name: Configure bindgen compatibility headers (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $includeRoot = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include"
-          $compat = "$includeRoot\msvc_compat"
-          $includeRoot = $includeRoot -replace '\\','/'
-          $compatForward = $compat -replace '\\','/'
-          $extra = "-I$includeRoot -I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
+        run: scripts/ci/ruby/configure-bindgen-windows.ps1
 
       - name: Install gem
         shell: bash
-        run: |
-          cd packages/ruby
-          gem install pkg/kreuzberg-*.gem
+        run: scripts/ci/ruby/install-gem.sh
 
       - name: Configure Tesseract build environment (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          # Set a clean temp directory for CMake builds to avoid FileTracker issues
-          $tempDir = "$env:GITHUB_WORKSPACE\temp"
-          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-          Add-Content -Path $env:GITHUB_ENV -Value "TEMP=$tempDir"
-          Add-Content -Path $env:GITHUB_ENV -Value "TMP=$tempDir"
-          # Use short path to avoid Windows MAX_PATH (260 char) issues with MSBuild FileTracker
-          Add-Content -Path $env:GITHUB_ENV -Value "TESSERACT_RS_CACHE_DIR=C:\tess"
-          Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_VERBOSE_MAKEFILE=ON"
+        run: scripts/ci/ruby/configure-tesseract-windows.ps1
 
       - name: Build local native extension
         shell: bash
-        run: |
-          cd packages/ruby
-          # Enable verbose output for debugging
-          export CARGO_BUILD_JOBS=1
-          export RUST_BACKTRACE=1
-          bundle exec rake compile
+        run: scripts/ci/ruby/compile-extension.sh
 
       - name: Run Ruby tests
-        run: |
-          cd packages/ruby
-          bundle exec rspec
+        shell: bash
+        run: scripts/ci/ruby/run-tests.sh
 
       - name: Download PDFium
         uses: ./.github/actions/download-pdfium

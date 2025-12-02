@@ -62,241 +62,41 @@ jobs:
     steps:
       - name: Validate tag and compute version
         id: meta
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_REF: ${{ inputs.ref }}
+          INPUT_TARGETS: ${{ inputs.targets }}
+          EVENT_RELEASE_TAG: ${{ github.event.release.tag_name }}
+          EVENT_DISPATCH_TAG: ${{ github.event.client_payload.tag }}
+          EVENT_DISPATCH_DRY_RUN: ${{ github.event.client_payload.dry_run }}
+          EVENT_DISPATCH_REF: ${{ github.event.client_payload.ref }}
+          EVENT_DISPATCH_TARGETS: ${{ github.event.client_payload.targets }}
         run: |
-          event="${{ github.event_name }}"
-          if [[ "$event" == "workflow_dispatch" ]]; then
-            tag="${{ inputs.tag }}"
-            dry_run_input="${{ inputs.dry_run }}"
-            ref_input="${{ inputs.ref }}"
-            targets_input="${{ inputs.targets }}"
-          elif [[ "$event" == "release" ]]; then
-            tag="${{ github.event.release.tag_name }}"
-            dry_run_input="false"
-            ref_input="refs/tags/${tag}"
-            targets_input=""
-          elif [[ "$event" == "repository_dispatch" ]]; then
-            tag="${{ github.event.client_payload.tag }}"
-            dry_run_input="${{ github.event.client_payload.dry_run }}"
-            ref_input="${{ github.event.client_payload.ref }}"
-            targets_input="${{ github.event.client_payload.targets }}"
-          else
-            tag="${GITHUB_REF_NAME}"
-            dry_run_input="false"
-            ref_input=""
-            targets_input=""
-            if [[ "$tag" == *-pre* || "$tag" == *-rc* ]]; then
-              dry_run_input="true"
-            fi
-          fi
-          if [[ -z "$tag" ]]; then
-            echo "Release tag could not be determined" >&2
-            exit 1
-          fi
-          if [[ "$tag" != v* ]]; then
-            echo "Tag must start with 'v' (e.g., v4.0.0-rc.1)" >&2
-            exit 1
-          fi
-          version="${tag#v}"
-          if [[ -n "$ref_input" ]]; then
-            ref="$ref_input"
-          else
-            ref="refs/tags/${tag}"
-          fi
-          if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
-            checkout_ref="refs/heads/main"
-            target_sha="$ref"
-          elif [[ "$ref" =~ ^refs/ ]]; then
-            checkout_ref="$ref"
-            target_sha=""
-          else
-            checkout_ref="refs/heads/${ref}"
-            target_sha=""
-          fi
-          if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
-            matrix_ref="main"
-          elif [[ "$ref" =~ ^refs/heads/(.+)$ ]]; then
-            matrix_ref="${BASH_REMATCH[1]}"
-          elif [[ "$ref" =~ ^refs/tags/(.+)$ ]]; then
-            matrix_ref="${BASH_REMATCH[1]}"
-          else
-            matrix_ref="$ref"
-          fi
-          dry_run="$dry_run_input"
+          metadata=$(bash scripts/publish/validate-and-compute-release-metadata.sh)
+          echo "$metadata" > release-metadata.json
 
-          if [[ "$ref" =~ ^refs/tags/ ]]; then
-            is_tag="true"
-          else
-            is_tag="false"
-          fi
-
-          normalize_target_list() {
-            local raw="$1"
-            raw="${raw:-all}"
-            if [[ -z "$raw" ]]; then
-              echo "all"
-            else
-              echo "$raw"
-            fi
-          }
-
-          targets_value=$(normalize_target_list "$targets_input")
-          release_python=false
-          release_node=false
-          release_ruby=false
-          release_cli=false
-          release_crates=false
-          release_docker=false
-          release_homebrew=false
-          release_java=false
-          release_csharp=false
-
-          set_all_targets() {
-            release_python=true
-            release_node=true
-            release_ruby=true
-            release_cli=true
-            release_crates=true
-            release_docker=true
-            release_homebrew=true
-            release_java=true
-            release_csharp=true
-          }
-
-          mapfile -t requested_targets < <(echo "$targets_value" | tr ',' '\n')
-
-          processed_any=false
-          for raw_target in "${requested_targets[@]}"; do
-            trimmed=$(echo "$raw_target" | tr '[:upper:]' '[:lower:]' | xargs)
-            if [[ -z "$trimmed" ]]; then
-              continue
-            fi
-            processed_any=true
-            case "$trimmed" in
-              all|'*'|'default')
-                set_all_targets
-                break
-                ;;
-              python)
-                release_python=true
-                ;;
-              node)
-                release_node=true
-                ;;
-              ruby)
-                release_ruby=true
-                ;;
-              cli)
-                release_cli=true
-                ;;
-              crates)
-                release_crates=true
-                ;;
-              docker)
-                release_docker=true
-                ;;
-              homebrew)
-                release_homebrew=true
-                ;;
-              java)
-                release_java=true
-                ;;
-              csharp|dotnet|cs|nuget)
-                release_csharp=true
-                ;;
-              none)
-                release_python=false
-                release_node=false
-                release_ruby=false
-                release_cli=false
-                release_crates=false
-                release_docker=false
-                release_homebrew=false
-                release_java=false
-                release_csharp=false
-                ;;
-              *)
-                echo "Unknown release target '$trimmed'. Allowed: all, python, node, ruby, cli, crates, docker, homebrew, java, csharp." >&2
-                exit 1
-                ;;
-            esac
-          done
-
-          if [[ "$release_homebrew" == "true" ]]; then
-            release_cli=true
-          fi
-
-          if [[ "$processed_any" == "false" ]]; then
-            set_all_targets
-            requested_targets=("all")
-          fi
-
-          enabled_targets=()
-          if [[ "$release_python" == "true" ]]; then enabled_targets+=("python"); fi
-          if [[ "$release_node" == "true" ]]; then enabled_targets+=("node"); fi
-          if [[ "$release_ruby" == "true" ]]; then enabled_targets+=("ruby"); fi
-          if [[ "$release_cli" == "true" ]]; then enabled_targets+=("cli"); fi
-          if [[ "$release_crates" == "true" ]]; then enabled_targets+=("crates"); fi
-          if [[ "$release_docker" == "true" ]]; then enabled_targets+=("docker"); fi
-          if [[ "$release_homebrew" == "true" ]]; then enabled_targets+=("homebrew"); fi
-          if [[ "$release_java" == "true" ]]; then enabled_targets+=("java"); fi
-          if [[ "$release_csharp" == "true" ]]; then enabled_targets+=("csharp"); fi
-
-          if [[ ${#enabled_targets[@]} -eq 9 ]]; then
-            release_targets_summary="all"
-          elif [[ ${#enabled_targets[@]} -eq 0 ]]; then
-            release_targets_summary="none"
-          else
-            release_targets_summary=$(IFS=','; echo "${enabled_targets[*]}")
-          fi
-
-          release_any="false"
-          if [[ ${#enabled_targets[@]} -gt 0 ]]; then
-            release_any="true"
-          fi
-
-          cat <<JSON > release-metadata.json
-          {
-            "tag": "$tag",
-            "version": "$version",
-            "ref": "$ref",
-            "checkout_ref": "$checkout_ref",
-            "target_sha": "$target_sha",
-            "matrix_ref": "$matrix_ref",
-            "dry_run": ${dry_run:-false},
-            "is_tag": $is_tag,
-            "release_targets": "$release_targets_summary",
-            "release_any": $release_any,
-            "release_python": $release_python,
-            "release_node": $release_node,
-            "release_ruby": $release_ruby,
-            "release_cli": $release_cli,
-            "release_crates": $release_crates,
-            "release_docker": $release_docker,
-            "release_homebrew": $release_homebrew,
-            "release_java": $release_java,
-            "release_csharp": $release_csharp
-          }
-          JSON
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
-          echo "dry_run=${dry_run:-false}" >> "$GITHUB_OUTPUT"
-          echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
-          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
-          echo "matrix_ref=$matrix_ref" >> "$GITHUB_OUTPUT"
-          echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
-          echo "release_targets=$release_targets_summary" >> "$GITHUB_OUTPUT"
-          echo "release_any=$release_any" >> "$GITHUB_OUTPUT"
-          echo "release_python=$release_python" >> "$GITHUB_OUTPUT"
-          echo "release_node=$release_node" >> "$GITHUB_OUTPUT"
-          echo "release_ruby=$release_ruby" >> "$GITHUB_OUTPUT"
-          echo "release_cli=$release_cli" >> "$GITHUB_OUTPUT"
-          echo "release_crates=$release_crates" >> "$GITHUB_OUTPUT"
-          echo "release_docker=$release_docker" >> "$GITHUB_OUTPUT"
-          echo "release_homebrew=$release_homebrew" >> "$GITHUB_OUTPUT"
-          echo "release_java=$release_java" >> "$GITHUB_OUTPUT"
-          echo "release_csharp=$release_csharp" >> "$GITHUB_OUTPUT"
-          echo "release_csharp=$release_csharp" >> "$GITHUB_OUTPUT"
+          echo "tag=$(echo "$metadata" | jq -r '.tag')" >> "$GITHUB_OUTPUT"
+          echo "version=$(echo "$metadata" | jq -r '.version')" >> "$GITHUB_OUTPUT"
+          echo "ref=$(echo "$metadata" | jq -r '.ref')" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$(echo "$metadata" | jq -r '.dry_run')" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$(echo "$metadata" | jq -r '.checkout_ref')" >> "$GITHUB_OUTPUT"
+          echo "target_sha=$(echo "$metadata" | jq -r '.target_sha')" >> "$GITHUB_OUTPUT"
+          echo "matrix_ref=$(echo "$metadata" | jq -r '.matrix_ref')" >> "$GITHUB_OUTPUT"
+          echo "is_tag=$(echo "$metadata" | jq -r '.is_tag')" >> "$GITHUB_OUTPUT"
+          echo "release_targets=$(echo "$metadata" | jq -r '.release_targets')" >> "$GITHUB_OUTPUT"
+          echo "release_any=$(echo "$metadata" | jq -r '.release_any')" >> "$GITHUB_OUTPUT"
+          echo "release_python=$(echo "$metadata" | jq -r '.release_python')" >> "$GITHUB_OUTPUT"
+          echo "release_node=$(echo "$metadata" | jq -r '.release_node')" >> "$GITHUB_OUTPUT"
+          echo "release_ruby=$(echo "$metadata" | jq -r '.release_ruby')" >> "$GITHUB_OUTPUT"
+          echo "release_cli=$(echo "$metadata" | jq -r '.release_cli')" >> "$GITHUB_OUTPUT"
+          echo "release_crates=$(echo "$metadata" | jq -r '.release_crates')" >> "$GITHUB_OUTPUT"
+          echo "release_docker=$(echo "$metadata" | jq -r '.release_docker')" >> "$GITHUB_OUTPUT"
+          echo "release_homebrew=$(echo "$metadata" | jq -r '.release_homebrew')" >> "$GITHUB_OUTPUT"
+          echo "release_java=$(echo "$metadata" | jq -r '.release_java')" >> "$GITHUB_OUTPUT"
+          echo "release_csharp=$(echo "$metadata" | jq -r '.release_csharp')" >> "$GITHUB_OUTPUT"
 
       - name: Upload release metadata
         uses: actions/upload-artifact@v5
@@ -316,20 +116,8 @@ jobs:
       - name: Check PyPI for existing version
         id: check
         run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-
-          # Check if package version exists on PyPI
-          http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://pypi.org/pypi/kreuzberg/${version}/json")
-
-          if [ "$http_code" = "200" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Python package kreuzberg==${version} already exists on PyPI"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Python package kreuzberg==${version} not found on PyPI, will build and publish"
-          fi
+          output=$(bash scripts/publish/check-pypi-version.sh "${{ needs.prepare.outputs.version }}")
+          echo "$output" >> $GITHUB_OUTPUT
 
   check-npm:
     name: Check if Node package exists on npm
@@ -342,18 +130,8 @@ jobs:
       - name: Check npm for existing version
         id: check
         run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-          package="@kreuzberg/node"
-
-          # npm view returns non-zero if version doesn't exist
-          if npm view "${package}@${version}" version >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Node package ${package}@${version} already exists on npm"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Node package ${package}@${version} not found on npm, will build and publish"
-          fi
+          output=$(bash scripts/publish/check-npm-version.sh "${{ needs.prepare.outputs.version }}")
+          echo "$output" >> $GITHUB_OUTPUT
 
   check-rubygems:
     name: Check if Ruby gem exists on RubyGems
@@ -366,17 +144,8 @@ jobs:
       - name: Check RubyGems for existing version
         id: check
         run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-
-          # gem search returns versions that exist
-          if gem search kreuzberg --remote --exact --version "=${version}" | grep -q "kreuzberg (${version})"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Ruby gem kreuzberg ${version} already exists on RubyGems"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Ruby gem kreuzberg ${version} not found on RubyGems, will build and publish"
-          fi
+          output=$(bash scripts/publish/check-rubygems-version.sh "${{ needs.prepare.outputs.version }}")
+          echo "$output" >> $GITHUB_OUTPUT
 
   check-maven:
     name: Check if Java package exists on Maven Central
@@ -389,23 +158,8 @@ jobs:
       - name: Check Maven Central for existing version
         id: check
         run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-          group="dev.kreuzberg"
-          artifact="kreuzberg"
-
-          # Query Maven Central REST API
-          url="https://search.maven.org/solrsearch/select?q=g:${group}+AND+a:${artifact}+AND+v:${version}&rows=1&wt=json"
-          response=$(curl -s "$url")
-
-          count=$(echo "$response" | jq -r '.response.numFound')
-          if [ "$count" -gt 0 ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Java package ${group}:${artifact}:${version} already exists on Maven Central"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Java package ${group}:${artifact}:${version} not found on Maven Central, will build and publish"
-          fi
+          output=$(bash scripts/publish/check-maven-version.sh "${{ needs.prepare.outputs.version }}")
+          echo "$output" >> $GITHUB_OUTPUT
 
   check-nuget:
     name: Check if C# package exists on NuGet
@@ -418,21 +172,8 @@ jobs:
       - name: Check NuGet for existing version
         id: check
         run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-          package="Kreuzberg"
-
-          # Query NuGet API
-          url="https://api.nuget.org/v3/registration5-semver1/${package,,}/index.json"
-          response=$(curl -s "$url")
-
-          if echo "$response" | jq -e ".items[].items[]?.catalogEntry | select(.version == \"${version}\")" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::NuGet package ${package} ${version} already exists"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::NuGet package ${package} ${version} not found, will build and publish"
-          fi
+          output=$(bash scripts/publish/check-nuget-version.sh "${{ needs.prepare.outputs.version }}")
+          echo "$output" >> $GITHUB_OUTPUT
 
   check-cratesio:
     name: Check if Rust crate exists on crates.io
@@ -448,35 +189,15 @@ jobs:
       - name: Check crates.io for existing versions
         id: check
         run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-
-          # Check kreuzberg crate
-          if cargo search kreuzberg --limit 1 | grep -q "kreuzberg = \"${version}\""; then
-            echo "kreuzberg_exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Rust crate kreuzberg ${version} already exists on crates.io"
-          else
-            echo "kreuzberg_exists=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Check kreuzberg-tesseract crate
-          if cargo search kreuzberg-tesseract --limit 1 | grep -q "kreuzberg-tesseract = \"${version}\""; then
-            echo "tesseract_exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Rust crate kreuzberg-tesseract ${version} already exists on crates.io"
-          else
-            echo "tesseract_exists=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Check kreuzberg-cli crate
-          if cargo search kreuzberg-cli --limit 1 | grep -q "kreuzberg-cli = \"${version}\""; then
-            echo "cli_exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Rust crate kreuzberg-cli ${version} already exists on crates.io"
-          else
-            echo "cli_exists=false" >> $GITHUB_OUTPUT
-          fi
+          output=$(bash scripts/publish/check-cratesio-versions.sh "${{ needs.prepare.outputs.version }}")
+          echo "$output" >> $GITHUB_OUTPUT
 
           # Set all_exist if all three crates exist
-          if [ "$(cat $GITHUB_OUTPUT | grep '_exists=true' | wc -l)" -eq 3 ]; then
+          kreuzberg_exists=$(grep 'kreuzberg_exists=' $GITHUB_OUTPUT | tail -1 | cut -d'=' -f2 || echo false)
+          tesseract_exists=$(grep 'tesseract_exists=' $GITHUB_OUTPUT | tail -1 | cut -d'=' -f2 || echo false)
+          cli_exists=$(grep 'cli_exists=' $GITHUB_OUTPUT | tail -1 | cut -d'=' -f2 || echo false)
+
+          if [ "$kreuzberg_exists" = "true" ] && [ "$tesseract_exists" = "true" ] && [ "$cli_exists" = "true" ]; then
             echo "all_exist=true" >> $GITHUB_OUTPUT
           else
             echo "all_exist=false" >> $GITHUB_OUTPUT
@@ -1459,12 +1180,7 @@ jobs:
       - name: Ensure GitHub release exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          tag="${{ needs.prepare.outputs.tag }}"
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "$tag" --generate-notes
-          fi
+        run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@v6
@@ -1476,10 +1192,7 @@ jobs:
       - name: Upload CLI binaries (idempotent)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for file in dist/cli/kreuzberg-cli-*; do
-            gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber
-          done
+        run: bash scripts/publish/upload-cli-binaries.sh "${{ needs.prepare.outputs.tag }}" dist/cli
 
   upload-csharp-release:
     name: Upload C# NuGet to GitHub Release
@@ -1502,12 +1215,7 @@ jobs:
       - name: Ensure GitHub release exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          tag="${{ needs.prepare.outputs.tag }}"
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "$tag" --generate-notes
-          fi
+        run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download C# artifacts
         uses: actions/download-artifact@v6
@@ -1518,10 +1226,7 @@ jobs:
       - name: Upload C# packages (idempotent)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for file in dist/csharp/*.nupkg; do
-            gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber
-          done
+        run: bash scripts/publish/upload-csharp-packages.sh "${{ needs.prepare.outputs.tag }}" dist/csharp
 
   publish-crates:
     name: Publish crates.io packages

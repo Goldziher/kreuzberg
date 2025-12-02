@@ -82,9 +82,7 @@ jobs:
 
       - name: Build Java bindings
         shell: bash
-        run: |
-          cd packages/java
-          mvn clean package -DskipTests
+        run: scripts/ci/java/build-java.sh
 
       - name: Upload JAR
         uses: actions/upload-artifact@v5
@@ -146,9 +144,7 @@ jobs:
           path: packages/java/target/
 
       - name: Run Java tests
-        run: |
-          cd packages/java
-          mvn test
+        run: scripts/ci/java/run-tests.sh
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
