@@ -119,13 +119,6 @@
 	},
 	"optionalDependencies": {
 		"@gutenye/ocr-node": "^1.4.8",
-		"@kreuzberg/darwin-arm64": "4.0.0-rc.5",
-		"@kreuzberg/darwin-x64": "4.0.0-rc.5",
-		"@kreuzberg/linux-arm-gnueabihf": "4.0.0-rc.5",
-		"@kreuzberg/linux-arm64-gnu": "4.0.0-rc.5",
-		"@kreuzberg/linux-x64-gnu": "4.0.0-rc.5",
-		"@kreuzberg/win32-arm64-msvc": "4.0.0-rc.5",
-		"@kreuzberg/win32-x64-msvc": "4.0.0-rc.5",
 		"sharp": "^0.34.5"
 	}
 }
