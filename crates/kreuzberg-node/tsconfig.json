@@ -1,19 +1,14 @@
 {
 	"compilerOptions": {
-		// Language and Environment
 		"target": "ES2022",
 		"lib": ["ES2022"],
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-
-		// Emit
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
 		"outDir": "./dist",
 		"rootDir": "./typescript",
-
-		// Strict Type-Checking Options (ALL enabled)
 		"strict": true,
 		"noImplicitAny": true,
 		"strictNullChecks": true,
@@ -23,8 +18,6 @@
 		"noImplicitThis": true,
 		"useUnknownInCatchVariables": true,
 		"alwaysStrict": true,
-
-		// Additional Checks (ALL enabled)
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"exactOptionalPropertyTypes": true,
@@ -33,22 +26,15 @@
 		"noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
 		"noPropertyAccessFromIndexSignature": true,
-
-		// Module Resolution
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"resolveJsonModule": true,
 		"isolatedModules": true,
-
-		// Advanced
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"verbatimModuleSyntax": true,
-
-		// Disallow JavaScript
 		"allowJs": false,
 		"checkJs": false,
-
 		"types": ["node"]
 	},
 	"include": ["typescript/**/*.ts", "typescript/**/*.d.ts"],

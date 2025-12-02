@@ -38,7 +38,7 @@ repos:
     hooks:
       - id: biome-check
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.30.0
+    rev: v1.31.0
     hooks:
       - id: oxlint
         args: ["--fix"]
@@ -59,13 +59,11 @@ repos:
     rev: v0.6.29
     hooks:
       - id: cpd
+        exclude: 'crates/kreuzberg-tesseract/third_party/.*'
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
-  - repo: https://github.com/tamasfe/taplo
-    rev: 0.9.3
-    hooks:
-      - id: taplo-format
-        exclude: (invalid|test).*\.toml$
+        files: ^packages/java/src/.*\.java$
+        exclude: 'crates/kreuzberg-tesseract/third_party/.*'
   - repo: local
     hooks:
       - id: golangci-lint
@@ -76,7 +74,7 @@ repos:
         pass_filenames: false
       - id: rubocop
         name: rubocop
-        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yml'
+        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yaml'
         require_serial: true
         language: system
         files: ^packages/ruby/.*\.rb$

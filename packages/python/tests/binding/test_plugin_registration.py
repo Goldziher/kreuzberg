@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import Any
+from typing import Any, Literal
 
 from kreuzberg import (
     clear_post_processors,
@@ -27,6 +27,12 @@ class MockValidator:
     def validate(self, result: dict[str, Any]) -> None:
         pass
 
+    def priority(self) -> int:
+        return 0
+
+    def should_validate(self, result: dict[str, Any]) -> bool:
+        return True
+
 
 class MockValidator2:
     """Second mock validator for testing."""
@@ -36,6 +42,12 @@ class MockValidator2:
 
     def validate(self, result: dict[str, Any]) -> None:
         pass
+
+    def priority(self) -> int:
+        return 1
+
+    def should_validate(self, result: dict[str, Any]) -> bool:
+        return True
 
 
 class MockPostProcessor:
@@ -47,6 +59,15 @@ class MockPostProcessor:
     def process(self, result: dict[str, Any]) -> dict[str, Any]:
         return result
 
+    def processing_stage(self) -> Literal["early", "middle", "late"]:
+        return "middle"
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
 
 class MockPostProcessor2:
     """Second mock post-processor for testing."""
@@ -56,6 +77,15 @@ class MockPostProcessor2:
 
     def process(self, result: dict[str, Any]) -> dict[str, Any]:
         return result
+
+    def processing_stage(self) -> Literal["early", "middle", "late"]:
+        return "late"
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
 
 
 def test_list_validators_empty() -> None:
@@ -164,6 +194,18 @@ class MockOcrBackend:
     def process_image(self, image_bytes: bytes, language: str) -> dict[str, Any]:
         return {"content": "mocked text", "metadata": {}, "tables": []}
 
+    def process_file(self, path: str, language: str) -> dict[str, Any]:
+        return {"content": "mocked text from file", "metadata": {}, "tables": []}
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+    def version(self) -> str:
+        return "1.0.0"
+
 
 class MockOcrBackend2:
     """Second mock OCR backend for testing."""
@@ -176,6 +218,18 @@ class MockOcrBackend2:
 
     def process_image(self, image_bytes: bytes, language: str) -> dict[str, Any]:
         return {"content": "mocked text 2", "metadata": {}, "tables": []}
+
+    def process_file(self, path: str, language: str) -> dict[str, Any]:
+        return {"content": "mocked text 2 from file", "metadata": {}, "tables": []}
+
+    def initialize(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+    def version(self) -> str:
+        return "2.0.0"
 
 
 def test_list_ocr_backends_returns_list() -> None:
