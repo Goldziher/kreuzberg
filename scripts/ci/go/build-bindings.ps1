@@ -5,12 +5,12 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$IsWindows = $PSVersionTable.Platform -eq 'Win32NT' -or $PSVersionTable.PSVersion.Major -lt 6
+$IsWindowsOS = $PSVersionTable.Platform -eq 'Win32NT' -or $PSVersionTable.PSVersion.Major -lt 6
 
 cd packages/go
 $workspace = Resolve-Path "$PWD/../.."
 
-if ($IsWindows) {
+if ($IsWindowsOS) {
     Write-Host "=== Setting up Windows MinGW-w64 CGO environment ==="
     $ffiPath = "$workspace/target/x86_64-pc-windows-gnu/release"
     $env:CC = "gcc"
