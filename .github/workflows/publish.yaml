@@ -1803,6 +1803,7 @@ jobs:
             --batch-mode \
             --no-transfer-progress \
             -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" \
+            -DskipTests \
             clean deploy
 
       - name: Maven already published summary
