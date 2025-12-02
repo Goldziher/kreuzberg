@@ -366,6 +366,14 @@ jobs:
       - name: Setup Node
         uses: ./.github/actions/setup-node-workspace
 
+      - name: Verify Node setup (async)
+        run: |
+          echo "Node version: $(node --version)"
+          echo "pnpm version: $(pnpm --version)"
+          echo "tsx availability: $(which tsx || echo 'NOT FOUND')"
+          echo "pnpm workspace structure:"
+          pnpm list --depth=0 || true
+
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
         with:
@@ -428,6 +436,14 @@ jobs:
 
       - name: Setup Node
         uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify Node setup (batch)
+        run: |
+          echo "Node version: $(node --version)"
+          echo "pnpm version: $(pnpm --version)"
+          echo "tsx availability: $(which tsx || echo 'NOT FOUND')"
+          echo "pnpm workspace structure:"
+          pnpm list --depth=0 || true
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime

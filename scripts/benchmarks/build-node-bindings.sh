@@ -17,5 +17,5 @@ cd crates/kreuzberg-node
 pnpm install --no-optional
 pnpm run build --target "${TARGET}"
 pkg=$(pnpm pack | tail -n1 | tr -d '\r')
-cd ../..
 pnpm install -w "crates/kreuzberg-node/${pkg}"
+cd ../..

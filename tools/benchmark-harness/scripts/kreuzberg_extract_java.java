@@ -26,13 +26,38 @@ public final class KreuzbergExtractJava {
             System.exit(1);
         }
 
+        // Enable debug logging if KREUZBERG_BENCHMARK_DEBUG is set
+        boolean debug = "true".equalsIgnoreCase(System.getenv("KREUZBERG_BENCHMARK_DEBUG"));
+
+        if (debug) {
+            debugLog("java.version", System.getProperty("java.version"));
+            debugLog("os.name", System.getProperty("os.name"));
+            debugLog("os.arch", System.getProperty("os.arch"));
+            debugLog("KREUZBERG_FFI_DIR", System.getenv("KREUZBERG_FFI_DIR"));
+            debugLog("java.library.path", System.getProperty("java.library.path"));
+            debugLog("LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH"));
+            debugLog("DYLD_LIBRARY_PATH", System.getenv("DYLD_LIBRARY_PATH"));
+            debugLog("Input file", args[1]);
+        }
+
         Path path = Path.of(args[1]);
         ExtractionResult result;
         long start = System.nanoTime();
         try {
+            if (debug) {
+                debugLog("Starting extraction", "");
+            }
             result = Kreuzberg.extractFile(path);
+            if (debug) {
+                debugLog("Extraction completed", "");
+            }
         } catch (KreuzbergException | RuntimeException e) {
-            e.printStackTrace(System.err);
+            if (debug) {
+                debugLog("Extraction failed with exception", e.getClass().getName());
+                e.printStackTrace(System.err);
+            } else {
+                e.printStackTrace(System.err);
+            }
             System.exit(1);
             return;
         }
@@ -70,6 +95,13 @@ public final class KreuzbergExtractJava {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
         return "\"" + escaped + "\"";
+    }
+
+    private static void debugLog(String key, String value) {
+        if (value == null) {
+            value = "(null)";
+        }
+        System.err.printf("[BENCHMARK_DEBUG] %-30s = %s%n", key, value);
     }
 }
 /* CHECKSTYLE:ON */

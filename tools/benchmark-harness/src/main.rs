@@ -245,24 +245,24 @@ async fn main() -> Result<()> {
 
             if let Ok(adapter) = create_node_async_adapter() {
                 if let Ok(()) = registry.register(Arc::new(adapter)) {
-                    eprintln!("[adapter] ✓ kreuzberg-async (registered)");
+                    eprintln!("[adapter] ✓ kreuzberg-node-async (registered)");
                     kreuzberg_count += 1;
                 } else {
-                    eprintln!("[adapter] ✗ kreuzberg-async (registration failed)");
+                    eprintln!("[adapter] ✗ kreuzberg-node-async (registration failed)");
                 }
             } else {
-                eprintln!("[adapter] ✗ kreuzberg-async (initialization failed)");
+                eprintln!("[adapter] ✗ kreuzberg-node-async (initialization failed)");
             }
 
             if let Ok(adapter) = create_node_batch_adapter() {
                 if let Ok(()) = registry.register(Arc::new(adapter)) {
-                    eprintln!("[adapter] ✓ kreuzberg-batch (registered)");
+                    eprintln!("[adapter] ✓ kreuzberg-node-batch (registered)");
                     kreuzberg_count += 1;
                 } else {
-                    eprintln!("[adapter] ✗ kreuzberg-batch (registration failed)");
+                    eprintln!("[adapter] ✗ kreuzberg-node-batch (registration failed)");
                 }
             } else {
-                eprintln!("[adapter] ✗ kreuzberg-batch (initialization failed)");
+                eprintln!("[adapter] ✗ kreuzberg-node-batch (initialization failed)");
             }
 
             if let Ok(adapter) = create_ruby_sync_adapter() {
