@@ -20,24 +20,6 @@ importers:
       '@emnapi/runtime':
         specifier: 1.7.1
         version: 1.7.1
-      '@octokit/core':
-        specifier: 4.0.0-rc.5
-        version: 7.0.6
-      esbuild:
-        specifier: 4.0.0-rc.5
-        version: 0.27.0
-      picomatch:
-        specifier: 4.0.0-rc.5
-        version: 4.0.3
-      postcss:
-        specifier: 8.5.6
-        version: 8.5.6
-      typanion:
-        specifier: 4.0.0-rc.5
-        version: 3.14.0
-      vite:
-        specifier: 4.0.0-rc.5
-        version: 7.2.6(@types/node@24.10.1)
       which:
         specifier: ^6.0.0
         version: 6.0.0
