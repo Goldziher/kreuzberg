@@ -12,7 +12,7 @@ import {
 	type PostProcessorProtocol,
 	registerPostProcessor,
 	unregisterPostProcessor,
-} from '@kreuzberg/node';
+} from "@kreuzberg/node";
 
 /**
  * Post-processor that enriches extraction results with metadata.

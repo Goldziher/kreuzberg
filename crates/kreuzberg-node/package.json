@@ -1,137 +1,137 @@
 {
-  "name": "@kreuzberg/node",
-  "version": "4.0.0-rc.5",
-  "description": "Kreuzberg document intelligence - Node.js native bindings",
-  "author": {
-    "name": "Na'aman Hirschfeld",
-    "email": "nhirschfeld@gmail.com",
-    "url": "https://kreuzberg.dev"
-  },
-  "homepage": "https://kreuzberg.dev",
-  "bugs": {
-    "url": "https://github.com/Goldziher/kreuzberg/issues"
-  },
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./cli": {
-      "types": "./dist/cli.d.ts",
-      "import": "./dist/cli.mjs",
-      "require": "./dist/cli.js"
-    }
-  },
-  "bin": {
-    "kreuzberg": "./dist/cli.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Goldziher/kreuzberg.git"
-  },
-  "license": "MIT",
-  "keywords": [
-    "document-intelligence",
-    "document-extraction",
-    "text-extraction",
-    "pdf-extraction",
-    "ocr",
-    "pdf",
-    "docx",
-    "xlsx",
-    "pptx",
-    "office-documents",
-    "table-extraction",
-    "metadata-extraction",
-    "rust",
-    "napi",
-    "native",
-    "nodejs"
-  ],
-  "files": [
-    "dist",
-    "index.js",
-    "*.cjs",
-    "*.d.ts",
-    "*.node",
-    "README.md"
-  ],
-  "napi": {
-    "binaryName": "kreuzberg-node",
-    "package": {
-      "name": "@kreuzberg/node"
-    },
-    "targets": [
-      "x86_64-apple-darwin",
-      "aarch64-apple-darwin",
-      "x86_64-pc-windows-msvc",
-      "aarch64-pc-windows-msvc",
-      "x86_64-unknown-linux-gnu",
-      "aarch64-unknown-linux-gnu",
-      "armv7-unknown-linux-gnueabihf"
-    ]
-  },
-  "engines": {
-    "node": ">= 18"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public"
-  },
-  "scripts": {
-    "artifacts": "napi artifacts",
-    "build": "napi build --platform --release && tsup",
-    "build:debug": "napi build --platform",
-    "build:ts": "tsup",
-    "test": "pnpm test:smoke && pnpm test:binding",
-    "test:smoke": "vitest run tests/smoke/",
-    "test:binding": "vitest run tests/binding/",
-    "test:cli": "vitest run tests/cli/",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage tests/binding/ tests/smoke/",
-    "typecheck": "tsc --noEmit",
-    "lint": "biome check typescript && oxlint typescript",
-    "lint:fix": "biome check --write typescript",
-    "format": "biome format --write typescript",
-    "prepublishOnly": "napi prepublish -t npm",
-    "universal": "napi universal",
-    "version": "napi version"
-  },
-  "devDependencies": {
-    "@napi-rs/cli": "^3.4.1",
-    "@types/archiver": "^7.0.0",
-    "@types/node": "^24.10.1",
-    "@types/which": "^3.0.4",
-    "@vitest/coverage-v8": "^4.0.14",
-    "archiver": "^7.0.1",
-    "oxlint": "^1.31.0",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.14"
-  },
-  "dependencies": {
-    "@emnapi/runtime": "1.7.1",
-    "@octokit/core": "4.0.0-rc.5",
-    "esbuild": "4.0.0-rc.5",
-    "picomatch": "4.0.0-rc.5",
-    "postcss": "8.5.6",
-    "typanion": "4.0.0-rc.5",
-    "vite": "4.0.0-rc.5",
-    "which": "^6.0.0"
-  },
-  "optionalDependencies": {
-    "@gutenye/ocr-node": "^1.4.8",
-    "@kreuzberg/darwin-arm64": "4.0.0-rc.5",
-    "@kreuzberg/darwin-x64": "4.0.0-rc.5",
-    "@kreuzberg/linux-arm-gnueabihf": "4.0.0-rc.5",
-    "@kreuzberg/linux-arm64-gnu": "4.0.0-rc.5",
-    "@kreuzberg/linux-x64-gnu": "4.0.0-rc.5",
-    "@kreuzberg/win32-arm64-msvc": "4.0.0-rc.5",
-    "@kreuzberg/win32-x64-msvc": "4.0.0-rc.5",
-    "sharp": "^0.34.5"
-  }
+	"name": "@kreuzberg/node",
+	"version": "4.0.0-rc.5",
+	"description": "Kreuzberg document intelligence - Node.js native bindings",
+	"author": {
+		"name": "Na'aman Hirschfeld",
+		"email": "nhirschfeld@gmail.com",
+		"url": "https://kreuzberg.dev"
+	},
+	"homepage": "https://kreuzberg.dev",
+	"bugs": {
+		"url": "https://github.com/Goldziher/kreuzberg/issues"
+	},
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./cli": {
+			"types": "./dist/cli.d.ts",
+			"import": "./dist/cli.mjs",
+			"require": "./dist/cli.js"
+		}
+	},
+	"bin": {
+		"kreuzberg": "./dist/cli.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Goldziher/kreuzberg.git"
+	},
+	"license": "MIT",
+	"keywords": [
+		"document-intelligence",
+		"document-extraction",
+		"text-extraction",
+		"pdf-extraction",
+		"ocr",
+		"pdf",
+		"docx",
+		"xlsx",
+		"pptx",
+		"office-documents",
+		"table-extraction",
+		"metadata-extraction",
+		"rust",
+		"napi",
+		"native",
+		"nodejs"
+	],
+	"files": [
+		"dist",
+		"index.js",
+		"*.cjs",
+		"*.d.ts",
+		"*.node",
+		"README.md"
+	],
+	"napi": {
+		"binaryName": "kreuzberg-node",
+		"package": {
+			"name": "@kreuzberg/node"
+		},
+		"targets": [
+			"x86_64-apple-darwin",
+			"aarch64-apple-darwin",
+			"x86_64-pc-windows-msvc",
+			"aarch64-pc-windows-msvc",
+			"x86_64-unknown-linux-gnu",
+			"aarch64-unknown-linux-gnu",
+			"armv7-unknown-linux-gnueabihf"
+		]
+	},
+	"engines": {
+		"node": ">= 18"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/",
+		"access": "public"
+	},
+	"scripts": {
+		"artifacts": "napi artifacts",
+		"build": "napi build --platform --release && tsup",
+		"build:debug": "napi build --platform",
+		"build:ts": "tsup",
+		"test": "pnpm test:smoke && pnpm test:binding",
+		"test:smoke": "vitest run tests/smoke/",
+		"test:binding": "vitest run tests/binding/",
+		"test:cli": "vitest run tests/cli/",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage tests/binding/ tests/smoke/",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check typescript && oxlint typescript",
+		"lint:fix": "biome check --write typescript",
+		"format": "biome format --write typescript",
+		"prepublishOnly": "napi prepublish -t npm",
+		"universal": "napi universal",
+		"version": "napi version"
+	},
+	"devDependencies": {
+		"@napi-rs/cli": "^3.4.1",
+		"@types/archiver": "^7.0.0",
+		"@types/node": "^24.10.1",
+		"@types/which": "^3.0.4",
+		"@vitest/coverage-v8": "^4.0.14",
+		"archiver": "^7.0.1",
+		"oxlint": "^1.31.0",
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.14"
+	},
+	"dependencies": {
+		"@emnapi/runtime": "1.7.1",
+		"@octokit/core": "4.0.0-rc.5",
+		"esbuild": "4.0.0-rc.5",
+		"picomatch": "4.0.0-rc.5",
+		"postcss": "8.5.6",
+		"typanion": "4.0.0-rc.5",
+		"vite": "4.0.0-rc.5",
+		"which": "^6.0.0"
+	},
+	"optionalDependencies": {
+		"@gutenye/ocr-node": "^1.4.8",
+		"@kreuzberg/darwin-arm64": "4.0.0-rc.5",
+		"@kreuzberg/darwin-x64": "4.0.0-rc.5",
+		"@kreuzberg/linux-arm-gnueabihf": "4.0.0-rc.5",
+		"@kreuzberg/linux-arm64-gnu": "4.0.0-rc.5",
+		"@kreuzberg/linux-x64-gnu": "4.0.0-rc.5",
+		"@kreuzberg/win32-arm64-msvc": "4.0.0-rc.5",
+		"@kreuzberg/win32-x64-msvc": "4.0.0-rc.5",
+		"sharp": "^0.34.5"
+	}
 }

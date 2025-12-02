@@ -45,6 +45,7 @@
  * ```
  */
 
+import type { PanicContext } from "./errors.js";
 import type {
 	Chunk,
 	ChunkingConfig,
@@ -67,8 +68,6 @@ import type {
 	ValidatorProtocol,
 } from "./types.js";
 
-import type { PanicContext } from "./errors.js";
-
 export {
 	CacheError,
 	ErrorCode,
@@ -76,10 +75,10 @@ export {
 	KreuzbergError,
 	MissingDependencyError,
 	OcrError,
+	type PanicContext,
 	ParsingError,
 	PluginError,
 	ValidationError,
-	type PanicContext,
 } from "./errors.js";
 export { GutenOcrBackend } from "./ocr/guten-ocr.js";
 export * from "./types.js";

@@ -7,14 +7,14 @@
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
-import { glob } from "glob";
 import {
 	batchExtractBytes,
 	batchExtractBytesSync,
 	batchExtractFiles,
 	batchExtractFilesSync,
 	ExtractionConfig,
-} from '@kreuzberg/node';
+} from "@kreuzberg/node";
+import { glob } from "glob";
 
 async function main() {
 	console.log("=== Synchronous Batch Processing ===");
@@ -126,6 +126,6 @@ async function main() {
 	});
 }
 
-import { extractFile } from '@kreuzberg/node';
+import { extractFile } from "@kreuzberg/node";
 
 main().catch(console.error);

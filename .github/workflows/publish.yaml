@@ -61,7 +61,7 @@ jobs:
       release_csharp: ${{ steps.meta.outputs.release_csharp }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Validate tag and compute version
         id: meta
@@ -1992,4 +1992,3 @@ jobs:
               escaped = summary.replace("%", "%25").replace("\n", "%0A")
               f.write(f"release_summary={escaped}\n")
           EOF
-
