@@ -22,12 +22,40 @@ fi
 version="$1"
 group="dev.kreuzberg"
 artifact="kreuzberg"
-
-# Query Maven Central REST API
 url="https://search.maven.org/solrsearch/select?q=g:${group}+AND+a:${artifact}+AND+v:${version}&rows=1&wt=json"
-response=$(curl -s "$url")
+max_attempts=3
+attempt=1
+response=""
+count=0
 
-count=$(echo "$response" | jq -r '.response.numFound')
+while [ $attempt -le $max_attempts ]; do
+  echo "::debug::Checking Maven Central for ${group}:${artifact}:${version} (attempt ${attempt}/${max_attempts})"
+
+  response=$(curl \
+    --silent \
+    --show-error \
+    --retry 3 \
+    --retry-delay 5 \
+    --connect-timeout 30 \
+    --max-time 60 \
+    "$url" 2>/dev/null || echo "")
+
+  if [ -n "$response" ]; then
+    count=$(echo "$response" | jq -r '.response.numFound' 2>/dev/null || echo "0")
+    if [ "$count" != "0" ] || [ "$count" = "0" ]; then
+      break
+    fi
+  fi
+
+  if [ $attempt -lt $max_attempts ]; then
+    sleep_time=$((attempt * 5))
+    echo "::warning::Maven Central check failed, retrying in ${sleep_time}s..."
+    sleep "$sleep_time"
+  fi
+
+  attempt=$((attempt + 1))
+done
+
 if [ "$count" -gt 0 ]; then
   echo "exists=true" >> "$GITHUB_OUTPUT"
   echo "::notice::Java package ${group}:${artifact}:${version} already exists on Maven Central"

@@ -401,6 +401,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Show initial disk space
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -411,6 +416,23 @@ jobs:
       - name: Ensure target commit
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Free up disk space
+        run: |
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
 
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-env
@@ -481,6 +503,30 @@ jobs:
       - name: Ensure target commit
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Show initial disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
+      - name: Free up disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -649,6 +695,30 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
+      - name: Show initial disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
+      - name: Free up disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
+
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
         with:
@@ -751,6 +821,30 @@ jobs:
       - name: Ensure target commit
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Show initial disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
+      - name: Free up disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
 
       - name: Install MSYS2 toolchain
         if: runner.os == 'Windows'
@@ -901,6 +995,11 @@ jobs:
     env:
       PDFIUM_VERSION: "7529"
     steps:
+      - name: Show initial disk space
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -911,6 +1010,23 @@ jobs:
       - name: Ensure target commit
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Free up disk space
+        run: |
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -963,6 +1079,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Show initial disk space
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -973,6 +1094,23 @@ jobs:
       - name: Ensure target commit
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Free up disk space
+        run: |
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5

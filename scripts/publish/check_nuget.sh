@@ -21,12 +21,39 @@ fi
 
 version="$1"
 package="Kreuzberg"
-
-# Query NuGet API
 url="https://api.nuget.org/v3/registration5-semver1/${package,,}/index.json"
-response=$(curl -s "$url")
+max_attempts=3
+attempt=1
+response=""
+package_found=false
 
-if echo "$response" | jq -e ".items[].items[]?.catalogEntry | select(.version == \"${version}\")" >/dev/null 2>&1; then
+while [ $attempt -le $max_attempts ]; do
+  echo "::debug::Checking NuGet for ${package} ${version} (attempt ${attempt}/${max_attempts})"
+
+  response=$(curl \
+    --silent \
+    --show-error \
+    --retry 3 \
+    --retry-delay 5 \
+    --connect-timeout 30 \
+    --max-time 60 \
+    "$url" 2>/dev/null || echo "")
+
+  if [ -n "$response" ]; then
+    if echo "$response" | jq -e ".items[].items[]?.catalogEntry | select(.version == \"${version}\")" >/dev/null 2>&1; then
+      package_found=true
+    fi
+    break
+  elif [ $attempt -lt $max_attempts ]; then
+    sleep_time=$((attempt * 5))
+    echo "::warning::NuGet check failed, retrying in ${sleep_time}s..."
+    sleep "$sleep_time"
+  fi
+
+  attempt=$((attempt + 1))
+done
+
+if [ "$package_found" = true ]; then
   echo "exists=true" >> "$GITHUB_OUTPUT"
   echo "::notice::NuGet package ${package} ${version} already exists"
 else
