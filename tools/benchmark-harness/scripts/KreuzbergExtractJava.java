@@ -51,7 +51,7 @@ public final class KreuzbergExtractJava {
             if (debug) {
                 debugLog("Extraction completed", "");
             }
-        } catch (KreuzbergException | RuntimeException e) {
+        } catch (KreuzbergException | RuntimeException | java.io.IOException e) {
             if (debug) {
                 debugLog("Extraction failed with exception", e.getClass().getName());
                 e.printStackTrace(System.err);
@@ -70,12 +70,12 @@ public final class KreuzbergExtractJava {
     private static String toJson(ExtractionResult result, double elapsedMs) {
         StringBuilder builder = new StringBuilder();
         builder.append('{');
-        builder.append("\"content\":").append(quote(result.content())).append(',');
+        builder.append("\"content\":").append(quote(result.getContent())).append(',');
         builder.append("\"metadata\":{");
-        builder.append("\"mimeType\":").append(quote(result.mimeType())).append(',');
-        builder.append("\"language\":").append(optionalToJson(result.language())).append(',');
-        builder.append("\"date\":").append(optionalToJson(result.date())).append(',');
-        builder.append("\"subject\":").append(optionalToJson(result.subject()));
+        builder.append("\"mimeType\":").append(quote(result.getMimeType())).append(',');
+        builder.append("\"language\":").append(optionalToJson(result.getLanguage())).append(',');
+        builder.append("\"date\":").append(optionalToJson(result.getDate())).append(',');
+        builder.append("\"subject\":").append(optionalToJson(result.getSubject()));
         builder.append("},\"_extraction_time_ms\":").append(String.format("%.3f", elapsedMs));
         builder.append('}');
         return builder.toString();
