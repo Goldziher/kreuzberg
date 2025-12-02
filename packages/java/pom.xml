@@ -89,6 +89,25 @@
                 <configuration>
                     <release>25</release>
                 </configuration>
+                <executions>
+                    <!-- Compile benchmark helper script -->
+                    <execution>
+                        <id>compile-benchmark-helper</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <compileSourceRoots>
+                                <compileSourceRoot>${project.basedir}/../../tools/benchmark-harness/scripts</compileSourceRoot>
+                            </compileSourceRoots>
+                            <includes>
+                                <include>KreuzbergExtractJava.java</include>
+                            </includes>
+                            <outputDirectory>${project.build.directory}/classes</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Maven Enforcer Plugin to enforce Maven version -->

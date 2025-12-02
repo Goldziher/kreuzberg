@@ -270,7 +270,7 @@ pub fn create_go_batch_adapter() -> Result<SubprocessAdapter> {
 
 /// Create Java sync adapter
 pub fn create_java_sync_adapter() -> Result<SubprocessAdapter> {
-    let script_path = get_script_path("kreuzberg_extract_java.java")?;
+    let _script_path = get_script_path("KreuzbergExtractJava.java")?;
     let command = find_java()?;
     let classpath = workspace_root()?.join("packages/java/target/classes");
     if !classpath.exists() {
@@ -288,7 +288,7 @@ pub fn create_java_sync_adapter() -> Result<SubprocessAdapter> {
         format!("-Djava.library.path={}", lib_dir.display()),
         "--class-path".to_string(),
         classpath.to_string_lossy().to_string(),
-        script_path.to_string_lossy().to_string(),
+        "KreuzbergExtractJava".to_string(),
         "sync".to_string(),
     ];
     Ok(SubprocessAdapter::new("kreuzberg-java-sync", command, args, env))
