@@ -293,6 +293,27 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Free up disk space for wheel build
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "=== Initial disk usage ==="
+          df -h /
+
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Disk usage after cleanup ==="
+          df -h /
+
       - name: Prepare wheel staging directory
         if: matrix.os == 'ubuntu-latest'
         shell: bash
@@ -356,6 +377,15 @@ jobs:
       - name: List built wheels
         shell: bash
         run: ls -lh target/wheels
+
+      - name: Clean up Docker resources (Ubuntu)
+        if: matrix.os == 'ubuntu-latest' && always()
+        run: |
+          echo "=== Cleaning up Docker resources ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+          echo "=== Final disk space ==="
+          df -h /
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v5
