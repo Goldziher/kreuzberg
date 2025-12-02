@@ -116,6 +116,9 @@ jobs:
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Check PyPI for existing version
         id: check
         run: |
@@ -130,6 +133,9 @@ jobs:
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Check npm for existing version
         id: check
         run: |
@@ -144,6 +150,9 @@ jobs:
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Check RubyGems for existing version
         id: check
         run: |
@@ -158,6 +167,9 @@ jobs:
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Check Maven Central for existing version
         id: check
         run: |
@@ -172,6 +184,9 @@ jobs:
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Check NuGet for existing version
         id: check
         run: |
@@ -189,6 +204,9 @@ jobs:
       cli_exists: ${{ steps.check.outputs.cli_exists }}
       exists: ${{ steps.check.outputs.all_exist }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Check crates.io for existing versions
         id: check
         run: |
