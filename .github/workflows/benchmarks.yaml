@@ -426,7 +426,7 @@ jobs:
         run: |
           set -euo pipefail
           cd crates/kreuzberg-node
-          pnpm install
+          pnpm install --no-optional
           pnpm run build --target x86_64-unknown-linux-gnu
           pkg=$(pnpm pack | tail -n1 | tr -d '\r')
           cd ../..
@@ -505,7 +505,7 @@ jobs:
         run: |
           set -euo pipefail
           cd crates/kreuzberg-node
-          pnpm install
+          pnpm install --no-optional
           pnpm run build --target x86_64-unknown-linux-gnu
           pkg=$(pnpm pack | tail -n1 | tr -d '\r')
           cd ../..
