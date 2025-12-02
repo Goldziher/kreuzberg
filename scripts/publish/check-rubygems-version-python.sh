@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-version="${1:?VERSION argument required}"
+export VERSION="${1:?VERSION argument required}"
 
 python3 - <<'PY'
 import json, os, sys, urllib.request

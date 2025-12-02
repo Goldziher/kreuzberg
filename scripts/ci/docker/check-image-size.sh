@@ -23,8 +23,8 @@ size_mb=$(docker inspect "kreuzberg:$VARIANT" --format='{{.Size}}' | awk '{print
 echo "Image size in MB: $size_mb"
 
 # Warn if image is larger than expected (2.5GB for full, 1.5GB for core)
-if [ "$VARIANT" = "full" ] && [ $size_mb -gt 2560 ]; then
+if [ "$VARIANT" = "full" ] && [ "$size_mb" -gt 2560 ]; then
   echo "::warning::Full image is larger than 2.5GB ($size_mb MB). Consider optimization."
-elif [ "$VARIANT" = "core" ] && [ $size_mb -gt 1536 ]; then
+elif [ "$VARIANT" = "core" ] && [ "$size_mb" -gt 1536 ]; then
   echo "::warning::Core image is larger than 1.5GB ($size_mb MB). Consider optimization."
 fi
