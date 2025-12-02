@@ -49,18 +49,18 @@
 	--md-typeset-a-hover-color: #58fbda;
 
 	/* BACKGROUNDS */
-	--md-default-bg-color: #1D1D21;
+	--md-default-bg-color: #1d1d21;
 	--md-default-bg-color--light: #2a2836;
-	--md-default-bg-color--dark: #1D1D21;
+	--md-default-bg-color--dark: #1d1d21;
 
 	/* SURFACES */
-	--md-primary-bg-color: #1D1D21;
+	--md-primary-bg-color: #1d1d21;
 	--md-shadow-z1: none;
 }
 
 /* Code Block Styling - Dark Mode Code Card Style */
 [data-md-color-scheme="slate"] .highlight {
-	background-color: #F1FFFC;
+	background-color: #f1fffc;
 	border-radius: 12px;
 	padding: 1rem;
 	margin-bottom: 1.5rem;
@@ -89,7 +89,7 @@
 
 [data-md-color-scheme="default"] .highlight pre {
 	background-color: transparent;
-	color: #FFFFFF;
+	color: #ffffff;
 	margin: 0;
 	font-size: 14px;
 	line-height: 1.6;
@@ -97,7 +97,7 @@
 
 [data-md-color-scheme="default"] .highlight code {
 	background-color: transparent;
-	color: #FFFFFF;
+	color: #ffffff;
 }
 
 /* Inline code styling */

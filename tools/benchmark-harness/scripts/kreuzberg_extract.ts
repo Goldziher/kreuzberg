@@ -7,7 +7,7 @@
  * - batch: batchExtractFile() - batch extraction for multiple files
  */
 
-import { batchExtractFile, extractFile } from '@kreuzberg/node';
+import { batchExtractFile, extractFile } from "@kreuzberg/node";
 
 interface ExtractionOutput {
 	content: string;

@@ -253,12 +253,7 @@ pub fn create_go_batch_adapter() -> Result<SubprocessAdapter> {
         "batch".to_string(),
     ];
     let env = build_library_env()?;
-    let mut adapter = SubprocessAdapter::with_batch_support(
-        "kreuzberg-go-batch",
-        command,
-        args,
-        env,
-    );
+    let mut adapter = SubprocessAdapter::with_batch_support("kreuzberg-go-batch", command, args, env);
     adapter.set_working_dir(scripts_dir);
     Ok(adapter)
 }
