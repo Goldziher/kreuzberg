@@ -1,3 +1,4 @@
 packages:
   - "."
   - "crates/kreuzberg-node"
+  - "e2e/typescript"
