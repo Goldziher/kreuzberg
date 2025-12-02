@@ -1773,6 +1773,45 @@ jobs:
           )
           echo "exists=$exists" >> "$GITHUB_OUTPUT"
 
+      - name: Rebuild gems with latest RubyGems
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.rubygems_check.outputs.exists != 'true' }}
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          # Ensure we're using latest RubyGems
+          gem update --system
+
+          gems=($(ls kreuzberg-*.gem | sort))
+          if [ ${#gems[@]} -eq 0 ]; then
+            echo "No gem artifacts found" >&2
+            exit 1
+          fi
+
+          # Rebuild each gem to ensure proper tar structure
+          for gem in "${gems[@]}"; do
+            echo "Rebuilding ${gem} to fix tar structure"
+
+            # Unpack the gem
+            gem unpack "${gem}"
+            gem_name=$(basename "${gem}" .gem)
+
+            # Extract gemspec from gem metadata
+            gem specification "${gem}" --ruby > "${gem_name}/${gem_name}.gemspec"
+
+            # Rebuild the gem (this creates proper tar structure)
+            (cd "${gem_name}" && gem build "${gem_name}.gemspec")
+
+            # Replace original gem with rebuilt one
+            mv "${gem_name}/${gem}" "./${gem}"
+
+            # Cleanup
+            rm -rf "${gem_name}"
+
+            echo "Rebuilt ${gem} successfully"
+          done
+
       - name: Publish gems
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.rubygems_check.outputs.exists != 'true' }}
         working-directory: dist
