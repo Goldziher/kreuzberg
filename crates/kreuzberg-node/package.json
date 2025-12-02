@@ -108,13 +108,19 @@
     "@types/which": "^3.0.4",
     "@vitest/coverage-v8": "^4.0.14",
     "archiver": "^7.0.1",
-    "oxlint": "^1.30.0",
+    "oxlint": "^1.31.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"
   },
   "dependencies": {
     "@emnapi/runtime": "1.7.1",
+    "@octokit/core": "4.0.0-rc.5",
+    "esbuild": "4.0.0-rc.5",
+    "picomatch": "4.0.0-rc.5",
+    "postcss": "8.5.6",
+    "typanion": "4.0.0-rc.5",
+    "vite": "4.0.0-rc.5",
     "which": "^6.0.0"
   },
   "optionalDependencies": {
