@@ -28,6 +28,7 @@ import javax.swing.JMenuBar;
  * @author wanke@google.com
  *
  */
+@SuppressWarnings("PMD.CognitiveComplexity")
 public class SVMenuBar implements ActionListener {
   /** The root entry to add items to. */
   private JMenuBar root;

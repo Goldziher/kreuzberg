@@ -30,7 +30,7 @@ import javax.swing.JPopupMenu;
  * @author wanke@google.com
  *
  */
-
+@SuppressWarnings("PMD.CognitiveComplexity")
 public class SVPopupMenu implements ActionListener {
   /** The root entry to add items to. */
   private JPopupMenu root;
