@@ -278,49 +278,50 @@ tasks:
       - "{{.BUNDLE}} exec pry -r ./lib/kreuzberg"
   typescript:install:
     desc: Install TypeScript dependencies
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
       - pnpm install
   typescript:setup:
     desc: Alias for typescript:install (idempotent)
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
       - task: typescript:install
   typescript:build:
     desc: Build TypeScript package
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
       - pnpm build
   typescript:test:
     desc: Run TypeScript tests
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
       - pnpm test
   typescript:lint:
     desc: Lint TypeScript code with auto-fix (biome)
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
       - pnpm lint:fix
   typescript:lint:check:
     desc: Lint TypeScript code in check-only mode (biome, no fixes)
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
       - pnpm lint
   typescript:format:
     desc: Format TypeScript code with modifications (biome)
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
       - pnpm format
   typescript:format:check:
     desc: Check TypeScript code formatting without modifications (biome)
-    dir: packages/typescript
+    dir: crates/kreuzberg-node
     cmds:
-      - pnpm exec biome format src
+      - pnpm exec biome format typescript
   typescript:update:
     desc: Update TypeScript dependencies
+    dir: crates/kreuzberg-node
     cmds:
       - echo "Updating TypeScript dependencies..."
-      - pnpm up --latest -r
+      - pnpm up --latest
   java:install:
     desc: Install Java dependencies
     dir: packages/java
