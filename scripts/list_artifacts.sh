@@ -17,9 +17,9 @@ fi
 PATTERN="$2"
 DESCRIPTION="${3:-artifacts}"
 
-if compgen -G "$DIR_PATH"/$PATTERN > /dev/null; then
+if compgen -G "$DIR_PATH/$PATTERN" > /dev/null; then
   echo "📦 Built ${DESCRIPTION}:"
-  ls -lh "$DIR_PATH"/$PATTERN
+  ls -lh "$DIR_PATH/$PATTERN"
 else
   echo "No ${DESCRIPTION} found in ${DIR_PATH} matching ${PATTERN}"
 fi

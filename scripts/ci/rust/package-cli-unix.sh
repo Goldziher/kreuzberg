@@ -17,7 +17,7 @@ fi
 
 echo "=== Packaging CLI binary for $TARGET ==="
 
-cd target/$TARGET/release
+cd "target/$TARGET/release"
 tar czf "kreuzberg-cli-$TARGET.tar.gz" kreuzberg
 mv "kreuzberg-cli-$TARGET.tar.gz" ../../..
 

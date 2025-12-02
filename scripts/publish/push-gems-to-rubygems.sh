@@ -18,7 +18,7 @@ cd "$artifacts_dir" || {
 }
 
 shopt -s nullglob
-gems=($(ls kreuzberg-*.gem | sort))
+mapfile -t gems < <(ls kreuzberg-*.gem | sort)
 
 if [ ${#gems[@]} -eq 0 ]; then
   echo "No gem artifacts found in $artifacts_dir" >&2
