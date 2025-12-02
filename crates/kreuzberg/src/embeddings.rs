@@ -59,7 +59,7 @@ use lazy_static::lazy_static;
 /// "mutex lock failed: Invalid argument"
 ///
 /// This manifests as:
-/// ```
+/// ```text
 /// libc++abi: terminating due to uncaught exception of type std::__1::system_error:
 /// mutex lock failed: Invalid argument
 /// ```

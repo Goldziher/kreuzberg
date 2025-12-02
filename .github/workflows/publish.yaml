@@ -60,6 +60,9 @@ jobs:
       release_java: ${{ steps.meta.outputs.release_java }}
       release_csharp: ${{ steps.meta.outputs.release_csharp }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Validate tag and compute version
         id: meta
         env:
