@@ -1,12 +1,6 @@
-import path from "path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-	resolve: {
-		alias: {
-			kreuzberg: path.resolve(__dirname, "../../packages/typescript/dist/index.mjs"),
-		},
-	},
 	test: {
 		globals: true,
 		environment: "node",

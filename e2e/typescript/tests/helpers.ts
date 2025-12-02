@@ -11,7 +11,7 @@ import type {
 	PostProcessorConfig,
 	TesseractConfig,
 	TokenReductionConfig,
-} from "../src/types.js";
+} from "@kreuzberg/node";
 
 const WORKSPACE_ROOT = resolve(__dirname, "../../../../..");
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
