@@ -14,7 +14,7 @@ keywords = ["ffi", "bindings", "document", "extraction", "api"]
 categories = ["development-tools::ffi", "text-processing"]
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 kreuzberg = { path = "../kreuzberg", features = ["full"] }

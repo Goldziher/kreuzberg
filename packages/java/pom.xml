@@ -46,9 +46,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>23</maven.compiler.source>
+        <maven.compiler.target>23</maven.compiler.target>
+        <maven.compiler.release>23</maven.compiler.release>
         <junit.version>5.11.4</junit.version>
         <maven.version>3.6.3</maven.version>
         <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -87,7 +87,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <release>25</release>
+                    <release>23</release>
                 </configuration>
                 <executions>
                     <!-- Compile benchmark helper script -->

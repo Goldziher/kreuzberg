@@ -20,7 +20,7 @@
 //! ```rust
 //! use std::path::PathBuf;
 //! use std::error::Error;
-//! use tesseract_rs::TesseractAPI;
+//! use kreuzberg_tesseract::TesseractAPI;
 //!
 //! fn get_default_tessdata_dir() -> PathBuf {
 //!     if cfg!(target_os = "macos") {

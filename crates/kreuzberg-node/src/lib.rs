@@ -21,8 +21,13 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::ffi::CStr;
 
+// Ensure kreuzberg-ffi is linked (required for C FFI symbols)
+// The underscore here is Rust's internal name normalization of the hyphenated crate name
+#[allow(unused_extern_crates)]
+extern crate kreuzberg_ffi;
+
 // FFI bindings to kreuzberg-ffi error context functions
-#[allow(dead_code)]
+// These are C ABI functions exported by kreuzberg-ffi
 unsafe extern "C" {
     /// Get the last error code from FFI.
     ///

@@ -396,6 +396,9 @@ cd kreuzberg/packages/ruby
 # Install dependencies
 bundle install
 
+# Set up vendor symlink for local development (required for building)
+ln -sfn ../../crates/kreuzberg vendor/kreuzberg
+
 # Build the Rust extension
 bundle exec rake compile
 
@@ -405,6 +408,8 @@ bundle exec rspec
 # Run RuboCop
 bundle exec rubocop
 ```
+
+**Note**: The Ruby bindings use a vendored copy of the core `kreuzberg` Rust crate. For local development, create a symlink at `vendor/kreuzberg` pointing to `../../crates/kreuzberg`. In CI and gem packaging, the actual vendored files are copied to this location.
 
 ## License
 

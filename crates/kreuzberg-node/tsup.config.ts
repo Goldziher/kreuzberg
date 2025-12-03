@@ -13,5 +13,7 @@ export default defineConfig({
 	sourcemap: true,
 	clean: true,
 	shims: true,
-	external: ["sharp", "@gutenye/ocr-node", /\.node$/, /@kreuzberg\/node-.*/, "../index.js"],
+	external: ["sharp", "@gutenye/ocr-node", /\.node$/, /@kreuzberg\/node-.*/],
+	// Don't externalize index.js - let tsup handle the require/import
+	noExternal: [],
 });

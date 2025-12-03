@@ -4,13 +4,14 @@ members = [
     "crates/kreuzberg-py",
     "crates/kreuzberg-ffi",
     "crates/kreuzberg-tesseract",
-    "packages/ruby/ext/kreuzberg_rb/native",
     "crates/kreuzberg-cli",
     "crates/kreuzberg-node",
     "tools/benchmark-harness",
     "tools/e2e-generator",
     "e2e/rust",
 ]
+# Note: packages/ruby/ext/kreuzberg_rb/native is excluded because it uses a vendored
+# kreuzberg crate for gem packaging. Build it separately via: cd packages/ruby && bundle exec rake compile
 default-members = ["crates/kreuzberg", "crates/kreuzberg-cli"]
 resolver = "2"
 

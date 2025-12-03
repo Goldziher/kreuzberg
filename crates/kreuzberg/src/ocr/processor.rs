@@ -375,6 +375,14 @@ impl OcrProcessor {
             )
         });
 
+        // Explicitly call recognize() to trigger OCR processing
+        // This ensures that subsequent calls to get_utf8_text(), get_hocr_text(), etc.
+        // have valid recognized text available
+        api.recognize()
+            .map_err(|e| OcrError::ProcessingFailed(format!("Failed to recognize text: {}", e)))?;
+
+        log_ci_debug(ci_debug_enabled, "recognize", || "completed".to_string());
+
         let tsv_data_for_tables = if config.enable_table_detection || config.output_format == "tsv" {
             Some(
                 api.get_tsv_text(0)
