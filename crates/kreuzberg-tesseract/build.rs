@@ -218,7 +218,13 @@ mod build_tesseract {
                     leptonica_config
                         .define("CMAKE_C_FLAGS_RELEASE", "/MD /O2")
                         .define("CMAKE_C_FLAGS_DEBUG", "/MDd /Od");
+                } else if cfg!(target_env = "gnu") {
+                    // MinGW/GNU toolchains reject MSVC-style flags, use GCC syntax
+                    leptonica_config
+                        .define("CMAKE_C_FLAGS_RELEASE", "-O2 -DNDEBUG")
+                        .define("CMAKE_C_FLAGS_DEBUG", "-O0 -g");
                 } else {
+                    // Fallback for other Windows toolchains
                     leptonica_config
                         .define("CMAKE_C_FLAGS_RELEASE", "-O2")
                         .define("CMAKE_C_FLAGS_DEBUG", "-O0 -g");
@@ -382,6 +388,14 @@ mod build_tesseract {
                 // Add TESSERACT_STATIC to prevent __declspec(dllimport) on API functions
                 cmake_cxx_flags.push_str("/EHsc /MP /std:c++17 /DTESSERACT_STATIC ");
                 additional_defines.push((
+                    "CMAKE_C_FLAGS_RELEASE".to_string(),
+                    "/MD /O2".to_string(),
+                ));
+                additional_defines.push((
+                    "CMAKE_C_FLAGS_DEBUG".to_string(),
+                    "/MDd /Od".to_string(),
+                ));
+                additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "/MD /O2 /DTESSERACT_STATIC".to_string(),
                 ));
@@ -393,9 +407,36 @@ mod build_tesseract {
                 // This flag causes CMake to export symbols for DLL linkage which creates
                 // __imp_ prefixed symbols that the linker can't find in static libraries
                 additional_defines.push(("CMAKE_MSVC_RUNTIME_LIBRARY".to_string(), "MultiThreadedDLL".to_string()));
-            } else {
-                // MinGW/GNU toolchains reject MSVC-style flags, so stick to GCC syntax
+            } else if cfg!(target_env = "gnu") {
+                // MinGW/GNU toolchains reject MSVC-style flags, use GCC syntax
                 cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
+                additional_defines.push((
+                    "CMAKE_C_FLAGS_RELEASE".to_string(),
+                    "-O2 -DNDEBUG".to_string(),
+                ));
+                additional_defines.push((
+                    "CMAKE_C_FLAGS_DEBUG".to_string(),
+                    "-O0 -g".to_string(),
+                ));
+                additional_defines.push((
+                    "CMAKE_CXX_FLAGS_RELEASE".to_string(),
+                    "-O2 -DNDEBUG -DTESSERACT_STATIC".to_string(),
+                ));
+                additional_defines.push((
+                    "CMAKE_CXX_FLAGS_DEBUG".to_string(),
+                    "-O0 -g -DTESSERACT_STATIC".to_string(),
+                ));
+            } else {
+                // Fallback for other Windows toolchains
+                cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
+                additional_defines.push((
+                    "CMAKE_C_FLAGS_RELEASE".to_string(),
+                    "-O2 -DNDEBUG".to_string(),
+                ));
+                additional_defines.push((
+                    "CMAKE_C_FLAGS_DEBUG".to_string(),
+                    "-O0 -g".to_string(),
+                ));
                 additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "-O2 -DNDEBUG -DTESSERACT_STATIC".to_string(),
