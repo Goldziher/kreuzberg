@@ -77,3 +77,11 @@ runs:
           uv pip install opencv-python-headless opencv-contrib-python
           echo "✅ OpenCV packages reinstalled"
         fi
+
+    - name: Preserve PKG_CONFIG_PATH for OpenSSL
+      shell: bash
+      run: |
+        if [ -n "${PKG_CONFIG_PATH:-}" ]; then
+          echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+          echo "Preserved PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+        fi
