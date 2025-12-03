@@ -39,7 +39,7 @@ pub fn extract_image_metadata(bytes: &[u8]) -> Result<ImageMetadata> {
 
     let width = image.width();
     let height = image.height();
-    let format_str = format!("{:?}", format);
+    let format_str = format!("{:?}", format).to_uppercase();
 
     let exif_data = extract_exif_data(bytes);
 
@@ -123,7 +123,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 100);
         assert_eq!(metadata.height, 80);
-        assert_eq!(metadata.format, "Png");
+        assert_eq!(metadata.format, "PNG");
     }
 
     #[test]
@@ -135,7 +135,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 200);
         assert_eq!(metadata.height, 150);
-        assert_eq!(metadata.format, "Jpeg");
+        assert_eq!(metadata.format, "JPEG");
     }
 
     #[test]
@@ -147,7 +147,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 120);
         assert_eq!(metadata.height, 90);
-        assert_eq!(metadata.format, "WebP");
+        assert_eq!(metadata.format, "WEBP");
     }
 
     #[test]
@@ -159,7 +159,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 50);
         assert_eq!(metadata.height, 50);
-        assert_eq!(metadata.format, "Bmp");
+        assert_eq!(metadata.format, "BMP");
     }
 
     #[test]
@@ -171,7 +171,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 180);
         assert_eq!(metadata.height, 120);
-        assert_eq!(metadata.format, "Tiff");
+        assert_eq!(metadata.format, "TIFF");
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 64);
         assert_eq!(metadata.height, 64);
-        assert_eq!(metadata.format, "Gif");
+        assert_eq!(metadata.format, "GIF");
     }
 
     #[test]
@@ -217,8 +217,8 @@ mod tests {
         let png_metadata = extract_image_metadata(&png_bytes).unwrap();
         let jpeg_metadata = extract_image_metadata(&jpeg_bytes).unwrap();
 
-        assert_eq!(png_metadata.format, "Png");
-        assert_eq!(jpeg_metadata.format, "Jpeg");
+        assert_eq!(png_metadata.format, "PNG");
+        assert_eq!(jpeg_metadata.format, "JPEG");
     }
 
     #[test]
@@ -284,7 +284,7 @@ mod tests {
         let metadata = result.unwrap();
         assert_eq!(metadata.width, 1);
         assert_eq!(metadata.height, 1);
-        assert_eq!(metadata.format, "Png");
+        assert_eq!(metadata.format, "PNG");
     }
 
     #[test]
@@ -361,8 +361,8 @@ mod tests {
         let jpeg_meta = extract_image_metadata(&jpeg_bytes).unwrap();
         let webp_meta = extract_image_metadata(&webp_bytes).unwrap();
 
-        assert_eq!(png_meta.format, "Png");
-        assert_eq!(jpeg_meta.format, "Jpeg");
-        assert_eq!(webp_meta.format, "WebP");
+        assert_eq!(png_meta.format, "PNG");
+        assert_eq!(jpeg_meta.format, "JPEG");
+        assert_eq!(webp_meta.format, "WEBP");
     }
 }

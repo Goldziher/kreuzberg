@@ -3,15 +3,25 @@
 //! This utility can run against a single file or a batch of files (via `--input-list`).
 //! For each input it prints or writes a JSON object containing duration, peak RSS,
 //! optional flamegraph path, and the top hot functions when CPU profiling is enabled.
+//!
+//! **Note**: This binary is only available on non-Windows platforms due to pprof dependency.
 
+#[cfg(not(target_os = "windows"))]
 use std::env;
+#[cfg(not(target_os = "windows"))]
 use std::fs::{File, create_dir_all};
+#[cfg(not(target_os = "windows"))]
 use std::io::{BufRead, BufReader};
+#[cfg(not(target_os = "windows"))]
 use std::path::{Path, PathBuf};
+#[cfg(not(target_os = "windows"))]
 use std::time::Instant;
 
+#[cfg(not(target_os = "windows"))]
 use kreuzberg::core::config::ExtractionConfig;
+#[cfg(not(target_os = "windows"))]
 use kreuzberg::core::extractor::extract_file_sync;
+#[cfg(not(target_os = "windows"))]
 use serde::Serialize;
 
 #[cfg(feature = "profiling")]
@@ -20,23 +30,17 @@ use pprof::{ProfilerGuardBuilder, Report};
 #[cfg(feature = "profiling")]
 use std::collections::HashMap;
 
-#[cfg(target_os = "macos")]
+#[cfg(all(not(target_os = "windows"), target_os = "macos"))]
 fn normalize_rss(value: i64) -> i64 {
     value / 1024
 }
 
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(all(not(target_os = "windows"), unix, not(target_os = "macos")))]
 fn normalize_rss(value: i64) -> i64 {
     value
 }
 
-#[cfg(not(unix))]
-#[allow(dead_code)]
-fn normalize_rss(value: i64) -> i64 {
-    value
-}
-
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 fn max_rss_kb() -> Option<i64> {
     use std::mem::MaybeUninit;
 
@@ -49,11 +53,7 @@ fn max_rss_kb() -> Option<i64> {
     Some(normalize_rss(usage.ru_maxrss))
 }
 
-#[cfg(not(unix))]
-fn max_rss_kb() -> Option<i64> {
-    None
-}
-
+#[cfg(not(target_os = "windows"))]
 #[derive(Debug)]
 struct Options {
     inputs: Vec<PathBuf>,
@@ -64,6 +64,7 @@ struct Options {
     output_dir: Option<PathBuf>,
 }
 
+#[cfg(not(target_os = "windows"))]
 #[derive(Serialize, Clone)]
 struct FunctionSample {
     function: String,
@@ -71,6 +72,7 @@ struct FunctionSample {
     percentage: f64,
 }
 
+#[cfg(not(target_os = "windows"))]
 #[derive(Serialize, Clone)]
 struct ProfileOutput {
     input: String,
@@ -81,12 +83,14 @@ struct ProfileOutput {
     top_functions: Option<Vec<FunctionSample>>,
 }
 
+#[cfg(not(target_os = "windows"))]
 fn print_usage() {
     eprintln!(
         "Usage: profile_extract [options] <file ...>\n\nOptions:\n  --flamegraph <path>         Write flamegraph SVG (single input)\n  --flamegraph-dir <dir>      Write flamegraph SVGs for each input\n  --output-json <path>        Write JSON output (single input)\n  --output-dir <dir>          Write per-file JSON outputs to directory\n  --input-list <path>         File with newline-separated input paths\n  -h, --help                  Show this help message"
     );
 }
 
+#[cfg(not(target_os = "windows"))]
 fn parse_options() -> Options {
     let mut args = env::args().skip(1);
     let mut inputs = Vec::new();
@@ -156,6 +160,7 @@ fn parse_options() -> Options {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 fn sanitize_file_name(path: &Path) -> String {
     let name_owned;
     let name = match path.file_name().and_then(|n| n.to_str()) {
@@ -176,6 +181,7 @@ fn sanitize_file_name(path: &Path) -> String {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 fn read_inputs_from_file(list_path: &Path) -> Result<Vec<PathBuf>, String> {
     let file = File::open(list_path).map_err(|e| format!("Failed to open input list {}: {e}", list_path.display()))?;
     let reader = BufReader::new(file);
@@ -191,6 +197,7 @@ fn read_inputs_from_file(list_path: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(inputs)
 }
 
+#[cfg(not(target_os = "windows"))]
 fn main() {
     let options = parse_options();
 
@@ -294,6 +301,7 @@ fn main() {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 fn run_profile(path: &Path, flamegraph_path: Option<PathBuf>) -> Result<ProfileOutput, String> {
     if !path.exists() {
         return Err("Input file does not exist".to_string());
@@ -453,4 +461,13 @@ fn summarize_top_functions(report: &Report, limit: usize) -> Vec<FunctionSample>
     } else {
         filtered
     }
+}
+
+// Windows stub: profiling features are not available on Windows due to pprof dependency
+#[cfg(target_os = "windows")]
+fn main() {
+    eprintln!("Error: profile_extract is not available on Windows.");
+    eprintln!("The pprof profiling library requires Unix-specific APIs.");
+    eprintln!("Please use this tool on Linux or macOS.");
+    std::process::exit(1);
 }

@@ -16,6 +16,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 kreuzberg = { path = "../kreuzberg", features = ["full", "embeddings"] }
+kreuzberg-ffi = { path = "../kreuzberg-ffi" }
 napi = { version = "3", default-features = false, features = ["napi8", "async", "serde-json"] }
 napi-derive = "3"
 tokio = { workspace = true }
