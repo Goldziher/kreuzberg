@@ -178,7 +178,7 @@ testpaths = [ "packages/python/tests" ]
 norecursedirs = [ "dist", "build", "*.egg" ]
 markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-  "integration: marks tests as integration tests",
+  "integration: marks tests as integration tests (requires running services)",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -208,6 +208,10 @@ exclude_lines = [
   "def __repr__",
   "class .*\\bProtocol\\):",
   "@(abc\\.)?abstractmethod",
+]
+omit = [
+  "packages/python/kreuzberg/ocr/easyocr.py",
+  "packages/python/kreuzberg/ocr/paddleocr.py",
 ]
 
 [tool.mypy]
