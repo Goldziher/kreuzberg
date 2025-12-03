@@ -74,7 +74,7 @@ jobs:
           rm -f mkdocs-v3.yaml
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: site
 
