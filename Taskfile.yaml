@@ -509,6 +509,15 @@ tasks:
     dir: e2e/csharp
     cmds:
       - |
+        # Set Tesseract data path for all platforms
+        if [ "$RUNNER_OS" = "Linux" ]; then
+            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+            export TESSDATA_PREFIX="$HOME/Library/Application Support/tesseract-rs/tessdata"
+        elif [ "$RUNNER_OS" = "Windows" ]; then
+            export TESSDATA_PREFIX="$APPDATA/tesseract-rs/tessdata"
+        fi
+
         DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
         LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
         dotnet test Kreuzberg.E2E.csproj -c Release
@@ -724,7 +733,17 @@ tasks:
     desc: Run C# tests
     dir: packages/csharp
     cmds:
-      - dotnet test Kreuzberg.Tests/Kreuzberg.Tests.csproj -c Release
+      - |
+        # Set Tesseract data path for all platforms
+        if [ "$RUNNER_OS" = "Linux" ]; then
+            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+            export TESSDATA_PREFIX="$HOME/Library/Application Support/tesseract-rs/tessdata"
+        elif [ "$RUNNER_OS" = "Windows" ]; then
+            export TESSDATA_PREFIX="$APPDATA/tesseract-rs/tessdata"
+        fi
+
+        dotnet test Kreuzberg.Tests/Kreuzberg.Tests.csproj -c Release
 
   csharp:lint:
     desc: Lint/format C# code with auto-fix (dotnet format)
