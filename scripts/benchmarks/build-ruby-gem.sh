@@ -33,6 +33,11 @@ echo "  LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 echo "  DYLD_LIBRARY_PATH: $DYLD_LIBRARY_PATH"
 echo ""
 
+# Vendor kreuzberg core before building gem
+echo "Vendoring kreuzberg core..."
+bash "$WORKSPACE_ROOT/scripts/ci/ruby/vendor-kreuzberg-core.sh"
+echo ""
+
 cd "$WORKSPACE_ROOT/packages/ruby"
 echo "Building Ruby native gem in: $(pwd)"
 
