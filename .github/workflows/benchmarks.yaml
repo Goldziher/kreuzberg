@@ -650,6 +650,9 @@ jobs:
         working-directory: packages/go
         run: go mod download
 
+      - name: Build Go bindings
+        run: bash scripts/benchmarks/build-go-bindings.sh
+
       - name: Run benchmark
         env:
           FRAMEWORK: kreuzberg-go-sync
@@ -714,6 +717,9 @@ jobs:
       - name: Prime Go modules
         working-directory: packages/go
         run: go mod download
+
+      - name: Build Go bindings
+        run: bash scripts/benchmarks/build-go-bindings.sh
 
       - name: Run benchmark
         env:
