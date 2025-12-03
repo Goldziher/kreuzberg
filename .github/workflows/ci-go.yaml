@@ -74,9 +74,14 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install mingw --version=13.2.0 --allow-downgrade -y
-          # Remove Strawberry Perl GCC from PATH to avoid conflicts with MinGW
+          # Remove Strawberry Perl GCC from PATH to avoid conflicts
           $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
           echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+
+          # Set environment variables for cc crate compiler detection
+          echo "CC=gcc" >> $env:GITHUB_ENV
+          echo "CXX=g++" >> $env:GITHUB_ENV
+          echo "AR=ar" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Build FFI library
@@ -161,9 +166,14 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install mingw --version=13.2.0 --allow-downgrade -y
-          # Remove Strawberry Perl GCC from PATH to avoid conflicts with MinGW
+          # Remove Strawberry Perl GCC from PATH to avoid conflicts
           $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
           echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+
+          # Set environment variables for cc crate compiler detection
+          echo "CC=gcc" >> $env:GITHUB_ENV
+          echo "CXX=g++" >> $env:GITHUB_ENV
+          echo "AR=ar" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Reorganize FFI libraries for Windows GNU target
