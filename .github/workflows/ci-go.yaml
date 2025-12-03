@@ -78,6 +78,14 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Cache MSYS2 MinGW toolchain
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: D:\a\_temp\msys64\ucrt64
+          key: msys2-mingw-ucrt64-${{ runner.os }}-v1
+          restore-keys: msys2-mingw-ucrt64-${{ runner.os }}-
+
       - name: Setup MSYS2 with MinGW-w64 (Windows)
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
@@ -178,6 +186,14 @@ jobs:
         with:
           name: go-ffi-lib-${{ matrix.os }}
           path: target/release/
+
+      - name: Cache MSYS2 MinGW toolchain
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: D:\a\_temp\msys64\ucrt64
+          key: msys2-mingw-ucrt64-${{ runner.os }}-v1
+          restore-keys: msys2-mingw-ucrt64-${{ runner.os }}-
 
       - name: Setup MSYS2 with MinGW-w64 (Windows)
         if: runner.os == 'Windows'

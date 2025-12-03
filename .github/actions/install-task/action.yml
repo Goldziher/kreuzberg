@@ -1,11 +1,28 @@
 name: Install Task
 description: Install Taskfile CLI
+inputs:
+  version:
+    description: Task CLI version to install
+    required: false
+    default: "3.45.4"
 runs:
   using: composite
   steps:
+    - name: Restore Task CLI cache
+      uses: actions/cache@v4
+      id: cache
+      with:
+        path: ~/.local/bin
+        key: task-cli-${{ runner.os }}-v${{ inputs.version }}
+        restore-keys: |
+          task-cli-${{ runner.os }}-
     - name: Install Task
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         set -euo pipefail
         sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+    - name: Add Task to PATH
+      shell: bash
+      run: |
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
