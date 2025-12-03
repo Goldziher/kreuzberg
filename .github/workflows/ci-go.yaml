@@ -45,6 +45,9 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-${{ matrix.os }}
+          # Disable sccache on Windows due to MinGW GCC incompatibility
+          # sccache cannot detect MinGW GCC compiler, causing build failures
+          use-sccache: ${{ runner.os != 'Windows' }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -119,6 +122,8 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
+          # Disable sccache on Windows due to MinGW GCC incompatibility
+          use-sccache: ${{ runner.os != 'Windows' }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
