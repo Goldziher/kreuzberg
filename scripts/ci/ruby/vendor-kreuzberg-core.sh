@@ -32,6 +32,20 @@ sed -i.bak 's/^edition\.workspace = true/edition = "2024"/' packages/ruby/vendor
 sed -i.bak 's/^rust-version\.workspace = true/rust-version = "1.91"/' packages/ruby/vendor/kreuzberg/Cargo.toml
 sed -i.bak 's/^authors\.workspace = true/authors = ["Na'\''aman Hirschfeld <nhirschfeld@gmail.com>"]/' packages/ruby/vendor/kreuzberg/Cargo.toml
 sed -i.bak 's/^license\.workspace = true/license = "MIT"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+
+# Inline workspace dependencies (without workspace = true references)
+sed -i.bak 's/^ahash = { workspace = true }/ahash = "0.8.12"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^async-trait = { workspace = true }/async-trait = "0.1.89"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^base64 = { workspace = true }/base64 = "0.22.1"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^hex = { workspace = true }/hex = "0.4.3"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^num_cpus = { workspace = true }/num_cpus = "1.17.0"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^serde = { workspace = true }/serde = { version = "1.0.228", features = ["derive"] }/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^serde_json = { workspace = true }/serde_json = "1.0.145"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^thiserror = { workspace = true }/thiserror = "2.0.17"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^tokio = { workspace = true }/tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^tracing = { workspace = true }/tracing = "0.1"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^anyhow = { workspace = true }/anyhow = "1.0"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+
 rm -f packages/ruby/vendor/kreuzberg/Cargo.toml.bak
 
 cat > packages/ruby/vendor/Cargo.toml <<'EOF'
