@@ -66,7 +66,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '25'
+          java-version: '23'
 
       - name: Setup Go
         uses: actions/setup-go@v6
