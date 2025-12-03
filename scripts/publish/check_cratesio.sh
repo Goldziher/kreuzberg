@@ -30,14 +30,14 @@ check_crate() {
   local found=false
 
   while [ $attempt -le $max_attempts ]; do
-    echo "::debug::Checking crates.io for ${crate_name} ${version} (attempt ${attempt}/${max_attempts})"
+    echo "::debug::Checking crates.io for ${crate_name} ${version} (attempt ${attempt}/${max_attempts})" >&2
 
     if cargo search "$crate_name" --limit 1 2>/dev/null | grep -q "${crate_name} = \"${version}\""; then
       found=true
       break
     elif [ $attempt -lt $max_attempts ]; then
       sleep_time=$((attempt * 5))
-      echo "::warning::crates.io check for ${crate_name} failed, retrying in ${sleep_time}s..."
+      echo "::warning::crates.io check for ${crate_name} failed, retrying in ${sleep_time}s..." >&2
       sleep "$sleep_time"
     fi
 
@@ -49,36 +49,39 @@ check_crate() {
 
 # Check kreuzberg crate
 if [ "$(check_crate "kreuzberg" "$version" "$max_attempts")" = "true" ]; then
-  echo "kreuzberg_exists=true" >> "$GITHUB_OUTPUT"
-  echo "::notice::Rust crate kreuzberg ${version} already exists on crates.io"
+  kreuzberg_exists=true
+  echo "::notice::Rust crate kreuzberg ${version} already exists on crates.io" >&2
 else
-  echo "kreuzberg_exists=false" >> "$GITHUB_OUTPUT"
-  echo "::notice::Rust crate kreuzberg ${version} not found on crates.io"
+  kreuzberg_exists=false
+  echo "::notice::Rust crate kreuzberg ${version} not found on crates.io" >&2
 fi
 
 # Check kreuzberg-tesseract crate
 if [ "$(check_crate "kreuzberg-tesseract" "$version" "$max_attempts")" = "true" ]; then
-  echo "tesseract_exists=true" >> "$GITHUB_OUTPUT"
-  echo "::notice::Rust crate kreuzberg-tesseract ${version} already exists on crates.io"
+  tesseract_exists=true
+  echo "::notice::Rust crate kreuzberg-tesseract ${version} already exists on crates.io" >&2
 else
-  echo "tesseract_exists=false" >> "$GITHUB_OUTPUT"
-  echo "::notice::Rust crate kreuzberg-tesseract ${version} not found on crates.io"
+  tesseract_exists=false
+  echo "::notice::Rust crate kreuzberg-tesseract ${version} not found on crates.io" >&2
 fi
 
 # Check kreuzberg-cli crate
 if [ "$(check_crate "kreuzberg-cli" "$version" "$max_attempts")" = "true" ]; then
-  echo "cli_exists=true" >> "$GITHUB_OUTPUT"
-  echo "::notice::Rust crate kreuzberg-cli ${version} already exists on crates.io"
+  cli_exists=true
+  echo "::notice::Rust crate kreuzberg-cli ${version} already exists on crates.io" >&2
 else
-  echo "cli_exists=false" >> "$GITHUB_OUTPUT"
-  echo "::notice::Rust crate kreuzberg-cli ${version} not found on crates.io"
+  cli_exists=false
+  echo "::notice::Rust crate kreuzberg-cli ${version} not found on crates.io" >&2
 fi
 
+# Output results
+echo "kreuzberg_exists=$kreuzberg_exists"
+echo "tesseract_exists=$tesseract_exists"
+echo "cli_exists=$cli_exists"
+
 # Set all_exist if all three crates exist
-if grep -q "kreuzberg_exists=true" "$GITHUB_OUTPUT" && \
-   grep -q "tesseract_exists=true" "$GITHUB_OUTPUT" && \
-   grep -q "cli_exists=true" "$GITHUB_OUTPUT"; then
-  echo "all_exist=true" >> "$GITHUB_OUTPUT"
+if [ "$kreuzberg_exists" = "true" ] && [ "$tesseract_exists" = "true" ] && [ "$cli_exists" = "true" ]; then
+  echo "all_exist=true"
 else
-  echo "all_exist=false" >> "$GITHUB_OUTPUT"
+  echo "all_exist=false"
 fi

@@ -290,7 +290,7 @@ public sealed class PdfMetadata
     public string? Author { get; set; }
 
     [JsonPropertyName("keywords")]
-    public string? Keywords { get; set; }
+    public List<string>? Keywords { get; set; }
 
     [JsonPropertyName("creator")]
     public string? Creator { get; set; }
@@ -413,7 +413,7 @@ public sealed class HtmlMetadata
     public string? Description { get; set; }
 
     [JsonPropertyName("keywords")]
-    public string? Keywords { get; set; }
+    public List<string>? Keywords { get; set; }
 
     [JsonPropertyName("author")]
     public string? Author { get; set; }

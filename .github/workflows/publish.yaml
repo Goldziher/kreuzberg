@@ -352,9 +352,6 @@ jobs:
 
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
-        env:
-          OPENSSL_LIB_DIR: /usr/lib/x86_64-linux-gnu
-          OPENSSL_INCLUDE_DIR: /usr/include
         uses: PyO3/maturin-action@v1
         with:
           command: build
@@ -364,6 +361,15 @@ jobs:
           working-directory: packages/python
           sccache: ${{ steps.tesseract-cache.outputs.cache-enabled }}
           docker-options: ${{ steps.tesseract-cache.outputs.docker-options }}
+          before-script-linux: |
+            # Install OpenSSL based on container type
+            if command -v yum >/dev/null 2>&1; then
+              # CentOS-based manylinux (rust-cross for x86_64)
+              yum install -y openssl openssl-devel pkgconfig
+            elif command -v apt-get >/dev/null 2>&1; then
+              # Debian-based manylinux (pypa for ARM)
+              apt-get update && apt-get install -y pkg-config libssl-dev
+            fi
 
       - name: Build wheels (native)
         if: matrix.os != 'ubuntu-latest'

@@ -28,7 +28,7 @@ response=""
 package_found=false
 
 while [ $attempt -le $max_attempts ]; do
-  echo "::debug::Checking NuGet for ${package} ${version} (attempt ${attempt}/${max_attempts})"
+  echo "::debug::Checking NuGet for ${package} ${version} (attempt ${attempt}/${max_attempts})" >&2
 
   response=$(curl \
     --silent \
@@ -46,7 +46,7 @@ while [ $attempt -le $max_attempts ]; do
     break
   elif [ $attempt -lt $max_attempts ]; then
     sleep_time=$((attempt * 5))
-    echo "::warning::NuGet check failed, retrying in ${sleep_time}s..."
+    echo "::warning::NuGet check failed, retrying in ${sleep_time}s..." >&2
     sleep "$sleep_time"
   fi
 
@@ -54,9 +54,9 @@ while [ $attempt -le $max_attempts ]; do
 done
 
 if [ "$package_found" = true ]; then
-  echo "exists=true" >> "$GITHUB_OUTPUT"
-  echo "::notice::NuGet package ${package} ${version} already exists"
+  echo "exists=true"
+  echo "::notice::NuGet package ${package} ${version} already exists" >&2
 else
-  echo "exists=false" >> "$GITHUB_OUTPUT"
-  echo "::notice::NuGet package ${package} ${version} not found, will build and publish"
+  echo "exists=false"
+  echo "::notice::NuGet package ${package} ${version} not found, will build and publish" >&2
 fi
