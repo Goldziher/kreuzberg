@@ -161,28 +161,9 @@ export function __resetBindingForTests(): void {
 // Helper to load native binding with ESM/CJS compatibility
 // biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 function loadNativeBinding(): any {
-	// In ESM context, we need to use a different approach
-	// Try to detect if we're in ESM or CJS
-	const isESM = typeof module === "undefined" || typeof module.exports === "undefined";
-
-	if (isESM) {
-		// ESM: Use dynamic import with createRequire
-		// This will be transformed by tsup but we need to handle it carefully
-		try {
-			// biome-ignore lint/suspicious/noExplicitAny: Module loader shimmed by tsup
-			const { createRequire } = require("node:module");
-			// biome-ignore lint/suspicious/noExplicitAny: import.meta available in ESM
-			const req = createRequire(import.meta.url);
-			return req("../index.js");
-		} catch {
-			// Fallback: try direct require (will work with tsup shim)
-			// biome-ignore lint/suspicious/noExplicitAny: require shimmed by tsup
-			return require("../index.js");
-		}
-	}
-
-	// CJS: Direct require
-	// biome-ignore lint/suspicious/noExplicitAny: require available in CJS
+	// Simply require the NAPI bridge - tsup will handle ESM/CJS conversion
+	// The index.js file is a pure CommonJS NAPI module and should not be shimmed
+	// biome-ignore lint/suspicious/noExplicitAny: require shimmed by tsup
 	return require("../index.js");
 }
 
