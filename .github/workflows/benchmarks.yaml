@@ -97,7 +97,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -152,7 +152,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -216,7 +216,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -280,7 +280,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -344,7 +344,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -415,7 +415,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -486,7 +486,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -551,7 +551,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -616,7 +616,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -684,7 +684,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -752,7 +752,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -816,7 +816,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -879,7 +879,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -943,7 +943,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -1007,7 +1007,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -1071,7 +1071,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
@@ -1135,7 +1135,7 @@ jobs:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ needs.setup.outputs.artifact-name }}
           path: target/release
