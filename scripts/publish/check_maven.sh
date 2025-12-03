@@ -29,7 +29,7 @@ response=""
 count=0
 
 while [ $attempt -le $max_attempts ]; do
-  echo "::debug::Checking Maven Central for ${group}:${artifact}:${version} (attempt ${attempt}/${max_attempts})"
+  echo "::debug::Checking Maven Central for ${group}:${artifact}:${version} (attempt ${attempt}/${max_attempts})" >&2
 
   response=$(curl \
     --silent \
@@ -49,7 +49,7 @@ while [ $attempt -le $max_attempts ]; do
 
   if [ $attempt -lt $max_attempts ]; then
     sleep_time=$((attempt * 5))
-    echo "::warning::Maven Central check failed, retrying in ${sleep_time}s..."
+    echo "::warning::Maven Central check failed, retrying in ${sleep_time}s..." >&2
     sleep "$sleep_time"
   fi
 
@@ -57,9 +57,9 @@ while [ $attempt -le $max_attempts ]; do
 done
 
 if [ "$count" -gt 0 ]; then
-  echo "exists=true" >> "$GITHUB_OUTPUT"
-  echo "::notice::Java package ${group}:${artifact}:${version} already exists on Maven Central"
+  echo "exists=true"
+  echo "::notice::Java package ${group}:${artifact}:${version} already exists on Maven Central" >&2
 else
-  echo "exists=false" >> "$GITHUB_OUTPUT"
-  echo "::notice::Java package ${group}:${artifact}:${version} not found on Maven Central, will build and publish"
+  echo "exists=false"
+  echo "::notice::Java package ${group}:${artifact}:${version} not found on Maven Central, will build and publish" >&2
 fi

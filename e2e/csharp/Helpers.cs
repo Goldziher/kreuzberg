@@ -356,12 +356,25 @@ public static class TestHelpers
             }
         }
 
-        if (value is JsonArray va && contains is JsonArray ca)
+        // Check if array contains a single value
+        if (value is JsonArray va && contains is JsonValue)
+        {
+            foreach (var vItem in va)
+            {
+                if (JsonEquals(vItem!, contains))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (value is JsonArray vArr && contains is JsonArray ca)
         {
             foreach (var item in ca)
             {
                 bool found = false;
-                foreach (var vItem in va)
+                foreach (var vItem in vArr)
                 {
                     if (JsonEquals(vItem!, item!))
                     {

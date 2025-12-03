@@ -35,6 +35,11 @@ echo ""
 
 cd "$WORKSPACE_ROOT/packages/ruby"
 echo "Building Ruby native gem in: $(pwd)"
+
+# Install Ruby dependencies
+echo "Installing Ruby dependencies..."
+bundle install
+
 bundle exec rake clean
 bundle exec rake compile
 bundle exec rake build
