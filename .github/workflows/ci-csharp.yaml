@@ -3,30 +3,30 @@ name: CI C#
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-ffi/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/csharp/**'
-    #   - 'e2e/csharp/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'packages/csharp/**/*.csproj'
-    #   - 'e2e/csharp/**/*.csproj'
-    #   - '.github/workflows/ci-csharp.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-ffi/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/csharp/**'
+      - 'e2e/csharp/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'packages/csharp/**/*.csproj'
+      - 'e2e/csharp/**/*.csproj'
+      - '.github/workflows/ci-csharp.yaml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-ffi/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/csharp/**'
-    #   - 'e2e/csharp/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'packages/csharp/**/*.csproj'
-    #   - 'e2e/csharp/**/*.csproj'
-    #   - '.github/workflows/ci-csharp.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-ffi/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/csharp/**'
+      - 'e2e/csharp/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'packages/csharp/**/*.csproj'
+      - 'e2e/csharp/**/*.csproj'
+      - '.github/workflows/ci-csharp.yaml'
 
 concurrency:
   group: ci-csharp-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

@@ -3,26 +3,26 @@ name: CI Rust
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-cli/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'e2e/rust/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'rust-toolchain.toml'
-    #   - '.github/workflows/ci-rust.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-cli/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'e2e/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ci-rust.yaml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-cli/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'e2e/rust/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'rust-toolchain.toml'
-    #   - '.github/workflows/ci-rust.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-cli/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'e2e/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ci-rust.yaml'
 
 concurrency:
   group: ci-rust-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

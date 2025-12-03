@@ -3,30 +3,30 @@ name: CI Python
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-py/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/python/**'
-    #   - 'e2e/python/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'uv.lock'
-    #   - 'pyproject.toml'
-    #   - '.github/workflows/ci-python.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/python/**'
+      - 'e2e/python/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'uv.lock'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-python.yaml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-py/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/python/**'
-    #   - 'e2e/python/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'uv.lock'
-    #   - 'pyproject.toml'
-    #   - '.github/workflows/ci-python.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/python/**'
+      - 'e2e/python/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'uv.lock'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-python.yaml'
 
 concurrency:
   group: ci-python-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
