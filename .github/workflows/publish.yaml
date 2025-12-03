@@ -1067,7 +1067,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '25'
+          java-version: '23'
           cache: 'maven'
 
       - name: Cache PDFium
@@ -1956,7 +1956,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "25"
+          java-version: "23"
           cache: maven
           server-id: central
           server-username: NEXUS_USERNAME

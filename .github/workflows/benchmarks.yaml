@@ -769,7 +769,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "25"
+          java-version: "23"
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
