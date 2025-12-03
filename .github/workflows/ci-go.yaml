@@ -3,14 +3,22 @@ name: CI Go
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'packages/go/**'
-    #   - 'crates/**'
+    paths:
+      - 'packages/go/**'
+      - 'crates/**'
+      - 'scripts/ci/go/**'
+      - '.github/workflows/ci-go.yaml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'packages/go/**'
-    #   - 'crates/**'
+    paths:
+      - 'packages/go/**'
+      - 'crates/**'
+      - 'scripts/ci/go/**'
+      - '.github/workflows/ci-go.yaml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
 
 concurrency:
   group: ci-go-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -45,8 +53,8 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-${{ matrix.os }}
-          # Disable sccache on Windows due to MinGW GCC incompatibility
-          # sccache cannot detect MinGW GCC compiler, causing build failures
+          # Disable sccache on Windows due to MSYS2 MinGW-w64 GCC incompatibility
+          # sccache cannot detect MSYS2 GCC compiler, causing build failures
           use-sccache: ${{ runner.os != 'Windows' }}
 
       - name: Setup Go
@@ -70,13 +78,22 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
-      - name: Setup MinGW-w64 (Windows)
+      - name: Setup MSYS2 with MinGW-w64 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-binutils
+          path-type: minimal
+
+      - name: Configure MinGW-w64 environment (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install mingw --version=13.2.0 --allow-downgrade -y
-          # Remove Strawberry Perl GCC from PATH to avoid conflicts
-          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
-          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+          # Add MSYS2 MinGW64 to PATH
+          echo "D:\a\_temp\msys64\ucrt64\bin" >> $env:GITHUB_PATH
 
           # Set environment variables for cc crate compiler detection
           echo "CC=gcc" >> $env:GITHUB_ENV
@@ -127,7 +144,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
-          # Disable sccache on Windows due to MinGW GCC incompatibility
+          # Disable sccache on Windows due to MSYS2 MinGW-w64 GCC incompatibility
           use-sccache: ${{ runner.os != 'Windows' }}
 
       - name: Setup Go
@@ -162,13 +179,22 @@ jobs:
           name: go-ffi-lib-${{ matrix.os }}
           path: target/release/
 
-      - name: Setup MinGW-w64 (Windows)
+      - name: Setup MSYS2 with MinGW-w64 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-binutils
+          path-type: minimal
+
+      - name: Configure MinGW-w64 environment (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install mingw --version=13.2.0 --allow-downgrade -y
-          # Remove Strawberry Perl GCC from PATH to avoid conflicts
-          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
-          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+          # Add MSYS2 MinGW64 to PATH
+          echo "D:\a\_temp\msys64\ucrt64\bin" >> $env:GITHUB_PATH
 
           # Set environment variables for cc crate compiler detection
           echo "CC=gcc" >> $env:GITHUB_ENV
