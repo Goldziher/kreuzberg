@@ -4,6 +4,7 @@ require 'rbconfig'
 require 'open3'
 
 module Kreuzberg
+  # Configures library paths for dynamic linking on different platforms.
   module SetupLibPath
     module_function
 

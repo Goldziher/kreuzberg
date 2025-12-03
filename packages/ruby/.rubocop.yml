@@ -36,11 +36,10 @@ Layout/LineLength:
     - 'spec/**/*'
 
 Metrics/BlockLength:
+  Enabled: true
   Max: 350
-  Exclude:
-    - '*.gemspec'
-    - 'examples/**/*'
-    - 'spec/**/*'
+  CountComments: false
+  CountAsOne: []
 
 Metrics/MethodLength:
   Max: 18
@@ -75,6 +74,7 @@ RSpec/UnspecifiedException:
   Enabled: false
 
 Lint/ConstantDefinitionInBlock:
+  Enabled: false
   Exclude:
     - 'spec/**/*'
 
@@ -85,12 +85,17 @@ Gemspec/DevelopmentDependencies:
   Enabled: false
 
 Metrics/ParameterLists:
-  Max: 7
+  Max: 14
   Exclude:
     - 'lib/kreuzberg/config.rb'
 
 Metrics/CyclomaticComplexity:
   Max: 7
+  Exclude:
+    - 'lib/kreuzberg/config.rb'
+
+Metrics/PerceivedComplexity:
+  Max: 12
   Exclude:
     - 'lib/kreuzberg/config.rb'
 

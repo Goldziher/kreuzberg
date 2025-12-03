@@ -6,6 +6,8 @@ Kreuzberg::SetupLibPath.configure
 require_relative 'kreuzberg/version'
 require 'kreuzberg_rb'
 
+# Kreuzberg is a Ruby binding for the Rust core library providing document extraction,
+# text extraction, and OCR capabilities.
 module Kreuzberg
   autoload :Config, 'kreuzberg/config'
   autoload :Result, 'kreuzberg/result'
