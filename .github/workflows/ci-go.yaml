@@ -102,11 +102,6 @@ jobs:
         run: |
           # Add MSYS2 MinGW64 to PATH
           echo "D:\a\_temp\msys64\ucrt64\bin" >> $env:GITHUB_PATH
-
-          # Set environment variables for cc crate compiler detection
-          echo "CC=gcc" >> $env:GITHUB_ENV
-          echo "CXX=g++" >> $env:GITHUB_ENV
-          echo "AR=ar" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Build FFI library
@@ -211,11 +206,6 @@ jobs:
         run: |
           # Add MSYS2 MinGW64 to PATH
           echo "D:\a\_temp\msys64\ucrt64\bin" >> $env:GITHUB_PATH
-
-          # Set environment variables for cc crate compiler detection
-          echo "CC=gcc" >> $env:GITHUB_ENV
-          echo "CXX=g++" >> $env:GITHUB_ENV
-          echo "AR=ar" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Reorganize FFI libraries for Windows GNU target
