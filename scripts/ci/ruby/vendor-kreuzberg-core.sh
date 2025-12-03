@@ -46,6 +46,10 @@ sed -i.bak 's/^tokio = { workspace = true }/tokio = { version = "1.48.0", featur
 sed -i.bak 's/^tracing = { workspace = true }/tracing = "0.1"/' packages/ruby/vendor/kreuzberg/Cargo.toml
 sed -i.bak 's/^anyhow = { workspace = true }/anyhow = "1.0"/' packages/ruby/vendor/kreuzberg/Cargo.toml
 
+# Inline dev-dependencies
+sed -i.bak 's/^tempfile = { workspace = true }/tempfile = "3.23.0"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^criterion = { workspace = true }/criterion = { version = "0.8", features = ["html_reports"] }/' packages/ruby/vendor/kreuzberg/Cargo.toml
+
 rm -f packages/ruby/vendor/kreuzberg/Cargo.toml.bak
 
 cat > packages/ruby/vendor/Cargo.toml <<'EOF'

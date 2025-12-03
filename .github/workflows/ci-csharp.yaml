@@ -204,5 +204,6 @@ jobs:
           KREUZBERG_FFI_DIR: ${{ github.workspace }}/target/release
           LD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${{ env.LD_LIBRARY_PATH }}
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${{ env.DYLD_LIBRARY_PATH }}
+          TESSDATA_PREFIX: ${{ runner.os == 'Linux' && '/usr/share/tesseract-ocr/5/tessdata' || runner.os == 'Windows' && 'C:\Program Files\Tesseract-OCR\tessdata' || '/usr/local/share/tessdata' }}
         run: |
           task e2e:csharp:test

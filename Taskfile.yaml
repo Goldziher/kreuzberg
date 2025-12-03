@@ -513,7 +513,12 @@ tasks:
         if [ "$RUNNER_OS" = "Linux" ]; then
             export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
         elif [ "$RUNNER_OS" = "macOS" ]; then
-            export TESSDATA_PREFIX="$HOME/Library/Application Support/tesseract-rs/tessdata"
+            # Try ARM64 path first, then Intel path
+            if [ -d "/opt/homebrew/opt/tesseract/share/tessdata" ]; then
+                export TESSDATA_PREFIX="/opt/homebrew/opt/tesseract/share/tessdata"
+            elif [ -d "/usr/local/opt/tesseract/share/tessdata" ]; then
+                export TESSDATA_PREFIX="/usr/local/opt/tesseract/share/tessdata"
+            fi
         elif [ "$RUNNER_OS" = "Windows" ]; then
             export TESSDATA_PREFIX="$APPDATA/tesseract-rs/tessdata"
         fi
