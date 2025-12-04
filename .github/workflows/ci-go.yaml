@@ -90,6 +90,14 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup MSYS2 MinGW toolchain (Windows GNU)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
+          pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-pkg-config
+          gcc --version
+
       - name: Build FFI library
         run: scripts/ci/go/build-ffi.ps1
         shell: pwsh
