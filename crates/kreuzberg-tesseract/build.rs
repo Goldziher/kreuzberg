@@ -51,6 +51,12 @@ mod build_tesseract {
             return PathBuf::from(custom);
         }
 
+        if cfg!(target_os = "windows") {
+            // Avoid deeply nested OUT_DIR paths (e.g., Ruby gems) that blow past MAX_PATH.
+            // Always prefer a short, deterministic cache root.
+            return PathBuf::from("C:\\tess");
+        }
+
         if let Some(workspace_cache) = workspace_cache_dir_from_out_dir() {
             return workspace_cache;
         }
@@ -72,10 +78,6 @@ mod build_tesseract {
                     .expect("Neither HOME nor USER environment variable set")
             });
             PathBuf::from(home_dir).join(".tesseract-rs")
-        } else if cfg!(target_os = "windows") {
-            // Windows MAX_PATH (260 char) handling: use shortest possible path
-            // Use C:\tess as the absolute shortest path to avoid path length issues
-            PathBuf::from("C:\\tess")
         } else {
             panic!("Unsupported operating system");
         }
