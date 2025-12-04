@@ -7,10 +7,13 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
 TARGET="${1:-}"
 
 if [ -z "$TARGET" ]; then
-	echo "Usage: build-napi.sh <target>"
+  echo "Usage: build-napi.sh <target>"
 	echo "  target: NAPI build target (e.g., x86_64-unknown-linux-gnu)"
 	exit 1
 fi
@@ -73,12 +76,12 @@ if [[ -n "$pkg_tgz" ]]; then
 
 	if [[ -n "$node_file" && -f "$node_file" ]]; then
 		echo "Repacking tarball with $node_file"
-		tmpdir=$(mktemp -d)
-		tar xzf "$pkg_tgz" -C "$tmpdir"
-		cp "$node_file" "$tmpdir/package/"
-		tar czf "$pkg_tgz" -C "$tmpdir" package
-		rm -rf "$tmpdir"
-	fi
+    tmpdir=$(mktemp -d)
+    tar xzf "$pkg_tgz" -C "$tmpdir"
+    cp "$node_file" "$tmpdir/package/"
+    tar czf "$pkg_tgz" -C "$tmpdir" package
+    rm -rf "$tmpdir"
+  fi
 fi
 
 echo "Build complete"

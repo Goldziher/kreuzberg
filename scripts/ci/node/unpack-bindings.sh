@@ -6,9 +6,14 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
+cd "$REPO_ROOT"
+
 echo "=== Unpacking and installing Node bindings ==="
 
-cd crates/kreuzberg-node
+cd "$REPO_ROOT"/crates/kreuzberg-node
 
 # Extract the tarball to get the built .node file
 pkg=$(find . -maxdepth 1 -name "kreuzberg-node-*.tgz" -print | head -n 1)

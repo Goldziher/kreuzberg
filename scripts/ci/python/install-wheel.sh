@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+cd "$REPO_ROOT"
+
 echo "=== Installing wheel for current platform ==="
 
 if ls dist/kreuzberg-*-manylinux*.whl 1>/dev/null 2>&1; then

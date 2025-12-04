@@ -7,10 +7,13 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
 COVERAGE="${1:-false}"
 shift || true
 
-cd packages/python
+cd "$REPO_ROOT/packages/python"
 
 echo "=== Running Python tests ==="
 
