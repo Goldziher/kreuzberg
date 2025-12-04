@@ -12,18 +12,16 @@ cd "$REPO_ROOT"
 
 echo "=== Installing wheel for current platform ==="
 
-if ls dist/kreuzberg-*-manylinux*.whl 1>/dev/null 2>&1; then
-	echo "Found manylinux wheel"
-	python -m pip install dist/kreuzberg-*-manylinux*.whl
-elif ls dist/kreuzberg-*-macos*.whl 1>/dev/null 2>&1; then
-	echo "Found macOS wheel"
-	python -m pip install dist/kreuzberg-*-macos*.whl
-elif ls dist/kreuzberg-*-win_amd64.whl 1>/dev/null 2>&1; then
-	echo "Found Windows wheel"
-	python -m pip install dist/kreuzberg-*-win_amd64.whl
-else
-	echo "Installing generic wheel"
-	python -m pip install dist/kreuzberg-*.whl
+# Find first matching wheel regardless of platform-specific suffix
+wheel_path="$(ls dist/kreuzberg-*.whl 2>/dev/null | head -n 1 || true)"
+
+if [ -z "$wheel_path" ]; then
+	echo "No wheel found in dist/. Contents:"
+	ls -l dist || true
+	exit 1
 fi
+
+echo "Installing wheel: $wheel_path"
+python -m pip install "$wheel_path"
 
 echo "Wheel installation complete"
