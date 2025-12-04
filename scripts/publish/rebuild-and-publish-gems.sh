@@ -26,7 +26,7 @@ gem update --system
 
 # Find all gem files
 shopt -s nullglob
-mapfile -t gems < <(ls kreuzberg-*.gem | sort)
+mapfile -t gems < <(find . -maxdepth 1 -name 'kreuzberg-*.gem' -print | sort)
 
 if [ ${#gems[@]} -eq 0 ]; then
   echo "No gem artifacts found in $artifacts_dir" >&2

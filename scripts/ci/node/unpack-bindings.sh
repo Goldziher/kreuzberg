@@ -11,7 +11,7 @@ echo "=== Unpacking and installing Node bindings ==="
 cd crates/kreuzberg-node
 
 # Extract the tarball to get the built .node file
-pkg=$(ls kreuzberg-node-*.tgz | head -n 1)
+pkg=$(find . -maxdepth 1 -name "kreuzberg-node-*.tgz" -print | head -n 1)
 if [ -z "$pkg" ]; then
     echo "No kreuzberg-node tarball found" >&2
     exit 1

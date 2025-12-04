@@ -29,13 +29,13 @@ check_crate() {
   local attempt=1
   local found=false
 
-  while [ $attempt -le $max_attempts ]; do
+  while [ "$attempt" -le "$max_attempts" ]; do
     echo "::debug::Checking crates.io for ${crate_name} ${version} (attempt ${attempt}/${max_attempts})" >&2
 
     if cargo search "$crate_name" --limit 1 2>/dev/null | grep -q "${crate_name} = \"${version}\""; then
       found=true
       break
-    elif [ $attempt -lt $max_attempts ]; then
+    elif [ "$attempt" -lt "$max_attempts" ]; then
       sleep_time=$((attempt * 5))
       echo "::warning::crates.io check for ${crate_name} failed, retrying in ${sleep_time}s..." >&2
       sleep "$sleep_time"

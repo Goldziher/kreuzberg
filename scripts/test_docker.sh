@@ -123,6 +123,7 @@ fail_test() {
 }
 
 # Cleanup function
+# shellcheck disable=SC2329
 cleanup() {
     log_info "Cleaning up test containers..."
     docker ps -a --filter "name=${CONTAINER_PREFIX}" --format "{{.Names}}" | while read -r container; do
@@ -139,6 +140,7 @@ random_container_name() {
 }
 
 # Wait for container to be healthy
+# shellcheck disable=SC2329
 wait_for_container() {
     local container=$1
     local max_wait=${2:-30}
@@ -388,7 +390,7 @@ if [ "$VARIANT" = "full" ]; then
 
     # Check if we have a .ppt test file
     if [ -f "${TEST_DOCS_DIR}/legacy_office/test.ppt" ] || [ -f "${TEST_DOCS_DIR}/legacy_office/sample.ppt" ]; then
-        PPT_FILE=$(ls "${TEST_DOCS_DIR}"/legacy_office/*.ppt 2>/dev/null | head -n1)
+        PPT_FILE=$(find "${TEST_DOCS_DIR}/legacy_office" -maxdepth 1 -name '*.ppt' -print | head -n1)
 
         if [ -n "$PPT_FILE" ]; then
             PPT_BASENAME=$(basename "$PPT_FILE")

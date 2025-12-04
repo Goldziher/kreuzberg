@@ -20,7 +20,7 @@ mkdir -p "$WHEEL_DIR"
 
 pushd "$PYTHON_DIR" >/dev/null
 uv build --wheel --out-dir "$WHEEL_DIR"
-LATEST_WHEEL="$(ls -t "$WHEEL_DIR"/*.whl | head -n1)"
+LATEST_WHEEL="$(find "$WHEEL_DIR" -maxdepth 1 -name '*.whl' -print0 | xargs -0 ls -t | head -n1)"
 uv pip install --force-reinstall "$LATEST_WHEEL"
 export LATEST_WHEEL
 

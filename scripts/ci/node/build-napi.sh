@@ -48,7 +48,7 @@ done
 # Repack tarball with the .node file for specific platforms
 pnpm pack
 
-pkg_tgz=$(ls kreuzberg-node-*.tgz | head -n1)
+pkg_tgz=$(find . -maxdepth 1 -name "kreuzberg-node-*.tgz" -print | head -n1)
 if [[ -n "$pkg_tgz" ]]; then
     case "$TARGET" in
         x86_64-unknown-linux-gnu)

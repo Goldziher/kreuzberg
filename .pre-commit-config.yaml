@@ -50,6 +50,11 @@ repos:
         exclude: ^(v3|benchmarks|scripts|crates)/
       - id: ruff-format
         exclude: ^(v3|benchmarks|scripts|crates)/
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.11.0
+    hooks:
+      - id: shellcheck
+        exclude: ^(crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
     hooks:
