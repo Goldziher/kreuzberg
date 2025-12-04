@@ -141,7 +141,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            node-version: "20"
+            node-version: "22"
             target: x86_64-unknown-linux-gnu
             coverage: true
           - os: ubuntu-latest
@@ -149,7 +149,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             coverage: false
           - os: macos-latest
-            node-version: "20"
+            node-version: "22"
             target: aarch64-apple-darwin
             coverage: false
           - os: macos-latest
@@ -157,7 +157,7 @@ jobs:
             target: aarch64-apple-darwin
             coverage: false
           - os: windows-latest
-            node-version: "20"
+            node-version: "22"
             target: x86_64-pc-windows-msvc
             coverage: false
           - os: windows-latest
