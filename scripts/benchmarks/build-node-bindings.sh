@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
 TARGET="${TARGET:-}"
 
 if [ -z "$TARGET" ]; then
@@ -13,7 +16,7 @@ if [ -z "$TARGET" ]; then
 	exit 1
 fi
 
-cd crates/kreuzberg-node
+cd "$REPO_ROOT/crates/kreuzberg-node"
 pnpm install --no-optional
 # Build native bindings with napi (passing TARGET for Rust compilation)
 pnpm exec napi build --platform --release --target "${TARGET}"
@@ -21,4 +24,4 @@ pnpm exec napi build --platform --release --target "${TARGET}"
 pnpm run build:ts
 pkg=$(pnpm pack | tail -n1 | tr -d '\r')
 pnpm install -w "crates/kreuzberg-node/${pkg}"
-cd ../..
+cd "$REPO_ROOT"
