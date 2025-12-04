@@ -14,6 +14,7 @@ on:
       - 'packages/csharp/**/*.csproj'
       - 'e2e/csharp/**/*.csproj'
       - '.github/workflows/ci-csharp.yaml'
+      - '.cargo/config.toml'
   pull_request:
     branches: [main]
     paths:
@@ -27,6 +28,7 @@ on:
       - 'packages/csharp/**/*.csproj'
       - 'e2e/csharp/**/*.csproj'
       - '.github/workflows/ci-csharp.yaml'
+      - '.cargo/config.toml'
 
 concurrency:
   group: ci-csharp-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

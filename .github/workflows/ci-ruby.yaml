@@ -15,6 +15,7 @@ name: CI Ruby
       - 'Gemfile.lock'
       - 'packages/ruby/Rakefile'
       - '.github/workflows/ci-ruby.yaml'
+      - '.cargo/config.toml'
   pull_request:
     branches: [main]
     paths:
@@ -29,6 +30,7 @@ name: CI Ruby
       - 'Gemfile.lock'
       - 'packages/ruby/Rakefile'
       - '.github/workflows/ci-ruby.yaml'
+      - '.cargo/config.toml'
 
 concurrency:
   group: ci-ruby-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

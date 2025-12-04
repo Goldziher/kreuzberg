@@ -15,6 +15,7 @@ on:
       - '.github/workflows/ci-go.yaml'
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - '.cargo/config.toml'
   pull_request:
     branches: [main]
     paths:
@@ -29,6 +30,7 @@ on:
       - '.github/workflows/ci-go.yaml'
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - '.cargo/config.toml'
 
 concurrency:
   group: ci-go-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

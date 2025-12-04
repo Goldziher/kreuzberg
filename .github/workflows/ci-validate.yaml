@@ -7,6 +7,7 @@ on:
       - 'crates/**'
       - 'packages/**'
       - 'tools/**'
+      - '.cargo/config.toml'
       - '.github/workflows/ci-validate.yaml'
   pull_request:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'crates/**'
       - 'packages/**'
       - 'tools/**'
+      - '.cargo/config.toml'
       - '.github/workflows/ci-validate.yaml'
 
 concurrency:
