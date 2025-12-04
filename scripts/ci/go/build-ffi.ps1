@@ -11,8 +11,8 @@
 $IsWindowsOS = $PSVersionTable.Platform -eq 'Win32NT' -or $PSVersionTable.PSVersion.Major -lt 6
 
 if ($IsWindowsOS) {
-    Write-Host "Building for Windows GNU target (MinGW-w64 compatible)"
-    rustup target add x86_64-pc-windows-gnu
+    Write-Host "Building for Windows MSVC target"
+    $TargetTriple = "x86_64-pc-windows-msvc"
 
     # Configure ONNX Runtime environment for ort-sys crate
     if ($env:ORT_LIB_LOCATION) {
@@ -28,20 +28,23 @@ if ($IsWindowsOS) {
             Write-Host "Set ORT_STRATEGY=system (was not set)"
         }
 
-        # Add -L flag to RUSTFLAGS to help linker find ONNX Runtime library
-        # This is needed because ort-sys needs to link against onnxruntime
-        if ($env:RUSTFLAGS) {
-            $env:RUSTFLAGS += " -L $env:ORT_LIB_LOCATION"
-        } else {
-            $env:RUSTFLAGS = "-L $env:ORT_LIB_LOCATION"
-        }
+        $EnvPath = $env:ORT_LIB_LOCATION -replace '/', '\'
+        $env:RUSTFLAGS = $env:RUSTFLAGS ? "$($env:RUSTFLAGS) -L $EnvPath" : "-L $EnvPath"
         Write-Host "RUSTFLAGS: $env:RUSTFLAGS"
+        # Ensure MSVC linker can locate import libs
+        $env:LIB = "$EnvPath;$env:LIB"
+        Write-Host "LIB: $env:LIB"
         Write-Host "=============================="
     } else {
         Write-Host "WARNING: ORT_LIB_LOCATION not set. Builds may fail if ONNX Runtime is not found."
     }
 
-    cargo build -p kreuzberg-ffi --release --target x86_64-pc-windows-gnu
+    cargo build -p kreuzberg-ffi --release --target $TargetTriple
+    $builtLibs = Get-ChildItem -Path "target\$TargetTriple\release" -Filter "libkreuzberg_ffi.*" -ErrorAction SilentlyContinue
+    if (-not (Test-Path "target\release")) { New-Item -ItemType Directory -Path "target\release" | Out-Null }
+    foreach ($lib in $builtLibs) {
+        Copy-Item -Path $lib.FullName -Destination "target\release" -Force
+    }
 } else {
     Write-Host "Building for Unix target"
     cargo build -p kreuzberg-ffi --release

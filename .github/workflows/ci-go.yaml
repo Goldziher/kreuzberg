@@ -65,9 +65,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-${{ matrix.os }}
-          # Disable sccache on Windows due to MSYS2 MinGW-w64 GCC incompatibility
-          # sccache cannot detect MSYS2 GCC compiler, causing build failures
-          use-sccache: ${{ runner.os != 'Windows' }}
+          use-sccache: true
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -90,32 +88,6 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
-      - name: Cache MSYS2 MinGW toolchain
-        if: runner.os == 'Windows'
-        uses: actions/cache@v4
-        with:
-          path: D:\a\_temp\msys64\ucrt64
-          key: msys2-mingw-ucrt64-${{ runner.os }}-v1
-          restore-keys: msys2-mingw-ucrt64-${{ runner.os }}-
-
-      - name: Setup MSYS2 with MinGW-w64 (Windows)
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: false
-          install: >-
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-binutils
-          path-type: minimal
-
-      - name: Configure MinGW-w64 environment (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          # Add MSYS2 MinGW64 to PATH
-          echo "D:\a\_temp\msys64\ucrt64\bin" >> $env:GITHUB_PATH
-        shell: pwsh
-
       - name: Build FFI library
         run: scripts/ci/go/build-ffi.ps1
         shell: pwsh
@@ -130,7 +102,7 @@ jobs:
           name: go-ffi-lib-${{ matrix.os }}
           path: |
             target/release/libkreuzberg_ffi.*
-            target/x86_64-pc-windows-gnu/release/libkreuzberg_ffi.*
+            target/x86_64-pc-windows-msvc/release/libkreuzberg_ffi.*
           retention-days: 7
 
       - name: Cleanup Rust cache
@@ -159,8 +131,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
-          # Disable sccache on Windows due to MSYS2 MinGW-w64 GCC incompatibility
-          use-sccache: ${{ runner.os != 'Windows' }}
+          use-sccache: true
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -193,37 +164,6 @@ jobs:
         with:
           name: go-ffi-lib-${{ matrix.os }}
           path: target/release/
-
-      - name: Cache MSYS2 MinGW toolchain
-        if: runner.os == 'Windows'
-        uses: actions/cache@v4
-        with:
-          path: D:\a\_temp\msys64\ucrt64
-          key: msys2-mingw-ucrt64-${{ runner.os }}-v1
-          restore-keys: msys2-mingw-ucrt64-${{ runner.os }}-
-
-      - name: Setup MSYS2 with MinGW-w64 (Windows)
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: false
-          install: >-
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-binutils
-          path-type: minimal
-
-      - name: Configure MinGW-w64 environment (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          # Add MSYS2 MinGW64 to PATH
-          echo "D:\a\_temp\msys64\ucrt64\bin" >> $env:GITHUB_PATH
-        shell: pwsh
-
-      - name: Reorganize FFI libraries for Windows GNU target
-        if: runner.os == 'Windows'
-        run: scripts/ci/go/reorganize-libraries.ps1
-        shell: pwsh
 
       - name: Make FFI library executable
         run: chmod +x target/release/libkreuzberg_ffi.* || true
