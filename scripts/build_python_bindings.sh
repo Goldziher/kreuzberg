@@ -11,6 +11,9 @@
 
 set -e # Exit on error
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+
 # Parse arguments
 BUILD_TYPE="--release"
 if [ "$1" = "--debug" ]; then
@@ -20,7 +23,7 @@ fi
 echo "🔨 Building Python bindings${BUILD_TYPE:+ in release mode}..."
 
 # Run maturin develop
-cd "$(dirname "$0")/../crates/kreuzberg-py"
+cd "$REPO_ROOT/crates/kreuzberg-py"
 maturin develop $BUILD_TYPE
 
 # On macOS, fix library install names
