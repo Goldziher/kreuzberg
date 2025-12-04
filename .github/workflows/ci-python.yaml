@@ -47,7 +47,7 @@ env:
 jobs:
   build-and-smoke-python:
     name: Python Build + Smoke (${{ matrix.target }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     env:
       RUSTC_WRAPPER: ""
       CARGO_BUILD_RUSTC_WRAPPER: ""
@@ -137,7 +137,7 @@ jobs:
 
   build-python-sdist:
     name: Python Sdist
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

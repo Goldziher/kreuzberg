@@ -61,7 +61,7 @@ env:
 jobs:
   build-and-smoke-node:
     name: Node Build + Smoke (${{ matrix.target }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

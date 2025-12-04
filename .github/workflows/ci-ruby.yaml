@@ -49,7 +49,7 @@ env:
 jobs:
   build-ruby-gem:
     name: Ruby Gem (${{ matrix.os }}, Ruby ${{ matrix.ruby-version }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

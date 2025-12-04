@@ -133,7 +133,7 @@ jobs:
   rust-e2e:
     name: Rust E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
 
@@ -181,7 +181,7 @@ jobs:
 
   build-and-smoke-cli:
     name: CLI Build + Smoke (${{ matrix.target }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
