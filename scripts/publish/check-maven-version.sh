@@ -17,9 +17,9 @@ response=$(curl -s "$url")
 
 count=$(echo "$response" | jq -r '.response.numFound')
 if [ "$count" -gt 0 ]; then
-  echo "exists=true"
-  echo "::notice::Java package ${group}:${artifact}:${version} already exists on Maven Central"
+	echo "exists=true"
+	echo "::notice::Java package ${group}:${artifact}:${version} already exists on Maven Central"
 else
-  echo "exists=false"
-  echo "::notice::Java package ${group}:${artifact}:${version} not found on Maven Central, will build and publish"
+	echo "exists=false"
+	echo "::notice::Java package ${group}:${artifact}:${version} not found on Maven Central, will build and publish"
 fi

@@ -9,8 +9,8 @@ set -euo pipefail
 TARGET="${TARGET:-}"
 
 if [ -z "$TARGET" ]; then
-  echo "::error::TARGET environment variable is required" >&2
-  exit 1
+	echo "::error::TARGET environment variable is required" >&2
+	exit 1
 fi
 
 cd crates/kreuzberg-node

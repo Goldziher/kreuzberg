@@ -52,7 +52,7 @@ sed -i.bak 's/^criterion = { workspace = true }/criterion = { version = "0.8", f
 
 rm -f packages/ruby/vendor/kreuzberg/Cargo.toml.bak
 
-cat > packages/ruby/vendor/Cargo.toml <<'EOF'
+cat >packages/ruby/vendor/Cargo.toml <<'EOF'
 [workspace]
 members = ["kreuzberg"]
 

@@ -16,8 +16,8 @@ set -euo pipefail
 pkg_dir="${1:-crates/kreuzberg-node}"
 
 if [ ! -d "$pkg_dir" ]; then
-  echo "Error: Package directory not found: $pkg_dir" >&2
-  exit 1
+	echo "Error: Package directory not found: $pkg_dir" >&2
+	exit 1
 fi
 
 cd "$pkg_dir" || exit 1
@@ -29,12 +29,12 @@ status=${PIPESTATUS[0]}
 set -e
 
 if [ "$status" -ne 0 ]; then
-  if grep -q "previously published versions" "$publish_log"; then
-    echo "::notice::@kreuzberg/node already published; skipping."
-  else
-    rm -f "$publish_log"
-    exit "$status"
-  fi
+	if grep -q "previously published versions" "$publish_log"; then
+		echo "::notice::@kreuzberg/node already published; skipping."
+	else
+		rm -f "$publish_log"
+		exit "$status"
+	fi
 fi
 
 rm -f "$publish_log"

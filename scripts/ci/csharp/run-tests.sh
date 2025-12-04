@@ -8,8 +8,8 @@
 set -euo pipefail
 
 if [ -z "${KREUZBERG_FFI_DIR:-}" ]; then
-    echo "Error: KREUZBERG_FFI_DIR environment variable not set"
-    exit 1
+	echo "Error: KREUZBERG_FFI_DIR environment variable not set"
+	exit 1
 fi
 
 echo "=== Running C# tests ==="

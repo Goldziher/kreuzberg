@@ -9,11 +9,11 @@ WHEEL_DIR="$ROOT/target/dev-wheels"
 # Ensure no stale native extensions are left behind (Windows builds fail if both
 # the prebuilt .pyd and freshly built DLL are present).
 find "$PYTHON_DIR/kreuzberg" -maxdepth 1 -type f \( \
-  -name '_internal_bindings*.so' -o \
-  -name '_internal_bindings*.pyd' -o \
-  -name '_internal_bindings*.dll' -o \
-  -name '_internal_bindings*.dylib' \
-\) -delete || true
+	-name '_internal_bindings*.so' -o \
+	-name '_internal_bindings*.pyd' -o \
+	-name '_internal_bindings*.dll' -o \
+	-name '_internal_bindings*.dylib' \
+	\) -delete || true
 
 rm -rf "$WHEEL_DIR"
 mkdir -p "$WHEEL_DIR"

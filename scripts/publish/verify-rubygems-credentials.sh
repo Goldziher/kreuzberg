@@ -10,9 +10,9 @@ set -euo pipefail
 credentials_file="${HOME}/.gem/credentials"
 
 if [ ! -f "$credentials_file" ]; then
-  echo "::error::RubyGems credentials file not found at $credentials_file"
-  ls -la "${HOME}/.gem/" || echo "${HOME}/.gem directory does not exist"
-  exit 1
+	echo "::error::RubyGems credentials file not found at $credentials_file"
+	ls -la "${HOME}/.gem/" || echo "${HOME}/.gem directory does not exist"
+	exit 1
 fi
 
 chmod 600 "$credentials_file"

@@ -8,8 +8,8 @@ set -euo pipefail
 PLATFORM="${PLATFORM:-}"
 
 if [ -z "$PLATFORM" ]; then
-  echo "::error::PLATFORM environment variable is required" >&2
-  exit 1
+	echo "::error::PLATFORM environment variable is required" >&2
+	exit 1
 fi
 
 # Resolve workspace root to find native libraries
@@ -18,8 +18,8 @@ LIB_DIR="$WORKSPACE_ROOT/target/release"
 
 # Verify native libraries exist before building
 if [ ! -d "$LIB_DIR" ]; then
-  echo "::error::Native library directory not found at $LIB_DIR" >&2
-  exit 1
+	echo "::error::Native library directory not found at $LIB_DIR" >&2
+	exit 1
 fi
 
 # Set library search paths so the Ruby native extension can find libpdfium and other dependencies

@@ -11,8 +11,8 @@ LIB_DIR="$WORKSPACE_ROOT/target/release"
 
 # Verify native libraries exist before building
 if [ ! -d "$LIB_DIR" ]; then
-  echo "::error::Native library directory not found at $LIB_DIR" >&2
-  exit 1
+	echo "::error::Native library directory not found at $LIB_DIR" >&2
+	exit 1
 fi
 
 # Set library search paths so CGO can find native libraries
