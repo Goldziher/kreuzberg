@@ -66,6 +66,7 @@ jobs:
         with:
           cache-key-prefix: go-${{ matrix.os }}
           use-sccache: true
+          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -132,6 +133,7 @@ jobs:
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
           use-sccache: true
+          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Setup Go
         uses: actions/setup-go@v6

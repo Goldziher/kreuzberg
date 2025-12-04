@@ -479,7 +479,7 @@ tasks:
   e2e:csharp:test:
     desc: Run C# E2E tests
     cmds:
-      - scripts/e2e/csharp/test.sh
+      - bash scripts/e2e/csharp/test.sh
   e2e:csharp:verify:
     desc: Regenerate and validate C# E2E suite
     cmds:

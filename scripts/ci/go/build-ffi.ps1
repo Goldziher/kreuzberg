@@ -11,8 +11,8 @@
 $IsWindowsOS = $PSVersionTable.Platform -eq 'Win32NT' -or $PSVersionTable.PSVersion.Major -lt 6
 
 if ($IsWindowsOS) {
-    Write-Host "Building for Windows MSVC target"
-    $TargetTriple = "x86_64-pc-windows-msvc"
+    Write-Host "Building for Windows MinGW (GNU) target"
+    $TargetTriple = "x86_64-pc-windows-gnu"
 
     # Configure ONNX Runtime environment for ort-sys crate
     if ($env:ORT_LIB_LOCATION) {
@@ -31,10 +31,6 @@ if ($IsWindowsOS) {
         $EnvPath = $env:ORT_LIB_LOCATION -replace '/', '\'
         $env:RUSTFLAGS = $env:RUSTFLAGS ? "$($env:RUSTFLAGS) -L $EnvPath" : "-L $EnvPath"
         Write-Host "RUSTFLAGS: $env:RUSTFLAGS"
-        # Ensure MSVC linker can locate import libs
-        $env:LIB = "$EnvPath;$env:LIB"
-        Write-Host "LIB: $env:LIB"
-        Write-Host "=============================="
     } else {
         Write-Host "WARNING: ORT_LIB_LOCATION not set. Builds may fail if ONNX Runtime is not found."
     }

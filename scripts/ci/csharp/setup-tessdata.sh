@@ -40,6 +40,10 @@ ensure_tessdata() {
 			fi
 			for lang in eng osd deu tur; do
 				if [ -f "$dir/$lang.traineddata" ]; then
+					# Skip copying if it's literally the same file (hardlink/symlink) to avoid cp errors
+					if [ -f "$dest/$lang.traineddata" ] && [ "$dir_real/$lang.traineddata" -ef "$dest/$lang.traineddata" ]; then
+						continue
+					fi
 					cp -f "$dir/$lang.traineddata" "$dest/"
 				fi
 			done
