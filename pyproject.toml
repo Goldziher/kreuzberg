@@ -33,7 +33,7 @@ doc = [
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings[python]>=1.0.0",
 ]
-benchmark = [ "docling>=2.63.0", "extractous>=0.3.0", "markitdown>=0.1.4", "unstructured>=0.18.21" ]
+benchmark = [ "docling>=2.63.0", "markitdown>=0.1.4", "unstructured>=0.18.21" ]
 
 [tool.setuptools]
 packages = [  ]
@@ -232,7 +232,6 @@ module = [
   "paddleocr",
   "torch",
   "kreuzberg._internal_bindings",
-  "extractous",
   "docling.*",
   "markitdown",
   "unstructured.*",

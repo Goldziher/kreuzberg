@@ -2,7 +2,7 @@
 	"document": "../../../test_documents/pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf",
 	"file_type": "pdf",
 	"file_size": 2621440,
-	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
 	"metadata": {
 		"description": "Technical manual - 2.5MB machine learning course textbook",
 		"category": "pdf-technical",

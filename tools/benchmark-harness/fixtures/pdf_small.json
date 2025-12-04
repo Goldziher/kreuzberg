@@ -2,7 +2,7 @@
 	"document": "../../../test_documents/pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf",
 	"file_type": "pdf",
 	"file_size": 187392,
-	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
 	"metadata": {
 		"description": "Small PDF - Intel technical document",
 		"category": "technical"

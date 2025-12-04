@@ -1,7 +1,7 @@
 use crate::{adapters::subprocess::SubprocessAdapter, error::Result};
 use std::{env, path::PathBuf};
 
-/// Creates a subprocess adapter for Docling framework (single-file mode)
+/// Creates a subprocess adapter for Docling (open source extraction framework, single-file mode)
 pub fn create_docling_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("docling_extract.py")?;
     let (command, mut args) = find_python_with_framework("docling")?;
@@ -11,7 +11,7 @@ pub fn create_docling_adapter() -> Result<SubprocessAdapter> {
     Ok(SubprocessAdapter::new("docling", command, args, vec![]))
 }
 
-/// Creates a subprocess adapter for Docling framework (batch mode)
+/// Creates a subprocess adapter for Docling (open source extraction framework, batch mode)
 pub fn create_docling_batch_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("docling_extract.py")?;
     let (command, mut args) = find_python_with_framework("docling")?;
@@ -26,7 +26,7 @@ pub fn create_docling_batch_adapter() -> Result<SubprocessAdapter> {
     ))
 }
 
-/// Creates a subprocess adapter for Unstructured framework
+/// Creates a subprocess adapter for Unstructured (open source extraction framework)
 pub fn create_unstructured_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("unstructured_extract.py")?;
     let (command, mut args) = find_python_with_framework("unstructured")?;
@@ -35,7 +35,7 @@ pub fn create_unstructured_adapter() -> Result<SubprocessAdapter> {
     Ok(SubprocessAdapter::new("unstructured", command, args, vec![]))
 }
 
-/// Creates a subprocess adapter for MarkItDown framework
+/// Creates a subprocess adapter for MarkItDown (open source extraction framework)
 pub fn create_markitdown_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("markitdown_extract.py")?;
     let (command, mut args) = find_python_with_framework("markitdown")?;
@@ -43,17 +43,6 @@ pub fn create_markitdown_adapter() -> Result<SubprocessAdapter> {
 
     Ok(SubprocessAdapter::new("markitdown", command, args, vec![]))
 }
-
-/// Creates a subprocess adapter for Extractous (Python bindings)
-pub fn create_extractous_python_adapter() -> Result<SubprocessAdapter> {
-    let script_path = get_script_path("extractous_extract.py")?;
-    let (command, mut args) = find_python_with_framework("extractous")?;
-    args.push(script_path.to_string_lossy().to_string());
-
-    Ok(SubprocessAdapter::new("extractous-python", command, args, vec![]))
-}
-
-// NOTE: Native Rust adapter for Extractous could be implemented here
 
 /// Helper function to get the path to a wrapper script
 fn get_script_path(script_name: &str) -> Result<PathBuf> {
@@ -75,7 +64,7 @@ fn get_script_path(script_name: &str) -> Result<PathBuf> {
     )))
 }
 
-/// Helper function to find Python interpreter with a specific framework installed
+/// Helper function to find Python interpreter with a specific open source extraction framework installed
 ///
 /// Returns (command, args) where command is the executable and args are the base arguments
 fn find_python_with_framework(framework: &str) -> Result<(PathBuf, Vec<String>)> {
@@ -106,6 +95,91 @@ fn find_python_with_framework(framework: &str) -> Result<(PathBuf, Vec<String>)>
     )))
 }
 
+/// Helper to find Java runtime
+fn find_java() -> Result<PathBuf> {
+    which::which("java").map_err(|_| crate::Error::Config("Java runtime not found".to_string()))
+}
+
+/// Helper to locate Tika JAR (auto-detect from libs/ or env var)
+fn get_tika_jar_path() -> Result<PathBuf> {
+    // Check CARGO_MANIFEST_DIR/libs/tika-app-*.jar
+    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        let lib_dir = PathBuf::from(manifest_dir).join("libs");
+        if let Ok(entries) = std::fs::read_dir(&lib_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(name) = path.file_name().and_then(|n| n.to_str())
+                    && name.starts_with("tika-app-") && name.ends_with(".jar")
+                {
+                    return Ok(path);
+                }
+            }
+        }
+    }
+
+    // Fallback: Check from workspace root
+    let fallback_lib_dir = PathBuf::from("tools/benchmark-harness/libs");
+    if let Ok(entries) = std::fs::read_dir(&fallback_lib_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(name) = path.file_name().and_then(|n| n.to_str())
+                && name.starts_with("tika-app-") && name.ends_with(".jar")
+            {
+                return Ok(path);
+            }
+        }
+    }
+
+    // Check TIKA_JAR env var
+    if let Ok(jar_path) = env::var("TIKA_JAR") {
+        let path = PathBuf::from(jar_path);
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    Err(crate::Error::Config(
+        "Tika JAR not found. Download: curl -LO https://repo1.maven.org/maven2/org/apache/tika/tika-app/2.9.2/tika-app-2.9.2.jar && mv tika-app-2.9.2.jar tools/benchmark-harness/libs/".to_string()
+    ))
+}
+
+/// Creates a subprocess adapter for Apache Tika (single-file mode)
+pub fn create_tika_sync_adapter() -> Result<SubprocessAdapter> {
+    let jar_path = get_tika_jar_path()?;
+    let script_path = get_script_path("TikaExtract.java")?;
+    let command = find_java()?;
+
+    let args = vec![
+        "-cp".to_string(),
+        jar_path.to_string_lossy().to_string(),
+        script_path.to_string_lossy().to_string(),
+        "sync".to_string(),
+    ];
+
+    Ok(SubprocessAdapter::new("tika-sync", command, args, vec![]))
+}
+
+/// Creates a subprocess adapter for Apache Tika (batch mode)
+pub fn create_tika_batch_adapter() -> Result<SubprocessAdapter> {
+    let jar_path = get_tika_jar_path()?;
+    let script_path = get_script_path("TikaExtract.java")?;
+    let command = find_java()?;
+
+    let args = vec![
+        "-cp".to_string(),
+        jar_path.to_string_lossy().to_string(),
+        script_path.to_string_lossy().to_string(),
+        "batch".to_string(),
+    ];
+
+    Ok(SubprocessAdapter::with_batch_support(
+        "tika-batch",
+        command,
+        args,
+        vec![],
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,6 +195,7 @@ mod tests {
         let _ = create_docling_adapter();
         let _ = create_unstructured_adapter();
         let _ = create_markitdown_adapter();
-        let _ = create_extractous_python_adapter();
+        let _ = create_tika_sync_adapter();
+        let _ = create_tika_batch_adapter();
     }
 }
