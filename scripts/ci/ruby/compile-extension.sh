@@ -16,6 +16,12 @@ cd "$REPO_ROOT/packages/ruby"
 export CARGO_BUILD_JOBS=1
 export RUST_BACKTRACE=1
 
+# Ensure vendored core exists (needed for native extension build)
+if [ ! -f "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml" ]; then
+	echo "Vendored core not found; running vendor-kreuzberg-core.sh"
+	"$REPO_ROOT/scripts/ci/ruby/vendor-kreuzberg-core.sh"
+fi
+
 bundle exec rake compile
 
 echo "Compilation complete"
