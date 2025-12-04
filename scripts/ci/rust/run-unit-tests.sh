@@ -21,6 +21,8 @@ fi
 ensure_tessdata() {
 	local dest="$TESSDATA_PREFIX"
 	mkdir -p "$dest"
+	local dest_real
+	dest_real="$(cd "$dest" && pwd -P)"
 
 	# Prefer preinstalled language data to avoid repeated downloads
 	local candidates=(
@@ -40,6 +42,12 @@ ensure_tessdata() {
 
 	for dir in "${candidates[@]}"; do
 		if [ -f "$dir/eng.traineddata" ]; then
+			local dir_real
+			dir_real="$(cd "$dir" && pwd -P)"
+			# Skip copying when source and destination are the same directory
+			if [ "$dir_real" = "$dest_real" ]; then
+				break
+			fi
 			for lang in eng osd deu tur; do
 				if [ -f "$dir/$lang.traineddata" ]; then
 					cp -f "$dir/$lang.traineddata" "$dest/"
