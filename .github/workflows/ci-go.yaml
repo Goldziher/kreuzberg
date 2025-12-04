@@ -65,7 +65,8 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-${{ matrix.os }}
-          use-sccache: true
+          # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
+          use-sccache: ${{ matrix.os != 'windows-latest' }}
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Setup Go
@@ -132,7 +133,8 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
-          use-sccache: true
+          # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
+          use-sccache: ${{ matrix.os != 'windows-latest' }}
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Setup Go
