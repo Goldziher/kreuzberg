@@ -509,22 +509,11 @@ tasks:
     dir: e2e/csharp
     cmds:
       - |
-        # Set Tesseract data path for all platforms
-        if [ "$RUNNER_OS" = "Linux" ]; then
-            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
-        elif [ "$RUNNER_OS" = "macOS" ]; then
-            # Try ARM64 path first, then Intel path
-            if [ -d "/opt/homebrew/opt/tesseract/share/tessdata" ]; then
-                export TESSDATA_PREFIX="/opt/homebrew/opt/tesseract/share/tessdata"
-            elif [ -d "/usr/local/opt/tesseract/share/tessdata" ]; then
-                export TESSDATA_PREFIX="/usr/local/opt/tesseract/share/tessdata"
-            fi
-        elif [ "$RUNNER_OS" = "Windows" ]; then
-            export TESSDATA_PREFIX="$APPDATA/tesseract-rs/tessdata"
-        fi
-
-        DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
-        LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
+        REPO_ROOT="$(cd ../.. && pwd)"
+        # Prepare Tesseract data and export TESSDATA_PREFIX
+        source "$REPO_ROOT/scripts/ci/csharp/setup-tessdata.sh"
+        DYLD_LIBRARY_PATH="$REPO_ROOT/target/release:${DYLD_LIBRARY_PATH:-}" \
+        LD_LIBRARY_PATH="$REPO_ROOT/target/release:${LD_LIBRARY_PATH:-}" \
         dotnet test Kreuzberg.E2E.csproj -c Release
   e2e:csharp:verify:
     desc: Regenerate and validate C# E2E suite
