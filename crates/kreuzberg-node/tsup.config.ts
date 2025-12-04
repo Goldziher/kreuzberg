@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-	entry: ["typescript/index.ts", "typescript/cli.ts"],
+	entry: ["typescript/index.ts", "typescript/cli.ts", "typescript/errors.ts"],
 	format: ["esm", "cjs"],
 	bundle: false,
 	dts: {

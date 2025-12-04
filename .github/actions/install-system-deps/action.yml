@@ -48,7 +48,15 @@ runs:
 
         # Install packages only if not already present
         brew list tesseract &>/dev/null || brew install tesseract
-        brew list --cask libreoffice &>/dev/null || brew install --cask libreoffice || true
+        # Add extra tessdata languages needed by tests
+        brew list tesseract-lang &>/dev/null || brew install tesseract-lang
+
+        # LibreOffice: skip install if already present on runner/cache to avoid cask error
+        if [ -d "/Applications/LibreOffice.app" ]; then
+          echo "LibreOffice already present at /Applications/LibreOffice.app, skipping install"
+        else
+          brew list --cask libreoffice &>/dev/null || brew install --cask libreoffice
+        fi
         echo "Installed packages:"
         brew list pandoc tesseract
         tesseract --version

@@ -24,7 +24,7 @@ if ($IsWindowsOS) {
     Write-Host "=== Build Environment ==="
     Write-Host "FFI library path: $ffiPath"
     Write-Host "Libraries available:"
-    & ls -la $ffiPath | findstr kreuzberg_ffi
+    Get-ChildItem -Force $ffiPath | findstr kreuzberg_ffi
     Write-Host "`nGCC version:"
     & gcc --version
     Write-Host "`nCGO environment:"
