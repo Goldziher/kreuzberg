@@ -212,4 +212,3 @@ public final class TikaExtract {
     }
 }
 /* CHECKSTYLE:ON */
-

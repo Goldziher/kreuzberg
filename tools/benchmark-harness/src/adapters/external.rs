@@ -109,7 +109,8 @@ fn get_tika_jar_path() -> Result<PathBuf> {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                    && name.starts_with("tika-app-") && name.ends_with(".jar")
+                    && name.starts_with("tika-app-")
+                    && name.ends_with(".jar")
                 {
                     return Ok(path);
                 }
@@ -123,7 +124,8 @@ fn get_tika_jar_path() -> Result<PathBuf> {
         for entry in entries.flatten() {
             let path = entry.path();
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.starts_with("tika-app-") && name.ends_with(".jar")
+                && name.starts_with("tika-app-")
+                && name.ends_with(".jar")
             {
                 return Ok(path);
             }

@@ -387,14 +387,8 @@ mod build_tesseract {
                 // Windows-specific MSVC flags
                 // Add TESSERACT_STATIC to prevent __declspec(dllimport) on API functions
                 cmake_cxx_flags.push_str("/EHsc /MP /std:c++17 /DTESSERACT_STATIC ");
-                additional_defines.push((
-                    "CMAKE_C_FLAGS_RELEASE".to_string(),
-                    "/MD /O2".to_string(),
-                ));
-                additional_defines.push((
-                    "CMAKE_C_FLAGS_DEBUG".to_string(),
-                    "/MDd /Od".to_string(),
-                ));
+                additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "/MD /O2".to_string()));
+                additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "/MDd /Od".to_string()));
                 additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "/MD /O2 /DTESSERACT_STATIC".to_string(),
@@ -410,14 +404,8 @@ mod build_tesseract {
             } else if cfg!(target_env = "gnu") {
                 // MinGW/GNU toolchains reject MSVC-style flags, use GCC syntax
                 cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
-                additional_defines.push((
-                    "CMAKE_C_FLAGS_RELEASE".to_string(),
-                    "-O2 -DNDEBUG".to_string(),
-                ));
-                additional_defines.push((
-                    "CMAKE_C_FLAGS_DEBUG".to_string(),
-                    "-O0 -g".to_string(),
-                ));
+                additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "-O2 -DNDEBUG".to_string()));
+                additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "-O0 -g".to_string()));
                 additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "-O2 -DNDEBUG -DTESSERACT_STATIC".to_string(),
@@ -429,14 +417,8 @@ mod build_tesseract {
             } else {
                 // Fallback for other Windows toolchains
                 cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
-                additional_defines.push((
-                    "CMAKE_C_FLAGS_RELEASE".to_string(),
-                    "-O2 -DNDEBUG".to_string(),
-                ));
-                additional_defines.push((
-                    "CMAKE_C_FLAGS_DEBUG".to_string(),
-                    "-O0 -g".to_string(),
-                ));
+                additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "-O2 -DNDEBUG".to_string()));
+                additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "-O0 -g".to_string()));
                 additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "-O2 -DNDEBUG -DTESSERACT_STATIC".to_string(),
