@@ -248,24 +248,24 @@ tasks:
     desc: Lint Ruby code with auto-fix (rubocop + steep)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml --autocorrect-all"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml --autocorrect-all"
       - "{{.BUNDLE}} exec steep check"
   ruby:lint:check:
     desc: Lint Ruby code in check-only mode (rubocop + steep, no fixes)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml"
       - "{{.BUNDLE}} exec steep check"
   ruby:format:
     desc: Format Ruby code with modifications (rubocop)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml --autocorrect-all"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml --autocorrect-all"
   ruby:format:check:
     desc: Check Ruby code formatting without modifications (rubocop)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml"
   ruby:typecheck:
     desc: Run steep type checking
     dir: packages/ruby
@@ -453,7 +453,7 @@ tasks:
     desc: Lint generated Ruby E2E suite
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml ../../e2e/ruby/spec"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml ../../e2e/ruby/spec"
   e2e:ruby:test:
     desc: Run Ruby E2E tests
     dir: packages/ruby
