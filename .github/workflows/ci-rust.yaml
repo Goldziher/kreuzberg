@@ -91,6 +91,15 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Configure Tesseract data path
+        shell: bash
+        run: |
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            echo "TESSDATA_PREFIX=/opt/homebrew/share/tessdata" >> "$GITHUB_ENV"
+          else
+            echo "TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata" >> "$GITHUB_ENV"
+          fi
+
       - name: Run unit tests
         run: scripts/ci/rust/run-unit-tests.sh
         shell: bash

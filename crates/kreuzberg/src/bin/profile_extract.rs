@@ -24,10 +24,10 @@ use kreuzberg::core::extractor::extract_file_sync;
 #[cfg(not(target_os = "windows"))]
 use serde::Serialize;
 
-#[cfg(feature = "profiling")]
+#[cfg(all(feature = "profiling", not(target_os = "windows")))]
 use pprof::{ProfilerGuardBuilder, Report};
 
-#[cfg(feature = "profiling")]
+#[cfg(all(feature = "profiling", not(target_os = "windows")))]
 use std::collections::HashMap;
 
 #[cfg(all(not(target_os = "windows"), target_os = "macos"))]

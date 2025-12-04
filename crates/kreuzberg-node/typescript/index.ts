@@ -45,6 +45,7 @@
  * ```
  */
 
+import { createRequire } from "module";
 import type { PanicContext } from "./errors.js";
 import type {
 	Chunk,
@@ -161,10 +162,19 @@ export function __resetBindingForTests(): void {
 // Helper to load native binding with ESM/CJS compatibility
 // biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 function loadNativeBinding(): any {
-	// Simply require the NAPI bridge - tsup will handle ESM/CJS conversion
-	// The index.js file is a pure CommonJS NAPI module and should not be shimmed
-	// biome-ignore lint/suspicious/noExplicitAny: require shimmed by tsup
-	return require("../index.js");
+	// In ESM, plain `require` is unavailable; fall back to createRequire for the CJS native loader.
+	// This keeps both CJS and ESM consumers working while the native .node binary stays CJS-only.
+	const localRequire =
+		typeof require !== "undefined"
+			? // biome-ignore lint/suspicious/noExplicitAny: Node typings are available at runtime
+				(require as any)
+			: createRequire(import.meta.url);
+
+	if (!localRequire) {
+		throw new Error("Unable to resolve native binding loader (require not available).");
+	}
+
+	return localRequire("../index.js");
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded

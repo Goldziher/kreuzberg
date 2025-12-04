@@ -116,7 +116,7 @@ jobs:
           command: build
           args: --release --strip --out ../../target/wheels
           sccache: 'false'
-          manylinux: auto
+          manylinux: off
 
       - name: Upload wheels
         uses: actions/upload-artifact@v5
