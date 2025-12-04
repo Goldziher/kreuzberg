@@ -14,6 +14,8 @@ if ($IsWindowsOS) {
     # sccache wrapper can break MinGW gcc builds; ensure it's disabled here
     $env:RUSTC_WRAPPER = ""
     $env:SCCACHE_GHA_ENABLED = "false"
+    # zstd-sys: disable legacy compression to avoid problematic legacy source build on MinGW
+    $env:ZSTD_DISABLE_LEGACY = "1"
 
     Write-Host "Building for Windows MinGW (GNU) target"
     $TargetTriple = "x86_64-pc-windows-gnu"
