@@ -406,6 +406,10 @@ mod build_tesseract {
                 cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
                 additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "-O2 -DNDEBUG".to_string()));
                 additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "-O0 -g".to_string()));
+                // Force CMake to pick the MinGW GCC toolchain instead of defaulting to MSVC
+                additional_defines.push(("CMAKE_C_COMPILER".to_string(), "gcc".to_string()));
+                additional_defines.push(("CMAKE_CXX_COMPILER".to_string(), "g++".to_string()));
+                additional_defines.push(("CMAKE_SYSTEM_NAME".to_string(), "Windows".to_string()));
                 additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "-O2 -DNDEBUG -DTESSERACT_STATIC".to_string(),
