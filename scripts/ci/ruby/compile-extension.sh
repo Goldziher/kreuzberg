@@ -6,8 +6,11 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
 echo "=== Compiling Ruby native extension ==="
-cd packages/ruby
+cd "$REPO_ROOT/packages/ruby"
 
 # Enable verbose output for debugging
 export CARGO_BUILD_JOBS=1

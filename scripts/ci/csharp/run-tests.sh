@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
 if [ -z "${KREUZBERG_FFI_DIR:-}" ]; then
 	echo "Error: KREUZBERG_FFI_DIR environment variable not set"
 	exit 1

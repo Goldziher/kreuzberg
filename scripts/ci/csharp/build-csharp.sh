@@ -6,7 +6,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
 echo "=== Building C# bindings ==="
-cd packages/csharp
+cd "$REPO_ROOT/packages/csharp"
 dotnet build Kreuzberg/Kreuzberg.csproj -c Release
 echo "C# build complete"
