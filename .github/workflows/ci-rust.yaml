@@ -11,6 +11,16 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'scripts/ci/rust/**'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-openssl/**'
+      - '.github/actions/cache-hf-fastembed/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/actions/install-task/**'
+      - '.github/actions/cleanup-rust-cache/**'
       - '.github/workflows/ci-rust.yaml'
   pull_request:
     branches: [main]
@@ -22,6 +32,16 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - 'scripts/ci/rust/**'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-openssl/**'
+      - '.github/actions/cache-hf-fastembed/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/actions/install-task/**'
+      - '.github/actions/cleanup-rust-cache/**'
       - '.github/workflows/ci-rust.yaml'
 
 concurrency:
