@@ -11,6 +11,10 @@
 $IsWindowsOS = $PSVersionTable.Platform -eq 'Win32NT' -or $PSVersionTable.PSVersion.Major -lt 6
 
 if ($IsWindowsOS) {
+    # sccache wrapper can break MinGW gcc builds; ensure it's disabled here
+    $env:RUSTC_WRAPPER = ""
+    $env:SCCACHE_GHA_ENABLED = "false"
+
     Write-Host "Building for Windows MinGW (GNU) target"
     $TargetTriple = "x86_64-pc-windows-gnu"
 
