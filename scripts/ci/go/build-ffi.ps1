@@ -19,6 +19,32 @@ if ($IsWindowsOS) {
     # Force MSYS2 UCRT64 toolchain for MinGW builds
     $ucrtBin = "C:\msys64\ucrt64\bin"
     if (Test-Path $ucrtBin) {
+        # Verify required tools exist before proceeding
+        $requiredTools = @{
+            "gcc.exe" = "GCC compiler"
+            "ar.exe" = "AR archiver"
+            "ranlib.exe" = "RANLIB"
+            "pkg-config.exe" = "pkg-config"
+            "nasm.exe" = "NASM assembler"
+        }
+
+        $missingTools = @()
+        foreach ($tool in $requiredTools.Keys) {
+            $toolPath = Join-Path $ucrtBin $tool
+            if (-not (Test-Path $toolPath)) {
+                $missingTools += "$tool ($($requiredTools[$tool]))"
+            }
+        }
+
+        if ($missingTools.Count -gt 0) {
+            Write-Host "ERROR: Required MSYS2 tools not found in $ucrtBin"
+            Write-Host "Missing tools: $($missingTools -join ', ')"
+            Write-Host ""
+            Write-Host "Directory contents:"
+            Get-ChildItem $ucrtBin -Filter "*.exe" | ForEach-Object { Write-Host "  $($_.Name)" }
+            throw "MSYS2 toolchain incomplete. Please ensure mingw-w64-ucrt-x86_64-gcc, mingw-w64-ucrt-x86_64-pkg-config, and mingw-w64-ucrt-x86_64-nasm are installed."
+        }
+
         $env:PATH = "$ucrtBin;$env:PATH"
         $env:CC = "$ucrtBin\gcc.exe"
         $env:AR = "$ucrtBin\ar.exe"
@@ -28,19 +54,15 @@ if ($IsWindowsOS) {
         $env:ZSTD_SYS_USE_CMAKE = "1"
         # NASM required by ring pregenerated objects
         $env:NASM = "$ucrtBin\nasm.exe"
+
         Write-Host "Using MSYS2 UCRT toolchain:"
         & "$env:CC" --version
-
-        # Verify NASM is available for ring crate
-        if (Test-Path $env:NASM) {
-            Write-Host "NASM found at: $env:NASM"
-            & "$env:NASM" --version
-        } else {
-            Write-Host "WARNING: NASM not found at $env:NASM"
-            Write-Host "Ring crate build may fail!"
-        }
+        Write-Host "NASM version:"
+        & "$env:NASM" --version
     } else {
-        Write-Host "WARNING: $ucrtBin not found; falling back to default PATH toolchain"
+        Write-Host "ERROR: $ucrtBin not found"
+        Write-Host "MSYS2 may not be installed or is in a different location."
+        throw "MSYS2 UCRT64 directory not found at expected location"
     }
 
     Write-Host "Building for Windows MinGW (GNU) target"

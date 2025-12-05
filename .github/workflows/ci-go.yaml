@@ -96,10 +96,12 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          install: |
+          install: >-
             mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-pkg-config
             mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-zstd
 
       - name: Build FFI library
         run: scripts/ci/go/build-ffi.ps1
@@ -154,10 +156,12 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          install: |
+          install: >-
             mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-pkg-config
             mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-zstd
 
       - name: Setup Go
         uses: actions/setup-go@v6
