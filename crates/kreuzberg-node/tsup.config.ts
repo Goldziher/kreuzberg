@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-	entry: ["typescript/index.ts", "typescript/cli.ts", "typescript/errors.ts"],
+	entry: ["typescript/index.ts", "typescript/cli.ts", "typescript/errors.ts", "typescript/ocr/guten-ocr.ts"],
 	format: ["esm", "cjs"],
 	bundle: false,
 	dts: {
