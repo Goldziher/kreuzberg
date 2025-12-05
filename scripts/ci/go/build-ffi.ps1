@@ -30,6 +30,15 @@ if ($IsWindowsOS) {
         $env:NASM = "$ucrtBin\nasm.exe"
         Write-Host "Using MSYS2 UCRT toolchain:"
         & "$env:CC" --version
+
+        # Verify NASM is available for ring crate
+        if (Test-Path $env:NASM) {
+            Write-Host "NASM found at: $env:NASM"
+            & "$env:NASM" --version
+        } else {
+            Write-Host "WARNING: NASM not found at $env:NASM"
+            Write-Host "Ring crate build may fail!"
+        }
     } else {
         Write-Host "WARNING: $ucrtBin not found; falling back to default PATH toolchain"
     }

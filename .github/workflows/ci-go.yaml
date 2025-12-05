@@ -95,8 +95,9 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
-          pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-pkg-config
+          pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-nasm
           gcc --version
+          nasm --version
 
       - name: Build FFI library
         run: scripts/ci/go/build-ffi.ps1
