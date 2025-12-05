@@ -26,6 +26,8 @@ if ($IsWindowsOS) {
         $env:PKG_CONFIG = "$ucrtBin\pkg-config.exe"
         # Use CMake-based build to rely on system zstd from MSYS2
         $env:ZSTD_SYS_USE_CMAKE = "1"
+        # NASM required by ring pregenerated objects
+        $env:NASM = "$ucrtBin\nasm.exe"
         Write-Host "Using MSYS2 UCRT toolchain:"
         & "$env:CC" --version
     } else {
