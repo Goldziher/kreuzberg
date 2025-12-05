@@ -1,6 +1,6 @@
 # Kreuzberg for Go
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/Goldziher/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg)
 [![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
 [![Docs](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,12 +8,12 @@
 High-performance document intelligence for Go backed by the Rust core that powers every Kreuzberg binding.
 
 > **🚀 Version 4.0.0 Release Candidate**
-> This binding targets the 4.0.0-rc.5 APIs. Report issues at [github.com/Goldziher/kreuzberg](https://github.com/Goldziher/kreuzberg).
+> This binding targets the 4.0.0-rc.5 APIs. Report issues at [github.com/kreuzberg-dev/kreuzberg](https://github.com/kreuzberg-dev/kreuzberg).
 
 ## Install
 
 ```bash
-go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
+go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 ```
 
 The Go binding uses cgo to link against the `kreuzberg-ffi` library:
@@ -37,7 +37,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 func main() {
@@ -133,7 +133,7 @@ func init() {
 
 ## API Reference
 
-- **GoDoc**: [pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg](https://pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg)
+- **GoDoc**: [pkg.go.dev/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg)
 - **Full documentation**: [kreuzberg.dev](https://kreuzberg.dev) (configuration, formats, OCR backends)
 
 ## Troubleshooting
@@ -143,7 +143,7 @@ func init() {
 | `runtime/cgo: dlopen(/libkreuzberg_ffi.dylib, 0x0001): image not found` | Set `DYLD_FALLBACK_LIBRARY_PATH` (macOS) or `LD_LIBRARY_PATH` (Linux) to point at `target/release`. |
 | `Missing dependency: tesseract` | Install the OCR backend and ensure it is on `PATH`. Errors bubble up as `*kreuzberg.MissingDependencyError`. |
 | `undefined: C.customValidator` during build | Export the callback with `//export` in a `*_cgo.go` file before using it in `Register*` helpers. |
-| `github.com/Goldziher/kreuzberg/packages/go/kreuzberg` tests fail | Set the library path as above before running `go test ./...`. |
+| `github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg` tests fail | Set the library path as above before running `go test ./...`. |
 
 ## Testing / Tooling
 

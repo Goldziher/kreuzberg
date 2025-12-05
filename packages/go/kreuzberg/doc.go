@@ -25,7 +25,7 @@
 //
 // 1. Fetch the Go module:
 //
-//	go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
+//	go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 //
 // 2. Build the native library (kreuzberg-ffi) for your platform:
 //
@@ -264,8 +264,8 @@
 // # Resources
 //
 // - Documentation: https://kreuzberg.dev
-// - GitHub: https://github.com/Goldziher/kreuzberg
-// - Issue tracker: https://github.com/Goldziher/kreuzberg/issues
+// - GitHub: https://github.com/kreuzberg-dev/kreuzberg
+// - Issue tracker: https://github.com/kreuzberg-dev/kreuzberg/issues
 // - Discord: https://discord.gg/pXxagNK2zN
 //
 // # Troubleshooting
@@ -309,5 +309,5 @@
 //
 // # Version
 //
-// This binding targets Kreuzberg 4.0.0-rc.5 (https://github.com/Goldziher/kreuzberg).
+// This binding targets Kreuzberg 4.0.0-rc.5 (https://github.com/kreuzberg-dev/kreuzberg).
 package kreuzberg

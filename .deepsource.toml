@@ -69,4 +69,4 @@ runtime_version = "21"
 name = "go"
 
 [analyzers.meta]
-import_paths = ["github.com/Goldziher/kreuzberg"]
+import_paths = ["github.com/kreuzberg-dev/kreuzberg"]

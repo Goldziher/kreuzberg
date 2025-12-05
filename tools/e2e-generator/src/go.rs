@@ -17,7 +17,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 var (
@@ -405,13 +405,13 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
 
 fn write_go_mod(go_root: &Utf8Path) -> Result<()> {
     let go_mod = go_root.join("go.mod");
-    let template = r#"module github.com/Goldziher/kreuzberg/e2e/go
+    let template = r#"module github.com/kreuzberg-dev/kreuzberg/e2e/go
 
 go 1.25
 
-require github.com/Goldziher/kreuzberg/packages/go v0.0.0
+require github.com/kreuzberg-dev/kreuzberg/packages/go v0.0.0
 
-replace github.com/Goldziher/kreuzberg/packages/go => ../../packages/go
+replace github.com/kreuzberg-dev/kreuzberg/packages/go => ../../packages/go
 "#;
     fs::write(go_mod.as_std_path(), template).context("failed to write go.mod")?;
     Ok(())
@@ -619,7 +619,7 @@ fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Resul
     writeln!(buffer)?;
     writeln!(
         buffer,
-        "    kreuzberg \"github.com/Goldziher/kreuzberg/packages/go/kreuzberg\""
+        "    kreuzberg \"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg\""
     )?;
     writeln!(buffer, ")")?;
     writeln!(buffer)?;

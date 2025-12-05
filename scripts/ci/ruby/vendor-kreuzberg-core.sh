@@ -66,7 +66,7 @@ edition = "2024"
 rust-version = "1.91"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
 license = "MIT"
-repository = "https://github.com/Goldziher/kreuzberg"
+repository = "https://github.com/kreuzberg-dev/kreuzberg"
 homepage = "https://kreuzberg.dev"
 
 [workspace.dependencies]

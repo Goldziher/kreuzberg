@@ -126,7 +126,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         sys.stderr.write(
             "The embedded Kreuzberg CLI binary could not be located. "
             "This indicates a packaging issue with the wheel; please open an issue at "
-            "https://github.com/Goldziher/kreuzberg/issues so we can investigate.\n",
+            "https://github.com/kreuzberg-dev/kreuzberg/issues so we can investigate.\n",
         )
         return 1
 

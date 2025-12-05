@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 // TestPostProcessor tests custom post processor behavior

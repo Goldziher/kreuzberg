@@ -1,7 +1,7 @@
 ```go
 package main
 
-import "github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+import "github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 
 func main() {
 	enabled := true

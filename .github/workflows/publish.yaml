@@ -2063,7 +2063,7 @@ jobs:
         run: |
           tag="${{ needs.prepare.outputs.tag }}"
           version="${{ needs.prepare.outputs.version }}"
-          url="https://github.com/Goldziher/kreuzberg/archive/$tag.tar.gz"
+          url="https://github.com/kreuzberg-dev/kreuzberg/archive/$tag.tar.gz"
 
           echo "tag=$tag" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
@@ -2079,7 +2079,7 @@ jobs:
         with:
           formula-name: kreuzberg
           formula-path: Formula/kreuzberg.rb
-          homebrew-tap: Goldziher/homebrew-tap
+          homebrew-tap: kreuzberg-dev/homebrew-tap
           tag-name: ${{ needs.prepare.outputs.tag }}
           download-url: ${{ steps.release.outputs.url }}
           commit-message: |

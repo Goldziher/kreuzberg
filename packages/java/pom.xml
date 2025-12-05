@@ -28,9 +28,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/Goldziher/kreuzberg.git</connection>
-        <developerConnection>scm:git:ssh://github.com:Goldziher/kreuzberg.git</developerConnection>
-        <url>https://github.com/Goldziher/kreuzberg</url>
+        <connection>scm:git:git://github.com/kreuzberg-dev/kreuzberg.git</connection>
+        <developerConnection>scm:git:ssh://github.com:kreuzberg-dev/kreuzberg.git</developerConnection>
+        <url>https://github.com/kreuzberg-dev/kreuzberg</url>
     </scm>
 
     <distributionManagement>

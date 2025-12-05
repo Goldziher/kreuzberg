@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 func main() {

@@ -216,7 +216,7 @@ To benchmark your specific use case, use our comprehensive benchmark suite:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Goldziher/kreuzberg.git
+git clone https://github.com/kreuzberg-dev/kreuzberg.git
 cd kreuzberg
 
 # Install with benchmark dependencies
@@ -251,7 +251,7 @@ Our benchmarks follow rigorous methodology to ensure accurate results:
 
 The benchmarks use real-world documents of varying complexity to simulate actual usage patterns.
 
-For complete benchmark suite documentation, methodology details, and CI integration, see the [Benchmark Suite README](https://github.com/Goldziher/kreuzberg/tree/main/benchmarks).
+For complete benchmark suite documentation, methodology details, and CI integration, see the [Benchmark Suite README](https://github.com/kreuzberg-dev/kreuzberg/tree/main/benchmarks).
 
 ## Troubleshooting Performance
 

@@ -77,9 +77,9 @@ optional-dependencies.paddleocr = [
 urls.Changelog = "https://kreuzberg.dev/CHANGELOG/"
 urls.Documentation = "https://kreuzberg.dev"
 urls.Homepage = "https://kreuzberg.dev"
-urls.Issues = "https://github.com/Goldziher/kreuzberg/issues"
-urls.Repository = "https://github.com/Goldziher/kreuzberg"
-urls.Source = "https://github.com/Goldziher/kreuzberg"
+urls.Issues = "https://github.com/kreuzberg-dev/kreuzberg/issues"
+urls.Repository = "https://github.com/kreuzberg-dev/kreuzberg"
+urls.Source = "https://github.com/kreuzberg-dev/kreuzberg"
 scripts.kreuzberg = "kreuzberg.__main__:main"
 
 [tool.maturin]
