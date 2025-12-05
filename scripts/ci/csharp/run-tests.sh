@@ -33,6 +33,7 @@ fi
 # Verify TESSDATA_PREFIX
 if [ -z "${TESSDATA_PREFIX:-}" ]; then
 	echo "Warning: TESSDATA_PREFIX not set, sourcing setup script"
+	# shellcheck disable=SC1091 # file is in-repo but shellcheck cannot resolve the relative include
 	# shellcheck source=scripts/ci/csharp/setup-tessdata.sh
 	source "$SCRIPT_DIR/setup-tessdata.sh"
 fi

@@ -538,6 +538,21 @@ Natural language processing enables computers to understand human language.
     #[tokio::test]
     #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
     async fn test_pipeline_keyword_extraction_short_content() {
+        {
+            // Ensure registries are empty so validators from other tests don't leak into this run.
+            let _guard = REGISTRY_TEST_GUARD.lock().unwrap();
+            crate::plugins::registry::get_validator_registry()
+                .write()
+                .unwrap()
+                .shutdown_all()
+                .unwrap();
+            crate::plugins::registry::get_post_processor_registry()
+                .write()
+                .unwrap()
+                .shutdown_all()
+                .unwrap();
+        }
+
         let result = ExtractionResult {
             content: "Short text".to_string(),
             mime_type: "text/plain".to_string(),

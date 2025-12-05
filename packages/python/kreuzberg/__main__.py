@@ -94,6 +94,16 @@ def _discover_dev_cli_binary(requested_subcommand: str | None) -> str | None:
     return None
 
 
+def _find_packaged_cli_binary() -> str | None:
+    """Look for the CLI binary in common installation paths before building one."""
+    script_dir = Path(sys.executable).parent
+    for name in ("kreuzberg-cli", "kreuzberg"):
+        candidate = script_dir / name
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Execute the Rust CLI with the provided arguments."""
     args = list(argv[1:] if argv is not None else sys.argv[1:])
@@ -105,6 +115,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             requested_subcommand = first
 
     cli_path = shutil.which("kreuzberg-cli")
+
+    if cli_path is None:
+        cli_path = _find_packaged_cli_binary()
 
     if cli_path is None:
         cli_path = _discover_dev_cli_binary(requested_subcommand)

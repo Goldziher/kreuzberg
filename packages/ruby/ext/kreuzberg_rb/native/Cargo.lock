@@ -1727,9 +1727,9 @@ dependencies = [
 
 [[package]]
 name = "html-to-markdown-rs"
-version = "2.9.2"
+version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fe28c60889eaa10b74d23092c4f46f9964116f1a7144b5d178ea0cc93af8541"
+checksum = "de76849872aad1bf971cd4a7cb311ba074cec42ce01f9c0e471f2abf93743c81"
 dependencies = [
  "astral-tl",
  "base64 0.22.1",

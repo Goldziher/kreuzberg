@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 # Prepare Tesseract data and export TESSDATA_PREFIX
+# shellcheck disable=SC1091 # file is in-repo but shellcheck cannot resolve the relative include
 # shellcheck source=scripts/ci/csharp/setup-tessdata.sh
 source "${REPO_ROOT}/scripts/ci/csharp/setup-tessdata.sh"
 

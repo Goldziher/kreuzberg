@@ -27,7 +27,7 @@ members = [
 
 [manifest.dependency-groups]
 benchmark = [
-    { name = "docling", specifier = ">=2.63.0" },
+    { name = "docling", specifier = ">=2.64.0" },
     { name = "markitdown", specifier = ">=0.1.4" },
     { name = "unstructured", specifier = ">=0.18.21" },
 ]

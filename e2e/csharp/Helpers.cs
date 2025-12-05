@@ -103,7 +103,15 @@ public static class TestHelpers
     public static ExtractionResult RunExtraction(string relativePath, string? configJson)
     {
         var documentPath = EnsureDocument(relativePath, true);
-        var config = BuildConfig(configJson);
+        var config = BuildConfig(configJson) ?? new ExtractionConfig
+        {
+            Ocr = new OcrConfig
+            {
+                Backend = "tesseract",
+                Language = "eng",
+            },
+            ForceOcr = true,
+        };
         return KreuzbergClient.ExtractFileSync(documentPath, config);
     }
 
