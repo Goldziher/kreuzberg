@@ -67,7 +67,7 @@ jobs:
           cache-key-prefix: go-${{ matrix.os }}
           # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
           use-sccache: ${{ matrix.os != 'windows-latest' }}
-          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-msvc' || '' }}
+          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -90,6 +90,17 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup MSYS2 MinGW toolchain (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: |
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-nasm
+
       - name: Build FFI library
         run: scripts/ci/go/build-ffi.ps1
         shell: pwsh
@@ -104,7 +115,7 @@ jobs:
           name: go-ffi-lib-${{ matrix.os }}
           path: |
             target/release/libkreuzberg_ffi.*
-            target/x86_64-pc-windows-msvc/release/libkreuzberg_ffi.*
+            target/x86_64-pc-windows-gnu/release/libkreuzberg_ffi.*
           retention-days: 7
 
       - name: Cleanup Rust cache
@@ -135,7 +146,18 @@ jobs:
           cache-key-prefix: go-tests-${{ matrix.os }}
           # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
           use-sccache: ${{ matrix.os != 'windows-latest' }}
-          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-msvc' || '' }}
+          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
+
+      - name: Setup MSYS2 MinGW toolchain (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: |
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-nasm
 
       - name: Setup Go
         uses: actions/setup-go@v6
