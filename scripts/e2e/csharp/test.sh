@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 # Prepare Tesseract data and export TESSDATA_PREFIX
+# shellcheck source=scripts/ci/csharp/setup-tessdata.sh
 source "${REPO_ROOT}/scripts/ci/csharp/setup-tessdata.sh"
 
 export DYLD_LIBRARY_PATH="${REPO_ROOT}/target/release:${DYLD_LIBRARY_PATH:-}"

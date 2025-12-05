@@ -12,9 +12,9 @@ REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
 # Validate REPO_ROOT is correct by checking for Cargo.toml
 if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
-    echo "Error: REPO_ROOT validation failed. Expected Cargo.toml at: $REPO_ROOT/Cargo.toml" >&2
-    echo "REPO_ROOT resolved to: $REPO_ROOT" >&2
-    exit 1
+	echo "Error: REPO_ROOT validation failed. Expected Cargo.toml at: $REPO_ROOT/Cargo.toml" >&2
+	echo "REPO_ROOT resolved to: $REPO_ROOT" >&2
+	exit 1
 fi
 
 cd "$REPO_ROOT"
@@ -22,7 +22,7 @@ cd "$REPO_ROOT"
 echo "=== Installing wheel for current platform ==="
 
 # Find first matching wheel regardless of platform-specific suffix
-wheel_path="$(ls dist/kreuzberg-*.whl 2>/dev/null | head -n 1 || true)"
+wheel_path="$(find dist -maxdepth 1 -name "kreuzberg-*.whl" -print -quit 2>/dev/null || true)"
 
 if [ -z "$wheel_path" ]; then
 	echo "No wheel found in dist/. Contents:"

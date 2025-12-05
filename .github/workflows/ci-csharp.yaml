@@ -185,14 +185,11 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
-      - name: Configure Tesseract data path
+      - name: Setup Tesseract environment
         shell: bash
         run: |
-          if [ "${RUNNER_OS}" = "macOS" ]; then
-            echo "TESSDATA_PREFIX=/opt/homebrew/share/tessdata" >> "$GITHUB_ENV"
-          else
-            echo "TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata" >> "$GITHUB_ENV"
-          fi
+          source scripts/ci/csharp/setup-tessdata.sh
+          echo "TESSDATA_PREFIX=${TESSDATA_PREFIX}" >> "$GITHUB_ENV"
 
       - name: Download FFI library
         uses: actions/download-artifact@v6

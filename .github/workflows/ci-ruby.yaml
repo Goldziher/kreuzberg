@@ -223,6 +223,10 @@ jobs:
         shell: pwsh
         run: scripts/ci/ruby/configure-tesseract-windows.ps1
 
+      - name: Vendor kreuzberg core for native extension
+        shell: bash
+        run: scripts/ci/ruby/vendor-kreuzberg-core.sh
+
       - name: Build local native extension
         shell: bash
         run: scripts/ci/ruby/compile-extension.sh

@@ -17,7 +17,7 @@ links = "kreuzberg_tesseract"
 exclude = ["tessdata/*", "third_party/*"]
 
 [dependencies]
-libc = "0.2.177"
+libc = "0.2.178"
 thiserror = { workspace = true }
 
 [dev-dependencies]
