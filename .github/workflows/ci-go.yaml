@@ -103,6 +103,47 @@ jobs:
             mingw-w64-ucrt-x86_64-nasm
             mingw-w64-ucrt-x86_64-zstd
 
+      - name: Verify MSYS2 toolchain and add to PATH (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Verify MSYS2 installation
+          if (-not (Test-Path "C:\msys64\ucrt64\bin")) {
+            throw "MSYS2 UCRT64 bin directory not found"
+          }
+
+          # List installed executables for debugging
+          Write-Host "Installed MSYS2 executables:"
+          Get-ChildItem "C:\msys64\ucrt64\bin" -Filter "*.exe" | Select-Object -First 20 | ForEach-Object { Write-Host "  $($_.Name)" }
+
+          # Verify required tools
+          $requiredTools = @("gcc.exe", "ar.exe", "ranlib.exe", "pkg-config.exe", "nasm.exe")
+          $missing = @()
+          foreach ($tool in $requiredTools) {
+            if (-not (Test-Path "C:\msys64\ucrt64\bin\$tool")) {
+              $missing += $tool
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            Write-Host "ERROR: Missing tools: $($missing -join ', ')"
+            Write-Host "Running pacman to ensure all packages are installed..."
+
+            # Run pacman in MSYS2 shell to ensure packages are installed
+            C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-nasm"
+
+            # Verify again
+            foreach ($tool in $missing) {
+              if (-not (Test-Path "C:\msys64\ucrt64\bin\$tool")) {
+                throw "Failed to install $tool"
+              }
+            }
+          }
+
+          # Add UCRT64 bin to PATH for subsequent steps
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\msys64\ucrt64\bin"
+          Write-Host "Added C:\msys64\ucrt64\bin to PATH"
+
       - name: Build FFI library
         run: scripts/ci/go/build-ffi.ps1
         shell: pwsh
@@ -162,6 +203,47 @@ jobs:
             mingw-w64-ucrt-x86_64-pkg-config
             mingw-w64-ucrt-x86_64-nasm
             mingw-w64-ucrt-x86_64-zstd
+
+      - name: Verify MSYS2 toolchain and add to PATH (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Verify MSYS2 installation
+          if (-not (Test-Path "C:\msys64\ucrt64\bin")) {
+            throw "MSYS2 UCRT64 bin directory not found"
+          }
+
+          # List installed executables for debugging
+          Write-Host "Installed MSYS2 executables:"
+          Get-ChildItem "C:\msys64\ucrt64\bin" -Filter "*.exe" | Select-Object -First 20 | ForEach-Object { Write-Host "  $($_.Name)" }
+
+          # Verify required tools
+          $requiredTools = @("gcc.exe", "ar.exe", "ranlib.exe", "pkg-config.exe", "nasm.exe")
+          $missing = @()
+          foreach ($tool in $requiredTools) {
+            if (-not (Test-Path "C:\msys64\ucrt64\bin\$tool")) {
+              $missing += $tool
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            Write-Host "ERROR: Missing tools: $($missing -join ', ')"
+            Write-Host "Running pacman to ensure all packages are installed..."
+
+            # Run pacman in MSYS2 shell to ensure packages are installed
+            C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-nasm"
+
+            # Verify again
+            foreach ($tool in $missing) {
+              if (-not (Test-Path "C:\msys64\ucrt64\bin\$tool")) {
+                throw "Failed to install $tool"
+              }
+            }
+          }
+
+          # Add UCRT64 bin to PATH for subsequent steps
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\msys64\ucrt64\bin"
+          Write-Host "Added C:\msys64\ucrt64\bin to PATH"
 
       - name: Setup Go
         uses: actions/setup-go@v6
