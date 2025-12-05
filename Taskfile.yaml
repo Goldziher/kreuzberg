@@ -258,7 +258,8 @@ tasks:
     desc: Install TypeScript dependencies
     dir: crates/kreuzberg-node
     cmds:
-      - pnpm install
+      - corepack enable
+      - pnpm install -r
   typescript:setup:
     desc: Alias for typescript:install (idempotent)
     dir: crates/kreuzberg-node
@@ -299,6 +300,7 @@ tasks:
     dir: crates/kreuzberg-node
     cmds:
       - echo "Updating TypeScript dependencies..."
+      - corepack up
       - pnpm up --latest
   java:install:
     desc: Install Java dependencies
