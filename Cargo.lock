@@ -8115,8 +8115,3 @@ checksum = "dc6fb7703e32e9a07fb3f757360338b3a567a5054f21b5f52a666752e333d58e"
 dependencies = [
  "zune-core 0.5.0",
 ]
-
-[[patch.unused]]
-name = "rb-sys"
-version = "0.9.117"
-source = "git+https://github.com/oxidize-rb/rb-sys?rev=acca8a7feac415f41f3773a940cbee2ae3167b94#acca8a7feac415f41f3773a940cbee2ae3167b94"
