@@ -18,7 +18,6 @@ resolver = "2"
 [patch.crates-io]
 kreuzberg = { path = "crates/kreuzberg" }
 kreuzberg-tesseract = { path = "crates/kreuzberg-tesseract" }
-rb-sys = { git = "https://github.com/oxidize-rb/rb-sys", rev = "acca8a7feac415f41f3773a940cbee2ae3167b94" }
 
 [workspace.package]
 version = "4.0.0-rc.5"
