@@ -8,7 +8,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+# scripts/ci/node lives three levels below repo root
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+
+# Validate REPO_ROOT is correct by checking for Cargo.toml
+if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
+    echo "Error: REPO_ROOT validation failed. Expected Cargo.toml at: $REPO_ROOT/Cargo.toml" >&2
+    echo "REPO_ROOT resolved to: $REPO_ROOT" >&2
+    exit 1
+fi
 
 TARGET="${1:-}"
 
@@ -18,12 +26,15 @@ if [ -z "$TARGET" ]; then
 	exit 1
 fi
 
-cd crates/kreuzberg-node
+cd "$REPO_ROOT/crates/kreuzberg-node"
 
 echo "=== Building NAPI bindings for $TARGET ==="
 pnpm install
 pnpm exec napi build --platform --release --target "$TARGET"
 pnpm exec napi prepublish -t npm --no-gh-release
+
+echo "=== Building TypeScript outputs ==="
+pnpm exec tsup
 
 mkdir -p artifacts
 
@@ -51,6 +62,7 @@ done
 # Repack tarball with the .node file for specific platforms
 pnpm pack
 
+echo "=== Verifying tarball contents ==="
 pkg_tgz=$(find . -maxdepth 1 -name "kreuzberg-node-*.tgz" -print | head -n1)
 if [[ -n "$pkg_tgz" ]]; then
 	case "$TARGET" in
@@ -82,6 +94,10 @@ if [[ -n "$pkg_tgz" ]]; then
 		tar czf "$pkg_tgz" -C "$tmpdir" package
 		rm -rf "$tmpdir"
 	fi
+
+	# Verify dist/ files are in tarball
+	echo "Checking dist/ files in $pkg_tgz:"
+	tar tzf "$pkg_tgz" | grep "^package/dist/" | head -10 || echo "Warning: No dist/ files found in tarball!"
 fi
 
 echo "Build complete"

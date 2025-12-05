@@ -7,13 +7,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+# scripts/ci/node lives three levels below repo root
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+
+# Validate REPO_ROOT is correct by checking for Cargo.toml
+if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
+    echo "Error: REPO_ROOT validation failed. Expected Cargo.toml at: $REPO_ROOT/Cargo.toml" >&2
+    echo "REPO_ROOT resolved to: $REPO_ROOT" >&2
+    exit 1
+fi
 
 cd "$REPO_ROOT"
 
 echo "=== Unpacking and installing Node bindings ==="
 
-cd "$REPO_ROOT"/crates/kreuzberg-node
+cd "$REPO_ROOT/crates/kreuzberg-node"
 
 # Extract the tarball to get the built .node file
 pkg=$(find . -maxdepth 1 -name "kreuzberg-node-*.tgz" -print | head -n 1)
