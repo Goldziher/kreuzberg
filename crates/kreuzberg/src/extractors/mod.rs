@@ -8,6 +8,7 @@ use crate::plugins::registry::get_document_extractor_registry;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 
+pub mod security;
 pub mod structured;
 pub mod text;
 
@@ -38,7 +39,7 @@ pub mod epub;
 #[cfg(feature = "office")]
 pub mod markdown;
 
-#[cfg(feature = "office")]
+#[cfg(feature = "pandoc-fallback")]
 pub mod pandoc;
 
 #[cfg(feature = "office")]
@@ -95,7 +96,7 @@ pub use epub::EpubExtractor;
 #[cfg(feature = "office")]
 pub use markdown::MarkdownExtractor as EnhancedMarkdownExtractor;
 
-#[cfg(feature = "office")]
+#[cfg(feature = "pandoc-fallback")]
 pub use pandoc::PandocExtractor;
 
 #[cfg(feature = "office")]
@@ -208,10 +209,14 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(PptxExtractor::new()))?;
         registry.register(Arc::new(OdtExtractor::new()))?;
         registry.register(Arc::new(RtfExtractor::new()))?;
-        registry.register(Arc::new(PandocExtractor::new()))?;
         registry.register(Arc::new(RstExtractor::new()))?;
         registry.register(Arc::new(LatexExtractor::new()))?;
         registry.register(Arc::new(JupyterExtractor::new()))?;
+    }
+
+    #[cfg(feature = "pandoc-fallback")]
+    {
+        registry.register(Arc::new(PandocExtractor::new()))?;
     }
 
     #[cfg(feature = "email")]
@@ -283,7 +288,7 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 10;
+            expected_count += 9;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
@@ -291,10 +296,15 @@ mod tests {
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
             assert!(extractor_names.contains(&"odt-extractor".to_string()));
             assert!(extractor_names.contains(&"rtf-extractor".to_string()));
-            assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
             assert!(extractor_names.contains(&"rst-extractor".to_string()));
             assert!(extractor_names.contains(&"latex-extractor".to_string()));
             assert!(extractor_names.contains(&"jupyter-extractor".to_string()));
+        }
+
+        #[cfg(feature = "pandoc-fallback")]
+        {
+            expected_count += 1;
+            assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
         }
 
         #[cfg(feature = "email")]

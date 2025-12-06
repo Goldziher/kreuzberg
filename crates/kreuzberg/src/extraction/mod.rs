@@ -25,7 +25,7 @@ pub mod libreoffice;
 #[cfg(feature = "office")]
 pub mod office_metadata;
 
-#[cfg(feature = "office")]
+#[cfg(feature = "pandoc-fallback")]
 pub mod pandoc;
 
 #[cfg(feature = "office")]

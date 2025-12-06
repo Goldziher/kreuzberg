@@ -41,6 +41,9 @@ html = ["dep:html-to-markdown-rs", "dep:html-escape", "dep:scraper"]
 xml = ["dep:quick-xml", "dep:roxmltree"]
 archives = ["dep:zip", "dep:tar", "dep:sevenz-rust"]
 
+# Optional Pandoc fallback for formats without native extractors
+pandoc-fallback = ["office"]
+
 # Processing features
 ocr = [
     "dep:kreuzberg-tesseract",
@@ -82,9 +85,10 @@ full = [
     "chunking",
     "quality",
     "keywords",
+    "pandoc-fallback",
 ]
 server = ["pdf", "excel", "html", "ocr", "api", "mcp"]
-cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking", "quality"]
+cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking", "quality", "pandoc-fallback"]
 
 [build-dependencies]
 tracing = "0.1"

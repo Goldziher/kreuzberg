@@ -2,7 +2,10 @@
 //!
 //! This extractor provides:
 //! - Comprehensive markdown parsing using pulldown-cmark
-//! - YAML frontmatter metadata extraction (title, author, date, keywords, description)
+//! - Complete YAML frontmatter metadata extraction:
+//!   - Standard fields: title, author, date, description, keywords
+//!   - Extended fields: abstract, subject, category, tags, language, version
+//! - Automatic conversion of array fields (keywords, tags) to comma-separated strings
 //! - Table extraction as structured data
 //! - Heading structure preservation
 //! - Code block and link extraction
@@ -65,21 +68,30 @@ impl MarkdownExtractor {
     }
 
     /// Extract metadata from YAML frontmatter.
+    ///
+    /// Extracts the following YAML fields:
+    /// - Standard fields: title, author, date, description (as subject)
+    /// - Extended fields: abstract, subject, category, tags, language, version
+    /// - Array fields (keywords, tags): converted to comma-separated strings
     fn extract_metadata_from_yaml(yaml: &YamlValue) -> Metadata {
         let mut metadata = Metadata::default();
 
+        // Extract title
         if let Some(title) = yaml.get("title").and_then(|v| v.as_str()) {
             metadata.additional.insert("title".to_string(), title.into());
         }
 
+        // Extract author
         if let Some(author) = yaml.get("author").and_then(|v| v.as_str()) {
             metadata.additional.insert("author".to_string(), author.into());
         }
 
+        // Extract date
         if let Some(date) = yaml.get("date").and_then(|v| v.as_str()) {
             metadata.date = Some(date.to_string());
         }
 
+        // Extract keywords (string or array)
         if let Some(keywords) = yaml.get("keywords") {
             match keywords {
                 YamlValue::String(s) => {
@@ -93,8 +105,48 @@ impl MarkdownExtractor {
             }
         }
 
+        // Extract description (maps to subject if not already set)
         if let Some(description) = yaml.get("description").and_then(|v| v.as_str()) {
             metadata.subject = Some(description.to_string());
+        }
+
+        // Extract abstract - NEW FIELD
+        if let Some(abstract_text) = yaml.get("abstract").and_then(|v| v.as_str()) {
+            metadata.additional.insert("abstract".to_string(), abstract_text.into());
+        }
+
+        // Extract subject - NEW FIELD (prefer explicit subject over description)
+        if let Some(subject) = yaml.get("subject").and_then(|v| v.as_str()) {
+            metadata.subject = Some(subject.to_string());
+        }
+
+        // Extract category - NEW FIELD
+        if let Some(category) = yaml.get("category").and_then(|v| v.as_str()) {
+            metadata.additional.insert("category".to_string(), category.into());
+        }
+
+        // Extract tags (string or array) - NEW FIELD
+        if let Some(tags) = yaml.get("tags") {
+            match tags {
+                YamlValue::String(s) => {
+                    metadata.additional.insert("tags".to_string(), s.clone().into());
+                }
+                YamlValue::Sequence(seq) => {
+                    let tags_str = seq.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", ");
+                    metadata.additional.insert("tags".to_string(), tags_str.into());
+                }
+                _ => {}
+            }
+        }
+
+        // Extract language - NEW FIELD
+        if let Some(language) = yaml.get("language").and_then(|v| v.as_str()) {
+            metadata.additional.insert("language".to_string(), language.into());
+        }
+
+        // Extract version - NEW FIELD
+        if let Some(version) = yaml.get("version").and_then(|v| v.as_str()) {
+            metadata.additional.insert("version".to_string(), version.into());
         }
 
         metadata
@@ -610,9 +662,13 @@ keywords:
 description: "A test description"
 abstract: "Test abstract"
 subject: "Test subject"
+category: "Documentation"
+version: "1.2.3"
+language: "en"
+tags:
+  - tag1
+  - tag2
 custom_field: "custom_value"
-version: 1.2.3
-tags: ["tag1", "tag2"]
 nested:
   organization: "Test Corp"
   contact:
@@ -633,29 +689,50 @@ nested:
             Some("Test Author")
         );
 
-        // Keywords should be extracted
+        // Keywords should be extracted as comma-separated
         assert!(metadata.additional.contains_key("keywords"));
+        let keywords = metadata
+            .additional
+            .get("keywords")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert!(keywords.contains("rust"));
+        assert!(keywords.contains("markdown"));
 
-        // Description maps to subject
-        assert_eq!(metadata.subject, Some("A test description".to_string()));
+        // NEW FIELD: subject should be set from explicit subject field, not description
+        assert_eq!(metadata.subject, Some("Test subject".to_string()));
 
-        // Count extracted vs available fields
-        let yaml_keys: Vec<String> = if let YamlValue::Mapping(map) = &yaml {
-            map.keys().filter_map(|k| k.as_str().map(|s| s.to_string())).collect()
-        } else {
-            vec![]
-        };
-
-        println!("\nTotal YAML fields: {}", yaml_keys.len());
-        println!("Extracted to standard fields: 2 (date, subject from description)");
-        println!("Extracted to additional: {}", metadata.additional.len());
-
-        // We should extract: title, author, keywords -> 3 in additional
-        // Plus: date, subject (from description) -> 2 in standard
-        // Missing: abstract, custom_field, version, tags, nested
-        assert!(
-            metadata.additional.len() >= 3,
-            "Should extract at least title, author, keywords"
+        // NEW FIELD: abstract should be extracted
+        assert_eq!(
+            metadata.additional.get("abstract").and_then(|v| v.as_str()),
+            Some("Test abstract")
         );
+
+        // NEW FIELD: category should be extracted
+        assert_eq!(
+            metadata.additional.get("category").and_then(|v| v.as_str()),
+            Some("Documentation")
+        );
+
+        // NEW FIELD: tags should be extracted as comma-separated
+        assert!(metadata.additional.contains_key("tags"));
+        let tags = metadata.additional.get("tags").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(tags.contains("tag1"));
+        assert!(tags.contains("tag2"));
+
+        // NEW FIELD: language should be extracted
+        assert_eq!(metadata.additional.get("language").and_then(|v| v.as_str()), Some("en"));
+
+        // NEW FIELD: version should be extracted
+        assert_eq!(
+            metadata.additional.get("version").and_then(|v| v.as_str()),
+            Some("1.2.3")
+        );
+
+        // Verify we extract the expected number of fields
+        // Expected: title, author, keywords, abstract, category, tags, language, version (8 fields)
+        // Plus: date and subject (in standard fields)
+        assert_eq!(metadata.additional.len(), 8, "Should extract all standard fields");
+        println!("\nSuccessfully extracted all 8 additional metadata fields");
     }
 }
