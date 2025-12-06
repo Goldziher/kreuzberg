@@ -141,3 +141,13 @@ coverage.json
 TestResults/
 # Ruby rspec examples
 examples.txt
+
+# Coverage files in packages subdirectories
+packages/*/coverage.out
+packages/*/coverage.json
+packages/*/.coverage
+packages/*/htmlcov/
+
+# Test results in packages subdirectories
+packages/*/TestResults/
+packages/*/test-results/
