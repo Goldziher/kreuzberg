@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>Podcast Directory</title>
+    <dateCreated>Wed, 15 Mar 2023 08:30:00 GMT</dateCreated>
+    <dateModified>Mon, 04 Dec 2023 14:20:00 GMT</dateModified>
+    <ownerName>Jane Doe</ownerName>
+    <ownerEmail>jane.doe@example.org</ownerEmail>
+  </head>
+  <body>
+    <outline text="Technology Podcasts" type="folder">
+      <outline text="The Joe Rogan Experience" type="podcast" xmlUrl="https://www.joerogan.com/feed" htmlUrl="https://www.joerogan.com/" />
+      <outline text="Syntax - Tasty Web Development Treats" type="podcast" xmlUrl="https://syntax.fm/rss" htmlUrl="https://syntax.fm/" />
+      <outline text="React Native Radio" type="podcast" xmlUrl="https://reactnativeradio.com/feed.xml" htmlUrl="https://reactnativeradio.com/" />
+    </outline>
+    <outline text="Business &amp; Startups" type="folder">
+      <outline text="Acquired" type="podcast" xmlUrl="https://www.acquired.fm/feed.xml" htmlUrl="https://www.acquired.fm/" />
+      <outline text="Masters of Scale" type="podcast" xmlUrl="https://mastersofscale.com/feed/" htmlUrl="https://mastersofscale.com/" />
+    </outline>
+    <outline text="Science &amp; Nature" type="folder">
+      <outline text="StarTalk Radio" type="podcast" xmlUrl="https://www.startalkradio.net/feed/podcast/" htmlUrl="https://www.startalkradio.net/" description="Cosmos, science and more" />
+      <outline text="Nature Podcast" type="podcast" xmlUrl="https://www.nature.com/nature/podcast.xml" htmlUrl="https://www.nature.com/nature/" />
+    </outline>
+  </body>
+</opml>

@@ -152,6 +152,7 @@ static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     set.insert("application/x-ipynb+json");
     set.insert("application/x-jats+xml");
     set.insert("application/x-latex");
+    set.insert("application/xml+opml");
     set.insert("application/x-opml+xml");
     set.insert("application/x-research-info-systems");
     set.insert("application/x-typst");
@@ -164,6 +165,7 @@ static SUPPORTED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     set.insert("text/x-markdown-extra");
     set.insert("text/x-mdoc");
     set.insert("text/x-multimarkdown");
+    set.insert("text/x-opml");
     set.insert("text/x-org");
     set.insert("text/x-pod");
     set.insert("text/x-rst");

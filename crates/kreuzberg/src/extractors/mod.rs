@@ -37,6 +37,9 @@ pub mod docx;
 pub mod epub;
 
 #[cfg(feature = "office")]
+pub mod fictionbook;
+
+#[cfg(feature = "office")]
 pub mod markdown;
 
 #[cfg(feature = "pandoc-fallback")]
@@ -78,8 +81,6 @@ pub mod xml;
 #[cfg(feature = "xml")]
 pub mod docbook;
 
-#[cfg(feature = "xml")]
-
 pub use structured::StructuredExtractor;
 pub use text::{MarkdownExtractor, PlainTextExtractor};
 
@@ -106,6 +107,9 @@ pub use docx::DocxExtractor;
 
 #[cfg(feature = "office")]
 pub use epub::EpubExtractor;
+
+#[cfg(feature = "office")]
+pub use fictionbook::FictionBookExtractor;
 
 #[cfg(feature = "office")]
 pub use markdown::MarkdownExtractor as EnhancedMarkdownExtractor;
@@ -148,8 +152,6 @@ pub use xml::XmlExtractor;
 
 #[cfg(feature = "xml")]
 pub use docbook::DocbookExtractor;
-
-#[cfg(feature = "xml")]
 
 /// Lazy-initialized flag that ensures extractors are registered exactly once.
 ///
@@ -234,6 +236,7 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(BibtexExtractor::new()))?;
         registry.register(Arc::new(DocxExtractor::new()))?;
         registry.register(Arc::new(EpubExtractor::new()))?;
+        registry.register(Arc::new(FictionBookExtractor::new()))?;
         registry.register(Arc::new(PptxExtractor::new()))?;
         registry.register(Arc::new(OdtExtractor::new()))?;
         registry.register(Arc::new(RtfExtractor::new()))?;
@@ -318,7 +321,8 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 11;
+            // Office adds 12 unique extractors (EnhancedMarkdownExtractor has same name as core, so it replaces it)
+            expected_count += 12;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
@@ -331,6 +335,7 @@ mod tests {
             assert!(extractor_names.contains(&"latex-extractor".to_string()));
             assert!(extractor_names.contains(&"jupyter-extractor".to_string()));
             assert!(extractor_names.contains(&"orgmode-extractor".to_string()));
+            assert!(extractor_names.contains(&"opml-extractor".to_string()));
         }
 
         #[cfg(feature = "pandoc-fallback")]

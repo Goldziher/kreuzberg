@@ -28,6 +28,7 @@ office = [
     "dep:roxmltree",
     "dep:zip",
     "dep:docx-lite",
+    "dep:quick-xml",
     # Pandoc replacement - native Rust extractors
     "dep:pulldown-cmark",
     "dep:biblatex",
@@ -35,6 +36,7 @@ office = [
     "dep:rtf-parser",
     "dep:rst_parser",
     "dep:epub",
+    "dep:typst-syntax",
 ]
 email = ["dep:mail-parser", "dep:msg_parser"]
 html = ["dep:html-to-markdown-rs", "dep:html-escape", "dep:scraper"]
@@ -144,6 +146,7 @@ orgize = { version = "0.9", optional = true }
 rtf-parser = { version = "0.4", optional = true }
 rst_parser = { version = "0.4", optional = true }
 epub = { version = "2.1", optional = true }
+typst-syntax = { version = "0.14", optional = true }
 
 # Processing features (optional)
 kreuzberg-tesseract = { version = "1.0.0-rc.1", optional = true }

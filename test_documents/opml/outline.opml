@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>Project Outline</title>
+    <dateCreated>Thu, 22 Jun 2023 10:15:00 GMT</dateCreated>
+    <dateModified>Sat, 02 Dec 2023 09:45:00 GMT</dateModified>
+    <ownerName>Project Manager</ownerName>
+  </head>
+  <body>
+    <outline text="Project Alpha" type="category">
+      <outline text="Phase 1: Planning" type="category">
+        <outline text="Requirements gathering" type="task" />
+        <outline text="Resource allocation" type="task" />
+        <outline text="Risk assessment" type="task" />
+      </outline>
+      <outline text="Phase 2: Development" type="category">
+        <outline text="Architecture design" type="task" />
+        <outline text="Backend implementation" type="task" />
+        <outline text="Frontend implementation" type="task" />
+        <outline text="Database setup" type="task" />
+      </outline>
+      <outline text="Phase 3: Testing" type="category">
+        <outline text="Unit testing" type="task" />
+        <outline text="Integration testing" type="task" />
+        <outline text="User acceptance testing" type="task" />
+      </outline>
+      <outline text="Phase 4: Deployment" type="category">
+        <outline text="Production setup" type="task" />
+        <outline text="Documentation" type="task" />
+        <outline text="Training" type="task" />
+      </outline>
+    </outline>
+    <outline text="Notes &amp; Resources" type="folder">
+      <outline text="Technical References" type="note" />
+      <outline text="Team Meeting Minutes" type="note" />
+      <outline text="Budget &amp; Timeline" type="note" />
+    </outline>
+  </body>
+</opml>
