@@ -152,9 +152,15 @@ impl RstExtractor {
                 continue;
             }
 
-            // Skip directives (.. name::) but extract their content
-            if line.trim().starts_with(".. ") {
-                let directive = &line.trim()[3..];
+            // Skip directives (.. name::) or comments (.. or ..comment) but extract their content
+            if line.trim().starts_with(".. ") || line.trim() == ".." {
+                let trimmed = line.trim();
+                let directive = if trimmed == ".." {
+                    // This is a comment block, skip it entirely
+                    ""
+                } else {
+                    &trimmed[3..]
+                };
 
                 // Image directive
                 if directive.starts_with("image::") {

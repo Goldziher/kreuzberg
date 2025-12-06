@@ -45,6 +45,12 @@ pub mod pandoc;
 pub mod rst;
 
 #[cfg(feature = "office")]
+pub mod latex;
+
+#[cfg(feature = "office")]
+pub mod jupyter;
+
+#[cfg(feature = "office")]
 pub mod odt;
 
 #[cfg(feature = "pdf")]
@@ -94,6 +100,12 @@ pub use pandoc::PandocExtractor;
 
 #[cfg(feature = "office")]
 pub use rst::RstExtractor;
+
+#[cfg(feature = "office")]
+pub use latex::LatexExtractor;
+
+#[cfg(feature = "office")]
+pub use jupyter::JupyterExtractor;
 
 #[cfg(feature = "office")]
 pub use odt::OdtExtractor;
@@ -198,6 +210,8 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(RtfExtractor::new()))?;
         registry.register(Arc::new(PandocExtractor::new()))?;
         registry.register(Arc::new(RstExtractor::new()))?;
+        registry.register(Arc::new(LatexExtractor::new()))?;
+        registry.register(Arc::new(JupyterExtractor::new()))?;
     }
 
     #[cfg(feature = "email")]
@@ -269,15 +283,18 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 7;
+            expected_count += 10;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
+            assert!(extractor_names.contains(&"epub-extractor".to_string()));
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
             assert!(extractor_names.contains(&"odt-extractor".to_string()));
             assert!(extractor_names.contains(&"rtf-extractor".to_string()));
             assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
             assert!(extractor_names.contains(&"rst-extractor".to_string()));
+            assert!(extractor_names.contains(&"latex-extractor".to_string()));
+            assert!(extractor_names.contains(&"jupyter-extractor".to_string()));
         }
 
         #[cfg(feature = "email")]

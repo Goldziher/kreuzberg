@@ -52,19 +52,19 @@ impl JupyterExtractor {
         // Extract notebook-level metadata
         if let Some(notebook_metadata) = notebook.get("metadata").and_then(|m| m.as_object()) {
             // Extract kernelspec
-            if let Some(kernelspec) = notebook_metadata.get("kernelspec") {
-                if let Some(name) = kernelspec.get("name").and_then(|n| n.as_str()) {
-                    extracted_content.push_str(&format!("Kernelspec: {}\n", name));
-                    metadata.insert("kernelspec".to_string(), kernelspec.clone());
-                }
+            if let Some(kernelspec) = notebook_metadata.get("kernelspec")
+                && let Some(name) = kernelspec.get("name").and_then(|n| n.as_str())
+            {
+                extracted_content.push_str(&format!("Kernelspec: {}\n", name));
+                metadata.insert("kernelspec".to_string(), kernelspec.clone());
             }
 
             // Extract language_info
-            if let Some(language_info) = notebook_metadata.get("language_info") {
-                if let Some(name) = language_info.get("name").and_then(|n| n.as_str()) {
-                    extracted_content.push_str(&format!("Language: {}\n", name));
-                    metadata.insert("language_info".to_string(), language_info.clone());
-                }
+            if let Some(language_info) = notebook_metadata.get("language_info")
+                && let Some(name) = language_info.get("name").and_then(|n| n.as_str())
+            {
+                extracted_content.push_str(&format!("Language: {}\n", name));
+                metadata.insert("language_info".to_string(), language_info.clone());
             }
         }
 
@@ -74,7 +74,7 @@ impl JupyterExtractor {
             metadata.insert("nbformat".to_string(), nbformat.clone());
         }
 
-        extracted_content.push_str("\n");
+        extracted_content.push('\n');
 
         // Extract cells
         if let Some(cells) = notebook.get("cells").and_then(|c| c.as_array()) {
@@ -91,7 +91,7 @@ impl JupyterExtractor {
         cell: &Value,
         cell_idx: usize,
         content: &mut String,
-        metadata: &mut HashMap<String, Value>,
+        _metadata: &mut HashMap<String, Value>,
     ) -> Result<()> {
         let cell_type = cell.get("cell_type").and_then(|t| t.as_str()).unwrap_or("unknown");
 
@@ -118,7 +118,7 @@ impl JupyterExtractor {
                 }
             }
         }
-        content.push_str("\n");
+        content.push('\n');
 
         match cell_type {
             "markdown" => Self::extract_markdown_cell(cell, content)?,
@@ -145,10 +145,10 @@ impl JupyterExtractor {
     /// Extract code cell content and outputs.
     fn extract_code_cell(cell: &Value, content: &mut String) -> Result<()> {
         // Add execution count if present
-        if let Some(exec_count) = cell.get("execution_count") {
-            if !exec_count.is_null() {
-                content.push_str(&format!("::: {{execution_count={}}}\n", exec_count));
-            }
+        if let Some(exec_count) = cell.get("execution_count")
+            && !exec_count.is_null()
+        {
+            content.push_str(&format!("::: {{execution_count={}}}\n", exec_count));
         }
 
         // Add source code
@@ -196,10 +196,10 @@ impl JupyterExtractor {
         content.push_str(&format!("::: {{.output .{}", output_type));
 
         // Add execution count if present
-        if let Some(exec_count) = output.get("execution_count") {
-            if !exec_count.is_null() {
-                content.push_str(&format!(" execution_count={}", exec_count));
-            }
+        if let Some(exec_count) = output.get("execution_count")
+            && !exec_count.is_null()
+        {
+            content.push_str(&format!(" execution_count={}", exec_count));
         }
 
         content.push_str("}\n");

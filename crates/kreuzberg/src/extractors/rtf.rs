@@ -343,7 +343,7 @@ mod tests {
 
     #[test]
     fn test_simple_rtf_extraction() {
-        let extractor = RtfExtractor;
+        let _extractor = RtfExtractor;
         let rtf_content = r#"{\rtf1 Hello World}"#;
         let extracted = extract_text_from_rtf(rtf_content);
         assert!(extracted.contains("Hello") || extracted.contains("World"));

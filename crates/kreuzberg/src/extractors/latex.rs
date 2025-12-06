@@ -27,7 +27,6 @@ use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
 use regex::Regex;
-use std::collections::HashMap;
 
 /// LaTeX document extractor
 pub struct LatexExtractor;
@@ -124,7 +123,6 @@ struct LatexParser {
     content: String,
     metadata: Metadata,
     tables: Vec<Table>,
-    position: usize,
 }
 
 impl LatexParser {
@@ -133,7 +131,6 @@ impl LatexParser {
             content: content.to_string(),
             metadata: Metadata::default(),
             tables: Vec::new(),
-            position: 0,
         }
     }
 
@@ -142,9 +139,7 @@ impl LatexParser {
         self.extract_metadata();
 
         // Process content and extract text
-        let text = self.extract_content();
-
-        text
+        self.extract_content()
     }
 
     fn extract_metadata(&mut self) {
@@ -183,24 +178,22 @@ impl LatexParser {
     }
 
     fn extract_command_content(&self, command: &str) -> Option<String> {
-        let pattern = format!(r"\\{}{{([^}}]*)}}", regex::escape(command));
-        if let Ok(re) = Regex::new(&pattern) {
-            if let Some(caps) = re.captures(&self.content) {
-                return Some(caps.get(1).map(|m| m.as_str().to_string()).unwrap_or_default());
-            }
-        }
-        None
+        // In regex, \\ matches a literal backslash
+        // In Rust raw string, r"\\" is the two characters \ and \
+        let pattern = format!(r"\\{}\{{([^}}]*)\}}", regex::escape(command));
+        Regex::new(&pattern)
+            .ok()
+            .and_then(|re| re.captures(&self.content))
+            .map(|caps| caps.get(1).map(|m| m.as_str().to_string()).unwrap_or_default())
     }
 
     fn extract_command_with_args(&self, command: &str) -> Option<String> {
         // Match \command[arg1]{arg2} or \command{arg}
-        let pattern = format!(r"\\{}(?:\[([^\]]*)\])?{{([^}}]*)}}", regex::escape(command));
-        if let Ok(re) = Regex::new(&pattern) {
-            if let Some(caps) = re.captures(&self.content) {
-                return caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str().to_string());
-            }
-        }
-        None
+        let pattern = format!(r"\\{}(?:\[([^\]]*)\])?\{{([^}}]*)\}}", regex::escape(command));
+        Regex::new(&pattern)
+            .ok()
+            .and_then(|re| re.captures(&self.content))
+            .and_then(|caps| caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str().to_string()))
     }
 
     fn extract_content(&mut self) -> String {
@@ -289,8 +282,8 @@ impl LatexParser {
                                 }
                             }
                         }
-                        "title" | "author" | "date" | "maketitle" | "usepackage" | "documentclass" | "begin"
-                        | "end" | "newcommand" | "renewcommand" | "chapter" | "appendix" => {
+                        "title" | "author" | "date" | "maketitle" | "usepackage" | "documentclass" | "newcommand"
+                        | "renewcommand" | "chapter" | "appendix" => {
                             // Skip these commands but handle their arguments if present
                             if let Some('{') = chars.peek() {
                                 chars.next();
@@ -521,19 +514,21 @@ impl LatexParser {
                         }
                         "verb" => {
                             // \verb!code! - read until next delimiter
-                            if let Some(&delim) = chars.peek() {
-                                if !delim.is_alphanumeric() && delim != '{' && delim != '[' {
-                                    chars.next();
-                                    let mut code = String::new();
-                                    while let Some(&c) = chars.peek() {
-                                        if c == delim {
-                                            chars.next();
-                                            break;
-                                        }
-                                        code.push(chars.next().unwrap());
+                            if let Some(&delim) = chars.peek()
+                                && !delim.is_alphanumeric()
+                                && delim != '{'
+                                && delim != '['
+                            {
+                                chars.next();
+                                let mut code = String::new();
+                                while let Some(&c) = chars.peek() {
+                                    if c == delim {
+                                        chars.next();
+                                        break;
                                     }
-                                    result.push_str(&format!("`{}`", code));
+                                    code.push(chars.next().unwrap());
                                 }
+                                result.push_str(&format!("`{}`", code));
                             }
                         }
                         "ldots" | "textellipsis" => {
@@ -574,23 +569,15 @@ impl LatexParser {
                             }
                         }
                         // Escaped special characters
-                        "&" | "#" | "_" | "{" | "}" | "%" => {
-                            let char_map = [("&", "&"), ("#", "#"), ("_", "_"), ("{", "{"), ("}", "}"), ("%", "%")];
-                            for (cmd, char) in &char_map {
-                                if cmd == &cmd {
-                                    result.push_str(char);
-                                }
-                            }
-                            match cmd.as_str() {
-                                "&" => result.push('&'),
-                                "#" => result.push('#'),
-                                "_" => result.push('_'),
-                                "{" => result.push('{'),
-                                "}" => result.push('}'),
-                                "%" => result.push('%'),
-                                _ => {}
-                            }
-                        }
+                        "&" | "#" | "_" | "{" | "}" | "%" => match cmd.as_str() {
+                            "&" => result.push('&'),
+                            "#" => result.push('#'),
+                            "_" => result.push('_'),
+                            "{" => result.push('{'),
+                            "}" => result.push('}'),
+                            "%" => result.push('%'),
+                            _ => {}
+                        },
                         "ensuremath" => {
                             if let Some('{') = chars.peek() {
                                 chars.next();
@@ -737,7 +724,7 @@ impl LatexParser {
         while let Some(&c) = chars.peek() {
             if c == '\\' {
                 content.push(chars.next().unwrap());
-                if let Some(&next) = chars.peek() {
+                if let Some(&_next) = chars.peek() {
                     content.push(chars.next().unwrap());
                 }
             } else if c == '{' {
@@ -768,7 +755,7 @@ impl LatexParser {
 
         while let Some(ch) = chars.next() {
             if ch == '\\' {
-                if let Some(&next) = chars.peek() {
+                if let Some(&_next) = chars.peek() {
                     let cmd = self.read_command_name(&mut chars);
                     match cmd.as_str() {
                         "&" => result.push('&'),
@@ -815,7 +802,7 @@ impl LatexParser {
                     }
                 }
 
-                if check_str.starts_with(&format!("\\end{{{}", env_name)) || check_str == format!("\\end") {
+                if check_str.starts_with(&format!("\\end{{{}", env_name)) || check_str == "\\end" {
                     // Found end of environment
                     // consume up to closing }
                     let mut depth = 0;
@@ -876,7 +863,7 @@ impl LatexParser {
                                     _ => "- ".to_string(),
                                 };
                                 result.push_str(&prefix);
-                                result.push_str(&current_item.trim());
+                                result.push_str(current_item.trim());
                                 result.push('\n');
                                 item_count += 1;
                             }
@@ -919,7 +906,7 @@ impl LatexParser {
                 _ => "- ".to_string(),
             };
             result.push_str(&prefix);
-            result.push_str(&current_item.trim());
+            result.push_str(current_item.trim());
             result.push('\n');
         }
 
@@ -928,18 +915,16 @@ impl LatexParser {
 
     fn parse_tabular(&self, content: &str) -> Option<(String, Table)> {
         // Parse LaTeX tabular environment
-        let mut rows = Vec::new();
-        let mut headers = Vec::new();
+        let mut cells = Vec::new();
         let mut current_row = Vec::new();
         let mut current_cell = String::new();
 
         let mut chars = content.chars().peekable();
-        let mut is_header_row = true;
 
         while let Some(ch) = chars.next() {
             if ch == '&' {
                 // Cell separator
-                let processed = self.process_inline_content(&current_cell.trim());
+                let processed = self.process_inline_content(current_cell.trim());
                 current_row.push(processed);
                 current_cell.clear();
             } else if ch == '\\' {
@@ -947,16 +932,11 @@ impl LatexParser {
                     if next_c == '\\' {
                         chars.next();
                         // Row separator
-                        let processed = self.process_inline_content(&current_cell.trim());
+                        let processed = self.process_inline_content(current_cell.trim());
                         current_row.push(processed);
 
                         if !current_row.is_empty() {
-                            if is_header_row && rows.is_empty() {
-                                headers = current_row.clone();
-                                is_header_row = false;
-                            } else {
-                                rows.push(current_row.clone());
-                            }
+                            cells.push(current_row.clone());
                         }
 
                         current_row.clear();
@@ -997,39 +977,37 @@ impl LatexParser {
 
         // Don't forget last cell and row
         if !current_cell.is_empty() {
-            let processed = self.process_inline_content(&current_cell.trim());
+            let processed = self.process_inline_content(current_cell.trim());
             current_row.push(processed);
         }
 
         if !current_row.is_empty() {
-            if is_header_row && rows.is_empty() {
-                headers = current_row.clone();
-            } else {
-                rows.push(current_row);
-            }
+            cells.push(current_row);
         }
 
-        if !rows.is_empty() || !headers.is_empty() {
-            let table = Table { headers, rows };
-
-            let mut text = String::new();
-            text.push('|');
-            for header in &table.headers {
-                text.push_str(&format!(" {} |", header));
-            }
-            text.push('\n');
-            text.push_str(&"|".repeat(table.headers.len() + 1));
-            text.push('\n');
-
-            for row in &table.rows {
-                text.push('|');
+        if !cells.is_empty() {
+            // Build markdown representation
+            let mut markdown = String::new();
+            for (i, row) in cells.iter().enumerate() {
+                markdown.push('|');
                 for cell in row {
-                    text.push_str(&format!(" {} |", cell));
+                    markdown.push_str(&format!(" {} |", cell));
                 }
-                text.push('\n');
+                markdown.push('\n');
+                // Add header separator after first row
+                if i == 0 && cells.len() > 1 {
+                    markdown.push_str(&"|".repeat(row.len() + 1));
+                    markdown.push('\n');
+                }
             }
 
-            Some((text, table))
+            let table = Table {
+                cells,
+                markdown: markdown.clone(),
+                page_number: 1,
+            };
+
+            Some((markdown, table))
         } else {
             None
         }
@@ -1045,7 +1023,7 @@ mod tests {
         let latex = r#"\title{Hello World}"#;
         let (_, metadata, _) = LatexExtractor::extract_from_latex(latex);
         assert_eq!(
-            metadata.additional.get("title").map(|v| v.as_str()),
+            metadata.additional.get("title").and_then(|v| v.as_str()),
             Some("Hello World")
         );
     }
