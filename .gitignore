@@ -33,6 +33,9 @@ tests/benchmarks/results/
 .env
 .idea/
 .kreuzberg/
+# Exception: Allow Go test fixtures (needed for go:embed directive)
+!packages/go/kreuzberg/.kreuzberg/
+!packages/go/kreuzberg/.kreuzberg/sample.pdf
 .mypy_cache/
 .nox/
 .pytest_cache/

@@ -29,7 +29,7 @@ func writeValidPDFToFile(dir string, filename string) (string, error) {
 	}
 
 	path := filepath.Join(dir, filename)
-	if err := os.WriteFile(path, pdfData, 0o644); err != nil {
+	if err := os.WriteFile(path, pdfData, 0o600); err != nil {
 		return "", fmt.Errorf("failed to write PDF file: %w", err)
 	}
 
