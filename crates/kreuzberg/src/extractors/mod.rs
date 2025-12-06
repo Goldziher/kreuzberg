@@ -44,9 +44,6 @@ pub mod pdf;
 #[cfg(feature = "office")]
 pub mod pptx;
 
-#[cfg(feature = "office")]
-pub mod typst;
-
 #[cfg(feature = "xml")]
 pub mod xml;
 
@@ -85,9 +82,6 @@ pub use pdf::PdfExtractor;
 
 #[cfg(feature = "office")]
 pub use pptx::PptxExtractor;
-
-#[cfg(feature = "office")]
-pub use typst::TypstExtractor;
 
 #[cfg(feature = "xml")]
 pub use xml::XmlExtractor;
@@ -176,7 +170,6 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(DocxExtractor::new()))?;
         registry.register(Arc::new(PptxExtractor::new()))?;
         registry.register(Arc::new(PandocExtractor::new()))?;
-        registry.register(Arc::new(TypstExtractor::new()))?;
     }
 
     #[cfg(feature = "email")]
@@ -248,13 +241,12 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 5;
+            expected_count += 4;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
             assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
-            assert!(extractor_names.contains(&"typst-extractor".to_string()));
         }
 
         #[cfg(feature = "email")]

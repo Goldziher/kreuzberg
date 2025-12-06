@@ -595,4 +595,67 @@ mod tests {
         // Either the YAML parses successfully or we fall back to treating it as content
         let _ = yaml; // Gracefully handle both success and failure
     }
+
+    #[test]
+    fn test_metadata_extraction_completeness() {
+        // Test all fields that Pandoc extracts
+        let yaml_str = r#"
+title: "Test Document"
+author: "Test Author"
+date: "2024-01-15"
+keywords:
+  - rust
+  - markdown
+  - testing
+description: "A test description"
+abstract: "Test abstract"
+subject: "Test subject"
+custom_field: "custom_value"
+version: 1.2.3
+tags: ["tag1", "tag2"]
+nested:
+  organization: "Test Corp"
+  contact:
+    email: "test@example.com"
+"#;
+
+        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).expect("Valid YAML");
+        let metadata = MarkdownExtractor::extract_metadata_from_yaml(&yaml);
+
+        // Check standard fields
+        assert_eq!(metadata.date, Some("2024-01-15".to_string()));
+        assert_eq!(
+            metadata.additional.get("title").and_then(|v| v.as_str()),
+            Some("Test Document")
+        );
+        assert_eq!(
+            metadata.additional.get("author").and_then(|v| v.as_str()),
+            Some("Test Author")
+        );
+
+        // Keywords should be extracted
+        assert!(metadata.additional.contains_key("keywords"));
+
+        // Description maps to subject
+        assert_eq!(metadata.subject, Some("A test description".to_string()));
+
+        // Count extracted vs available fields
+        let yaml_keys: Vec<String> = if let YamlValue::Mapping(map) = &yaml {
+            map.keys().filter_map(|k| k.as_str().map(|s| s.to_string())).collect()
+        } else {
+            vec![]
+        };
+
+        println!("\nTotal YAML fields: {}", yaml_keys.len());
+        println!("Extracted to standard fields: 2 (date, subject from description)");
+        println!("Extracted to additional: {}", metadata.additional.len());
+
+        // We should extract: title, author, keywords -> 3 in additional
+        // Plus: date, subject (from description) -> 2 in standard
+        // Missing: abstract, custom_field, version, tags, nested
+        assert!(
+            metadata.additional.len() >= 3,
+            "Should extract at least title, author, keywords"
+        );
+    }
 }
