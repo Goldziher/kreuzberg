@@ -25,7 +25,7 @@ public class ConcurrencyTests
     #region Concurrent File Extraction Tests
 
     [Fact]
-    public void ExtractMultipleFilesSync_WithTaskWhenAll_AllCompleteSuccessfully()
+    public async Task ExtractMultipleFilesSync_WithTaskWhenAll_AllCompleteSuccessfully()
     {
         var paths = new[]
         {
@@ -35,7 +35,7 @@ public class ConcurrencyTests
         };
 
         var tasks = paths.Select(path => Task.Run(() => KreuzbergClient.ExtractFileSync(path))).ToList();
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks.ToArray());
 
         Assert.All(tasks, task =>
         {
@@ -45,7 +45,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public async void ExtractMultipleFilesAsync_WithAwaitAll_AllCompleteSuccessfully()
+    public async Task ExtractMultipleFilesAsync_WithAwaitAll_AllCompleteSuccessfully()
     {
         var paths = new[]
         {
@@ -61,7 +61,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ConcurrentFileExtraction_With10Tasks_AllSucceed()
+    public async Task ConcurrentFileExtraction_With10Tasks_AllSucceed()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var tasks = new Task[10];
@@ -71,7 +71,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.ExtractFileSync(pdfPath));
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -80,7 +80,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ConcurrentFileExtraction_With20Tasks_AllSucceed()
+    public async Task ConcurrentFileExtraction_With20Tasks_AllSucceed()
     {
         var paths = new[]
         {
@@ -95,7 +95,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.ExtractFileSync(paths[pathIndex]));
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -108,7 +108,7 @@ public class ConcurrencyTests
     #region Concurrent Bytes Extraction Tests
 
     [Fact]
-    public void ConcurrentBytesExtraction_With10Tasks_AllSucceed()
+    public async Task ConcurrentBytesExtraction_With10Tasks_AllSucceed()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var bytes = File.ReadAllBytes(pdfPath);
@@ -119,7 +119,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.ExtractBytesSync(bytes, "application/pdf"));
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -128,7 +128,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public async void ConcurrentBytesExtractionAsync_With15Tasks_AllSucceed()
+    public async Task ConcurrentBytesExtractionAsync_With15Tasks_AllSucceed()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var bytes = File.ReadAllBytes(pdfPath);
@@ -148,7 +148,7 @@ public class ConcurrencyTests
     #region Batch Extraction Concurrency Tests
 
     [Fact]
-    public void ConcurrentBatchExtraction_With5BatchTasks_AllSucceed()
+    public async Task ConcurrentBatchExtraction_With5BatchTasks_AllSucceed()
     {
         var paths = new[]
         {
@@ -162,7 +162,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.BatchExtractFilesSync(paths));
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -171,7 +171,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public async void ConcurrentBatchExtractionAsync_With3BatchTasks_AllSucceed()
+    public async Task ConcurrentBatchExtractionAsync_With3BatchTasks_AllSucceed()
     {
         var paths = new[]
         {
@@ -201,7 +201,7 @@ public class ConcurrencyTests
     #region MIME Detection Concurrency Tests
 
     [Fact]
-    public void ConcurrentMimeDetection_With10Tasks_AllSucceed()
+    public async Task ConcurrentMimeDetection_With10Tasks_AllSucceed()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
 
@@ -211,7 +211,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.DetectMimeTypeFromPath(pdfPath));
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -220,7 +220,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ConcurrentMimeDetectionFromBytes_With10Tasks_AllSucceed()
+    public async Task ConcurrentMimeDetectionFromBytes_With10Tasks_AllSucceed()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var bytes = File.ReadAllBytes(pdfPath);
@@ -231,7 +231,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.DetectMimeType(bytes));
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -244,7 +244,7 @@ public class ConcurrencyTests
     #region Registry Operation Concurrency Tests
 
     [Fact]
-    public void ConcurrentListPostProcessors_With10Tasks_AllSucceed()
+    public async Task ConcurrentListPostProcessors_With10Tasks_AllSucceed()
     {
         var tasks = new Task[10];
         for (int i = 0; i < 10; i++)
@@ -252,7 +252,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.ListPostProcessors());
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -261,7 +261,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ConcurrentListValidators_With10Tasks_AllSucceed()
+    public async Task ConcurrentListValidators_With10Tasks_AllSucceed()
     {
         var tasks = new Task[10];
         for (int i = 0; i < 10; i++)
@@ -269,7 +269,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.ListValidators());
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -278,7 +278,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ConcurrentListOcrBackends_With10Tasks_AllSucceed()
+    public async Task ConcurrentListOcrBackends_With10Tasks_AllSucceed()
     {
         var tasks = new Task[10];
         for (int i = 0; i < 10; i++)
@@ -286,7 +286,7 @@ public class ConcurrencyTests
             tasks[i] = Task.Run(() => KreuzbergClient.ListOcrBackends());
         }
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.All(tasks, task =>
         {
@@ -299,7 +299,7 @@ public class ConcurrencyTests
     #region Post-Processor Registration Concurrency Tests
 
     [Fact]
-    public void ConcurrentPostProcessorRegistration_NoRaceConditions()
+    public async Task ConcurrentPostProcessorRegistration_NoRaceConditions()
     {
         var processors = new List<IPostProcessor>();
         for (int i = 0; i < 5; i++)
@@ -312,7 +312,7 @@ public class ConcurrencyTests
             KreuzbergClient.RegisterPostProcessor(p);
         })).ToList();
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks.ToArray());
 
         var registered = KreuzbergClient.ListPostProcessors();
         Assert.NotNull(registered);
@@ -332,7 +332,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ConcurrentPostProcessorRegistrationAndUnregistration_MaintainsConsistency()
+    public async Task ConcurrentPostProcessorRegistrationAndUnregistration_MaintainsConsistency()
     {
         var names = Enumerable.Range(0, 5)
             .Select(i => $"concurrent-pp-cleanup-{i}")
@@ -350,7 +350,7 @@ public class ConcurrencyTests
             KreuzbergClient.UnregisterPostProcessor(name);
         })).ToList();
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks.ToArray());
 
         var remaining = KreuzbergClient.ListPostProcessors();
         Assert.NotNull(remaining);
@@ -361,7 +361,7 @@ public class ConcurrencyTests
     #region Validator Registration Concurrency Tests
 
     [Fact]
-    public void ConcurrentValidatorRegistration_NoRaceConditions()
+    public async Task ConcurrentValidatorRegistration_NoRaceConditions()
     {
         var validators = new List<IValidator>();
         for (int i = 0; i < 5; i++)
@@ -374,7 +374,7 @@ public class ConcurrencyTests
             KreuzbergClient.RegisterValidator(v);
         })).ToList();
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks.ToArray());
 
         var registered = KreuzbergClient.ListValidators();
         Assert.NotNull(registered);
@@ -398,7 +398,7 @@ public class ConcurrencyTests
     #region OCR Backend Registration Concurrency Tests
 
     [Fact]
-    public void ConcurrentOcrBackendRegistration_NoRaceConditions()
+    public async Task ConcurrentOcrBackendRegistration_NoRaceConditions()
     {
         var backends = new List<IOcrBackend>();
         for (int i = 0; i < 5; i++)
@@ -411,7 +411,7 @@ public class ConcurrencyTests
             KreuzbergClient.RegisterOcrBackend(b);
         })).ToList();
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks.ToArray());
 
         var registered = KreuzbergClient.ListOcrBackends();
         Assert.NotNull(registered);
@@ -435,7 +435,7 @@ public class ConcurrencyTests
     #region Mixed Concurrent Operations Tests
 
     [Fact]
-    public void MixedConcurrentOperations_ExtractionAndMimeDetection_AllSucceed()
+    public async Task MixedConcurrentOperations_ExtractionAndMimeDetection_AllSucceed()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var bytes = File.ReadAllBytes(pdfPath);
@@ -451,13 +451,13 @@ public class ConcurrencyTests
             .ToList();
 
         var allTasks = extractTasks.Concat(mimeTasks).ToArray();
-        Task.WaitAll(allTasks);
+        await Task.WhenAll(allTasks);
 
         Assert.All(allTasks, task => Assert.True(task.IsCompletedSuccessfully));
     }
 
     [Fact]
-    public async void MixedAsyncOperations_ExtractionAndBatchProcessing_AllSucceed()
+    public async Task MixedAsyncOperations_ExtractionAndBatchProcessing_AllSucceed()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var paths = new[] { pdfPath };
@@ -465,10 +465,11 @@ public class ConcurrencyTests
         var extractTask = KreuzbergClient.ExtractFileAsync(pdfPath);
         var batchTask = KreuzbergClient.BatchExtractFilesAsync(paths);
 
-        await Task.WhenAll(extractTask, batchTask);
+        var extractResult = await extractTask;
+        var batchResult = await batchTask;
 
-        Assert.NotNull(extractTask.Result);
-        Assert.NotNull(batchTask.Result);
+        Assert.NotNull(extractResult);
+        Assert.NotNull(batchResult);
     }
 
     #endregion
@@ -476,7 +477,7 @@ public class ConcurrencyTests
     #region Race Condition Detection Tests
 
     [Fact]
-    public void ConcurrentRegistrationsToSameRegistry_DetectsNoDataCorruption()
+    public async Task ConcurrentRegistrationsToSameRegistry_DetectsNoDataCorruption()
     {
         var results = new ConcurrentBag<bool>();
         var processors = Enumerable.Range(0, 10)
@@ -496,7 +497,7 @@ public class ConcurrencyTests
             }
         })).ToList();
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks.ToArray());
 
         // All registrations should succeed or handle gracefully
         Assert.NotEmpty(results);
@@ -513,7 +514,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void RepeatedConcurrentExtractions_ProducesConsistentResults()
+    public async Task RepeatedConcurrentExtractions_ProducesConsistentResults()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var results = new ConcurrentBag<string>();
@@ -528,7 +529,7 @@ public class ConcurrencyTests
                 }))
                 .ToArray();
 
-            Task.WaitAll(tasks);
+            await Task.WhenAll(tasks);
         }
 
         Assert.NotEmpty(results);
@@ -542,7 +543,7 @@ public class ConcurrencyTests
     #region Thread Safety Verification Tests
 
     [Fact]
-    public void ThreadSafety_ExtensionMapping_WithConcurrentRequests()
+    public async Task ThreadSafety_ExtensionMapping_WithConcurrentRequests()
     {
         var mimeType = "application/pdf";
         var results = new ConcurrentBag<IReadOnlyList<string>>();
@@ -555,7 +556,7 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Equal(10, results.Count);
         // All results should be identical
@@ -563,7 +564,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ThreadSafety_EmbeddingPresetRetrieval_WithConcurrentRequests()
+    public async Task ThreadSafety_EmbeddingPresetRetrieval_WithConcurrentRequests()
     {
         var presets = KreuzbergClient.ListEmbeddingPresets();
         if (presets.Count == 0)
@@ -582,7 +583,7 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Equal(10, results.Count);
         Assert.All(results, r => Assert.NotNull(r));
@@ -593,7 +594,7 @@ public class ConcurrencyTests
     #region Async/Await Pattern Tests
 
     [Fact]
-    public async void AsyncAwaitPattern_SequentialOperations_CompletesSuccessfully()
+    public async Task AsyncAwaitPattern_SequentialOperations_CompletesSuccessfully()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
 
@@ -605,7 +606,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public async void AsyncAwaitPattern_ParallelOperations_CompletesSuccessfully()
+    public async Task AsyncAwaitPattern_ParallelOperations_CompletesSuccessfully()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
 
@@ -618,7 +619,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public async void AsyncAwaitPattern_CancellationToken_Supported()
+    public async Task AsyncAwaitPattern_CancellationToken_Supported()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var cts = new CancellationTokenSource();
@@ -632,7 +633,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public async void AsyncAwaitPattern_CancellationToken_PreventsExecution()
+    public async Task AsyncAwaitPattern_CancellationToken_PreventsExecution()
     {
         try
         {
@@ -658,7 +659,7 @@ public class ConcurrencyTests
     #region Stress Tests
 
     [Fact]
-    public void StressTest_Many_ConcurrentExtractions_WithoutDeadlock()
+    public async Task StressTest_Many_ConcurrentExtractions_WithoutDeadlock()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var taskCount = 50;
@@ -672,16 +673,25 @@ public class ConcurrencyTests
         }
 
         // Wait with timeout to detect deadlock
-        var completed = Task.WaitAll(tasks, TimeSpan.FromMinutes(5));
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+        {
+            try
+            {
+                await Task.WhenAll(tasks);
+            }
+            catch (OperationCanceledException)
+            {
+                Assert.Fail("Task completion timed out - possible deadlock");
+            }
+        }
 
         stopwatch.Stop();
 
-        Assert.True(completed, "Task completion timed out - possible deadlock");
         Assert.All(tasks, task => Assert.True(task.IsCompletedSuccessfully));
     }
 
     [Fact]
-    public async void StressTest_ManyAsyncOperations_WithoutDeadlock()
+    public async Task StressTest_ManyAsyncOperations_WithoutDeadlock()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var taskCount = 30;

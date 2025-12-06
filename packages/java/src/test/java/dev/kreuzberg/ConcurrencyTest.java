@@ -31,7 +31,8 @@ class ConcurrencyTest {
     // ==================== Concurrent Extraction ====================
 
     @Test
-    void testConcurrentExtractSameFile(@TempDir Path tempDir) throws IOException, InterruptedException, ExecutionException {
+    void testConcurrentExtractSameFile(@TempDir Path tempDir)
+            throws IOException, InterruptedException, ExecutionException {
         Path testFile = tempDir.resolve("shared.txt");
         Files.writeString(testFile, "Shared content for concurrent extraction");
 
@@ -62,7 +63,8 @@ class ConcurrencyTest {
     }
 
     @Test
-    void testConcurrentExtractDifferentFiles(@TempDir Path tempDir) throws IOException, InterruptedException, ExecutionException {
+    void testConcurrentExtractDifferentFiles(@TempDir Path tempDir)
+            throws IOException, InterruptedException, ExecutionException {
         // Create multiple test files
         List<Path> files = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -218,7 +220,8 @@ class ConcurrencyTest {
     // ==================== Thread Safety ====================
 
     @Test
-    void testThreadSafetyWithSharedResult(@TempDir Path tempDir) throws IOException, InterruptedException, KreuzbergException {
+    void testThreadSafetyWithSharedResult(@TempDir Path tempDir)
+            throws IOException, InterruptedException, KreuzbergException {
         Path testFile = tempDir.resolve("thread_safe.txt");
         Files.writeString(testFile, "Thread safety test content");
 
@@ -250,7 +253,8 @@ class ConcurrencyTest {
     }
 
     @Test
-    void testConcurrentMetadataAccess(@TempDir Path tempDir) throws IOException, InterruptedException, KreuzbergException {
+    void testConcurrentMetadataAccess(@TempDir Path tempDir)
+            throws IOException, InterruptedException, KreuzbergException {
         Path testFile = tempDir.resolve("metadata.txt");
         Files.writeString(testFile, "Metadata test");
 
@@ -326,7 +330,7 @@ class ConcurrencyTest {
             // Register validators concurrently
             var future1 = executor.submit(() -> {
                 try {
-                    Kreuzberg.registerValidator(validator1Name, result -> {});
+                    Kreuzberg.registerValidator(validator1Name, result -> { });
                     return true;
                 } catch (KreuzbergException e) {
                     return false;
@@ -335,7 +339,7 @@ class ConcurrencyTest {
 
             var future2 = executor.submit(() -> {
                 try {
-                    Kreuzberg.registerValidator(validator2Name, result -> {});
+                    Kreuzberg.registerValidator(validator2Name, result -> { });
                     return true;
                 } catch (KreuzbergException e) {
                     return false;
@@ -348,8 +352,16 @@ class ConcurrencyTest {
             assertTrue(result1 || result2, "At least one validator registration should succeed");
 
             // Cleanup
-            try { Kreuzberg.unregisterValidator(validator1Name); } catch (Exception ignored) {}
-            try { Kreuzberg.unregisterValidator(validator2Name); } catch (Exception ignored) {}
+            try {
+                Kreuzberg.unregisterValidator(validator1Name);
+            } catch (Exception ignored) {
+                // Ignore
+            }
+            try {
+                Kreuzberg.unregisterValidator(validator2Name);
+            } catch (Exception ignored) {
+                // Ignore
+            }
 
         } finally {
             executor.shutdown();
@@ -436,7 +448,9 @@ class ConcurrencyTest {
             for (Future<ExtractionResult> future : futures) {
                 try {
                     future.get();
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    // Ignore
+                }
             }
 
             int successTotal = successCount.get();
@@ -551,7 +565,9 @@ class ConcurrencyTest {
     // ==================== Sequential vs Concurrent Equivalence ====================
 
     @Test
-    void testSequentialVsConcurrentResults(@TempDir Path tempDir) throws IOException, InterruptedException, ExecutionException, KreuzbergException {
+    void testSequentialVsConcurrentResults(@TempDir Path tempDir)
+            throws IOException, InterruptedException, ExecutionException,
+            KreuzbergException {
         Path testFile = tempDir.resolve("equivalence.txt");
         Files.writeString(testFile, "Equivalence test content");
 

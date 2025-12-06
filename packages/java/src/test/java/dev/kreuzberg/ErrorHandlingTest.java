@@ -288,7 +288,7 @@ class ErrorHandlingTest {
 
     @Test
     void testRegisterValidatorWithNullName() {
-        Validator validator = result -> {};
+        Validator validator = result -> { };
 
         assertThrows(KreuzbergException.class, () -> {
             Kreuzberg.registerValidator(null, validator);
@@ -297,7 +297,7 @@ class ErrorHandlingTest {
 
     @Test
     void testRegisterValidatorWithBlankName() {
-        Validator validator = result -> {};
+        Validator validator = result -> { };
 
         assertThrows(KreuzbergException.class, () -> {
             Kreuzberg.registerValidator("", validator);

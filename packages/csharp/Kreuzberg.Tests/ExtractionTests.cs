@@ -920,7 +920,7 @@ public class ExtractionTests
     #region Async Extraction Tests
 
     [Fact]
-    public async void ExtractFileAsync_WithValidPath_CompletsSuccessfully()
+    public async Task ExtractFileAsync_WithValidPath_CompletsSuccessfully()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var result = await KreuzbergClient.ExtractFileAsync(pdfPath);
@@ -930,7 +930,7 @@ public class ExtractionTests
     }
 
     [Fact]
-    public async void ExtractBytesAsync_WithValidBytes_CompletsSuccessfully()
+    public async Task ExtractBytesAsync_WithValidBytes_CompletsSuccessfully()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
         var bytes = File.ReadAllBytes(pdfPath);
@@ -942,7 +942,7 @@ public class ExtractionTests
     }
 
     [Fact]
-    public async void BatchExtractFilesAsync_WithMultipleFiles_ReturnsAllResults()
+    public async Task BatchExtractFilesAsync_WithMultipleFiles_ReturnsAllResults()
     {
         var paths = new[]
         {
@@ -957,7 +957,7 @@ public class ExtractionTests
     }
 
     [Fact]
-    public async void BatchExtractBytesAsync_WithMultipleItems_ReturnsAllResults()
+    public async Task BatchExtractBytesAsync_WithMultipleItems_ReturnsAllResults()
     {
         var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
 

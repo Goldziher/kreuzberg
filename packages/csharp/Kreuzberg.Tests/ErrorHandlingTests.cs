@@ -154,7 +154,7 @@ public class ErrorHandlingTests
         try
         {
             KreuzbergClient.ExtractBytesSync(new ReadOnlySpan<byte>(), "application/pdf");
-            Assert.True(false, "Expected KreuzbergValidationException");
+            Assert.Fail("Expected KreuzbergValidationException");
         }
         catch (KreuzbergValidationException ex)
         {
@@ -176,7 +176,7 @@ public class ErrorHandlingTests
         try
         {
             KreuzbergClient.DetectMimeType(new ReadOnlySpan<byte>());
-            Assert.True(false, "Expected KreuzbergValidationException");
+            Assert.Fail("Expected KreuzbergValidationException");
         }
         catch (KreuzbergValidationException ex)
         {
@@ -710,14 +710,14 @@ public class ErrorHandlingTests
     #region Async Error Handling Tests
 
     [Fact]
-    public async void ExtractFileAsync_WithNonexistentFile_ThrowsException()
+    public async Task ExtractFileAsync_WithNonexistentFile_ThrowsException()
     {
         var ex = await Assert.ThrowsAsync<KreuzbergValidationException>(() => KreuzbergClient.ExtractFileAsync("/nonexistent/file.pdf"));
         Assert.NotNull(ex);
     }
 
     [Fact]
-    public async void BatchExtractFilesAsync_WithInvalidPath_Fails()
+    public async Task BatchExtractFilesAsync_WithInvalidPath_Fails()
     {
         var paths = new[] { "/nonexistent/path.pdf" };
 

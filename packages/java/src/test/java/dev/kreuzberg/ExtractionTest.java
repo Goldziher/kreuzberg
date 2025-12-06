@@ -220,7 +220,8 @@ class ExtractionTest {
         ExtractionResult result = Kreuzberg.extractFile(testFile);
 
         assertNotNull(result.getMetadata(), "Metadata should not be null");
-        assertTrue(result.getMetadata().isEmpty() || result.getMetadata().size() >= 0, "Metadata should be retrievable");
+        assertTrue(result.getMetadata().isEmpty() || result.getMetadata().size() >= 0,
+                "Metadata should be retrievable");
     }
 
     @Test

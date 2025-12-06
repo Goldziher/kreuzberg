@@ -229,6 +229,7 @@ module = [
   "keybert",
   "easyocr",
   "paddle",
+  "paddle.*",
   "paddleocr",
   "torch",
   "kreuzberg._internal_bindings",

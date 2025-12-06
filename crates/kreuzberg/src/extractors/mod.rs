@@ -52,6 +52,9 @@ pub mod latex;
 pub mod jupyter;
 
 #[cfg(feature = "office")]
+pub mod orgmode;
+
+#[cfg(feature = "office")]
 pub mod odt;
 
 #[cfg(feature = "pdf")]
@@ -107,6 +110,9 @@ pub use latex::LatexExtractor;
 
 #[cfg(feature = "office")]
 pub use jupyter::JupyterExtractor;
+
+#[cfg(feature = "office")]
+pub use orgmode::OrgModeExtractor;
 
 #[cfg(feature = "office")]
 pub use odt::OdtExtractor;
@@ -212,6 +218,7 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(RstExtractor::new()))?;
         registry.register(Arc::new(LatexExtractor::new()))?;
         registry.register(Arc::new(JupyterExtractor::new()))?;
+        registry.register(Arc::new(OrgModeExtractor::new()))?;
     }
 
     #[cfg(feature = "pandoc-fallback")]
@@ -288,7 +295,7 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 9;
+            expected_count += 10;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
@@ -299,6 +306,7 @@ mod tests {
             assert!(extractor_names.contains(&"rst-extractor".to_string()));
             assert!(extractor_names.contains(&"latex-extractor".to_string()));
             assert!(extractor_names.contains(&"jupyter-extractor".to_string()));
+            assert!(extractor_names.contains(&"orgmode-extractor".to_string()));
         }
 
         #[cfg(feature = "pandoc-fallback")]
