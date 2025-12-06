@@ -33,16 +33,28 @@ pub mod bibtex;
 pub mod docx;
 
 #[cfg(feature = "office")]
+pub mod epub;
+
+#[cfg(feature = "office")]
 pub mod markdown;
 
 #[cfg(feature = "office")]
 pub mod pandoc;
+
+#[cfg(feature = "office")]
+pub mod rst;
+
+#[cfg(feature = "office")]
+pub mod odt;
 
 #[cfg(feature = "pdf")]
 pub mod pdf;
 
 #[cfg(feature = "office")]
 pub mod pptx;
+
+#[cfg(feature = "office")]
+pub mod rtf;
 
 #[cfg(feature = "xml")]
 pub mod xml;
@@ -72,16 +84,28 @@ pub use bibtex::BibtexExtractor;
 pub use docx::DocxExtractor;
 
 #[cfg(feature = "office")]
+pub use epub::EpubExtractor;
+
+#[cfg(feature = "office")]
 pub use markdown::MarkdownExtractor as EnhancedMarkdownExtractor;
 
 #[cfg(feature = "office")]
 pub use pandoc::PandocExtractor;
+
+#[cfg(feature = "office")]
+pub use rst::RstExtractor;
+
+#[cfg(feature = "office")]
+pub use odt::OdtExtractor;
 
 #[cfg(feature = "pdf")]
 pub use pdf::PdfExtractor;
 
 #[cfg(feature = "office")]
 pub use pptx::PptxExtractor;
+
+#[cfg(feature = "office")]
+pub use rtf::RtfExtractor;
 
 #[cfg(feature = "xml")]
 pub use xml::XmlExtractor;
@@ -168,8 +192,12 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(EnhancedMarkdownExtractor::new()))?;
         registry.register(Arc::new(BibtexExtractor::new()))?;
         registry.register(Arc::new(DocxExtractor::new()))?;
+        registry.register(Arc::new(EpubExtractor::new()))?;
         registry.register(Arc::new(PptxExtractor::new()))?;
+        registry.register(Arc::new(OdtExtractor::new()))?;
+        registry.register(Arc::new(RtfExtractor::new()))?;
         registry.register(Arc::new(PandocExtractor::new()))?;
+        registry.register(Arc::new(RstExtractor::new()))?;
     }
 
     #[cfg(feature = "email")]
@@ -241,12 +269,15 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 4;
+            expected_count += 7;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
+            assert!(extractor_names.contains(&"odt-extractor".to_string()));
+            assert!(extractor_names.contains(&"rtf-extractor".to_string()));
             assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
+            assert!(extractor_names.contains(&"rst-extractor".to_string()));
         }
 
         #[cfg(feature = "email")]
