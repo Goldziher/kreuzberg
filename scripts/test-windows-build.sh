@@ -12,10 +12,10 @@ docker build -f "$REPO_ROOT/Dockerfile.windows-test" -t kreuzberg-windows-test "
 echo ""
 echo "=== Running Windows build test ==="
 docker run --rm \
-  -v "$REPO_ROOT:/workspace" \
-  -w /workspace \
-  kreuzberg-windows-test \
-  bash -c '
+	-v "$REPO_ROOT:/workspace" \
+	-w /workspace \
+	kreuzberg-windows-test \
+	bash -c '
     set -e
 
     echo "=== Testing minimal Windows build (core library only) ==="

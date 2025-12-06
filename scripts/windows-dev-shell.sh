@@ -33,7 +33,7 @@ echo "Type 'exit' to leave the container."
 echo ""
 
 docker run --rm -it \
-  -v "$REPO_ROOT:/workspace" \
-  -w /workspace \
-  kreuzberg-windows-test \
-  /bin/bash
+	-v "$REPO_ROOT:/workspace" \
+	-w /workspace \
+	kreuzberg-windows-test \
+	/bin/bash

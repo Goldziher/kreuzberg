@@ -126,3 +126,15 @@ docker-logs/
 
 # Auto-generated E2E test files
 e2e/java/src/test/java/com/kreuzberg/e2e/package-info.java
+
+# Test result and coverage files
+# Go coverage
+coverage.out
+# Python coverage
+coverage.json
+# C# coverage
+*.cobertura.xml
+# C# test results
+TestResults/
+# Ruby rspec examples
+examples.txt

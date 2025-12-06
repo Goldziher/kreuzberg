@@ -133,10 +133,7 @@ mod tests {
     #[test]
     fn test_markdown_escapes_pipe_characters() {
         // Given: Cells containing pipe characters
-        let cells = vec![
-            vec!["Header".to_string()],
-            vec!["Cell with | pipe".to_string()],
-        ];
+        let cells = vec![vec!["Header".to_string()], vec!["Cell with | pipe".to_string()]];
 
         // When: Converting to markdown
         let markdown = cells_to_markdown(&cells);

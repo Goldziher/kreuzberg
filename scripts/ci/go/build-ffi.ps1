@@ -34,14 +34,14 @@ if ($IsWindowsOS) {
     $env:CC_x86_64_pc_windows_gnu = "gcc"
     $env:AR_x86_64_pc_windows_gnu = "ar"
     $env:RANLIB_x86_64_pc_windows_gnu = "ranlib"
-    $env:"CC_x86_64-pc-windows-gnu" = "gcc"
-    $env:"AR_x86_64-pc-windows-gnu" = "ar"
-    $env:"RANLIB_x86_64-pc-windows-gnu" = "ranlib"
+    ${env:CC_x86_64-pc-windows-gnu} = "gcc"
+    ${env:AR_x86_64-pc-windows-gnu} = "ar"
+    ${env:RANLIB_x86_64-pc-windows-gnu} = "ranlib"
 
     # Also set CXX for C++ code
     $env:CXX = "g++"
     $env:CXX_x86_64_pc_windows_gnu = "g++"
-    $env:"CXX_x86_64-pc-windows-gnu" = "g++"
+    ${env:CXX_x86_64-pc-windows-gnu} = "g++"
 
     Write-Host "Using MSYS2 UCRT toolchain (from PATH):"
     & gcc --version

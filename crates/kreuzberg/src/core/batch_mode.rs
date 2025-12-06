@@ -72,10 +72,7 @@ mod tests {
         .await;
 
         // Then: Should return to false after future completes
-        assert!(
-            !is_batch_mode(),
-            "batch mode should be false after future completes"
-        );
+        assert!(!is_batch_mode(), "batch mode should be false after future completes");
     }
 
     #[tokio::test]
@@ -102,10 +99,7 @@ mod tests {
         .await;
 
         // When: Checking between calls
-        assert!(
-            !is_batch_mode(),
-            "batch mode should be false between calls"
-        );
+        assert!(!is_batch_mode(), "batch mode should be false between calls");
 
         // Then: Second call should also work independently
         with_batch_mode(async {
