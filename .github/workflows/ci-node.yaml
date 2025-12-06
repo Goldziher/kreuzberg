@@ -112,6 +112,27 @@ jobs:
       - name: Build Node bindings
         shell: bash
         run: scripts/ci/node/build-napi.sh ${{ matrix.target }}
+        env:
+          # Disable sccache if it causes issues with ARM64 cross-compilation
+          RUSTC_WRAPPER: ''
+          SCCACHE_GHA_ENABLED: 'false'
+
+      - name: Verify TypeScript build artifacts
+        shell: bash
+        run: |
+          cd crates/kreuzberg-node
+          echo "Checking dist directory:"
+          ls -la dist/ || echo "ERROR: dist directory not found"
+          echo ""
+          echo "Checking tarball contents for dist files:"
+          tgz=$(find . -maxdepth 1 -name "*.tgz" -type f | head -n1)
+          if [ -n "$tgz" ]; then
+            echo "Found tarball: $tgz"
+            tar tzf "$tgz" | grep "^package/dist/" | wc -l | xargs echo "dist files in tarball:"
+          else
+            echo "ERROR: No tarball found"
+            exit 1
+          fi
 
       - name: Upload Node bindings
         uses: actions/upload-artifact@v5

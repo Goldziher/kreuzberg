@@ -36,6 +36,26 @@ pnpm exec napi prepublish -t npm --no-gh-release
 echo "=== Building TypeScript outputs ==="
 pnpm exec tsup
 
+# Verify dist directory was created with files
+if [ ! -d "dist" ]; then
+	echo "Error: dist directory not created by tsup" >&2
+	exit 1
+fi
+
+if [ ! -f "dist/index.js" ]; then
+	echo "Error: dist/index.js not found" >&2
+	if [ -d "dist" ]; then
+		echo "dist directory exists. Contents:"
+		find dist/ -maxdepth 1 -type f
+	else
+		echo "dist directory does not exist"
+	fi
+	exit 1
+fi
+
+echo "Verified dist directory contains:"
+find dist/ -maxdepth 1 -type f | head -20
+
 mkdir -p artifacts
 
 # Collect artifacts from napi (if produced) and fallback to build outputs
@@ -97,7 +117,14 @@ if [[ -n "$pkg_tgz" ]]; then
 
 	# Verify dist/ files are in tarball
 	echo "Checking dist/ files in $pkg_tgz:"
-	tar tzf "$pkg_tgz" | grep "^package/dist/" | head -10 || echo "Warning: No dist/ files found in tarball!"
+	if tar tzf "$pkg_tgz" | grep "^package/dist/" | head -10; then
+		echo "Verified: dist/ files are included in tarball"
+	else
+		echo "Error: No dist/ files found in tarball!" >&2
+		echo "Tarball contents:"
+		tar tzf "$pkg_tgz" | grep -E "^package/(dist|index|\.d\.ts)" || echo "No TypeScript build outputs in tarball"
+		exit 1
+	fi
 fi
 
 echo "Build complete"
