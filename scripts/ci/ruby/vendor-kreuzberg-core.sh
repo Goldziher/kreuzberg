@@ -42,21 +42,21 @@ sed -i.bak 's/^ahash = { workspace = true }/ahash = "0.8.12"/' "$REPO_ROOT/packa
 sed -i.bak 's/^async-trait = { workspace = true }/async-trait = "0.1.89"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^base64 = { workspace = true }/base64 = "0.22.1"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^hex = { workspace = true }/hex = "0.4.3"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^num_cpus = { workspace = true }/num_cpus = "1.17.0"/' packages/ruby/vendor/kreuzberg/Cargo.toml
-sed -i.bak 's/^serde = { workspace = true }/serde = { version = "1.0.228", features = ["derive"] }/' packages/ruby/vendor/kreuzberg/Cargo.toml
-sed -i.bak 's/^serde_json = { workspace = true }/serde_json = "1.0.145"/' packages/ruby/vendor/kreuzberg/Cargo.toml
-sed -i.bak 's/^thiserror = { workspace = true }/thiserror = "2.0.17"/' packages/ruby/vendor/kreuzberg/Cargo.toml
-sed -i.bak 's/^tokio = { workspace = true }/tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }/' packages/ruby/vendor/kreuzberg/Cargo.toml
-sed -i.bak 's/^tracing = { workspace = true }/tracing = "0.1"/' packages/ruby/vendor/kreuzberg/Cargo.toml
-sed -i.bak 's/^anyhow = { workspace = true }/anyhow = "1.0"/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^num_cpus = { workspace = true }/num_cpus = "1.17.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^serde = { workspace = true }/serde = { version = "1.0.228", features = ["derive"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^serde_json = { workspace = true }/serde_json = "1.0.145"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^thiserror = { workspace = true }/thiserror = "2.0.17"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^tokio = { workspace = true }/tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^tracing = { workspace = true }/tracing = "0.1"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^anyhow = { workspace = true }/anyhow = "1.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 
 # Inline dev-dependencies
-sed -i.bak 's/^tempfile = { workspace = true }/tempfile = "3.23.0"/' packages/ruby/vendor/kreuzberg/Cargo.toml
-sed -i.bak 's/^criterion = { workspace = true }/criterion = { version = "0.8", features = ["html_reports"] }/' packages/ruby/vendor/kreuzberg/Cargo.toml
+sed -i.bak 's/^tempfile = { workspace = true }/tempfile = "3.23.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^criterion = { workspace = true }/criterion = { version = "0.8", features = ["html_reports"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 
-rm -f packages/ruby/vendor/kreuzberg/Cargo.toml.bak
+rm -f "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml.bak"
 
-cat >packages/ruby/vendor/Cargo.toml <<'EOF'
+cat >"$REPO_ROOT/packages/ruby/vendor/Cargo.toml" <<'EOF'
 [workspace]
 members = ["kreuzberg"]
 
