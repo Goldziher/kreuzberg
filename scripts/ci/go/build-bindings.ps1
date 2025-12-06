@@ -13,6 +13,8 @@ $workspace = Resolve-Path "$PWD/../.."
 if ($IsWindowsOS) {
     Write-Host "=== Setting up Windows MinGW-w64 CGO environment ==="
     $ffiPath = "$workspace/target/x86_64-pc-windows-gnu/release"
+
+    # MSYS2 UCRT64 toolchain is already available in PATH (verified by CI workflow)
     $env:CC = "gcc"
     $env:CXX = "g++"
     $env:AR = "ar"

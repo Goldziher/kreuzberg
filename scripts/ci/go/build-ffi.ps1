@@ -16,54 +16,22 @@ if ($IsWindowsOS) {
     $env:SCCACHE_GHA_ENABLED = "false"
     # zstd-sys: disable legacy compression to avoid problematic legacy source build on MinGW
     $env:ZSTD_DISABLE_LEGACY = "1"
-    # Force MSYS2 UCRT64 toolchain for MinGW builds
-    $ucrtBin = "C:\msys64\ucrt64\bin"
-    if (Test-Path $ucrtBin) {
-        # Verify required tools exist before proceeding
-        $requiredTools = @{
-            "gcc.exe" = "GCC compiler"
-            "ar.exe" = "AR archiver"
-            "ranlib.exe" = "RANLIB"
-            "pkg-config.exe" = "pkg-config"
-            "nasm.exe" = "NASM assembler"
-        }
 
-        $missingTools = @()
-        foreach ($tool in $requiredTools.Keys) {
-            $toolPath = Join-Path $ucrtBin $tool
-            if (-not (Test-Path $toolPath)) {
-                $missingTools += "$tool ($($requiredTools[$tool]))"
-            }
-        }
+    # MSYS2 UCRT64 toolchain is already added to PATH by CI workflow
+    # Set environment variables for toolchain
+    $env:CC = "gcc"
+    $env:AR = "ar"
+    $env:RANLIB = "ranlib"
+    $env:PKG_CONFIG = "pkg-config"
+    # Use CMake-based build to rely on system zstd from MSYS2
+    $env:ZSTD_SYS_USE_CMAKE = "1"
+    # NASM required by ring pregenerated objects
+    $env:NASM = "nasm"
 
-        if ($missingTools.Count -gt 0) {
-            Write-Host "ERROR: Required MSYS2 tools not found in $ucrtBin"
-            Write-Host "Missing tools: $($missingTools -join ', ')"
-            Write-Host ""
-            Write-Host "Directory contents:"
-            Get-ChildItem $ucrtBin -Filter "*.exe" | ForEach-Object { Write-Host "  $($_.Name)" }
-            throw "MSYS2 toolchain incomplete. Please ensure mingw-w64-ucrt-x86_64-gcc, mingw-w64-ucrt-x86_64-pkg-config, and mingw-w64-ucrt-x86_64-nasm are installed."
-        }
-
-        $env:PATH = "$ucrtBin;$env:PATH"
-        $env:CC = "$ucrtBin\gcc.exe"
-        $env:AR = "$ucrtBin\ar.exe"
-        $env:RANLIB = "$ucrtBin\ranlib.exe"
-        $env:PKG_CONFIG = "$ucrtBin\pkg-config.exe"
-        # Use CMake-based build to rely on system zstd from MSYS2
-        $env:ZSTD_SYS_USE_CMAKE = "1"
-        # NASM required by ring pregenerated objects
-        $env:NASM = "$ucrtBin\nasm.exe"
-
-        Write-Host "Using MSYS2 UCRT toolchain:"
-        & "$env:CC" --version
-        Write-Host "NASM version:"
-        & "$env:NASM" --version
-    } else {
-        Write-Host "ERROR: $ucrtBin not found"
-        Write-Host "MSYS2 may not be installed or is in a different location."
-        throw "MSYS2 UCRT64 directory not found at expected location"
-    }
+    Write-Host "Using MSYS2 UCRT toolchain (from PATH):"
+    & gcc --version
+    Write-Host "NASM version:"
+    & nasm --version
 
     Write-Host "Building for Windows MinGW (GNU) target"
     $TargetTriple = "x86_64-pc-windows-gnu"
