@@ -24,7 +24,19 @@ profiling = ["dep:pprof"]
 # Format extractors
 pdf = ["dep:pdfium-render", "dep:lopdf", "dep:image"]
 excel = ["dep:calamine", "dep:polars"]
-office = ["dep:roxmltree", "dep:zip", "dep:docx-lite"]
+office = [
+    "dep:roxmltree",
+    "dep:zip",
+    "dep:docx-lite",
+    # Pandoc replacement - native Rust extractors
+    "dep:pulldown-cmark",
+    "dep:typst-syntax",
+    "dep:biblatex",
+    "dep:orgize",
+    "dep:rtf-parser",
+    "dep:rst_parser",
+    "dep:epub",
+]
 email = ["dep:mail-parser", "dep:msg_parser"]
 html = ["dep:html-to-markdown-rs", "dep:html-escape", "dep:scraper"]
 xml = ["dep:quick-xml", "dep:roxmltree"]
@@ -121,6 +133,15 @@ quick-xml = { version = "0.38.4", optional = true }
 tar = { version = "0.4.44", optional = true }
 sevenz-rust = { version = "0.6.1", optional = true }
 docx-lite = { version = "0.2.0", optional = true }
+
+# Pandoc replacement - native Rust format extractors (optional)
+pulldown-cmark = { version = "0.13", optional = true }
+typst-syntax = { version = "0.14", optional = true }
+biblatex = { version = "0.11", optional = true }
+orgize = { version = "0.9", optional = true }
+rtf-parser = { version = "0.4", optional = true }
+rst_parser = { version = "0.4", optional = true }
+epub = { version = "2.1", optional = true }
 
 # Processing features (optional)
 kreuzberg-tesseract = { version = "1.0.0-rc.1", optional = true }
