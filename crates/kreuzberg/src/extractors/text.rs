@@ -66,16 +66,20 @@ impl DocumentExtractor for PlainTextExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        let text_result = parse_text(content, false)?;
+        // Extract plain text directly with minimal processing
+        let text = String::from_utf8_lossy(content).into_owned();
+        let line_count = text.lines().count();
+        let word_count = text.split_whitespace().count();
+        let character_count = text.len();
 
         Ok(ExtractionResult {
-            content: text_result.content,
+            content: text,
             mime_type: mime_type.to_string(),
             metadata: crate::types::Metadata {
                 format: Some(crate::types::FormatMetadata::Text(crate::types::TextMetadata {
-                    line_count: text_result.line_count,
-                    word_count: text_result.word_count,
-                    character_count: text_result.character_count,
+                    line_count,
+                    word_count,
+                    character_count,
                     headers: None,
                     links: None,
                     code_blocks: None,

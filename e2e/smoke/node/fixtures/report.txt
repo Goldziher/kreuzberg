@@ -1,1 +1,2 @@
-Kreuzberg node smoke fixture.
+Kreuzberg node smoke fixture for testing.
+This is a smoke test document.

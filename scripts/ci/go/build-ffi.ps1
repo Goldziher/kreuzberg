@@ -28,6 +28,13 @@ if ($IsWindowsOS) {
     # NASM required by ring pregenerated objects
     $env:NASM = "nasm"
 
+    # TARGET_* variables are checked FIRST by cc-rs (these are critical for forcing MinGW)
+    # cc-rs priority: TARGET_AR/AR_<target>/AR for ar, same for CC, RANLIB
+    $env:TARGET_CC = "gcc"
+    $env:TARGET_AR = "ar"
+    $env:TARGET_RANLIB = "ranlib"
+    $env:TARGET_CXX = "g++"
+
     # Set target-specific environment variables for cc crate
     # The cc crate checks both hyphen and underscore variants
     # This prevents auto-detection from picking MSVC tools on Windows
@@ -42,6 +49,12 @@ if ($IsWindowsOS) {
     $env:CXX = "g++"
     $env:CXX_x86_64_pc_windows_gnu = "g++"
     ${env:CXX_x86_64-pc-windows-gnu} = "g++"
+
+    # Cargo-specific linker configuration
+    $env:CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "x86_64-w64-mingw32-gcc"
+
+    # Disable MSVC detection
+    $env:CC_PREFER_CLANG = "1"
 
     Write-Host "Using MSYS2 UCRT toolchain (from PATH):"
     & gcc --version

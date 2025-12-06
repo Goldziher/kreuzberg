@@ -73,11 +73,23 @@ Add-Content -Path $env:GITHUB_ENV -Value "RANLIB=ranlib"
 Add-Content -Path $env:GITHUB_ENV -Value "CXX=g++"
 Add-Content -Path $env:GITHUB_ENV -Value "RUSTFLAGS=-C target-feature=+crt-static"
 
-# Also set target-specific variables for cc crate
+# Target-specific variables that cc-rs checks first (these take precedence)
+# cc-rs priority: TARGET_AR > AR_<target> > AR
+Add-Content -Path $env:GITHUB_ENV -Value "TARGET_CC=gcc"
+Add-Content -Path $env:GITHUB_ENV -Value "TARGET_AR=ar"
+Add-Content -Path $env:GITHUB_ENV -Value "TARGET_RANLIB=ranlib"
+
+# Also set target-specific variables for cc crate (with underscores, cc-rs also checks these)
 Add-Content -Path $env:GITHUB_ENV -Value "CC_x86_64_pc_windows_gnu=gcc"
 Add-Content -Path $env:GITHUB_ENV -Value "AR_x86_64_pc_windows_gnu=ar"
 Add-Content -Path $env:GITHUB_ENV -Value "RANLIB_x86_64_pc_windows_gnu=ranlib"
 Add-Content -Path $env:GITHUB_ENV -Value "CXX_x86_64_pc_windows_gnu=g++"
+
+# Cargo-specific linker configuration for MinGW target
+Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
+
+# Disable MSVC detection - tell cc-rs to use GNU target explicitly
+Add-Content -Path $env:GITHUB_ENV -Value "CC_PREFER_CLANG=1"
 
 # Verify tools are accessible from PATH in this step
 Write-Host "Testing tool availability:"
@@ -106,10 +118,13 @@ if ($arPath) {
   if ($arPath -like "*msys64*" -or $arPath -like "*ucrt64*") {
     Write-Host "  [OK] Using MSYS2/MinGW ar (correct)"
   } else {
-    Write-Host "  [WARNING] ar may not be from MSYS2: $arPath"
+    Write-Host "  [FAIL] ar is NOT from MSYS2/MinGW: $arPath"
+    Write-Host "  This will cause MSVC flags to be used. CI will fail."
+    throw "Invalid ar executable: $arPath"
   }
 } else {
-  Write-Host "  [WARNING] ar command not found in PATH"
+  Write-Host "  [FAIL] ar command not found in PATH"
+  throw "ar command not found in PATH"
 }
 
 Write-Host "Checking 'gcc' command:"
@@ -120,10 +135,27 @@ if ($gccPath) {
   if ($gccPath -like "*msys64*" -or $gccPath -like "*ucrt64*") {
     Write-Host "  [OK] Using MSYS2/MinGW gcc (correct)"
   } else {
-    Write-Host "  [WARNING] gcc may not be from MSYS2: $gccPath"
+    Write-Host "  [FAIL] gcc is NOT from MSYS2/MinGW: $gccPath"
+    Write-Host "  This will cause compilation with MSVC. CI will fail."
+    throw "Invalid gcc executable: $gccPath"
   }
 } else {
-  Write-Host "  [WARNING] gcc command not found in PATH"
+  Write-Host "  [FAIL] gcc command not found in PATH"
+  throw "gcc command not found in PATH"
+}
+
+# Test ar to ensure it's the GNU version (not MSVC lib.exe)
+Write-Host "Testing ar version (must show GNU ar):"
+try {
+  $arVersion = & ar --version 2>&1 | Select-Object -First 1
+  if ($arVersion -like "*GNU ar*" -or $arVersion -like "*binutils*") {
+    Write-Host "  [OK] ar is GNU version: $arVersion"
+  } else {
+    Write-Host "  [WARNING] ar may not be GNU version: $arVersion"
+    Write-Host "  Expected to contain 'GNU ar' or 'binutils'"
+  }
+} catch {
+  Write-Host "  [WARNING] Could not verify ar version"
 }
 
 Write-Host "=== Environment Variables ==="
@@ -131,7 +163,12 @@ Write-Host "CC: $env:CC"
 Write-Host "AR: $env:AR"
 Write-Host "RANLIB: $env:RANLIB"
 Write-Host "CXX: $env:CXX"
+Write-Host "TARGET_CC: $env:TARGET_CC"
+Write-Host "TARGET_AR: $env:TARGET_AR"
+Write-Host "TARGET_RANLIB: $env:TARGET_RANLIB"
+Write-Host "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: $env:CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER"
 Write-Host "RUSTFLAGS: $env:RUSTFLAGS"
+Write-Host "CC_PREFER_CLANG: $env:CC_PREFER_CLANG"
 
 Write-Host ""
 Write-Host "MSYS2 UCRT64 toolchain setup completed successfully"
