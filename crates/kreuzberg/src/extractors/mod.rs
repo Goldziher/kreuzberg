@@ -57,6 +57,12 @@ pub mod orgmode;
 #[cfg(feature = "office")]
 pub mod odt;
 
+#[cfg(feature = "office")]
+pub mod opml;
+
+#[cfg(feature = "xml")]
+pub mod jats;
+
 #[cfg(feature = "pdf")]
 pub mod pdf;
 
@@ -68,6 +74,11 @@ pub mod rtf;
 
 #[cfg(feature = "xml")]
 pub mod xml;
+
+#[cfg(feature = "xml")]
+pub mod docbook;
+
+#[cfg(feature = "xml")]
 
 pub use structured::StructuredExtractor;
 pub use text::{MarkdownExtractor, PlainTextExtractor};
@@ -117,6 +128,12 @@ pub use orgmode::OrgModeExtractor;
 #[cfg(feature = "office")]
 pub use odt::OdtExtractor;
 
+#[cfg(feature = "xml")]
+pub use jats::JatsExtractor;
+
+#[cfg(feature = "office")]
+pub use opml::OpmlExtractor;
+
 #[cfg(feature = "pdf")]
 pub use pdf::PdfExtractor;
 
@@ -128,6 +145,11 @@ pub use rtf::RtfExtractor;
 
 #[cfg(feature = "xml")]
 pub use xml::XmlExtractor;
+
+#[cfg(feature = "xml")]
+pub use docbook::DocbookExtractor;
+
+#[cfg(feature = "xml")]
 
 /// Lazy-initialized flag that ensures extractors are registered exactly once.
 ///
@@ -219,6 +241,7 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(LatexExtractor::new()))?;
         registry.register(Arc::new(JupyterExtractor::new()))?;
         registry.register(Arc::new(OrgModeExtractor::new()))?;
+        registry.register(Arc::new(OpmlExtractor::new()))?;
     }
 
     #[cfg(feature = "pandoc-fallback")]
@@ -295,11 +318,12 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 10;
+            expected_count += 11;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
             assert!(extractor_names.contains(&"epub-extractor".to_string()));
+            assert!(extractor_names.contains(&"fictionbook-extractor".to_string()));
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
             assert!(extractor_names.contains(&"odt-extractor".to_string()));
             assert!(extractor_names.contains(&"rtf-extractor".to_string()));
