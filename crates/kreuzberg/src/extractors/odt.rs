@@ -60,6 +60,94 @@ impl Plugin for OdtExtractor {
     }
 }
 
+/// Extract text from MathML formula element
+///
+/// # Arguments
+/// * `math_node` - The math XML node
+///
+/// # Returns
+/// * `Option<String>` - The extracted formula text
+fn extract_mathml_text(math_node: roxmltree::Node) -> Option<String> {
+    // Try to find annotation with StarMath encoding first
+    for node in math_node.descendants() {
+        if node.tag_name().name() == "annotation"
+            && let Some(encoding) = node.attribute("encoding")
+            && encoding.contains("StarMath")
+            && let Some(text) = node.text()
+        {
+            return Some(text.to_string());
+        }
+    }
+
+    // Fallback: try to extract text from MathML elements
+    let mut formula_parts = Vec::new();
+    for node in math_node.descendants() {
+        match node.tag_name().name() {
+            "mi" | "mo" | "mn" | "ms" | "mtext" => {
+                if let Some(text) = node.text() {
+                    formula_parts.push(text.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if !formula_parts.is_empty() {
+        Some(formula_parts.join(" "))
+    } else {
+        None
+    }
+}
+
+/// Extract text from embedded formula objects
+///
+/// # Arguments
+/// * `archive` - ZIP archive containing the ODT document
+///
+/// # Returns
+/// * `String` - Extracted formula content from embedded objects
+fn extract_embedded_formulas(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> crate::error::Result<String> {
+    use std::io::Read;
+    let mut formula_parts = Vec::new();
+
+    // Try to find embedded objects (e.g., "Object 1/content.xml")
+    let file_names: Vec<String> = archive.file_names().map(|s| s.to_string()).collect();
+
+    for file_name in file_names {
+        // Look for embedded object content.xml files
+        if file_name.contains("Object")
+            && file_name.ends_with("content.xml")
+            && let Ok(mut file) = archive.by_name(&file_name)
+        {
+            let mut xml_content = String::new();
+            if file.read_to_string(&mut xml_content).is_ok() {
+                // Parse and look for math elements
+                if let Ok(doc) = Document::parse(&xml_content) {
+                    let root = doc.root_element();
+
+                    // Look for math elements in the embedded object
+                    if root.tag_name().name() == "math" {
+                        if let Some(formula_text) = extract_mathml_text(root) {
+                            formula_parts.push(formula_text);
+                        }
+                    } else {
+                        // Search for math elements within the document
+                        for node in root.descendants() {
+                            if node.tag_name().name() == "math"
+                                && let Some(formula_text) = extract_mathml_text(node)
+                            {
+                                formula_parts.push(formula_text);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(formula_parts.join("\n"))
+}
+
 /// Extract text content from ODT content.xml
 ///
 /// # Arguments
@@ -362,8 +450,20 @@ impl DocumentExtractor for OdtExtractor {
 
                 let text = extract_content_text(&mut archive)?;
                 let tables = extract_tables(&mut archive)?;
+                let embedded_formulas = extract_embedded_formulas(&mut archive)?;
 
-                Ok((text, tables))
+                // Combine text and formulas
+                let combined_text = if !embedded_formulas.is_empty() {
+                    if !text.is_empty() {
+                        format!("{}\n{}", text, embedded_formulas)
+                    } else {
+                        embedded_formulas
+                    }
+                } else {
+                    text
+                };
+
+                Ok((combined_text, tables))
             })
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("ODT extraction task failed: {}", e)))??
@@ -375,8 +475,20 @@ impl DocumentExtractor for OdtExtractor {
 
             let text = extract_content_text(&mut archive)?;
             let tables = extract_tables(&mut archive)?;
+            let embedded_formulas = extract_embedded_formulas(&mut archive)?;
 
-            (text, tables)
+            // Combine text and formulas
+            let combined_text = if !embedded_formulas.is_empty() {
+                if !text.is_empty() {
+                    format!("{}\n{}", text, embedded_formulas)
+                } else {
+                    embedded_formulas
+                }
+            } else {
+                text
+            };
+
+            (combined_text, tables)
         };
 
         // Extract metadata from meta.xml

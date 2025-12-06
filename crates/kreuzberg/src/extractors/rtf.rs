@@ -55,24 +55,64 @@ impl Plugin for RtfExtractor {
     }
 }
 
-/// Extract text from RTF document using simple parsing approach.
+/// Parse an RTF control word and extract its value.
+///
+/// Returns a tuple of (control_word, optional_numeric_value)
+fn parse_rtf_control_word(chars: &mut std::iter::Peekable<std::str::Chars>) -> (String, Option<i32>) {
+    let mut word = String::new();
+    let mut num_str = String::new();
+    let mut is_negative = false;
+
+    // Read the control word
+    while let Some(&c) = chars.peek() {
+        if c.is_alphabetic() {
+            word.push(c);
+            chars.next();
+        } else {
+            break;
+        }
+    }
+
+    // Read optional numeric parameter
+    if let Some(&c) = chars.peek()
+        && c == '-'
+    {
+        is_negative = true;
+        chars.next();
+    }
+
+    while let Some(&c) = chars.peek() {
+        if c.is_ascii_digit() {
+            num_str.push(c);
+            chars.next();
+        } else {
+            break;
+        }
+    }
+
+    let num_value = if !num_str.is_empty() {
+        let val = num_str.parse::<i32>().unwrap_or(0);
+        Some(if is_negative { -val } else { val })
+    } else {
+        None
+    };
+
+    (word, num_value)
+}
+
+/// Extract text and image metadata from RTF document.
 ///
 /// This function extracts plain text from an RTF document by:
 /// 1. Tokenizing control sequences and text
 /// 2. Converting encoded characters to Unicode
 /// 3. Extracting text while skipping formatting groups
-/// 4. Normalizing whitespace
+/// 4. Detecting and extracting image metadata (\pict sections)
+/// 5. Normalizing whitespace
 fn extract_text_from_rtf(content: &str) -> String {
     let mut result = String::new();
     let mut chars = content.chars().peekable();
-    let mut skip_next_char = false;
 
     while let Some(ch) = chars.next() {
-        if skip_next_char {
-            skip_next_char = false;
-            continue;
-        }
-
         match ch {
             '\\' => {
                 // Handle RTF control sequences
@@ -119,18 +159,22 @@ fn extract_text_from_rtf(content: &str) -> String {
                             }
                         }
                         _ => {
-                            // Regular control word - skip until next whitespace or control char
-                            while let Some(&c) = chars.peek() {
-                                if !c.is_alphanumeric() {
-                                    break;
+                            // Regular control word - parse and check if it's pict
+                            let (control_word, _) = parse_rtf_control_word(&mut chars);
+
+                            if control_word == "pict" {
+                                // Found an image! Extract image metadata
+                                let image_metadata = extract_image_metadata(&mut chars);
+                                if !image_metadata.is_empty() {
+                                    result.push('!');
+                                    result.push('[');
+                                    result.push_str("image");
+                                    result.push(']');
+                                    result.push('(');
+                                    result.push_str(&image_metadata);
+                                    result.push(')');
+                                    result.push(' ');
                                 }
-                                chars.next();
-                            }
-                            // Skip one trailing digit if present (for parameterized control words)
-                            if let Some(&c) = chars.peek()
-                                && (c.is_ascii_digit() || c == '-')
-                            {
-                                chars.next();
                             }
                         }
                     }
@@ -159,6 +203,87 @@ fn extract_text_from_rtf(content: &str) -> String {
     let cleaned = result.split_whitespace().collect::<Vec<_>>().join(" ");
 
     cleaned.trim().to_string()
+}
+
+/// Extract image metadata from within a \pict group.
+///
+/// Looks for image type (jpegblip, pngblip, etc.) and dimensions.
+fn extract_image_metadata(chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
+    let mut metadata = String::new();
+    let mut image_type = String::new();
+    let mut width_goal: Option<i32> = None;
+    let mut height_goal: Option<i32> = None;
+    let mut depth = 0;
+
+    // Scan for image metadata control words
+    while let Some(&ch) = chars.peek() {
+        if ch == '{' {
+            depth += 1;
+            chars.next();
+        } else if ch == '}' {
+            if depth == 0 {
+                break;
+            }
+            depth -= 1;
+            chars.next();
+        } else if ch == '\\' {
+            chars.next(); // consume backslash
+            let (control_word, value) = parse_rtf_control_word(chars);
+
+            // Check for image type
+            if control_word == "jpegblip" {
+                image_type = "jpg".to_string();
+            } else if control_word == "pngblip" {
+                image_type = "png".to_string();
+            } else if control_word == "wmetafile" {
+                image_type = "wmf".to_string();
+            } else if control_word == "dibitmap" {
+                image_type = "bmp".to_string();
+            }
+            // Check for dimensions (goal dimensions are in twips, 1 inch = 1440 twips)
+            else if control_word == "picwgoal" {
+                if let Some(val) = value {
+                    width_goal = Some(val);
+                }
+            } else if control_word == "pichgoal" {
+                if let Some(val) = value {
+                    height_goal = Some(val);
+                }
+            } else if control_word == "bin" {
+                // End of control words, rest is binary data
+                break;
+            }
+        } else if ch == ' ' {
+            chars.next();
+        } else {
+            // Skip other characters (like binary data)
+            chars.next();
+        }
+    }
+
+    // Build metadata string
+    if !image_type.is_empty() {
+        metadata.push_str("image.");
+        metadata.push_str(&image_type);
+    }
+
+    // Add dimensions if available
+    if let Some(width) = width_goal {
+        let width_inches = width as f64 / 1440.0;
+        metadata.push_str(&format!(" width=\"{:.1}in\"", width_inches));
+    }
+
+    if let Some(height) = height_goal {
+        let height_inches = height as f64 / 1440.0;
+        metadata.push_str(&format!(" height=\"{:.1}in\"", height_inches));
+    }
+
+    // If no metadata found, just return a generic image reference
+    if metadata.is_empty() {
+        metadata = "image.jpg".to_string();
+    }
+
+    metadata
 }
 
 #[async_trait]
