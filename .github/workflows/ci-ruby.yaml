@@ -45,6 +45,8 @@ env:
   PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
+  # Windows MAX_PATH mitigation: Use shorter build paths
+  CARGO_TARGET_DIR: ${{ runner.os == 'Windows' && 'C:\t' || 'target' }}
 
 jobs:
   build-ruby-gem:
@@ -73,6 +75,10 @@ jobs:
             ruby-version: "3.4"
             platform: windows-x64
     runs-on: ${{ matrix.os }}
+    env:
+      # Windows MAX_PATH mitigation: Configure shorter bundler paths
+      BUNDLE_PATH: ${{ runner.os == 'Windows' && 'C:\b' || '' }}
+      GEM_HOME: ${{ runner.os == 'Windows' && 'C:\g' || '' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -93,6 +99,25 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: false
           working-directory: packages/ruby
+
+      - name: Configure short paths for Windows MAX_PATH mitigation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Create short path directories
+          New-Item -ItemType Directory -Path "C:\t" -Force
+          New-Item -ItemType Directory -Path "C:\b" -Force
+          New-Item -ItemType Directory -Path "C:\g" -Force
+
+          # Configure bundler to use shorter path
+          cd packages/ruby
+          bundle config set path "C:\b"
+          bundle config set no_prune true
+
+          Write-Host "Windows MAX_PATH mitigation paths configured:"
+          Write-Host "  CARGO_TARGET_DIR: C:\t"
+          Write-Host "  BUNDLE_PATH: C:\b"
+          Write-Host "  GEM_HOME: C:\g"
 
       - name: Install Ruby deps
         if: runner.os != 'Windows'
@@ -177,6 +202,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       RUSTC_WRAPPER: ""
+      # Windows MAX_PATH mitigation: Use shorter build paths
+      CARGO_TARGET_DIR: ${{ runner.os == 'Windows' && 'C:\t' || 'target' }}
+      BUNDLE_PATH: ${{ runner.os == 'Windows' && 'C:\b' || '' }}
+      GEM_HOME: ${{ runner.os == 'Windows' && 'C:\g' || '' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -189,6 +218,24 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: ${{ runner.os != 'Windows' }}
           working-directory: packages/ruby
+
+      - name: Configure short paths for Windows MAX_PATH mitigation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Create short path directories
+          New-Item -ItemType Directory -Path "C:\t" -Force
+          New-Item -ItemType Directory -Path "C:\b" -Force
+          New-Item -ItemType Directory -Path "C:\g" -Force
+
+          # Configure bundler to use shorter path
+          bundle config set path "C:\b"
+          bundle config set no_prune true
+
+          Write-Host "Windows MAX_PATH mitigation paths configured:"
+          Write-Host "  CARGO_TARGET_DIR: C:\t"
+          Write-Host "  BUNDLE_PATH: C:\b"
+          Write-Host "  GEM_HOME: C:\g"
 
       - name: Install Ruby deps (Windows)
         if: runner.os == 'Windows'
