@@ -10,9 +10,6 @@
 //! - Tables: Correctly parses LaTeX tabular environments
 //! - Special handling: Citations, footnotes, code blocks, blockquotes
 
-use kreuzberg::core::config::ExtractionConfig;
-use kreuzberg::types::{ExtractionResult, Metadata};
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -42,11 +39,11 @@ fn test_latex_metadata_title_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected behavior: Extract title from \title{Pandoc Test Suite}
-    let expected_title = "Pandoc Test Suite";
+    let _expected_title = "Pandoc Test Suite";
 
     // TODO: Implement LaTeX extractor that extracts title from document metadata
     // assert_eq!(extracted_metadata.title, Some(expected_title.to_string()));
@@ -61,11 +58,11 @@ fn test_latex_metadata_authors_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected behavior: Extract multiple authors from \author{John MacFarlane \and Anonymous}
-    let expected_authors = vec!["John MacFarlane", "Anonymous"];
+    let _expected_authors = vec!["John MacFarlane", "Anonymous"];
 
     // TODO: Implement LaTeX extractor that extracts authors array from document metadata
     // assert_eq!(extracted_metadata.authors, expected_authors);
@@ -80,11 +77,11 @@ fn test_latex_metadata_date_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected behavior: Extract date from \date{July 17, 2006}
-    let expected_date = "July 17, 2006";
+    let _expected_date = "July 17, 2006";
 
     // TODO: Implement LaTeX extractor that extracts date from document metadata
     // assert_eq!(extracted_metadata.date, Some(expected_date.to_string()));
@@ -99,7 +96,7 @@ fn test_latex_metadata_completeness() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: All three metadata fields should be present
@@ -126,11 +123,11 @@ fn test_latex_content_plain_text_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: First paragraph should be preserved
-    let expected_text = "This is a set of tests for pandoc. Most of them are adapted from";
+    let _expected_text = "This is a set of tests for pandoc. Most of them are adapted from";
 
     // TODO: Implement LaTeX extractor that extracts and cleans LaTeX content
     // assert!(extracted_content.contains(expected_text));
@@ -145,11 +142,11 @@ fn test_latex_content_section_headers() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Headers section should be present
-    let expected_headers = vec!["Headers", "Paragraphs", "Block Quotes", "Lists"];
+    let _expected_headers = vec!["Headers", "Paragraphs", "Block Quotes", "Lists"];
 
     // TODO: Implement LaTeX extractor that identifies \section{} commands
     // for header in expected_headers {
@@ -166,11 +163,11 @@ fn test_latex_content_subsection_headers() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Subsection headers should be identified as level 2
-    let expected_subsections = vec!["Unordered", "Ordered", "Nested"];
+    let _expected_subsections = vec!["Unordered", "Ordered", "Nested"];
 
     // TODO: Implement LaTeX extractor that identifies \subsection{} commands
     // for subsection in expected_subsections {
@@ -187,7 +184,7 @@ fn test_latex_content_emphasis_preservation() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Emphasis markers should be preserved in markdown (e.g., *text*)
@@ -206,7 +203,7 @@ fn test_latex_content_strong_preservation() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Strong markers should be preserved in markdown (e.g., **text**)
@@ -225,7 +222,7 @@ fn test_latex_content_links_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Links in markdown format [text](url)
@@ -245,7 +242,7 @@ fn test_latex_content_inline_code() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Inline code should be preserved with backticks
@@ -269,7 +266,7 @@ fn test_latex_content_unordered_lists() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Bullet list items should be identified
@@ -290,7 +287,7 @@ fn test_latex_content_ordered_lists() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Numbered list items should be identified
@@ -311,7 +308,7 @@ fn test_latex_content_nested_lists() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Nested list structure should be preserved
@@ -330,7 +327,7 @@ fn test_latex_content_definition_lists() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Definition list items should be identified
@@ -354,7 +351,7 @@ fn test_latex_table_basic_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected table structure from:
@@ -381,7 +378,7 @@ fn test_latex_table_headers() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected headers: "Animal", "Number"
@@ -400,7 +397,7 @@ fn test_latex_table_cell_content() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected cell values:
@@ -424,7 +421,7 @@ fn test_latex_table_single_column() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Second table with single column
@@ -447,7 +444,7 @@ fn test_latex_multiple_tables_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: At least 2 tables in the test document
@@ -469,7 +466,7 @@ fn test_latex_blockquote_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Block quote content should be identified
@@ -487,7 +484,7 @@ fn test_latex_nested_blockquotes() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Nested quote structure should be preserved
@@ -510,7 +507,7 @@ fn test_latex_code_block_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Code blocks should be identified and preserved
@@ -529,7 +526,7 @@ fn test_latex_code_block_special_characters() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Special chars like \$ \\ \> \[ \{ should be preserved in code
@@ -553,7 +550,7 @@ fn test_latex_unicode_characters() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Unicode characters should be preserved
@@ -576,7 +573,7 @@ fn test_latex_escaped_special_characters() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: AT&T (ampersand should be unescaped)
@@ -595,7 +592,7 @@ fn test_latex_smart_quotes() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Smart quotes should be converted to proper characters
@@ -618,7 +615,7 @@ fn test_latex_citation_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Citations should be identified
@@ -637,7 +634,7 @@ fn test_latex_citation_with_pages() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Citation with page numbers [22-23] should be preserved
@@ -659,7 +656,7 @@ fn test_latex_footnote_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Footnote content should be extracted
@@ -677,7 +674,7 @@ fn test_latex_multiple_footnotes() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: All footnotes in document should be extracted
@@ -696,7 +693,7 @@ fn test_latex_footnote_with_complex_content() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Complex footnote structures should be preserved
@@ -720,7 +717,7 @@ fn test_latex_inline_math() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Math expressions should be preserved
@@ -740,7 +737,7 @@ fn test_latex_display_math() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Display math should be identified separately from inline
@@ -756,7 +753,7 @@ fn test_latex_complex_math_expressions() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Complex expressions like fractions and limits
@@ -780,7 +777,7 @@ fn test_latex_image_reference_extraction() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Image references should be identified
@@ -799,7 +796,7 @@ fn test_latex_inline_images() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Inline images (in the middle of text) should be preserved
@@ -823,7 +820,7 @@ fn test_latex_document_structure() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Document should have clear hierarchical structure
@@ -845,7 +842,7 @@ fn test_latex_horizontal_rules() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Horizontal rules should be identified
@@ -888,7 +885,7 @@ fn test_latex_utf8_encoding() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // The test document uses \usepackage[utf8x]{inputenc}
@@ -906,7 +903,7 @@ fn test_latex_with_packages() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // The test document uses multiple packages:
@@ -927,7 +924,7 @@ fn test_latex_strikethrough_text() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Strikethrough text should be identified
@@ -946,7 +943,7 @@ fn test_latex_superscripts_subscripts() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Super/subscripts should be identified
@@ -970,7 +967,7 @@ fn test_latex_extracts_valid_markdown() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Output should be valid markdown that can be parsed
@@ -988,7 +985,7 @@ fn test_latex_content_quality_vs_pandoc_baseline() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Key content from Pandoc extraction should be present
@@ -1013,7 +1010,7 @@ fn test_latex_metadata_extraction_completeness() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: All extractable metadata should be present
@@ -1033,7 +1030,7 @@ fn test_latex_extraction_performance() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Extraction should complete in reasonable time
@@ -1055,7 +1052,7 @@ fn test_latex_extraction_deterministic() {
         return;
     }
 
-    let content = load_test_latex();
+    let _content = load_test_latex();
 
     // This test will fail until LaTeX extractor is implemented
     // Expected: Multiple extractions should produce identical results

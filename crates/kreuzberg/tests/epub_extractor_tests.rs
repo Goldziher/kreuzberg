@@ -43,6 +43,7 @@ fn assert_contains_ci(content: &str, needle: &str, description: &str) {
 }
 
 /// Helper to validate content doesn't contain undesired text
+#[allow(dead_code)]
 fn assert_not_contains_ci(content: &str, needle: &str, description: &str) {
     assert!(
         !content.to_lowercase().contains(&needle.to_lowercase()),

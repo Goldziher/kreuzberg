@@ -67,7 +67,7 @@ $testTools = @("gcc", "g++", "nasm")
 foreach ($tool in $testTools) {
   $result = & $tool --version 2>&1 | Select-Object -First 1
   if ($LASTEXITCODE -eq 0) {
-    Write-Host "  [OK] $tool: $result"
+    Write-Host "  [OK] ${tool}: $result"
   } else {
     Write-Host "  [WARNING] $tool not yet in PATH (will be available in next step)"
   }
