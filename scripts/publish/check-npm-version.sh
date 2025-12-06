@@ -12,9 +12,9 @@ package="@kreuzberg/node"
 
 # npm view returns non-zero if version doesn't exist
 if npm view "${package}@${version}" version >/dev/null 2>&1; then
-  echo "exists=true"
-  echo "::notice::Node package ${package}@${version} already exists on npm"
+	echo "exists=true"
+	echo "::notice::Node package ${package}@${version} already exists on npm"
 else
-  echo "exists=false"
-  echo "::notice::Node package ${package}@${version} not found on npm, will build and publish"
+	echo "exists=false"
+	echo "::notice::Node package ${package}@${version} not found on npm, will build and publish"
 fi

@@ -5,6 +5,6 @@
 set -euo pipefail
 
 if [ ! -d tools/benchmark-harness ]; then
-  echo "::error::tools/benchmark-harness not found on branch ${GITHUB_REF}." >&2
-  exit 1
+	echo "::error::tools/benchmark-harness not found on branch ${GITHUB_REF}." >&2
+	exit 1
 fi

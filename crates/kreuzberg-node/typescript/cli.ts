@@ -32,7 +32,7 @@ function main(argv: string[]): number {
 		console.error(
 			"The embedded Kreuzberg CLI binary could not be located. " +
 				"This indicates a packaging issue; please open an issue at " +
-				"https://github.com/Goldziher/kreuzberg/issues so we can investigate.",
+				"https://github.com/kreuzberg-dev/kreuzberg/issues so we can investigate.",
 		);
 		return 1;
 	}

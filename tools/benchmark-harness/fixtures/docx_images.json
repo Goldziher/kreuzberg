@@ -2,7 +2,7 @@
 	"document": "../../../test_documents/documents/word_image_anchors.docx",
 	"file_type": "docx",
 	"file_size": 18432,
-	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
 	"metadata": {
 		"description": "DOCX with embedded images and anchors - 18KB document",
 		"category": "docx-images",

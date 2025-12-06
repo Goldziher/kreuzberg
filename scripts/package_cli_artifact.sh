@@ -3,8 +3,8 @@ set -euo pipefail
 
 TARGET="${1:-${TARGET:-}}"
 if [[ -z "$TARGET" ]]; then
-  echo "Usage: $0 <target>" >&2
-  exit 1
+	echo "Usage: $0 <target>" >&2
+	exit 1
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,10 +17,10 @@ cp "$ROOT/README.md" "$STAGE/"
 
 # Copy shared libraries if they exist
 if [[ -f "$ROOT/target/${TARGET}/release/libpdfium.dylib" ]]; then
-  cp "$ROOT/target/${TARGET}/release/libpdfium.dylib" "$STAGE/"
+	cp "$ROOT/target/${TARGET}/release/libpdfium.dylib" "$STAGE/"
 fi
 if [[ -f "$ROOT/target/${TARGET}/release/libpdfium.so" ]]; then
-  cp "$ROOT/target/${TARGET}/release/libpdfium.so" "$STAGE/"
+	cp "$ROOT/target/${TARGET}/release/libpdfium.so" "$STAGE/"
 fi
 
 tar -czf "kreuzberg-cli-${TARGET}.tar.gz" -C "$ROOT" "kreuzberg-cli-${TARGET}"

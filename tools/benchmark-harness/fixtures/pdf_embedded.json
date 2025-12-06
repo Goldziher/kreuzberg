@@ -2,7 +2,7 @@
 	"document": "../../../test_documents/pdfs/embedded_images_tables.pdf",
 	"file_type": "pdf",
 	"file_size": 109798,
-	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
 	"metadata": {
 		"description": "PDF with embedded images and tables",
 		"category": "complex"

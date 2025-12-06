@@ -13,7 +13,7 @@ Thank you for contributing to Kreuzberg!
 1. **Clone and install**:
 
     ```bash
-    git clone https://github.com/Goldziher/kreuzberg.git
+    git clone https://github.com/kreuzberg-dev/kreuzberg.git
     cd kreuzberg
     uv sync --all-packages --all-extras --all-groups
     ```

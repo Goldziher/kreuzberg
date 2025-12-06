@@ -554,10 +554,10 @@ Kreuzberg v4 was a major undertaking. Thank you to all contributors!
 
 - **Documentation**: https://docs.kreuzberg.dev
 - **Migration Guide**: https://docs.kreuzberg.dev/migration/v3-to-v4/
-- **Examples**: https://github.com/Goldziher/kreuzberg/tree/v4-dev/examples
-- **Support**: https://github.com/Goldziher/kreuzberg/issues
+- **Examples**: https://github.com/kreuzberg-dev/kreuzberg/tree/v4-dev/examples
+- **Support**: https://github.com/kreuzberg-dev/kreuzberg/issues
 
-[4.0.0-rc.2]: https://github.com/Goldziher/kreuzberg/compare/v4.0.0-rc.1...v4.0.0-rc.2
-[4.0.0-rc.1]: https://github.com/Goldziher/kreuzberg/compare/v4.0.0-rc.0...v4.0.0-rc.1
-[4.0.0-rc.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v4.0.0-rc.0
-[3.22.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v3.22.0
+[4.0.0-rc.2]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.1...v4.0.0-rc.2
+[4.0.0-rc.1]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.0...v4.0.0-rc.1
+[4.0.0-rc.0]: https://github.com/kreuzberg-dev/kreuzberg/compare/v3.21.0...v4.0.0-rc.0
+[3.22.0]: https://github.com/kreuzberg-dev/kreuzberg/compare/v3.21.0...v3.22.0

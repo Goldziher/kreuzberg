@@ -3,14 +3,34 @@ name: CI Go
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'packages/go/**'
-    #   - 'crates/**'
+    paths:
+      - 'packages/go/**'
+      - 'crates/**'
+      - 'scripts/ci/go/**'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/workflows/ci-go.yaml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/config.toml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'packages/go/**'
-    #   - 'crates/**'
+    paths:
+      - 'packages/go/**'
+      - 'crates/**'
+      - 'scripts/ci/go/**'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/workflows/ci-go.yaml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/config.toml'
 
 concurrency:
   group: ci-go-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -45,9 +65,9 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-${{ matrix.os }}
-          # Disable sccache on Windows due to MinGW GCC incompatibility
-          # sccache cannot detect MinGW GCC compiler, causing build failures
-          use-sccache: ${{ runner.os != 'Windows' }}
+          # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
+          use-sccache: ${{ matrix.os != 'windows-latest' }}
+          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -70,19 +90,24 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
-      - name: Setup MinGW-w64 (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install mingw --version=13.2.0 --allow-downgrade -y
-          # Remove Strawberry Perl GCC from PATH to avoid conflicts
-          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
-          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+      - name: Setup MSYS2 MinGW toolchain (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-zstd
+            mingw-w64-ucrt-x86_64-binutils
 
-          # Set environment variables for cc crate compiler detection
-          echo "CC=gcc" >> $env:GITHUB_ENV
-          echo "CXX=g++" >> $env:GITHUB_ENV
-          echo "AR=ar" >> $env:GITHUB_ENV
+      - name: Verify MSYS2 toolchain and add to PATH (Windows only)
+        if: matrix.os == 'windows-latest'
         shell: pwsh
+        run: scripts/ci/go/setup-msys2-windows.ps1
 
       - name: Build FFI library
         run: scripts/ci/go/build-ffi.ps1
@@ -127,8 +152,28 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
-          # Disable sccache on Windows due to MinGW GCC incompatibility
-          use-sccache: ${{ runner.os != 'Windows' }}
+          # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
+          use-sccache: ${{ matrix.os != 'windows-latest' }}
+          target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
+
+      - name: Setup MSYS2 MinGW toolchain (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-zstd
+            mingw-w64-ucrt-x86_64-binutils
+
+      - name: Verify MSYS2 toolchain and add to PATH (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: scripts/ci/go/setup-msys2-windows.ps1
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -161,25 +206,6 @@ jobs:
         with:
           name: go-ffi-lib-${{ matrix.os }}
           path: target/release/
-
-      - name: Setup MinGW-w64 (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install mingw --version=13.2.0 --allow-downgrade -y
-          # Remove Strawberry Perl GCC from PATH to avoid conflicts
-          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notlike '*Strawberry*' }) -join ';'
-          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
-
-          # Set environment variables for cc crate compiler detection
-          echo "CC=gcc" >> $env:GITHUB_ENV
-          echo "CXX=g++" >> $env:GITHUB_ENV
-          echo "AR=ar" >> $env:GITHUB_ENV
-        shell: pwsh
-
-      - name: Reorganize FFI libraries for Windows GNU target
-        if: runner.os == 'Windows'
-        run: scripts/ci/go/reorganize-libraries.ps1
-        shell: pwsh
 
       - name: Make FFI library executable
         run: chmod +x target/release/libkreuzberg_ffi.* || true

@@ -1,9 +1,0 @@
-# AI Rules for Kreuzberg Project
-# Guidelines for Claude operations and task delegation
-
-rules:
-  # Subagent Usage
-  - Use Task tool with specialized subagents for implementation work whenever possible
-  - Prefer haiku model for subagents to minimize cost (use model: haiku parameter)
-  - Only use sonnet/opus for complex tasks requiring advanced reasoning
-  - Delegate repetitive tasks (multi-file edits, consistency fixes) to haiku subagents

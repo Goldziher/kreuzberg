@@ -1,6 +1,8 @@
 //! Pandoc-based extractors for various document formats.
 //!
-//! Supports: DOCX, ODT, EPUB, LaTeX, RST, RTF, and many more formats via Pandoc.
+//! This module is only available when the `pandoc-fallback` feature is enabled.
+//! Supports: DOCX, ODT, EPUB, LaTeX, RST, RTF, and many more formats via Pandoc
+//! when native extractors are not sufficient.
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;

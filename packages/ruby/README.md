@@ -12,7 +12,7 @@ High-performance document intelligence for Ruby, powered by Rust.
 Extract text, tables, images, and metadata from 30+ file formats including PDF, DOCX, PPTX, XLSX, images, and more.
 
 > **🚀 Version 4.0.0 Release Candidate**
-> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter.
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter.
 
 ## Features
 
@@ -390,7 +390,7 @@ Kreuzberg's Rust core provides significant performance improvements:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Goldziher/kreuzberg.git
+git clone https://github.com/kreuzberg-dev/kreuzberg.git
 cd kreuzberg/packages/ruby
 
 # Install dependencies
@@ -422,5 +422,5 @@ Contributions are welcome! Please see [CONTRIBUTING.md](../../CONTRIBUTING.md) f
 ## Links
 
 - **Documentation**: https://docs.kreuzberg.dev
-- **GitHub**: https://github.com/Goldziher/kreuzberg
-- **Issues**: https://github.com/Goldziher/kreuzberg/issues
+- **GitHub**: https://github.com/kreuzberg-dev/kreuzberg
+- **Issues**: https://github.com/kreuzberg-dev/kreuzberg/issues

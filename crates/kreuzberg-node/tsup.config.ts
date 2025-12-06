@@ -1,8 +1,15 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-	entry: ["typescript/index.ts", "typescript/cli.ts"],
+	entry: [
+		"typescript/index.ts",
+		"typescript/cli.ts",
+		"typescript/errors.ts",
+		"typescript/types.ts",
+		"typescript/ocr/guten-ocr.ts",
+	],
 	format: ["esm", "cjs"],
+	bundle: false,
 	dts: {
 		compilerOptions: {
 			skipLibCheck: true,
@@ -12,8 +19,8 @@ export default defineConfig({
 	splitting: false,
 	sourcemap: true,
 	clean: true,
-	shims: true,
+	shims: false,
+	platform: "node",
+	target: "node22",
 	external: ["sharp", "@gutenye/ocr-node", /\.node$/, /@kreuzberg\/node-.*/, "./index.js", "../index.js"],
-	// Don't externalize index.js - let tsup handle the require/import
-	noExternal: [],
 });

@@ -8,13 +8,13 @@ BUNDLE_CMD="${BUNDLE_CMD:-bundle}"
 EXTRA_INCLUDE="$ROOT/packages/ruby/ext/kreuzberg_rb/native/include"
 UNAME="$(uname -s || echo "")"
 if [[ "$UNAME" == MINGW* || "$UNAME" == MSYS* || "$UNAME" == CYGWIN* ]]; then
-  EXTRA_INCLUDE="$(cygpath -m "$EXTRA_INCLUDE")"
+	EXTRA_INCLUDE="$(cygpath -m "$EXTRA_INCLUDE")"
 fi
 
 if [[ -z "${BINDGEN_EXTRA_CLANG_ARGS:-}" ]]; then
-  export BINDGEN_EXTRA_CLANG_ARGS="-I$EXTRA_INCLUDE"
+	export BINDGEN_EXTRA_CLANG_ARGS="-I$EXTRA_INCLUDE"
 else
-  export BINDGEN_EXTRA_CLANG_ARGS="$BINDGEN_EXTRA_CLANG_ARGS -I$EXTRA_INCLUDE"
+	export BINDGEN_EXTRA_CLANG_ARGS="$BINDGEN_EXTRA_CLANG_ARGS -I$EXTRA_INCLUDE"
 fi
 
 pushd "$RUBY_DIR" >/dev/null

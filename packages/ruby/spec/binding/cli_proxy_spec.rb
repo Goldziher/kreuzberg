@@ -3,8 +3,7 @@
 RSpec.describe Kreuzberg::CLIProxy do
   describe '.find_cli_binary' do
     context 'when binary exists' do
-      it 'finds the binary in search paths', :skip do
-        # Skip in CI/test environments where binary might not be built
+      it 'finds the binary in search paths' do
         binary = described_class.find_cli_binary
         expect(binary).to be_a(Pathname)
         expect(binary.file?).to be true
@@ -25,9 +24,8 @@ RSpec.describe Kreuzberg::CLIProxy do
   end
 
   describe '.call' do
-    context 'when binary is available', :skip do
+    context 'when binary is available' do
       it 'executes CLI command successfully' do
-        # Skip in environments without built binary
         output = described_class.call(['--version'])
         expect(output).to be_a(String)
         expect(output).not_to be_empty

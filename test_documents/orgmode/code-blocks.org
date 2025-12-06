@@ -1,0 +1,24 @@
+#+title: Code Blocks Test
+#+author: Test Author
+
+* Python Code
+
+#+begin_src python
+def hello():
+    print("Hello, World!")
+#+end_src
+
+* Bash Code
+
+#+begin_src bash
+echo "Testing bash"
+ls -la
+#+end_src
+
+* JavaScript Code
+
+#+begin_src javascript
+function greet(name) {
+    return `Hello, ${name}!`;
+}
+#+end_src

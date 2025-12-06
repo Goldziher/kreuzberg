@@ -18,6 +18,11 @@ incremental = true
 [target.x86_64-pc-windows-msvc]
 # Windows MSVC specific settings
 
+[target.x86_64-pc-windows-gnu]
+# Use MSYS2 UCRT64 toolchain for MinGW builds
+linker = "C:\\msys64\\ucrt64\\bin\\gcc.exe"
+ar = "C:\\msys64\\ucrt64\\bin\\ar.exe"
+
 # Network settings for faster crate downloads
 [net]
 git-fetch-with-cli = false

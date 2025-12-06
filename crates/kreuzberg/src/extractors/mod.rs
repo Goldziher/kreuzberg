@@ -8,6 +8,7 @@ use crate::plugins::registry::get_document_extractor_registry;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 
+pub mod security;
 pub mod structured;
 pub mod text;
 
@@ -27,16 +28,43 @@ pub mod excel;
 pub mod html;
 
 #[cfg(feature = "office")]
+pub mod bibtex;
+
+#[cfg(feature = "office")]
 pub mod docx;
 
 #[cfg(feature = "office")]
+pub mod epub;
+
+#[cfg(feature = "office")]
+pub mod markdown;
+
+#[cfg(feature = "pandoc-fallback")]
 pub mod pandoc;
+
+#[cfg(feature = "office")]
+pub mod rst;
+
+#[cfg(feature = "office")]
+pub mod latex;
+
+#[cfg(feature = "office")]
+pub mod jupyter;
+
+#[cfg(feature = "office")]
+pub mod orgmode;
+
+#[cfg(feature = "office")]
+pub mod odt;
 
 #[cfg(feature = "pdf")]
 pub mod pdf;
 
 #[cfg(feature = "office")]
 pub mod pptx;
+
+#[cfg(feature = "office")]
+pub mod rtf;
 
 #[cfg(feature = "xml")]
 pub mod xml;
@@ -60,16 +88,43 @@ pub use excel::ExcelExtractor;
 pub use html::HtmlExtractor;
 
 #[cfg(feature = "office")]
+pub use bibtex::BibtexExtractor;
+
+#[cfg(feature = "office")]
 pub use docx::DocxExtractor;
 
 #[cfg(feature = "office")]
+pub use epub::EpubExtractor;
+
+#[cfg(feature = "office")]
+pub use markdown::MarkdownExtractor as EnhancedMarkdownExtractor;
+
+#[cfg(feature = "pandoc-fallback")]
 pub use pandoc::PandocExtractor;
+
+#[cfg(feature = "office")]
+pub use rst::RstExtractor;
+
+#[cfg(feature = "office")]
+pub use latex::LatexExtractor;
+
+#[cfg(feature = "office")]
+pub use jupyter::JupyterExtractor;
+
+#[cfg(feature = "office")]
+pub use orgmode::OrgModeExtractor;
+
+#[cfg(feature = "office")]
+pub use odt::OdtExtractor;
 
 #[cfg(feature = "pdf")]
 pub use pdf::PdfExtractor;
 
 #[cfg(feature = "office")]
 pub use pptx::PptxExtractor;
+
+#[cfg(feature = "office")]
+pub use rtf::RtfExtractor;
 
 #[cfg(feature = "xml")]
 pub use xml::XmlExtractor;
@@ -153,8 +208,21 @@ pub fn register_default_extractors() -> Result<()> {
 
     #[cfg(feature = "office")]
     {
+        registry.register(Arc::new(EnhancedMarkdownExtractor::new()))?;
+        registry.register(Arc::new(BibtexExtractor::new()))?;
         registry.register(Arc::new(DocxExtractor::new()))?;
+        registry.register(Arc::new(EpubExtractor::new()))?;
         registry.register(Arc::new(PptxExtractor::new()))?;
+        registry.register(Arc::new(OdtExtractor::new()))?;
+        registry.register(Arc::new(RtfExtractor::new()))?;
+        registry.register(Arc::new(RstExtractor::new()))?;
+        registry.register(Arc::new(LatexExtractor::new()))?;
+        registry.register(Arc::new(JupyterExtractor::new()))?;
+        registry.register(Arc::new(OrgModeExtractor::new()))?;
+    }
+
+    #[cfg(feature = "pandoc-fallback")]
+    {
         registry.register(Arc::new(PandocExtractor::new()))?;
     }
 
@@ -227,9 +295,23 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 3;
+            expected_count += 10;
+            assert!(extractor_names.contains(&"markdown-extractor".to_string()));
+            assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
+            assert!(extractor_names.contains(&"epub-extractor".to_string()));
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
+            assert!(extractor_names.contains(&"odt-extractor".to_string()));
+            assert!(extractor_names.contains(&"rtf-extractor".to_string()));
+            assert!(extractor_names.contains(&"rst-extractor".to_string()));
+            assert!(extractor_names.contains(&"latex-extractor".to_string()));
+            assert!(extractor_names.contains(&"jupyter-extractor".to_string()));
+            assert!(extractor_names.contains(&"orgmode-extractor".to_string()));
+        }
+
+        #[cfg(feature = "pandoc-fallback")]
+        {
+            expected_count += 1;
             assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
         }
 

@@ -4,7 +4,7 @@
 [![PyPI](https://badge.fury.io/py/kreuzberg.svg)](https://badge.fury.io/py/kreuzberg)
 [![npm](https://img.shields.io/npm/v/kreuzberg)](https://www.npmjs.com/package/kreuzberg)
 [![RubyGems](https://badge.fury.io/rb/kreuzberg.svg)](https://rubygems.org/gems/kreuzberg)
-[![Go Reference](https://pkg.go.dev/badge/github.com/Goldziher/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg)
 [![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,7 +12,7 @@
 **A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats. Available for Rust, Python, Ruby, Go, Java, TypeScript/Node.js, and C#—or use via CLI, REST API, or MCP server.
 
 > **🚀 Version 4.0.0 Release Candidate**
-> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter. Help us make the stable release better!
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter. Help us make the stable release better!
 
 ## Why Kreuzberg
 
@@ -55,7 +55,7 @@ npm install @kreuzberg/node
 ### Go
 
 ```bash
-go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
+go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 ```
 
 Build the FFI crate (`cargo build -p kreuzberg-ffi --release`) and set `LD_LIBRARY_PATH`/`DYLD_FALLBACK_LIBRARY_PATH` to `target/release` so cgo can locate `libkreuzberg_ffi`.

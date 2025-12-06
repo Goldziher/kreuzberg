@@ -236,6 +236,7 @@ end
 # Pattern 15: Custom Ruby OCR Backend Plugin
 # ============================================================================
 
+# Example OCR backend implementation for custom processing.
 class CustomOcrBackend
   def process_image(image_bytes, language)
     # In a real implementation, you would:

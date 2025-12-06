@@ -38,12 +38,8 @@ ahash = { workspace = true }
 num_cpus = { workspace = true }
 which = "8"
 
-# Optional external framework integrations
-extractous = { version = "0.3", optional = true }
-
 [dev-dependencies]
 tempfile = { workspace = true }
 
 [features]
 default = []
-extractous-native = ["dep:extractous"]

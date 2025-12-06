@@ -312,11 +312,11 @@ async fn main() -> Result<()> {
             eprintln!("[adapter] Kreuzberg bindings: {}/11 available", kreuzberg_count);
 
             use benchmark_harness::adapters::external::{
-                create_docling_adapter, create_docling_batch_adapter, create_extractous_python_adapter,
-                create_markitdown_adapter, create_unstructured_adapter,
+                create_docling_adapter, create_docling_batch_adapter, create_markitdown_adapter,
+                create_tika_batch_adapter, create_tika_sync_adapter, create_unstructured_adapter,
             };
 
-            // Register external framework adapters
+            // Register open source extraction framework adapters
             let mut external_count = 0;
 
             if let Ok(adapter) = create_docling_adapter() {
@@ -341,17 +341,6 @@ async fn main() -> Result<()> {
                 eprintln!("[adapter] ✗ docling-batch (initialization failed)");
             }
 
-            if let Ok(adapter) = create_extractous_python_adapter() {
-                if let Ok(()) = registry.register(Arc::new(adapter)) {
-                    eprintln!("[adapter] ✓ extractous-python (registered)");
-                    external_count += 1;
-                } else {
-                    eprintln!("[adapter] ✗ extractous-python (registration failed)");
-                }
-            } else {
-                eprintln!("[adapter] ✗ extractous-python (initialization failed)");
-            }
-
             if let Ok(adapter) = create_markitdown_adapter() {
                 if let Ok(()) = registry.register(Arc::new(adapter)) {
                     eprintln!("[adapter] ✓ markitdown (registered)");
@@ -374,7 +363,32 @@ async fn main() -> Result<()> {
                 eprintln!("[adapter] ✗ unstructured (initialization failed)");
             }
 
-            eprintln!("[adapter] External frameworks: {}/5 available", external_count);
+            if let Ok(adapter) = create_tika_sync_adapter() {
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ tika-sync (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ tika-sync (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ tika-sync (initialization failed)");
+            }
+
+            if let Ok(adapter) = create_tika_batch_adapter() {
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ tika-batch (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ tika-batch (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ tika-batch (initialization failed)");
+            }
+
+            eprintln!(
+                "[adapter] Open source extraction frameworks: {}/6 available",
+                external_count
+            );
             eprintln!(
                 "[adapter] Total adapters: {} available",
                 kreuzberg_count + external_count

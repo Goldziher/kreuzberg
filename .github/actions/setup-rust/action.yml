@@ -117,15 +117,15 @@ runs:
           ~/.cargo/registry/cache
           ~/.cargo/git/db
           target/
-        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ steps.cargo-hash.outputs.hash }}
+        key: ${{ inputs.cache-key-prefix }}-v2-${{ runner.os }}-${{ steps.cargo-hash.outputs.hash }}
         restore-keys: |
-          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-
+          ${{ inputs.cache-key-prefix }}-v2-${{ runner.os }}-
 
     - name: Cache cargo-llvm-cov
       uses: actions/cache@v4
       with:
         path: ~/.cargo/bin/cargo-llvm-cov
-        key: cargo-llvm-cov-${{ runner.os }}
+        key: cargo-llvm-cov-v2-${{ runner.os }}
 
     - name: Ensure sccache is on PATH
       if: inputs.use-sccache == 'true' && env.SCCACHE_PATH != ''

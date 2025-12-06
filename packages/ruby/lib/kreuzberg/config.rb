@@ -39,6 +39,7 @@ module Kreuzberg
       end
     end
 
+    # Tesseract OCR engine configuration
     class Tesseract
       attr_reader :options
 
@@ -120,6 +121,7 @@ module Kreuzberg
       end
     end
 
+    # Embedding model configuration for document chunking
     class Embedding
       attr_reader :model, :normalize, :batch_size, :show_download_progress, :cache_dir
 
@@ -357,6 +359,7 @@ module Kreuzberg
       end
     end
 
+    # HTML preprocessing configuration for content extraction
     class HtmlPreprocessing
       attr_reader :enabled, :preset, :remove_navigation, :remove_forms
 
@@ -385,6 +388,7 @@ module Kreuzberg
       end
     end
 
+    # HTML rendering options for document conversion
     class HtmlOptions
       attr_reader :options
 
@@ -412,6 +416,7 @@ module Kreuzberg
       end
     end
 
+    # YAKE keyword extraction parameters
     class KeywordYakeParams
       attr_reader :window_size
 
@@ -424,6 +429,7 @@ module Kreuzberg
       end
     end
 
+    # RAKE keyword extraction parameters
     class KeywordRakeParams
       attr_reader :min_word_length, :max_words_per_phrase
 
@@ -440,6 +446,7 @@ module Kreuzberg
       end
     end
 
+    # Keyword extraction configuration for document analysis
     class Keywords
       attr_reader :algorithm, :max_keywords, :min_score, :ngram_range,
                   :language, :yake_params, :rake_params
@@ -645,7 +652,7 @@ module Kreuzberg
         @max_concurrent_extractions = max_concurrent_extractions&.to_i
       end
 
-      # rubocop:disable Metrics/PerceivedComplexity
+      # rubocop:disable Metrics/CyclomaticComplexity
       def to_h
         {
           use_cache: @use_cache,
@@ -664,7 +671,7 @@ module Kreuzberg
           max_concurrent_extractions: @max_concurrent_extractions
         }.compact
       end
-      # rubocop:enable Metrics/PerceivedComplexity
+      # rubocop:enable Metrics/CyclomaticComplexity
 
       private
 

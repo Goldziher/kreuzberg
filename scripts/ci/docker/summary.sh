@@ -11,10 +11,10 @@ VARIANT="${1:-}"
 RESULTS_FILE="${2:-/tmp/kreuzberg-docker-test-results.json}"
 
 if [ -z "$VARIANT" ]; then
-  echo "Usage: summary.sh <variant> [results-file]"
-  echo "  variant: core or full"
-  echo "  results-file: path to test results JSON (default: /tmp/kreuzberg-docker-test-results.json)"
-  exit 1
+	echo "Usage: summary.sh <variant> [results-file]"
+	echo "  variant: core or full"
+	echo "  results-file: path to test results JSON (default: /tmp/kreuzberg-docker-test-results.json)"
+	exit 1
 fi
 
 echo "✅ Docker image built and tested successfully!"
@@ -24,6 +24,6 @@ echo "Image: kreuzberg:$VARIANT"
 echo ""
 
 if [ -f "$RESULTS_FILE" ]; then
-  echo "Test Results:"
-  cat "$RESULTS_FILE" | jq . || cat "$RESULTS_FILE"
+	echo "Test Results:"
+	cat "$RESULTS_FILE" | jq . || cat "$RESULTS_FILE"
 fi

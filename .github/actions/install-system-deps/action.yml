@@ -1,49 +1,121 @@
 name: Install System Dependencies
 description: Install platform specific dependencies required for document conversion
+inputs:
+  skip-pandoc:
+    description: 'Skip Pandoc installation (optional, for testing without pandoc-fallback feature)'
+    required: false
+    default: 'false'
 runs:
   using: composite
   steps:
+    - name: Cache Tesseract data (macOS)
+      if: runner.os == 'macOS'
+      id: cache-tesseract-macos
+      uses: actions/cache@v4
+      with:
+        path: /usr/local/opt/tesseract/share/tessdata/
+        key: tesseract-data-${{ runner.os }}-v2
+        restore-keys: |
+          tesseract-data-${{ runner.os }}-
+
+    - name: Cache Pandoc (macOS)
+      if: runner.os == 'macOS'
+      id: cache-pandoc-macos
+      uses: actions/cache@v4
+      with:
+        path: /usr/local/opt/pandoc/
+        key: pandoc-${{ runner.os }}-v2
+        restore-keys: |
+          pandoc-${{ runner.os }}-
+
+    - name: Cache LibreOffice (macOS)
+      if: runner.os == 'macOS'
+      id: cache-libreoffice-macos
+      uses: actions/cache@v4
+      with:
+        path: /Applications/LibreOffice.app
+        key: libreoffice-${{ runner.os }}-v2
+
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
       shell: bash
       run: |
         set -eo pipefail
-        echo "Installing pandoc, tesseract, and LibreOffice..."
+        SKIP_PANDOC="${{ inputs.skip-pandoc }}"
+
+        if [ "$SKIP_PANDOC" == "true" ]; then
+          echo "Skipping Pandoc installation as requested..."
+        else
+          echo "Installing pandoc, tesseract, and LibreOffice..."
+
+          # Install Pandoc only if not cached
+          if [ "${{ steps.cache-pandoc-macos.outputs.cache-hit }}" != "true" ]; then
+            echo "Pandoc cache miss, installing..."
+            brew install pandoc
+          else
+            echo "Pandoc found in cache, skipping installation"
+          fi
+        fi
+
         # Install packages only if not already present
-        brew list pandoc &>/dev/null || brew install pandoc
         brew list tesseract &>/dev/null || brew install tesseract
-        brew list --cask libreoffice &>/dev/null || brew install --cask libreoffice || true
+        # Add extra tessdata languages needed by tests
+        brew list tesseract-lang &>/dev/null || brew install tesseract-lang
+
+        # LibreOffice: skip install if already present on runner/cache to avoid cask error
+        if [ -d "/Applications/LibreOffice.app" ]; then
+          echo "LibreOffice already present at /Applications/LibreOffice.app, skipping install"
+        else
+          brew list --cask libreoffice &>/dev/null || brew install --cask libreoffice
+        fi
         echo "Installed packages:"
-        brew list pandoc tesseract
+        brew list tesseract
+        if [ "$SKIP_PANDOC" != "true" ]; then
+          brew list pandoc
+        fi
         tesseract --version
         echo "Verifying LibreOffice installation..."
         if ! soffice --version; then
           echo "Warning: soffice not available in PATH" >&2
         fi
 
+    - name: Cache Tesseract data (Linux)
+      if: runner.os == 'Linux'
+      id: cache-tesseract-linux
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/share/tesseract-ocr/5/tessdata/
+          /usr/share/tesseract-ocr/tessdata/
+        key: tesseract-data-linux-v2
+        restore-keys: |
+          tesseract-data-linux-
+
     - name: Install dependencies (Linux)
       if: runner.os == 'Linux'
       shell: bash
       run: |
         set -eo pipefail
+        SKIP_PANDOC="${{ inputs.skip-pandoc }}"
         sudo apt-get update
-        sudo apt-get install -y \
-          pandoc \
-          libreoffice \
-          libreoffice-writer \
-          libreoffice-calc \
-          libreoffice-impress \
-          tesseract-ocr \
-          tesseract-ocr-eng \
-          tesseract-ocr-tur \
-          tesseract-ocr-deu \
-          fonts-liberation \
-          fonts-dejavu-core \
-          fonts-noto-core \
-          libssl-dev \
-          pkg-config
+
+        # Build list of packages
+        PACKAGES="libreoffice libreoffice-writer libreoffice-calc libreoffice-impress tesseract-ocr tesseract-ocr-eng tesseract-ocr-tur tesseract-ocr-deu fonts-liberation fonts-dejavu-core fonts-noto-core libssl-dev pkg-config"
+
+        # Add Pandoc unless skipped
+        if [ "$SKIP_PANDOC" != "true" ]; then
+          PACKAGES="pandoc $PACKAGES"
+        else
+          echo "Skipping Pandoc installation as requested..."
+        fi
+
+        # Install dependencies
+        sudo apt-get install -y $PACKAGES
+
         echo "Verifying Linux installations..."
-        pandoc --version
+        if [ "$SKIP_PANDOC" != "true" ]; then
+          pandoc --version
+        fi
         soffice --version
         tesseract --version
         echo "Verifying Tesseract language data..."
@@ -80,30 +152,79 @@ runs:
         echo "Testing LibreOffice headless mode..."
         soffice --headless --version || echo "Warning: LibreOffice headless version check failed"
 
+    - name: Cache Tesseract (Windows)
+      if: runner.os == 'Windows'
+      id: cache-tesseract-windows
+      uses: actions/cache@v4
+      with:
+        path: C:\Program Files\Tesseract-OCR
+        key: tesseract-data-${{ runner.os }}-v2
+        restore-keys: |
+          tesseract-data-${{ runner.os }}-
+
+    - name: Cache Pandoc (Windows)
+      if: runner.os == 'Windows'
+      id: cache-pandoc-windows
+      uses: actions/cache@v4
+      with:
+        path: C:\Program Files\Pandoc
+        key: pandoc-${{ runner.os }}-v2
+        restore-keys: |
+          pandoc-${{ runner.os }}-
+
     - name: Cache LibreOffice (Windows)
       if: runner.os == 'Windows'
       id: cache-libreoffice-windows
       uses: actions/cache@v4
       with:
         path: C:\Program Files\LibreOffice
-        key: libreoffice-windows-${{ runner.os }}-v1
+        key: libreoffice-${{ runner.os }}-v2
 
     - name: Install dependencies (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
         $ErrorActionPreference = "Stop"
+        $skipPandoc = "${{ inputs.skip-pandoc }}" -eq "true"
 
-        # Check if LibreOffice is already cached
+        # Check if tools are already cached
+        $pandocCacheHit = "${{ steps.cache-pandoc-windows.outputs.cache-hit }}" -eq "true"
+        $tesseractCacheHit = "${{ steps.cache-tesseract-windows.outputs.cache-hit }}" -eq "true"
         $libreofficeInstalled = Test-Path "C:\Program Files\LibreOffice\program\soffice.exe"
 
+        # Build list of packages to install
+        $packagesToInstall = @()
+
+        if (-not $skipPandoc) {
+          if (-not $pandocCacheHit) {
+            Write-Host "Pandoc cache miss, adding to install list..."
+            $packagesToInstall += "pandoc"
+          } else {
+            Write-Host "Pandoc found in cache, skipping installation"
+          }
+        } else {
+          Write-Host "Skipping Pandoc installation as requested..."
+        }
+
+        if (-not $tesseractCacheHit) {
+          Write-Host "Tesseract cache miss, adding to install list..."
+          $packagesToInstall += "tesseract"
+        } else {
+          Write-Host "Tesseract found in cache, skipping installation"
+        }
+
         if (-not $libreofficeInstalled) {
-          Write-Host "Installing pandoc, tesseract, and LibreOffice from chocolatey..."
-          choco install -y pandoc tesseract libreoffice --no-progress
+          Write-Host "LibreOffice not found, adding to install list..."
+          $packagesToInstall += "libreoffice"
         } else {
           Write-Host "LibreOffice found in cache, skipping installation"
-          Write-Host "Installing pandoc and tesseract..."
-          choco install -y pandoc tesseract --no-progress
+        }
+
+        if ($packagesToInstall.Count -gt 0) {
+          Write-Host "Installing packages from chocolatey: $($packagesToInstall -join ', ')..."
+          choco install -y @packagesToInstall --no-progress
+        } else {
+          Write-Host "All packages found in cache, skipping installation"
         }
 
         Write-Output "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -114,6 +235,8 @@ runs:
         # Install python-magic-bin for Windows compatibility
         python -m pip install python-magic-bin
 
-        pandoc --version
+        if (-not $skipPandoc) {
+          pandoc --version
+        }
         soffice --version
         tesseract --version

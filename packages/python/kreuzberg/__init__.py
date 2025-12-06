@@ -79,6 +79,7 @@ from kreuzberg._internal_bindings import (
     unregister_ocr_backend,
     unregister_post_processor,
     unregister_validator,
+    validate_mime_type,
 )
 from kreuzberg._internal_bindings import (
     batch_extract_bytes as batch_extract_bytes_impl,
@@ -190,6 +191,7 @@ __all__ = [
     "unregister_ocr_backend",
     "unregister_post_processor",
     "unregister_validator",
+    "validate_mime_type",
 ]
 
 

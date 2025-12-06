@@ -12,7 +12,7 @@ High-performance document intelligence for .NET. Extract text, metadata, and str
 **Powered by a Rust core** – Native performance for document extraction with safe P/Invoke bindings.
 
 > **Version 4.0.0 Release Candidate**
-> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter.
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter.
 
 ## Features
 

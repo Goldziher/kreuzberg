@@ -22,8 +22,8 @@ module Kreuzberg
     # @return [String] Extracted content
     #
     def extract(path, output: 'text', ocr: false)
-      args = ['extract', path, '--output', output]
-      args << '--ocr' if ocr
+      args = ['extract', path, '--format', output]
+      args.push('--ocr', ocr ? 'true' : 'false')
       CLIProxy.call(args)
     end
 

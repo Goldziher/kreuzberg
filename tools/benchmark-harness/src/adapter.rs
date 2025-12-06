@@ -1,8 +1,8 @@
 //! Framework adapter system
 //!
 //! Adapters provide a unified interface for extracting content across different
-//! frameworks and language bindings. This allows benchmarking any extraction
-//! framework against the same test fixtures.
+//! extraction frameworks (both Kreuzberg language bindings and open source alternatives).
+//! This allows benchmarking any extraction framework against the same test fixtures.
 
 use crate::{Result, types::BenchmarkResult};
 use async_trait::async_trait;
@@ -12,7 +12,7 @@ use std::time::Duration;
 /// Unified interface for document extraction frameworks
 ///
 /// Implementations of this trait can extract content from documents using
-/// different frameworks (Kreuzberg Rust core, Python bindings, Node.js, etc.)
+/// different extraction frameworks (Kreuzberg language bindings and open source alternatives).
 #[async_trait]
 pub trait FrameworkAdapter: Send + Sync {
     /// Get the framework name (e.g., "kreuzberg-native", "kreuzberg-python")

@@ -827,7 +827,7 @@ print(f"Batch (100 files): {time.time() - start:.2f}s")
 
 - **Documentation**: [https://docs.kreuzberg.dev](https://docs.kreuzberg.dev)
 - **Examples**: See [Python API Reference](../reference/api-python.md), [TypeScript API Reference](../reference/api-typescript.md), [Rust API Reference](../reference/api-rust.md)
-- **Issues**: [GitHub Issues](https://github.com/Goldziher/kreuzberg/issues)
+- **Issues**: [GitHub Issues](https://github.com/kreuzberg-dev/kreuzberg/issues)
 - **Changelog**: [CHANGELOG.md](../changelog.md)
 
 ## Deprecation Timeline

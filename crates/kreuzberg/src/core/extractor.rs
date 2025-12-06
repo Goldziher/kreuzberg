@@ -49,8 +49,8 @@ use std::sync::Arc;
 fn record_error(error: &KreuzbergError) {
     let span = tracing::Span::current();
     span.record("otel.status_code", "ERROR");
-    span.record("error.type", &format!("{:?}", error));
-    span.record("error.message", &error.to_string());
+    span.record("error.type", format!("{:?}", error));
+    span.record("error.message", error.to_string());
 }
 
 /// Sanitize a file path to return only the filename.

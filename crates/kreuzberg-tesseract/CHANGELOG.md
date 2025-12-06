@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### About This Release
 
-This is **kreuzberg-tesseract**, a maintained version of Tesseract OCR Rust bindings based on the original [tesseract-rs](https://github.com/cafercangundogdu/tesseract-rs) by Cafer Can Gündoğdu. This release enables [kreuzberg](https://github.com/Goldziher/kreuzberg) to be published to crates.io with enhanced cross-compilation and build reliability.
+This is **kreuzberg-tesseract**, a maintained version of Tesseract OCR Rust bindings based on the original [tesseract-rs](https://github.com/cafercangundogdu/tesseract-rs) by Cafer Can Gündoğdu. This release enables [kreuzberg](https://github.com/kreuzberg-dev/kreuzberg) to be published to crates.io with enhanced cross-compilation and build reliability.
 
 ### Added
 - C++17 filesystem support for Tesseract 5.5.1 compatibility

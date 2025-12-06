@@ -1,4 +1,4 @@
 ```bash
-go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
+go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 
 ```

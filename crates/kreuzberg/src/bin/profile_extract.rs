@@ -24,10 +24,10 @@ use kreuzberg::core::extractor::extract_file_sync;
 #[cfg(not(target_os = "windows"))]
 use serde::Serialize;
 
-#[cfg(feature = "profiling")]
+#[cfg(all(feature = "profiling", not(target_os = "windows")))]
 use pprof::{ProfilerGuardBuilder, Report};
 
-#[cfg(feature = "profiling")]
+#[cfg(all(feature = "profiling", not(target_os = "windows")))]
 use std::collections::HashMap;
 
 #[cfg(all(not(target_os = "windows"), target_os = "macos"))]
@@ -389,7 +389,7 @@ fn run_profile(path: &Path, flamegraph_path: Option<PathBuf>) -> Result<ProfileO
         _ => (None, None),
     };
 
-    #[cfg(not(feature = "profiling"))]
+    #[cfg(all(not(feature = "profiling"), not(target_os = "windows")))]
     let (flamegraph_path_str, top_functions): (Option<String>, Option<Vec<FunctionSample>>) = (None, None);
 
     let peak_kb = end_rss.or(start_rss);
@@ -408,7 +408,7 @@ fn run_profile(path: &Path, flamegraph_path: Option<PathBuf>) -> Result<ProfileO
     })
 }
 
-#[cfg(feature = "profiling")]
+#[cfg(all(feature = "profiling", not(target_os = "windows")))]
 fn summarize_top_functions(report: &Report, limit: usize) -> Vec<FunctionSample> {
     let mut totals: HashMap<String, i64> = HashMap::new();
 

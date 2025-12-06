@@ -17,7 +17,7 @@ runs:
       with:
         path: |
           ${{ runner.temp }}/onnxruntime
-        key: onnx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
+        key: onnx-v2-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
 
     - name: Prepare ONNX Runtime (Linux)
       if: runner.os == 'Linux'
@@ -116,5 +116,9 @@ runs:
           "ORT_LIB_LOCATION=$OrtRoot\lib"
           "ORT_PREFER_DYNAMIC_LINK=1"
           "ORT_SKIP_DOWNLOAD=1"
+          "ORT_STRATEGY=system"
+          "RUSTFLAGS=-L $OrtRoot\lib"
+          "LIB=$OrtRoot\lib;$env:LIB"
+          "LIBRARY_PATH=$OrtRoot\lib;$env:LIBRARY_PATH"
           "PATH=$Dest;$env:PATH"
         ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

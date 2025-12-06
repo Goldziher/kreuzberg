@@ -1,5 +1,6 @@
 """Tests for CLI server commands (serve and mcp) via Python proxy."""
 
+import contextlib
 import socket
 import subprocess
 import sys
@@ -21,47 +22,45 @@ def _get_free_port() -> int:
 @pytest.mark.timeout(30)
 def test_serve_command_help() -> None:
     """Test that serve command help is accessible via Python CLI proxy."""
-    process = subprocess.Popen(
-        [sys.executable, "-m", "kreuzberg", "serve", "--help"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-
     try:
-        stdout, _ = process.communicate(timeout=20)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        stdout, _ = process.communicate()
-        raise
+        result = subprocess.run(
+            [sys.executable, "-m", "kreuzberg", "serve", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as e:
+        # If subprocess.run times out, ensure process is cleaned up
+        stdout = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout if e.stdout else "")
+        raise AssertionError(f"serve --help command timed out after 10 seconds. Output: {stdout}") from e
 
-    assert process.returncode == 0
-    assert "Start the API server" in stdout
-    assert "--host" in stdout
-    assert "--port" in stdout
-    assert "--config" in stdout
+    assert result.returncode == 0, f"Command failed with return code {result.returncode}. stderr: {result.stderr}"
+    assert "Start the API server" in result.stdout
+    assert "--host" in result.stdout
+    assert "--port" in result.stdout
+    assert "--config" in result.stdout
 
 
 @pytest.mark.timeout(30)
 def test_mcp_command_help() -> None:
     """Test that mcp command help is accessible via Python CLI proxy."""
-    process = subprocess.Popen(
-        [sys.executable, "-m", "kreuzberg", "mcp", "--help"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-
     try:
-        stdout, _ = process.communicate(timeout=20)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        stdout, _ = process.communicate()
-        raise
+        result = subprocess.run(
+            [sys.executable, "-m", "kreuzberg", "mcp", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as e:
+        # If subprocess.run times out, ensure process is cleaned up
+        stdout = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout if e.stdout else "")
+        raise AssertionError(f"mcp --help command timed out after 10 seconds. Output: {stdout}") from e
 
-    assert process.returncode == 0
-    assert "Start the MCP (Model Context Protocol) server" in stdout
-    assert "--config" in stdout
+    assert result.returncode == 0, f"Command failed with return code {result.returncode}. stderr: {result.stderr}"
+    assert "Start the MCP (Model Context Protocol) server" in result.stdout
+    assert "--config" in result.stdout
 
 
 @pytest.mark.integration
@@ -98,12 +97,15 @@ def test_serve_command_starts_and_responds() -> None:
         assert info_data["rust_backend"] is True
 
     finally:
+        # Ensure clean shutdown: terminate gracefully first, then force kill if needed
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait()
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                # Last resort: if it still hangs, leave it (OS will clean up)
+                process.wait(timeout=2)
 
 
 @pytest.mark.integration
@@ -153,12 +155,15 @@ language = "eng"
         assert response.status_code == 200
 
     finally:
+        # Ensure clean shutdown: terminate gracefully first, then force kill if needed
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait()
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                # Last resort: if it still hangs, leave it (OS will clean up)
+                process.wait(timeout=2)
 
         config_path.unlink(missing_ok=True)
 
@@ -196,9 +201,12 @@ def test_serve_command_extract_endpoint(tmp_path: Path) -> None:
         assert "Hello, Kreuzberg API!" in results[0]["content"]
 
     finally:
+        # Ensure clean shutdown: terminate gracefully first, then force kill if needed
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait()
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                # Last resort: if it still hangs, leave it (OS will clean up)
+                process.wait(timeout=2)

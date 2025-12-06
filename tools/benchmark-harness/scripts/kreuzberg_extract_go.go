@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 var debugEnabled = os.Getenv("KREUZBERG_BENCHMARK_DEBUG") != ""

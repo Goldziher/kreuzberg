@@ -2,6 +2,7 @@
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
+use crate::extraction::cells_to_markdown;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
@@ -90,70 +91,6 @@ fn extract_html_tables(html: &str) -> Result<Vec<Table>> {
     }
 
     Ok(tables)
-}
-
-/// Convert table cells to markdown format.
-///
-/// Reuses the same logic as DOCX extractor for consistency.
-/// First row is treated as header, remaining rows as data.
-///
-/// # Arguments
-/// * `cells` - 2D vector of cell strings (rows × columns)
-///
-/// # Returns
-/// * `String` - Markdown formatted table
-fn cells_to_markdown(cells: &[Vec<String>]) -> String {
-    if cells.is_empty() {
-        return String::new();
-    }
-
-    let mut markdown = String::new();
-
-    // Determine number of columns from first row
-    let num_cols = cells.first().map(|r| r.len()).unwrap_or(0);
-    if num_cols == 0 {
-        return String::new();
-    }
-
-    // Header row (first row)
-    if let Some(header) = cells.first() {
-        markdown.push_str("| ");
-        for cell in header {
-            // Escape pipe characters in cell content
-            let escaped = cell.replace('|', "\\|");
-            markdown.push_str(&escaped);
-            markdown.push_str(" | ");
-        }
-        markdown.push('\n');
-
-        // Separator row
-        markdown.push('|');
-        for _ in 0..num_cols {
-            markdown.push_str("------|");
-        }
-        markdown.push('\n');
-    }
-
-    // Data rows (skip first row as it's the header)
-    for row in cells.iter().skip(1) {
-        markdown.push_str("| ");
-        for (idx, cell) in row.iter().enumerate() {
-            if idx >= num_cols {
-                break; // Handle irregular tables
-            }
-            // Escape pipe characters in cell content
-            let escaped = cell.replace('|', "\\|");
-            markdown.push_str(&escaped);
-            markdown.push_str(" | ");
-        }
-        // Pad with empty cells if row is shorter than expected
-        for _ in row.len()..num_cols {
-            markdown.push_str(" | ");
-        }
-        markdown.push('\n');
-    }
-
-    markdown
 }
 
 impl Plugin for HtmlExtractor {
@@ -342,53 +279,6 @@ mod tests {
         // Whitespace is normalized during text extraction
         assert_eq!(table.cells[0][0], "Header Bold");
         assert_eq!(table.cells[1][0], "Data with emphasis");
-    }
-
-    #[test]
-    fn test_cells_to_markdown_basic() {
-        let cells = vec![
-            vec!["Header1".to_string(), "Header2".to_string()],
-            vec!["Row1Col1".to_string(), "Row1Col2".to_string()],
-            vec!["Row2Col1".to_string(), "Row2Col2".to_string()],
-        ];
-
-        let markdown = cells_to_markdown(&cells);
-
-        assert!(markdown.contains("| Header1 | Header2 |"));
-        assert!(markdown.contains("|------|------|"));
-        assert!(markdown.contains("| Row1Col1 | Row1Col2 |"));
-        assert!(markdown.contains("| Row2Col1 | Row2Col2 |"));
-    }
-
-    #[test]
-    fn test_cells_to_markdown_empty() {
-        let cells: Vec<Vec<String>> = vec![];
-        let markdown = cells_to_markdown(&cells);
-        assert_eq!(markdown, "");
-    }
-
-    #[test]
-    fn test_cells_to_markdown_escape_pipes() {
-        let cells = vec![vec!["Header".to_string()], vec!["Cell with | pipe".to_string()]];
-
-        let markdown = cells_to_markdown(&cells);
-        assert!(markdown.contains("Cell with \\| pipe"));
-    }
-
-    #[test]
-    fn test_cells_to_markdown_irregular_rows() {
-        let cells = vec![
-            vec!["H1".to_string(), "H2".to_string(), "H3".to_string()],
-            vec!["R1C1".to_string(), "R1C2".to_string()], // Missing third column
-            vec!["R2C1".to_string(), "R2C2".to_string(), "R2C3".to_string()],
-        ];
-
-        let markdown = cells_to_markdown(&cells);
-
-        // Should have 3 columns in header
-        assert!(markdown.contains("| H1 | H2 | H3 |"));
-        // Should pad short rows
-        assert!(markdown.contains("| R1C1 | R1C2 |  |"));
     }
 
     #[tokio::test]

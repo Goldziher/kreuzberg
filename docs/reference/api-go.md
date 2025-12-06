@@ -18,7 +18,7 @@ The Go binding exposes the same extraction capabilities as the other languages t
 Add the package to your `go.mod`:
 
 ```bash
-go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
+go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 ```
 
 Build the FFI library and set library paths:
@@ -50,7 +50,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 func main() {
@@ -76,7 +76,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 func main() {
@@ -929,7 +929,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 result, err := kreuzberg.ExtractFileSync("document.pdf", nil)
@@ -1136,7 +1136,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 //export myCustomProcessor

@@ -6,7 +6,7 @@ rust-version.workspace = true
 authors.workspace = true
 description = "C FFI bindings for Kreuzberg document intelligence library"
 license.workspace = true
-repository = "https://github.com/Goldziher/kreuzberg"
+repository = "https://github.com/kreuzberg-dev/kreuzberg"
 homepage = "https://kreuzberg.dev"
 documentation = "https://docs.rs/kreuzberg-ffi"
 readme = "README.md"
@@ -22,7 +22,7 @@ serde_json = { workspace = true }
 serde = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
-html-to-markdown-rs = { version = "2.9.2", default-features = false, optional = true }
+html-to-markdown-rs = { version = "2.11.1", default-features = false, optional = true }
 
 [build-dependencies]
 cbindgen = "0.29"

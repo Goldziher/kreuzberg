@@ -1,0 +1,149 @@
+Simple table with caption:
+
+\begin{longtable}[]{@{}rlcl@{}}
+\caption{Demonstration of simple table syntax.}\tabularnewline
+\toprule\noalign{}
+Right & Left & Center & Default \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Right & Left & Center & Default \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+12 & 12 & 12 & 12 \\
+123 & 123 & 123 & 123 \\
+1 & 1 & 1 & 1 \\
+\end{longtable}
+
+Simple table without caption:
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}rlcl@{}}
+\toprule\noalign{}
+Right & Left & Center & Default \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+12 & 12 & 12 & 12 \\
+123 & 123 & 123 & 123 \\
+1 & 1 & 1 & 1 \\
+\end{longtable}
+}
+
+Simple table indented two spaces:
+
+\begin{longtable}[]{@{}rlcl@{}}
+\caption{Demonstration of simple table syntax.}\tabularnewline
+\toprule\noalign{}
+Right & Left & Center & Default \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Right & Left & Center & Default \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+12 & 12 & 12 & 12 \\
+123 & 123 & 123 & 123 \\
+1 & 1 & 1 & 1 \\
+\end{longtable}
+
+Multiline table with caption:
+
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1375}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1625}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3500}}@{}}
+\caption{Here's the caption. It may span multiple lines.}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Centered Header
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Left Aligned
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Right Aligned
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default aligned
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Centered Header
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Left Aligned
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Right Aligned
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default aligned
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+First & row & 12.0 & Example of a row that spans multiple lines. \\
+Second & row & 5.0 & Here's another one. Note the blank line between rows. \\
+\end{longtable}
+
+Multiline table without caption:
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1375}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1625}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3500}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Centered Header
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Left Aligned
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Right Aligned
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default aligned
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+First & row & 12.0 & Example of a row that spans multiple lines. \\
+Second & row & 5.0 & Here's another one. Note the blank line between rows. \\
+\end{longtable}
+}
+
+Table without column headers:
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}rlcr@{}}
+\toprule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+12 & 12 & 12 & 12 \\
+123 & 123 & 123 & 123 \\
+1 & 1 & 1 & 1 \\
+\end{longtable}
+}
+
+Multiline table without column headers:
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1375}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.1625}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.3500}}@{}}
+\toprule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+First & row & 12.0 & Example of a row that spans multiple lines. \\
+Second & row & 5.0 & Here's another one. Note the blank line between rows. \\
+\end{longtable}
+}

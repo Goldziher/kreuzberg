@@ -90,16 +90,16 @@ Gem::Specification.new do |spec|
     Rust core. Supports extraction, OCR, chunking, and language detection for 30+ file formats
     including PDF, DOCX, PPTX, XLSX, images, and more.
   DESC
-  spec.homepage = 'https://github.com/Goldziher/kreuzberg'
+  spec.homepage = 'https://github.com/kreuzberg-dev/kreuzberg'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.2.0'
 
   spec.metadata = {
     'homepage_uri' => spec.homepage,
-    'source_code_uri' => 'https://github.com/Goldziher/kreuzberg',
-    'changelog_uri' => 'https://github.com/Goldziher/kreuzberg/blob/main/CHANGELOG.md',
+    'source_code_uri' => 'https://github.com/kreuzberg-dev/kreuzberg',
+    'changelog_uri' => 'https://github.com/kreuzberg-dev/kreuzberg/blob/main/CHANGELOG.md',
     'documentation_uri' => 'https://docs.kreuzberg.dev',
-    'bug_tracker_uri' => 'https://github.com/Goldziher/kreuzberg/issues',
+    'bug_tracker_uri' => 'https://github.com/kreuzberg-dev/kreuzberg/issues',
     'rubygems_mfa_required' => 'true',
     'keywords' => 'document-intelligence,document-extraction,ocr,rust,bindings'
   }

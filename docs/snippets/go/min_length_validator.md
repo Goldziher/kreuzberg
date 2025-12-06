@@ -7,7 +7,7 @@ import (
 	"log"
 	"unsafe"
 
-	"github.com/Goldziher/kreuzberg/packages/go/kreuzberg"
+	"github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"
 )
 
 /*

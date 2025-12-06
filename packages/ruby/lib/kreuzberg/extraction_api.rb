@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Kreuzberg
+  # Provides extraction methods for documents and text.
   module ExtractionAPI
     def extract_file_sync(path, mime_type: nil, config: nil)
       opts = normalize_config(config)

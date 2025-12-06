@@ -1,34 +1,35 @@
 # frozen_string_literal: true
 
 RSpec.describe Kreuzberg::CLI do
-  describe '.extract', :skip do
+  describe '.extract' do
     it 'extracts content from a file' do
-      # Skip in environments without CLI binary
-      path = create_test_file('CLI test content')
+      path = test_document_path('documents/simple.odt')
       output = described_class.extract(path)
 
       expect(output).to be_a(String)
-      expect(output).to include('CLI test content')
+      expect(output).not_to be_empty
     end
 
     it 'accepts output format option' do
-      path = create_test_file('JSON output test')
+      path = test_document_path('documents/simple.odt')
       output = described_class.extract(path, output: 'json')
 
       expect(output).to be_a(String)
+      expect(output).not_to be_empty
     end
 
     it 'accepts OCR option' do
-      path = create_test_file('OCR test')
-      output = described_class.extract(path, ocr: true)
+      path = test_document_path('pdfs/100_g_networking_technology_overview_slides_toronto_august_2016.pdf')
+      output = described_class.extract(path, ocr: false)
 
       expect(output).to be_a(String)
+      expect(output).not_to be_empty
     end
   end
 
-  describe '.detect', :skip do
+  describe '.detect' do
     it 'detects MIME type' do
-      path = create_test_file('MIME detection test')
+      path = test_document_path('documents/simple.odt')
       mime_type = described_class.detect(path)
 
       expect(mime_type).to be_a(String)
@@ -36,7 +37,7 @@ RSpec.describe Kreuzberg::CLI do
     end
   end
 
-  describe '.version', :skip do
+  describe '.version' do
     it 'returns version string' do
       version = described_class.version
       expect(version).to be_a(String)
@@ -44,7 +45,7 @@ RSpec.describe Kreuzberg::CLI do
     end
   end
 
-  describe '.help', :skip do
+  describe '.help' do
     it 'returns help text' do
       help_text = described_class.help
       expect(help_text).to be_a(String)

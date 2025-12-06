@@ -117,6 +117,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(detect_mime_type_from_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(detect_mime_type_from_path, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_mime_type, m)?)?;
     m.add_function(wrap_pyfunction!(get_extensions_for_mime, m)?)?;
     m.add_function(wrap_pyfunction!(get_last_error_code, m)?)?;
     m.add_function(wrap_pyfunction!(get_last_panic_context, m)?)?;
@@ -268,6 +269,32 @@ fn detect_mime_type_from_bytes(data: &[u8]) -> PyResult<String> {
 #[pyfunction]
 fn detect_mime_type_from_path(path: &str) -> PyResult<String> {
     kreuzberg::detect_mime_type(path, true).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+}
+
+/// Validate and normalize a MIME type.
+///
+/// Checks if the provided MIME type is supported. Accepts specific supported types
+/// and all image/* types.
+///
+/// Args:
+///     mime_type (str): MIME type to validate (e.g., "application/pdf", "image/png")
+///
+/// Returns:
+///     str: Normalized MIME type string
+///
+/// Raises:
+///     RuntimeError: If the MIME type is not supported
+///
+/// Example:
+///     >>> from kreuzberg import validate_mime_type
+///     >>> normalized = validate_mime_type("application/pdf")
+///     >>> assert normalized == "application/pdf"
+///     >>> # Image types are always supported
+///     >>> custom_image = validate_mime_type("image/custom")
+///     >>> assert custom_image == "image/custom"
+#[pyfunction]
+fn validate_mime_type(mime_type: &str) -> PyResult<String> {
+    kreuzberg::validate_mime_type(mime_type).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
 }
 
 /// Get file extensions for a MIME type.

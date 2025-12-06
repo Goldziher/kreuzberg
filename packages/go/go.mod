@@ -1,3 +1,3 @@
-module github.com/Goldziher/kreuzberg/packages/go
+module github.com/kreuzberg-dev/kreuzberg/packages/go
 
 go 1.25

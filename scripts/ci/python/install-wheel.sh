@@ -6,20 +6,31 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# scripts/ci/python lives three levels below repo root
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+
+# Validate REPO_ROOT is correct by checking for Cargo.toml
+if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
+	echo "Error: REPO_ROOT validation failed. Expected Cargo.toml at: $REPO_ROOT/Cargo.toml" >&2
+	echo "REPO_ROOT resolved to: $REPO_ROOT" >&2
+	exit 1
+fi
+
+cd "$REPO_ROOT"
+
 echo "=== Installing wheel for current platform ==="
 
-if ls dist/kreuzberg-*-manylinux*.whl 1> /dev/null 2>&1; then
-    echo "Found manylinux wheel"
-    python -m pip install dist/kreuzberg-*-manylinux*.whl
-elif ls dist/kreuzberg-*-macos*.whl 1> /dev/null 2>&1; then
-    echo "Found macOS wheel"
-    python -m pip install dist/kreuzberg-*-macos*.whl
-elif ls dist/kreuzberg-*-win_amd64.whl 1> /dev/null 2>&1; then
-    echo "Found Windows wheel"
-    python -m pip install dist/kreuzberg-*-win_amd64.whl
-else
-    echo "Installing generic wheel"
-    python -m pip install dist/kreuzberg-*.whl
+# Find first matching wheel regardless of platform-specific suffix
+wheel_path="$(find dist -maxdepth 1 -name "kreuzberg-*.whl" -print -quit 2>/dev/null || true)"
+
+if [ -z "$wheel_path" ]; then
+	echo "No wheel found in dist/. Contents:"
+	ls -l dist || true
+	exit 1
 fi
+
+echo "Installing wheel: $wheel_path"
+python -m pip install "$wheel_path"
 
 echo "Wheel installation complete"
