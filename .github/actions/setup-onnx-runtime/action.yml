@@ -17,7 +17,7 @@ runs:
       with:
         path: |
           ${{ runner.temp }}/onnxruntime
-        key: onnx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
+        key: onnx-v2-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
 
     - name: Prepare ONNX Runtime (Linux)
       if: runner.os == 'Linux'

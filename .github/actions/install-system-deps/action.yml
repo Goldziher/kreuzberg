@@ -9,7 +9,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: /usr/local/opt/tesseract/share/tessdata/
-        key: tesseract-data-${{ runner.os }}-v1
+        key: tesseract-data-${{ runner.os }}-v2
         restore-keys: |
           tesseract-data-${{ runner.os }}-
 
@@ -19,7 +19,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: /usr/local/opt/pandoc/
-        key: pandoc-${{ runner.os }}-v1
+        key: pandoc-${{ runner.os }}-v2
         restore-keys: |
           pandoc-${{ runner.os }}-
 
@@ -29,7 +29,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: /Applications/LibreOffice.app
-        key: libreoffice-${{ runner.os }}-v1
+        key: libreoffice-${{ runner.os }}-v2
 
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
@@ -73,27 +73,9 @@ runs:
         path: |
           /usr/share/tesseract-ocr/5/tessdata/
           /usr/share/tesseract-ocr/tessdata/
-        key: tesseract-data-linux-v1
+        key: tesseract-data-linux-v2
         restore-keys: |
           tesseract-data-linux-
-
-    - name: Cache Pandoc (Linux)
-      if: runner.os == 'Linux'
-      id: cache-pandoc-linux
-      uses: actions/cache@v4
-      with:
-        path: /usr/bin/pandoc
-        key: pandoc-${{ runner.os }}-v1
-        restore-keys: |
-          pandoc-${{ runner.os }}-
-
-    - name: Cache LibreOffice packages (Linux)
-      if: runner.os == 'Linux'
-      id: cache-libreoffice-linux
-      uses: actions/cache@v4
-      with:
-        path: /var/cache/apt/archives
-        key: libreoffice-${{ runner.os }}-v1
 
     - name: Install dependencies (Linux)
       if: runner.os == 'Linux'
@@ -102,18 +84,9 @@ runs:
         set -eo pipefail
         sudo apt-get update
 
-        # Install Pandoc only if not cached
-        if [ "${{ steps.cache-pandoc-linux.outputs.cache-hit }}" != "true" ]; then
-          echo "Pandoc cache miss, installing..."
-          PACKAGES_TO_INSTALL="pandoc"
-        else
-          echo "Pandoc found in cache, skipping installation"
-          PACKAGES_TO_INSTALL=""
-        fi
-
-        # Always install other dependencies
+        # Install dependencies (Pandoc caching disabled due to tar extraction issues with absolute paths)
         sudo apt-get install -y \
-          $PACKAGES_TO_INSTALL \
+          pandoc \
           libreoffice \
           libreoffice-writer \
           libreoffice-calc \
@@ -171,7 +144,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: C:\Program Files\Tesseract-OCR
-        key: tesseract-data-${{ runner.os }}-v1
+        key: tesseract-data-${{ runner.os }}-v2
         restore-keys: |
           tesseract-data-${{ runner.os }}-
 
@@ -181,7 +154,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: C:\Program Files\Pandoc
-        key: pandoc-${{ runner.os }}-v1
+        key: pandoc-${{ runner.os }}-v2
         restore-keys: |
           pandoc-${{ runner.os }}-
 
@@ -191,7 +164,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: C:\Program Files\LibreOffice
-        key: libreoffice-${{ runner.os }}-v1
+        key: libreoffice-${{ runner.os }}-v2
 
     - name: Install dependencies (Windows)
       if: runner.os == 'Windows'

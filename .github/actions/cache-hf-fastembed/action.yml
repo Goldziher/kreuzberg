@@ -27,10 +27,10 @@ runs:
           ~/.cache/huggingface
           ~/Library/Caches/huggingface
           ~\AppData\Local\huggingface
-        key: hf-models-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache-key-suffix }}
+        key: hf-models-v2-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache-key-suffix }}
         restore-keys: |
-          hf-models-${{ runner.os }}-${{ runner.arch }}-
-          hf-models-${{ runner.os }}-
+          hf-models-v2-${{ runner.os }}-${{ runner.arch }}-
+          hf-models-v2-${{ runner.os }}-
 
     - name: Prefetch fastembed models
       if: inputs.prefetch == 'true'

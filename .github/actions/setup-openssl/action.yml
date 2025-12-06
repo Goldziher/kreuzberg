@@ -10,7 +10,7 @@ runs:
       with:
         path: |
           /home/runner/.cache/openssl-build
-        key: openssl-${{ runner.os }}-${{ hashFiles('/usr/bin/pkg-config', '/usr/bin/gcc') }}-v1
+        key: openssl-${{ runner.os }}-${{ hashFiles('/usr/bin/pkg-config', '/usr/bin/gcc') }}-v2
         restore-keys: |
           openssl-${{ runner.os }}-
 
@@ -59,7 +59,7 @@ runs:
       id: cache-macos
       with:
         path: /usr/local/opt/openssl@3/
-        key: openssl-${{ runner.os }}-${{ hashFiles('/usr/bin/gcc') }}-v1
+        key: openssl-${{ runner.os }}-${{ hashFiles('/usr/bin/gcc') }}-v2
         restore-keys: |
           openssl-${{ runner.os }}-
 
@@ -97,7 +97,7 @@ runs:
         path: |
           C:\Program Files\OpenSSL-Win64
           C:\Program Files\OpenSSL
-        key: openssl-${{ runner.os }}-${{ hashFiles('C:\Program Files\Git\cmd\git.exe') }}-v1
+        key: openssl-${{ runner.os }}-${{ hashFiles('C:\Program Files\Git\cmd\git.exe') }}-v2
         restore-keys: |
           openssl-${{ runner.os }}-
 
