@@ -27,7 +27,13 @@ pub mod excel;
 pub mod html;
 
 #[cfg(feature = "office")]
+pub mod bibtex;
+
+#[cfg(feature = "office")]
 pub mod docx;
+
+#[cfg(feature = "office")]
+pub mod markdown;
 
 #[cfg(feature = "office")]
 pub mod pandoc;
@@ -37,6 +43,9 @@ pub mod pdf;
 
 #[cfg(feature = "office")]
 pub mod pptx;
+
+#[cfg(feature = "office")]
+pub mod typst;
 
 #[cfg(feature = "xml")]
 pub mod xml;
@@ -60,7 +69,13 @@ pub use excel::ExcelExtractor;
 pub use html::HtmlExtractor;
 
 #[cfg(feature = "office")]
+pub use bibtex::BibtexExtractor;
+
+#[cfg(feature = "office")]
 pub use docx::DocxExtractor;
+
+#[cfg(feature = "office")]
+pub use markdown::MarkdownExtractor as EnhancedMarkdownExtractor;
 
 #[cfg(feature = "office")]
 pub use pandoc::PandocExtractor;
@@ -70,6 +85,9 @@ pub use pdf::PdfExtractor;
 
 #[cfg(feature = "office")]
 pub use pptx::PptxExtractor;
+
+#[cfg(feature = "office")]
+pub use typst::TypstExtractor;
 
 #[cfg(feature = "xml")]
 pub use xml::XmlExtractor;
@@ -153,9 +171,12 @@ pub fn register_default_extractors() -> Result<()> {
 
     #[cfg(feature = "office")]
     {
+        registry.register(Arc::new(EnhancedMarkdownExtractor::new()))?;
+        registry.register(Arc::new(BibtexExtractor::new()))?;
         registry.register(Arc::new(DocxExtractor::new()))?;
         registry.register(Arc::new(PptxExtractor::new()))?;
         registry.register(Arc::new(PandocExtractor::new()))?;
+        registry.register(Arc::new(TypstExtractor::new()))?;
     }
 
     #[cfg(feature = "email")]
@@ -227,10 +248,13 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 3;
+            expected_count += 5;
+            assert!(extractor_names.contains(&"markdown-extractor".to_string()));
+            assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
             assert!(extractor_names.contains(&"pptx-extractor".to_string()));
             assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
+            assert!(extractor_names.contains(&"typst-extractor".to_string()));
         }
 
         #[cfg(feature = "email")]
