@@ -57,7 +57,7 @@ uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 target-version = "py310"
 line-length = 120
 src = [ "packages/python/*" ]
-extend-exclude = [ "benchmarks", "crates", "scripts", "v3" ]
+extend-exclude = [ "benchmarks", "crates", "scripts", "test_documents", "v3" ]
 format.docstring-code-line-length = 120
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
