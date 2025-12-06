@@ -28,6 +28,21 @@ if ($IsWindowsOS) {
     # NASM required by ring pregenerated objects
     $env:NASM = "nasm"
 
+    # Set target-specific environment variables for cc crate
+    # The cc crate checks both hyphen and underscore variants
+    # This prevents auto-detection from picking MSVC tools on Windows
+    $env:CC_x86_64_pc_windows_gnu = "gcc"
+    $env:AR_x86_64_pc_windows_gnu = "ar"
+    $env:RANLIB_x86_64_pc_windows_gnu = "ranlib"
+    $env:"CC_x86_64-pc-windows-gnu" = "gcc"
+    $env:"AR_x86_64-pc-windows-gnu" = "ar"
+    $env:"RANLIB_x86_64-pc-windows-gnu" = "ranlib"
+
+    # Also set CXX for C++ code
+    $env:CXX = "g++"
+    $env:CXX_x86_64_pc_windows_gnu = "g++"
+    $env:"CXX_x86_64-pc-windows-gnu" = "g++"
+
     Write-Host "Using MSYS2 UCRT toolchain (from PATH):"
     & gcc --version
     Write-Host "NASM version:"
