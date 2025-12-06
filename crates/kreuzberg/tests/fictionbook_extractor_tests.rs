@@ -224,3 +224,57 @@ async fn test_fictionbook_pandoc_baseline_emphasis() {
         );
     }
 }
+
+#[tokio::test]
+async fn test_fictionbook_markdown_formatting_preservation() {
+    let extractor = kreuzberg::extractors::FictionBookExtractor::new();
+    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/emphasis.fb2");
+
+    let result = extractor
+        .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
+        .await
+        .expect("Failed to extract FB2 file");
+
+    // Verify markdown formatting is preserved in the output
+    assert!(
+        result.content.contains("**strong**"),
+        "Strong text should be formatted as **bold** in markdown"
+    );
+    assert!(
+        result.content.contains("*emphasis*"),
+        "Emphasis text should be formatted as *italic* in markdown"
+    );
+    assert!(
+        result.content.contains("~~deleted~~"),
+        "Strikethrough text should be formatted as ~~strikethrough~~ in markdown"
+    );
+    assert!(
+        result.content.contains("`code`"),
+        "Code text should be wrapped in backticks in markdown"
+    );
+}
+
+#[tokio::test]
+async fn test_fictionbook_formatting_in_body_paragraphs() {
+    let extractor = kreuzberg::extractors::FictionBookExtractor::new();
+    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/basic.fb2");
+
+    let result = extractor
+        .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
+        .await
+        .expect("Failed to extract FB2 file");
+
+    // Verify formatting is preserved in body content
+    assert!(
+        result.content.contains("*emphasized*"),
+        "Emphasis formatting should be preserved in body content"
+    );
+    assert!(
+        result.content.contains("**strong**"),
+        "Strong formatting should be preserved in body content"
+    );
+    assert!(
+        result.content.contains("`verbatim`"),
+        "Code formatting should be preserved in body content"
+    );
+}

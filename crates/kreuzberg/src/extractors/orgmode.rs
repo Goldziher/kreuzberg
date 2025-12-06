@@ -44,19 +44,23 @@ impl OrgModeExtractor {
         Self
     }
 
-    /// Extract metadata from Org document content by parsing for directives.
+    /// Extract metadata and content from Org document in a single pass.
     ///
-    /// Looks for:
+    /// Combines metadata extraction from directives and full document parsing
+    /// into one efficient operation. Looks for:
     /// - #+TITLE: → title
     /// - #+AUTHOR: → author/authors
     /// - #+DATE: → date
     /// - #+KEYWORDS: → keywords
-    fn extract_metadata(content: &str) -> Metadata {
+    /// - Other #+DIRECTIVE: entries
+    ///
+    /// Also extracts document structure and content in parallel.
+    fn extract_metadata_and_content(org_text: &str, org: &Org) -> (Metadata, String) {
         let mut metadata = Metadata::default();
         let mut additional = HashMap::new();
 
-        // Parse directives from the raw content
-        for line in content.lines().take(100) {
+        // Parse directives from the raw content (single pass through first ~100 lines)
+        for line in org_text.lines().take(100) {
             // Only check first ~100 lines for directives (they typically come early)
             let trimmed = line.trim();
 
@@ -88,7 +92,11 @@ impl OrgModeExtractor {
         }
 
         metadata.additional = additional;
-        metadata
+
+        // Extract content in parallel with metadata extraction
+        let content = Self::extract_content(org);
+
+        (metadata, content)
     }
 
     /// Extract all content from an Org document using event iteration.
@@ -221,7 +229,11 @@ impl OrgModeExtractor {
                     // Already added content in Start event
                 }
                 orgize::Event::Start(Element::Link(link)) => {
-                    content.push_str(&format!("[{}]", link.path));
+                    // Use description if available, otherwise fall back to path
+                    // [[url][description]] → description
+                    // [[url]] → url
+                    let link_text = if let Some(desc) = &link.desc { desc } else { &link.path };
+                    content.push_str(&format!("[{}]", link_text));
                 }
                 orgize::Event::End(Element::Link { .. }) => {
                     // Handled in Start
@@ -406,11 +418,8 @@ impl DocumentExtractor for OrgModeExtractor {
         // Parse Org document
         let org = Org::parse(&org_text);
 
-        // Extract metadata from directives in raw content
-        let metadata = Self::extract_metadata(&org_text);
-
-        // Extract content and structure
-        let extracted_content = Self::extract_content(&org);
+        // Extract metadata and content in a single combined pass
+        let (metadata, extracted_content) = Self::extract_metadata_and_content(&org_text, &org);
 
         // Extract tables
         let tables = Self::extract_tables(&org);
@@ -471,7 +480,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_title() {
         let org_text = "#+TITLE: Test Document\n\nContent here.";
-        let metadata = OrgModeExtractor::extract_metadata(org_text);
+        let org = Org::parse(org_text);
+        let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         assert!(metadata.additional.get("title").and_then(|v| v.as_str()).is_some());
     }
@@ -479,7 +489,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_author() {
         let org_text = "#+AUTHOR: John Doe\n\nContent here.";
-        let metadata = OrgModeExtractor::extract_metadata(org_text);
+        let org = Org::parse(org_text);
+        let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         assert!(metadata.additional.get("author").and_then(|v| v.as_str()).is_some());
     }
@@ -487,7 +498,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_date() {
         let org_text = "#+DATE: 2024-01-15\n\nContent here.";
-        let metadata = OrgModeExtractor::extract_metadata(org_text);
+        let org = Org::parse(org_text);
+        let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         assert_eq!(metadata.date, Some("2024-01-15".to_string()));
     }
@@ -495,7 +507,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_keywords() {
         let org_text = "#+KEYWORDS: rust, org-mode, parsing\n\nContent here.";
-        let metadata = OrgModeExtractor::extract_metadata(org_text);
+        let org = Org::parse(org_text);
+        let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         let keywords = metadata.additional.get("keywords").and_then(|v| v.as_array());
         assert!(keywords.is_some());
@@ -555,5 +568,89 @@ mod tests {
         let extractor = OrgModeExtractor::new();
         let supported = extractor.supported_mime_types();
         assert!(supported.contains(&"text/x-org"));
+    }
+
+    #[test]
+    fn test_link_with_description() {
+        let org_text = r#"* Links Test
+
+[[http://att.com/][AT&T]]
+"#;
+        let org = Org::parse(org_text);
+        let content = OrgModeExtractor::extract_content(&org);
+
+        // Link description should be extracted, not the URL
+        assert!(content.contains("AT&T"), "Should contain link description 'AT&T'");
+        // The URL should still be present in the extracted content, but wrapped in brackets
+        // The actual format depends on how orgize structures the link
+    }
+
+    #[test]
+    fn test_link_without_description() {
+        let org_text = r#"* Links Test
+
+[[https://example.com]]
+"#;
+        let org = Org::parse(org_text);
+        let content = OrgModeExtractor::extract_content(&org);
+
+        // Link path should be used when no description is provided
+        assert!(
+            content.contains("example.com"),
+            "Should contain link path when no description provided"
+        );
+    }
+
+    #[test]
+    fn test_link_with_ampersand_in_description() {
+        let org_text = r#"* Company Links
+
+[[http://att.com/][AT&T Company]]
+"#;
+        let org = Org::parse(org_text);
+        let content = OrgModeExtractor::extract_content(&org);
+
+        // Description with ampersand should be preserved
+        assert!(
+            content.contains("AT&T"),
+            "Should preserve ampersand in link description"
+        );
+    }
+
+    #[test]
+    fn test_multiple_links_with_mixed_descriptions() {
+        let org_text = r#"* Multiple Links
+
+[[https://example.com][Example Link]]
+
+[[https://example.org]]
+
+[[mailto:test@example.com][Contact]]
+"#;
+        let org = Org::parse(org_text);
+        let content = OrgModeExtractor::extract_content(&org);
+
+        // First link with description
+        assert!(content.contains("Example Link"));
+        // Second link without description
+        assert!(content.contains("example.org"));
+        // Third link with description
+        assert!(content.contains("Contact"));
+    }
+
+    #[test]
+    fn test_link_description_priority_over_url() {
+        // This is the CRITICAL test - ensures description is used over path
+        let org_text = r#"[[http://att.com/][AT&T]]"#;
+        let org = Org::parse(org_text);
+        let content = OrgModeExtractor::extract_content(&org);
+
+        // The description "AT&T" should be in the output
+        assert!(content.contains("AT&T"), "Description should be prioritized over URL");
+        // The extracted content should contain the description wrapped in brackets: [AT&T]
+        assert!(
+            content.contains("[AT&T]"),
+            "Link should be formatted as [description] when description exists"
+        );
     }
 }

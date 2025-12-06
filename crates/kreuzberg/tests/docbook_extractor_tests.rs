@@ -317,3 +317,180 @@ async fn test_docbook_empty_sections() {
     assert!(result.content.contains("Section with Content"));
     assert!(result.content.contains("Content here"));
 }
+
+#[tokio::test]
+async fn test_docbook_itemized_list() {
+    let docbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+<article>
+  <title>List Test</title>
+  <itemizedlist>
+    <listitem>
+      <para>First item</para>
+    </listitem>
+    <listitem>
+      <para>Second item</para>
+    </listitem>
+    <listitem>
+      <para>Third item</para>
+    </listitem>
+  </itemizedlist>
+</article>"#;
+
+    let result = extract_docbook_bytes(docbook.as_bytes(), "application/docbook+xml").await;
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert!(result.content.contains("First item"));
+    assert!(result.content.contains("Second item"));
+    assert!(result.content.contains("Third item"));
+    assert!(result.content.contains("- "), "Should contain bullet points");
+}
+
+#[tokio::test]
+async fn test_docbook_ordered_list() {
+    let docbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+<article>
+  <title>Ordered List Test</title>
+  <orderedlist>
+    <listitem>
+      <para>First step</para>
+    </listitem>
+    <listitem>
+      <para>Second step</para>
+    </listitem>
+    <listitem>
+      <para>Third step</para>
+    </listitem>
+  </orderedlist>
+</article>"#;
+
+    let result = extract_docbook_bytes(docbook.as_bytes(), "application/docbook+xml").await;
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert!(result.content.contains("First step"));
+    assert!(result.content.contains("Second step"));
+    assert!(result.content.contains("Third step"));
+    assert!(result.content.contains("1. "), "Should contain numbered list");
+}
+
+#[tokio::test]
+async fn test_docbook_blockquote() {
+    let docbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+<article>
+  <title>Blockquote Test</title>
+  <blockquote>
+    <para>This is a quoted passage.</para>
+  </blockquote>
+</article>"#;
+
+    let result = extract_docbook_bytes(docbook.as_bytes(), "application/docbook+xml").await;
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert!(result.content.contains("quoted passage"));
+    assert!(result.content.contains("> "), "Should contain blockquote marker");
+}
+
+#[tokio::test]
+async fn test_docbook_figure() {
+    let docbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+<article>
+  <title>Figure Test</title>
+  <figure>
+    <title>Sample Figure</title>
+    <para>This is a figure description.</para>
+  </figure>
+</article>"#;
+
+    let result = extract_docbook_bytes(docbook.as_bytes(), "application/docbook+xml").await;
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert!(result.content.contains("Figure"));
+}
+
+#[tokio::test]
+async fn test_docbook_footnote() {
+    let docbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+<article>
+  <title>Footnote Test</title>
+  <para>Here is some text with a footnote<footnote><para>This is the footnote content</para></footnote>.</para>
+</article>"#;
+
+    let result = extract_docbook_bytes(docbook.as_bytes(), "application/docbook+xml").await;
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert!(result.content.contains("text with a footnote"));
+    assert!(result.content.contains("footnote content"));
+}
+
+#[tokio::test]
+async fn test_docbook_mixed_content_with_lists() {
+    let docbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+<article>
+  <title>Mixed Content</title>
+  <para>Introduction paragraph.</para>
+  <itemizedlist>
+    <listitem>
+      <para>List item 1</para>
+    </listitem>
+    <listitem>
+      <para>List item 2</para>
+    </listitem>
+  </itemizedlist>
+  <para>Conclusion paragraph.</para>
+  <programlisting>
+code example
+  </programlisting>
+</article>"#;
+
+    let result = extract_docbook_bytes(docbook.as_bytes(), "application/docbook+xml").await;
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert!(result.content.contains("Introduction paragraph"));
+    assert!(result.content.contains("List item 1"));
+    assert!(result.content.contains("List item 2"));
+    assert!(result.content.contains("Conclusion paragraph"));
+    assert!(result.content.contains("code example"));
+}
+
+#[tokio::test]
+async fn test_docbook_namespaced_lists() {
+    let docbook5 = r#"<?xml version="1.0" encoding="UTF-8"?>
+<article xmlns="http://docbook.org/ns/docbook">
+  <info>
+    <title>Lists in DocBook 5</title>
+  </info>
+  <itemizedlist>
+    <listitem>
+      <para>Namespaced item 1</para>
+    </listitem>
+    <listitem>
+      <para>Namespaced item 2</para>
+    </listitem>
+  </itemizedlist>
+</article>"#;
+
+    let result = extract_docbook_bytes(docbook5.as_bytes(), "application/docbook+xml").await;
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert!(result.content.contains("Namespaced item 1"));
+    assert!(result.content.contains("Namespaced item 2"));
+    assert!(result.content.contains("- "));
+}

@@ -442,13 +442,13 @@ This is content after properties.
 // SECTION 8: LINK EXTRACTION TESTS
 // ============================================================================
 
-/// Test 9: Link syntax extraction
+/// Test 9: Link syntax extraction with description priority
 ///
 /// Validates:
 /// - [[url]] syntax is recognized
-/// - [[url][description]] syntax is extracted
+/// - [[url][description]] syntax extracts description (not url)
 /// - Internal links [[*heading]] are handled
-/// - Link text is preserved
+/// - Link text is preserved (description when available)
 #[tokio::test]
 async fn test_orgmode_links() {
     if skip_if_no_pandoc().await {
@@ -467,9 +467,10 @@ async fn test_orgmode_links() {
         .await
         .expect("Should extract links from Org Mode");
 
-    // Links should be present (URLs are extracted, descriptions may vary based on Pandoc)
-    assert_contains_ci(&result.content, "example.com", "Should contain example.com from links");
-    assert_contains_ci(&result.content, "att.com", "Should contain att.com URL");
+    // Links with descriptions should extract the description (not the URL)
+    assert_contains_ci(&result.content, "AT&T", "Should contain AT&T link description");
+    assert_contains_ci(&result.content, "URL", "Should contain 'URL' link description");
+    assert_contains_ci(&result.content, "email", "Should contain 'email' link description");
     assert_contains_ci(&result.content, "ampersand", "Should contain ampersand reference");
     assert_contains_ci(&result.content, "Links", "Should contain Links section header");
 
@@ -934,8 +935,12 @@ async fn test_orgmode_comprehensive_document() {
     assert_contains_ci(&result.content, "Block Quotes", "Should contain Block Quotes section");
     assert_contains_ci(&result.content, "Level 2", "Should contain Level 2 heading");
     assert_contains_ci(&result.content, "emphasis", "Should contain emphasis/formatted text");
-    assert_contains_ci(&result.content, "example.com", "Should contain example.com links");
-    assert_contains_ci(&result.content, "att.com", "Should contain att.com link");
+    assert_contains_ci(
+        &result.content,
+        "embedded link",
+        "Should contain 'embedded link' link description",
+    );
+    assert_contains_ci(&result.content, "AT&T", "Should contain AT&T link description");
     assert_contains_ci(&result.content, "special", "Should contain special characters section");
 
     println!("✅ Org Mode comprehensive document test passed!");

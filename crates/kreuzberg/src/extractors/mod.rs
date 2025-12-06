@@ -63,6 +63,9 @@ pub mod odt;
 #[cfg(feature = "office")]
 pub mod opml;
 
+#[cfg(feature = "office")]
+pub mod typst;
+
 #[cfg(feature = "xml")]
 pub mod jats;
 
@@ -137,6 +140,9 @@ pub use jats::JatsExtractor;
 
 #[cfg(feature = "office")]
 pub use opml::OpmlExtractor;
+
+#[cfg(feature = "office")]
+pub use typst::TypstExtractor;
 
 #[cfg(feature = "pdf")]
 pub use pdf::PdfExtractor;
@@ -245,6 +251,7 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(JupyterExtractor::new()))?;
         registry.register(Arc::new(OrgModeExtractor::new()))?;
         registry.register(Arc::new(OpmlExtractor::new()))?;
+        registry.register(Arc::new(TypstExtractor::new()))?;
     }
 
     #[cfg(feature = "pandoc-fallback")]
@@ -321,8 +328,8 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            // Office adds 12 unique extractors (EnhancedMarkdownExtractor has same name as core, so it replaces it)
-            expected_count += 12;
+            // Office adds 13 unique extractors (EnhancedMarkdownExtractor has same name as core, so it replaces it)
+            expected_count += 13;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
             assert!(extractor_names.contains(&"docx-extractor".to_string()));
@@ -336,6 +343,7 @@ mod tests {
             assert!(extractor_names.contains(&"jupyter-extractor".to_string()));
             assert!(extractor_names.contains(&"orgmode-extractor".to_string()));
             assert!(extractor_names.contains(&"opml-extractor".to_string()));
+            assert!(extractor_names.contains(&"typst-extractor".to_string()));
         }
 
         #[cfg(feature = "pandoc-fallback")]

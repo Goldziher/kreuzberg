@@ -34,6 +34,103 @@ impl FictionBookExtractor {
         Self
     }
 
+    /// Extract paragraph content with markdown formatting preservation.
+    /// Handles inline formatting tags like emphasis (*), strong (**), strikethrough (~~), etc.
+    fn extract_paragraph_content(reader: &mut Reader<&[u8]>) -> Result<String> {
+        let mut text = String::new();
+        let mut para_depth = 0;
+
+        loop {
+            match reader.read_event() {
+                Ok(Event::Start(e)) => {
+                    let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    match tag.as_str() {
+                        "emphasis" => {
+                            text.push('*');
+                        }
+                        "strong" => {
+                            text.push_str("**");
+                        }
+                        "strikethrough" => {
+                            text.push_str("~~");
+                        }
+                        "code" => {
+                            text.push('`');
+                        }
+                        "sub" => {
+                            text.push('~');
+                        }
+                        "sup" => {
+                            text.push('^');
+                        }
+                        "a" | "empty-line" => {
+                            // Links and empty lines - just continue
+                        }
+                        _ => {}
+                    }
+                    para_depth += 1;
+                }
+                Ok(Event::End(e)) => {
+                    let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    match tag.as_str() {
+                        "p" if para_depth == 1 => {
+                            // End of paragraph
+                            break;
+                        }
+                        "emphasis" => {
+                            text.push('*');
+                        }
+                        "strong" => {
+                            text.push_str("**");
+                        }
+                        "strikethrough" => {
+                            text.push_str("~~");
+                        }
+                        "code" => {
+                            text.push('`');
+                        }
+                        "sub" => {
+                            text.push('~');
+                        }
+                        "sup" => {
+                            text.push('^');
+                        }
+                        _ => {}
+                    }
+                    if para_depth > 0 {
+                        para_depth -= 1;
+                    }
+                }
+                Ok(Event::Text(t)) => {
+                    let decoded = String::from_utf8_lossy(t.as_ref()).to_string();
+                    let trimmed = decoded.trim();
+                    if !trimmed.is_empty() {
+                        if !text.is_empty()
+                            && !text.ends_with(' ')
+                            && !text.ends_with('*')
+                            && !text.ends_with('`')
+                            && !text.ends_with('~')
+                            && !text.ends_with('^')
+                        {
+                            text.push(' ');
+                        }
+                        text.push_str(trimmed);
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(e) => {
+                    return Err(crate::error::KreuzbergError::parsing(format!(
+                        "XML parsing error: {}",
+                        e
+                    )));
+                }
+                _ => {}
+            }
+        }
+
+        Ok(text.trim().to_string())
+    }
+
     /// Extract text content from a FictionBook element and its children.
     fn extract_text_content(reader: &mut Reader<&[u8]>) -> Result<String> {
         let mut text = String::new();
@@ -77,7 +174,7 @@ impl FictionBookExtractor {
                     }
                 }
                 Ok(Event::CData(t)) => {
-                    let decoded = std::str::from_utf8(t.as_ref()).unwrap_or("").to_string();
+                    let decoded = String::from_utf8_lossy(t.as_ref()).to_string();
                     if !decoded.trim().is_empty() {
                         if !text.is_empty() && !text.ends_with('\n') {
                             text.push('\n');
@@ -212,42 +309,13 @@ impl FictionBookExtractor {
                             _ => {}
                         }
                     } else if tag == "p" && in_body && !skip_notes_body {
-                        // Extract paragraph content
-                        let mut para = String::new();
-                        let mut para_depth = 0;
-
-                        loop {
-                            match reader.read_event() {
-                                Ok(Event::Start(_)) => {
-                                    para_depth += 1;
-                                }
-                                Ok(Event::End(pe)) => {
-                                    let ptag = String::from_utf8_lossy(pe.name().as_ref()).to_string();
-                                    if ptag == "p" && para_depth == 0 {
-                                        break;
-                                    }
-                                    if para_depth > 0 {
-                                        para_depth -= 1;
-                                    }
-                                }
-                                Ok(Event::Text(t)) => {
-                                    let text = String::from_utf8_lossy(t.as_ref()).to_string();
-                                    if !text.trim().is_empty() {
-                                        if !para.is_empty() {
-                                            para.push(' ');
-                                        }
-                                        para.push_str(text.trim());
-                                    }
-                                }
-                                Ok(Event::Eof) => break,
-                                Err(_) => break,
-                                _ => {}
+                        // Extract paragraph content with formatting preservation
+                        match Self::extract_paragraph_content(&mut reader) {
+                            Ok(para) if !para.is_empty() => {
+                                content.push_str(&para);
+                                content.push('\n');
                             }
-                        }
-
-                        if !para.trim().is_empty() {
-                            content.push_str(para.trim());
-                            content.push('\n');
+                            _ => {}
                         }
                     } else if tag == "title" && in_body {
                         // Extract title from body
@@ -300,44 +368,13 @@ impl FictionBookExtractor {
                             }
                             _ => {}
                         },
-                        "p" => {
-                            let mut para = String::new();
-                            let mut para_depth = 0;
-
-                            loop {
-                                match reader.read_event() {
-                                    Ok(Event::Start(_)) => {
-                                        para_depth += 1;
-                                    }
-                                    Ok(Event::End(pe)) => {
-                                        let ptag = String::from_utf8_lossy(pe.name().as_ref()).to_string();
-                                        if ptag == "p" && para_depth == 0 {
-                                            break;
-                                        }
-                                        if para_depth > 0 {
-                                            para_depth -= 1;
-                                        }
-                                    }
-                                    Ok(Event::Text(t)) => {
-                                        let text = String::from_utf8_lossy(t.as_ref()).to_string();
-                                        if !text.trim().is_empty() {
-                                            if !para.is_empty() {
-                                                para.push(' ');
-                                            }
-                                            para.push_str(text.trim());
-                                        }
-                                    }
-                                    Ok(Event::Eof) => break,
-                                    Err(_) => break,
-                                    _ => {}
-                                }
-                            }
-
-                            if !para.trim().is_empty() {
-                                content.push_str(para.trim());
+                        "p" => match Self::extract_paragraph_content(reader) {
+                            Ok(para) if !para.is_empty() => {
+                                content.push_str(&para);
                                 content.push('\n');
                             }
-                        }
+                            _ => {}
+                        },
                         "cite" => match Self::extract_text_content(reader) {
                             Ok(cite_content) if !cite_content.is_empty() => {
                                 content.push_str("> ");

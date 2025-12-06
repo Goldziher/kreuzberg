@@ -90,16 +90,61 @@ fn extract_text_content(reader: &mut Reader<&[u8]>) -> Result<String> {
     Ok(text.trim().to_string())
 }
 
-/// Extract tables from JATS content.
-fn extract_jats_tables(content: &str) -> Result<Vec<Table>> {
+/// Structure to hold extracted JATS metadata.
+#[derive(Debug, Clone, Default)]
+struct JatsMetadataExtracted {
+    title: String,
+    subtitle: Option<String>,
+    authors: Vec<String>,
+    affiliations: Vec<String>,
+    doi: Option<String>,
+    pii: Option<String>,
+    keywords: Vec<String>,
+    publication_date: Option<String>,
+    volume: Option<String>,
+    issue: Option<String>,
+    pages: Option<String>,
+    journal_title: Option<String>,
+    article_type: Option<String>,
+    abstract_text: Option<String>,
+    corresponding_author: Option<String>,
+}
+
+/// Extract all content in a single optimized pass.
+/// Combines metadata extraction, content parsing, and table extraction into one pass.
+fn extract_jats_all_in_one(content: &str) -> Result<(JatsMetadataExtracted, String, String, Vec<Table>)> {
     let mut reader = Reader::from_str(content);
-    let mut tables = Vec::new();
+    let mut metadata = JatsMetadataExtracted::default();
+    let mut body_content = String::new();
+    let mut title = String::new();
+
+    // State tracking for metadata section
+    let mut in_article_meta = false;
+    let mut in_article_title = false;
+    let mut in_subtitle = false;
+    let mut in_contrib = false;
+    let mut in_name = false;
+    let mut in_aff = false;
+    let mut in_abstract = false;
+    let mut in_kwd_group = false;
+    let mut in_kwd = false;
+    let mut current_author = String::new();
+    let mut current_aff = String::new();
+    let mut abstract_content = String::new();
+
+    // State tracking for body section
+    let mut in_body = false;
+    let mut in_section = false;
+    let mut in_para = false;
+
+    // State tracking for tables
     let mut in_table = false;
     let mut in_thead = false;
     let mut in_tbody = false;
     let mut in_row = false;
     let mut current_table: Vec<Vec<String>> = Vec::new();
     let mut current_row: Vec<String> = Vec::new();
+    let mut tables = Vec::new();
     let mut table_index = 0;
 
     loop {
@@ -108,6 +153,122 @@ fn extract_jats_tables(content: &str) -> Result<Vec<Table>> {
                 let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                 match tag.as_str() {
+                    "article" => {
+                        // Extract article-type attribute
+                        for attr in e.attributes() {
+                            if let Ok(attr) = attr {
+                                if String::from_utf8_lossy(attr.key.as_ref()) == "article-type" {
+                                    metadata.article_type =
+                                        Some(String::from_utf8_lossy(attr.value.as_ref()).to_string());
+                                }
+                            }
+                        }
+                    }
+                    "article-meta" => {
+                        in_article_meta = true;
+                    }
+                    "article-title" if in_article_meta => {
+                        in_article_title = true;
+                    }
+                    "subtitle" if in_article_meta => {
+                        in_subtitle = true;
+                    }
+                    "contrib" if in_article_meta => {
+                        in_contrib = true;
+                        current_author.clear();
+                    }
+                    "name" if in_contrib => {
+                        in_name = true;
+                    }
+                    "aff" if in_article_meta => {
+                        in_aff = true;
+                        current_aff.clear();
+                    }
+                    "article-id" if in_article_meta => {
+                        let mut id_type = String::new();
+                        for attr in e.attributes() {
+                            if let Ok(attr) = attr {
+                                if String::from_utf8_lossy(attr.key.as_ref()) == "pub-id-type" {
+                                    id_type = String::from_utf8_lossy(attr.value.as_ref()).to_string();
+                                }
+                            }
+                        }
+
+                        let id_text = extract_text_content(&mut reader)?;
+                        match id_type.as_str() {
+                            "doi" => metadata.doi = Some(id_text),
+                            "pii" => metadata.pii = Some(id_text),
+                            _ => {}
+                        }
+                        continue;
+                    }
+                    "volume" if in_article_meta => {
+                        let vol_text = extract_text_content(&mut reader)?;
+                        metadata.volume = Some(vol_text);
+                        continue;
+                    }
+                    "issue" if in_article_meta => {
+                        let issue_text = extract_text_content(&mut reader)?;
+                        metadata.issue = Some(issue_text);
+                        continue;
+                    }
+                    "fpage" | "lpage" if in_article_meta => {
+                        let page_text = extract_text_content(&mut reader)?;
+                        if let Some(pages) = &mut metadata.pages {
+                            pages.push_str("-");
+                            pages.push_str(&page_text);
+                        } else {
+                            metadata.pages = Some(page_text);
+                        }
+                        continue;
+                    }
+                    "pub-date" if in_article_meta => {
+                        let date_text = extract_text_content(&mut reader)?;
+                        if metadata.publication_date.is_none() {
+                            metadata.publication_date = Some(date_text);
+                        }
+                        continue;
+                    }
+                    "journal-title" if in_article_meta => {
+                        let journal_text = extract_text_content(&mut reader)?;
+                        if metadata.journal_title.is_none() {
+                            metadata.journal_title = Some(journal_text);
+                        }
+                        continue;
+                    }
+                    "abstract" if in_article_meta => {
+                        in_abstract = true;
+                        abstract_content.clear();
+                    }
+                    "kwd-group" if in_article_meta => {
+                        in_kwd_group = true;
+                    }
+                    "kwd" if in_kwd_group => {
+                        in_kwd = true;
+                    }
+                    "corresp" if in_article_meta => {
+                        let corresp_text = extract_text_content(&mut reader)?;
+                        metadata.corresponding_author = Some(corresp_text);
+                        continue;
+                    }
+                    "body" => {
+                        in_body = true;
+                    }
+                    "sec" if in_body => {
+                        in_section = true;
+                    }
+                    "title" if (in_section || in_body) && !in_article_title => {
+                        let section_title = extract_text_content(&mut reader)?;
+                        if !section_title.is_empty() {
+                            body_content.push_str("## ");
+                            body_content.push_str(&section_title);
+                            body_content.push_str("\n\n");
+                        }
+                        continue;
+                    }
+                    "p" if in_body || in_section => {
+                        in_para = true;
+                    }
                     "table" => {
                         in_table = true;
                         current_table.clear();
@@ -123,7 +284,6 @@ fn extract_jats_tables(content: &str) -> Result<Vec<Table>> {
                         current_row.clear();
                     }
                     "td" | "th" if in_row => {
-                        // Extract cell content
                         let mut cell_text = String::new();
                         let mut cell_depth = 0;
 
@@ -170,180 +330,6 @@ fn extract_jats_tables(content: &str) -> Result<Vec<Table>> {
                 let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                 match tag.as_str() {
-                    "table" if in_table => {
-                        if !current_table.is_empty() {
-                            let markdown = cells_to_markdown(&current_table);
-                            tables.push(Table {
-                                cells: current_table.clone(),
-                                markdown,
-                                page_number: table_index + 1,
-                            });
-                            table_index += 1;
-                            current_table.clear();
-                        }
-                        in_table = false;
-                    }
-                    "thead" if in_thead => {
-                        in_thead = false;
-                    }
-                    "tbody" if in_tbody => {
-                        in_tbody = false;
-                    }
-                    "tr" if in_row => {
-                        if !current_row.is_empty() {
-                            current_table.push(current_row.clone());
-                            current_row.clear();
-                        }
-                        in_row = false;
-                    }
-                    _ => {}
-                }
-            }
-            Ok(Event::Eof) => break,
-            Err(e) => {
-                return Err(crate::error::KreuzbergError::parsing(format!(
-                    "XML parsing error: {}",
-                    e
-                )));
-            }
-            _ => {}
-        }
-    }
-
-    Ok(tables)
-}
-
-/// Structure to hold extracted JATS metadata.
-#[derive(Debug, Clone, Default)]
-struct JatsMetadataExtracted {
-    title: String,
-    subtitle: Option<String>,
-    authors: Vec<String>,
-    affiliations: Vec<String>,
-    doi: Option<String>,
-    pii: Option<String>,
-    keywords: Vec<String>,
-    publication_date: Option<String>,
-    volume: Option<String>,
-    issue: Option<String>,
-    pages: Option<String>,
-    journal_title: Option<String>,
-    article_type: Option<String>,
-    abstract_text: Option<String>,
-    corresponding_author: Option<String>,
-}
-
-/// Parse JATS metadata from article-meta element.
-fn extract_jats_metadata(content: &str) -> Result<JatsMetadataExtracted> {
-    let mut reader = Reader::from_str(content);
-    let mut metadata = JatsMetadataExtracted::default();
-    let mut in_article_meta = false;
-    let mut in_article_title = false;
-    let mut in_subtitle = false;
-    let mut in_contrib = false;
-    let mut in_name = false;
-    let mut in_aff = false;
-    let mut in_abstract = false;
-    let mut in_kwd_group = false;
-    let mut in_kwd = false;
-    let mut current_author = String::new();
-    let mut current_aff = String::new();
-    let mut abstract_content = String::new();
-
-    loop {
-        match reader.read_event() {
-            Ok(Event::Start(e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
-
-                match tag.as_str() {
-                    "article-meta" => {
-                        in_article_meta = true;
-                    }
-                    "article-title" if in_article_meta => {
-                        in_article_title = true;
-                    }
-                    "subtitle" if in_article_meta => {
-                        in_subtitle = true;
-                    }
-                    "contrib" if in_article_meta => {
-                        in_contrib = true;
-                        current_author.clear();
-                    }
-                    "name" if in_contrib => {
-                        in_name = true;
-                    }
-                    "aff" if in_article_meta => {
-                        in_aff = true;
-                        current_aff.clear();
-                    }
-                    "article-id" if in_article_meta => {
-                        // Extract article identifiers
-                        let mut id_type = String::new();
-                        for attr in e.attributes() {
-                            if let Ok(attr) = attr {
-                                if String::from_utf8_lossy(attr.key.as_ref()) == "pub-id-type" {
-                                    id_type = String::from_utf8_lossy(attr.value.as_ref()).to_string();
-                                }
-                            }
-                        }
-
-                        let id_text = extract_text_content(&mut reader)?;
-                        match id_type.as_str() {
-                            "doi" => metadata.doi = Some(id_text),
-                            "pii" => metadata.pii = Some(id_text),
-                            _ => {}
-                        }
-                        continue;
-                    }
-                    "volume" if in_article_meta => {
-                        let vol_text = extract_text_content(&mut reader)?;
-                        metadata.volume = Some(vol_text);
-                        continue;
-                    }
-                    "issue" if in_article_meta => {
-                        let issue_text = extract_text_content(&mut reader)?;
-                        metadata.issue = Some(issue_text);
-                        continue;
-                    }
-                    "fpage" | "lpage" if in_article_meta => {
-                        let page_text = extract_text_content(&mut reader)?;
-                        if let Some(pages) = &mut metadata.pages {
-                            pages.push_str("-");
-                            pages.push_str(&page_text);
-                        } else {
-                            metadata.pages = Some(page_text);
-                        }
-                        continue;
-                    }
-                    "pub-date" if in_article_meta => {
-                        let date_text = extract_text_content(&mut reader)?;
-                        if metadata.publication_date.is_none() {
-                            metadata.publication_date = Some(date_text);
-                        }
-                        continue;
-                    }
-                    "abstract" if in_article_meta => {
-                        in_abstract = true;
-                        abstract_content.clear();
-                    }
-                    "kwd-group" if in_article_meta => {
-                        in_kwd_group = true;
-                    }
-                    "kwd" if in_kwd_group => {
-                        in_kwd = true;
-                    }
-                    "corresp" if in_article_meta => {
-                        let corresp_text = extract_text_content(&mut reader)?;
-                        metadata.corresponding_author = Some(corresp_text);
-                        continue;
-                    }
-                    _ => {}
-                }
-            }
-            Ok(Event::End(e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
-
-                match tag.as_str() {
                     "article-meta" => {
                         in_article_meta = false;
                     }
@@ -380,6 +366,41 @@ fn extract_jats_metadata(content: &str) -> Result<JatsMetadataExtracted> {
                     "kwd" if in_kwd => {
                         in_kwd = false;
                     }
+                    "body" => {
+                        in_body = false;
+                    }
+                    "sec" if in_section => {
+                        in_section = false;
+                    }
+                    "p" if in_para => {
+                        in_para = false;
+                    }
+                    "table" if in_table => {
+                        if !current_table.is_empty() {
+                            let markdown = cells_to_markdown(&current_table);
+                            tables.push(Table {
+                                cells: current_table.clone(),
+                                markdown,
+                                page_number: table_index + 1,
+                            });
+                            table_index += 1;
+                            current_table.clear();
+                        }
+                        in_table = false;
+                    }
+                    "thead" if in_thead => {
+                        in_thead = false;
+                    }
+                    "tbody" if in_tbody => {
+                        in_tbody = false;
+                    }
+                    "tr" if in_row => {
+                        if !current_row.is_empty() {
+                            current_table.push(current_row.clone());
+                            current_row.clear();
+                        }
+                        in_row = false;
+                    }
                     _ => {}
                 }
             }
@@ -409,116 +430,9 @@ fn extract_jats_metadata(content: &str) -> Result<JatsMetadataExtracted> {
                         abstract_content.push_str(trimmed);
                     } else if in_kwd {
                         metadata.keywords.push(trimmed.to_string());
-                    }
-                }
-            }
-            Ok(Event::Eof) => break,
-            Err(e) => {
-                return Err(crate::error::KreuzbergError::parsing(format!(
-                    "XML parsing error: {}",
-                    e
-                )));
-            }
-            _ => {}
-        }
-    }
-
-    Ok(metadata)
-}
-
-/// Parse JATS content and extract structured text.
-fn parse_jats_content(content: &str) -> Result<(String, String)> {
-    let mut reader = Reader::from_str(content);
-    let mut output = String::new();
-    let mut title = String::new();
-    let mut in_body = false;
-    let mut in_section = false;
-    let mut in_title = false;
-    let mut in_para = false;
-    let mut title_extracted = false;
-
-    loop {
-        match reader.read_event() {
-            Ok(Event::Start(e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
-
-                match tag.as_str() {
-                    "article-title" if !title_extracted => {
-                        in_title = true;
-                    }
-                    "body" => {
-                        in_body = true;
-                    }
-                    "sec" if in_body => {
-                        in_section = true;
-                    }
-                    "title" if (in_section || in_body) && !in_title => {
-                        let section_title = extract_text_content(&mut reader)?;
-                        if !section_title.is_empty() {
-                            output.push_str("## ");
-                            output.push_str(&section_title);
-                            output.push_str("\n\n");
-                        }
-                        continue;
-                    }
-                    "p" if in_body => {
-                        in_para = true;
-                    }
-                    "p" if in_section => {
-                        in_para = true;
-                    }
-                    "table-wrap" if in_body => {
-                        // Skip tables, they're handled separately
-                        let mut depth = 1;
-                        loop {
-                            match reader.read_event() {
-                                Ok(Event::Start(_)) => depth += 1,
-                                Ok(Event::End(_)) => {
-                                    depth -= 1;
-                                    if depth == 0 {
-                                        break;
-                                    }
-                                }
-                                Ok(Event::Eof) => break,
-                                Err(_) => break,
-                                _ => {}
-                            }
-                        }
-                        continue;
-                    }
-                    _ => {}
-                }
-            }
-            Ok(Event::End(e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
-
-                match tag.as_str() {
-                    "article-title" if in_title => {
-                        in_title = false;
-                        title_extracted = true;
-                    }
-                    "body" => {
-                        in_body = false;
-                    }
-                    "sec" if in_section => {
-                        in_section = false;
-                    }
-                    "p" if in_para => {
-                        in_para = false;
-                    }
-                    _ => {}
-                }
-            }
-            Ok(Event::Text(t)) => {
-                let decoded = String::from_utf8_lossy(t.as_ref()).to_string();
-                let trimmed = decoded.trim();
-
-                if !trimmed.is_empty() {
-                    if in_title && title.is_empty() {
-                        title.push_str(trimmed);
                     } else if in_para && in_body {
-                        output.push_str(trimmed);
-                        output.push_str("\n\n");
+                        body_content.push_str(trimmed);
+                        body_content.push_str("\n\n");
                     }
                 }
             }
@@ -533,13 +447,14 @@ fn parse_jats_content(content: &str) -> Result<(String, String)> {
         }
     }
 
-    // Prepend title to output if it was extracted
-    let mut final_output = output;
-    if !title.is_empty() {
-        final_output = format!("# {}\n\n{}", title, final_output);
+    // Build final title and content
+    let mut final_output = body_content;
+    if !metadata.title.is_empty() {
+        final_output = format!("# {}\n\n{}", metadata.title, final_output);
+        title = metadata.title.clone();
     }
 
-    Ok((final_output.trim().to_string(), title))
+    Ok((metadata, final_output.trim().to_string(), title, tables))
 }
 
 impl Plugin for JatsExtractor {
@@ -582,23 +497,22 @@ impl DocumentExtractor for JatsExtractor {
             .map(|s| s.to_string())
             .unwrap_or_else(|_| String::from_utf8_lossy(content).to_string());
 
-        // Extract metadata
-        let jats_metadata = extract_jats_metadata(&jats_content)?;
+        // Single-pass extraction: metadata, content, and tables all at once
+        let (jats_metadata, extracted_content, _title, tables) = extract_jats_all_in_one(&jats_content)?;
 
-        // Parse content
-        let (extracted_content, _title) = parse_jats_content(&jats_content)?;
-
-        // Extract tables
-        let tables = extract_jats_tables(&jats_content)?;
-
-        // Build metadata
+        // Build metadata with all 13 extracted fields
         let mut metadata = Metadata::default();
         let mut subject_parts = Vec::new();
 
-        // Title
+        // Title (required)
         if !jats_metadata.title.is_empty() {
             metadata.subject = Some(jats_metadata.title.clone());
             subject_parts.push(format!("Title: {}", jats_metadata.title));
+        }
+
+        // Subtitle
+        if let Some(subtitle) = &jats_metadata.subtitle {
+            subject_parts.push(format!("Subtitle: {}", subtitle));
         }
 
         // Authors
@@ -606,9 +520,19 @@ impl DocumentExtractor for JatsExtractor {
             subject_parts.push(format!("Authors: {}", jats_metadata.authors.join("; ")));
         }
 
+        // Affiliations
+        if !jats_metadata.affiliations.is_empty() {
+            subject_parts.push(format!("Affiliations: {}", jats_metadata.affiliations.join("; ")));
+        }
+
         // DOI
         if let Some(doi) = &jats_metadata.doi {
             subject_parts.push(format!("DOI: {}", doi));
+        }
+
+        // PII
+        if let Some(pii) = &jats_metadata.pii {
+            subject_parts.push(format!("PII: {}", pii));
         }
 
         // Keywords
@@ -619,6 +543,32 @@ impl DocumentExtractor for JatsExtractor {
         // Publication date
         if let Some(date) = &jats_metadata.publication_date {
             metadata.date = Some(date.clone());
+            subject_parts.push(format!("Publication Date: {}", date));
+        }
+
+        // Volume
+        if let Some(volume) = &jats_metadata.volume {
+            subject_parts.push(format!("Volume: {}", volume));
+        }
+
+        // Issue
+        if let Some(issue) = &jats_metadata.issue {
+            subject_parts.push(format!("Issue: {}", issue));
+        }
+
+        // Pages
+        if let Some(pages) = &jats_metadata.pages {
+            subject_parts.push(format!("Pages: {}", pages));
+        }
+
+        // Journal title
+        if let Some(journal_title) = &jats_metadata.journal_title {
+            subject_parts.push(format!("Journal: {}", journal_title));
+        }
+
+        // Article type
+        if let Some(article_type) = &jats_metadata.article_type {
+            subject_parts.push(format!("Article Type: {}", article_type));
         }
 
         // Abstract
@@ -626,9 +576,9 @@ impl DocumentExtractor for JatsExtractor {
             subject_parts.push(format!("Abstract: {}", abstract_text));
         }
 
-        // Affiliations
-        if !jats_metadata.affiliations.is_empty() {
-            subject_parts.push(format!("Affiliations: {}", jats_metadata.affiliations.join("; ")));
+        // Corresponding author
+        if let Some(corresp_author) = &jats_metadata.corresponding_author {
+            subject_parts.push(format!("Corresponding Author: {}", corresp_author));
         }
 
         if !subject_parts.is_empty() {
@@ -710,8 +660,9 @@ mod tests {
   </body>
 </article>"#;
 
-        let (content, title) = parse_jats_content(jats).expect("Parse failed");
+        let (metadata, content, title, _tables) = extract_jats_all_in_one(jats).expect("Parse failed");
         assert_eq!(title, "Test Article Title");
+        assert_eq!(metadata.title, "Test Article Title");
         assert!(content.contains("Test Article Title"));
         assert!(content.contains("Test content"));
     }
@@ -727,7 +678,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert_eq!(metadata.title, "Effects of Caffeine on Human Health");
     }
 
@@ -743,7 +694,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert_eq!(metadata.title, "Main Title");
         assert_eq!(metadata.subtitle, Some("A Systematic Review".to_string()));
     }
@@ -772,7 +723,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert_eq!(metadata.authors.len(), 2);
         assert!(metadata.authors[0].contains("Smith"));
         assert!(metadata.authors[1].contains("Johnson"));
@@ -790,7 +741,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert_eq!(metadata.affiliations.len(), 2);
         assert!(metadata.affiliations[0].contains("Harvard"));
         assert!(metadata.affiliations[1].contains("Boston"));
@@ -808,7 +759,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert_eq!(metadata.doi, Some("10.1371/journal.pmed.0020124".to_string()));
         assert_eq!(metadata.pii, Some("05-PLME-RA-0071R2".to_string()));
     }
@@ -828,7 +779,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert_eq!(metadata.keywords.len(), 3);
         assert!(metadata.keywords.contains(&"caffeine".to_string()));
         assert!(metadata.keywords.contains(&"meta-analysis".to_string()));
@@ -853,7 +804,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert!(metadata.publication_date.is_some());
         assert_eq!(metadata.volume, Some("2".to_string()));
         assert_eq!(metadata.issue, Some("4".to_string()));
@@ -880,7 +831,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert!(metadata.abstract_text.is_some());
         let abstract_text = metadata.abstract_text.unwrap();
         assert!(abstract_text.contains("background"));
@@ -915,7 +866,7 @@ mod tests {
   </body>
 </article>"#;
 
-        let tables = extract_jats_tables(jats).expect("Table extraction failed");
+        let (_metadata, _content, _title, tables) = extract_jats_all_in_one(jats).expect("Table extraction failed");
         assert_eq!(tables.len(), 1);
         assert_eq!(tables[0].cells.len(), 3); // header + 2 rows
     }
@@ -933,7 +884,7 @@ mod tests {
   </front>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert!(metadata.corresponding_author.is_some());
         let corresp = metadata.corresponding_author.unwrap();
         assert!(corresp.contains("rwilliams"));
@@ -964,7 +915,7 @@ mod tests {
   </body>
 </article>"#;
 
-        let (content, _title) = parse_jats_content(jats).expect("Parse failed");
+        let (_metadata, content, _title, _tables) = extract_jats_all_in_one(jats).expect("Parse failed");
         assert!(content.contains("Introduction"));
         assert!(content.contains("Methods"));
         assert!(content.contains("Results"));
@@ -999,7 +950,8 @@ mod tests {
   </body>
 </article>"#;
 
-        let metadata_extracted = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata_extracted, _content, _title, _tables) =
+            extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert_eq!(metadata_extracted.title, "Sample Article");
         assert_eq!(metadata_extracted.authors.len(), 1);
         assert_eq!(metadata_extracted.doi, Some("10.1234/test".to_string()));
@@ -1019,9 +971,105 @@ mod tests {
   </body>
 </article>"#;
 
-        let metadata = extract_jats_metadata(jats).expect("Metadata extraction failed");
+        let (metadata, content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
         assert!(metadata.title.is_empty());
-        let (content, _title) = parse_jats_content(jats).expect("Parse failed");
         assert!(content.is_empty() || content.trim().is_empty());
+    }
+
+    #[test]
+    fn test_extract_jats_journal_title() {
+        let jats = r#"<?xml version="1.0" encoding="UTF-8"?>
+<article>
+  <front>
+    <article-meta>
+      <article-title>Test Article</article-title>
+      <journal-title>Nature Medicine</journal-title>
+    </article-meta>
+  </front>
+</article>"#;
+
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
+        assert_eq!(metadata.journal_title, Some("Nature Medicine".to_string()));
+    }
+
+    #[test]
+    fn test_extract_jats_article_type() {
+        let jats = r#"<?xml version="1.0" encoding="UTF-8"?>
+<article article-type="research-article">
+  <front>
+    <article-meta>
+      <article-title>Test Article</article-title>
+    </article-meta>
+  </front>
+</article>"#;
+
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
+        assert_eq!(metadata.article_type, Some("research-article".to_string()));
+    }
+
+    #[test]
+    fn test_extract_all_13_metadata_fields() {
+        let jats = r#"<?xml version="1.0" encoding="UTF-8"?>
+<article article-type="research-article">
+  <front>
+    <article-meta>
+      <article-title>Full Metadata Test</article-title>
+      <subtitle>A Complete Example</subtitle>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Author</surname>
+            <given-names>First</given-names>
+          </name>
+        </contrib>
+      </contrib-group>
+      <aff>Department of Testing, Test University</aff>
+      <article-id pub-id-type="doi">10.1234/full-test</article-id>
+      <article-id pub-id-type="pii">TEST-001</article-id>
+      <kwd-group>
+        <kwd>testing</kwd>
+        <kwd>metadata</kwd>
+      </kwd-group>
+      <pub-date pub-type="epub">
+        <year>2024</year>
+      </pub-date>
+      <volume>5</volume>
+      <issue>3</issue>
+      <fpage>100</fpage>
+      <lpage>110</lpage>
+      <journal-title>Test Journal</journal-title>
+      <abstract>
+        <p>This is a test abstract for all metadata fields.</p>
+      </abstract>
+      <author-notes>
+        <corresp>Correspondence: test@example.com</corresp>
+      </author-notes>
+    </article-meta>
+  </front>
+  <body>
+    <p>Test content.</p>
+  </body>
+</article>"#;
+
+        let (metadata, _content, _title, _tables) = extract_jats_all_in_one(jats).expect("Metadata extraction failed");
+
+        // Verify all 13 metadata fields are extracted
+        assert_eq!(metadata.title, "Full Metadata Test");
+        assert_eq!(metadata.subtitle, Some("A Complete Example".to_string()));
+        assert_eq!(metadata.authors.len(), 1);
+        assert!(metadata.authors[0].contains("Author"));
+        assert_eq!(metadata.affiliations.len(), 1);
+        assert!(metadata.affiliations[0].contains("Testing"));
+        assert_eq!(metadata.doi, Some("10.1234/full-test".to_string()));
+        assert_eq!(metadata.pii, Some("TEST-001".to_string()));
+        assert_eq!(metadata.keywords.len(), 2);
+        assert!(metadata.publication_date.is_some());
+        assert_eq!(metadata.volume, Some("5".to_string()));
+        assert_eq!(metadata.issue, Some("3".to_string()));
+        assert!(metadata.pages.is_some());
+        assert_eq!(metadata.journal_title, Some("Test Journal".to_string()));
+        assert_eq!(metadata.article_type, Some("research-article".to_string()));
+        assert!(metadata.abstract_text.is_some());
+        assert!(metadata.corresponding_author.is_some());
     }
 }

@@ -68,26 +68,54 @@ async fn test_simple_typst_document_extraction() {
         "Document author should be extracted"
     );
 
-    // Test 5: Content should contain main heading
+    // Test 5: Content should contain main headings - CRITICAL: all 8 headings must be present
     assert!(
-        extraction.content.contains("Introduction") || extraction.content.contains("Subsection"),
-        "Should extract heading content"
+        extraction.content.contains("Introduction"),
+        "Should extract 'Introduction' heading"
+    );
+    assert!(
+        extraction.content.contains("Features"),
+        "Should extract 'Features' heading"
+    );
+    assert!(
+        extraction.content.contains("Conclusion"),
+        "Should extract 'Conclusion' heading"
     );
 
-    // Test 6: Formatting markers should be preserved
+    // Test 6: Verify all 8 headings from simple.typ are extracted
+    // simple.typ contains: Introduction, Subsection, Features, Lists, Code, Tables, Links, Conclusion
+    let intro_count = extraction.content.matches("= Introduction").count();
+    let subsection_count = extraction.content.matches("== Subsection").count();
+    let features_count = extraction.content.matches("= Features").count();
+    let lists_count = extraction.content.matches("== Lists").count();
+    let code_count = extraction.content.matches("== Code").count();
+    let tables_count = extraction.content.matches("== Tables").count();
+    let links_count = extraction.content.matches("== Links").count();
+    let conclusion_count = extraction.content.matches("= Conclusion").count();
+
+    assert_eq!(intro_count, 1, "Should extract 'Introduction' (level 1)");
+    assert_eq!(subsection_count, 1, "Should extract 'Subsection' (level 2)");
+    assert_eq!(features_count, 1, "Should extract 'Features' (level 1)");
+    assert_eq!(lists_count, 1, "Should extract 'Lists' (level 2)");
+    assert_eq!(code_count, 1, "Should extract 'Code' (level 2)");
+    assert_eq!(tables_count, 1, "Should extract 'Tables' (level 2)");
+    assert_eq!(links_count, 1, "Should extract 'Links' (level 2)");
+    assert_eq!(conclusion_count, 1, "Should extract 'Conclusion' (level 1)");
+
+    // Test 7: Formatting markers should be preserved
     assert!(
         extraction.content.contains("*") || extraction.content.contains("bold"),
         "Should preserve bold formatting or text"
     );
 
-    // Test 7: Lists should be extracted
+    // Test 8: Lists should be extracted
     assert!(
         extraction.content.contains("-") || extraction.content.contains("First") || extraction.content.contains("item"),
         "Should extract list content"
     );
 
     println!(
-        "✓ simple.typ: Successfully extracted {} characters",
+        "✓ simple.typ: Successfully extracted {} characters with all 8 headings",
         extraction.content.len()
     );
 }
@@ -187,9 +215,38 @@ async fn test_heading_hierarchy_extraction() {
         "Should extract level 3 heading"
     );
 
-    // Test 5: Multiple heading levels indicate hierarchy support
-    let heading_count = extraction.content.matches("=").count();
-    assert!(heading_count >= 3, "Should extract multiple heading levels");
+    // Test 5: Level 4 heading should be present
+    assert!(
+        extraction.content.contains("==== Level 4") || extraction.content.contains("Level 4 Heading"),
+        "Should extract level 4 heading"
+    );
+
+    // Test 6: Level 5 heading should be present
+    assert!(
+        extraction.content.contains("===== Level 5") || extraction.content.contains("Level 5 Heading"),
+        "Should extract level 5 heading"
+    );
+
+    // Test 7: Level 6 heading should be present
+    assert!(
+        extraction.content.contains("====== Level 6") || extraction.content.contains("Level 6 Heading"),
+        "Should extract level 6 heading"
+    );
+
+    // Test 8: Verify exact counts for level 1, 2, and 3 headings
+    let level_1_count = extraction.content.matches("= Level 1").count();
+    let level_2_count = extraction.content.matches("== Level 2").count();
+    let level_3_count = extraction.content.matches("=== Level 3").count();
+    let level_4_count = extraction.content.matches("==== Level 4").count();
+    let level_5_count = extraction.content.matches("===== Level 5").count();
+    let level_6_count = extraction.content.matches("====== Level 6").count();
+
+    assert_eq!(level_1_count, 1, "Should extract exactly one level 1 heading");
+    assert_eq!(level_2_count, 1, "Should extract exactly one level 2 heading");
+    assert_eq!(level_3_count, 1, "Should extract exactly one level 3 heading");
+    assert_eq!(level_4_count, 1, "Should extract exactly one level 4 heading");
+    assert_eq!(level_5_count, 1, "Should extract exactly one level 5 heading");
+    assert_eq!(level_6_count, 1, "Should extract exactly one level 6 heading");
 
     println!(
         "✓ headings.typ: Successfully extracted {} characters with heading structure",
