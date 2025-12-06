@@ -55,6 +55,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # Windows MinGW toolchain environment variables (set at job level to persist)
+      # These force cc-rs to use GNU toolchain instead of MSVC
+      CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
+      AR: ${{ matrix.os == 'windows-latest' && 'ar' || '' }}
+      RANLIB: ${{ matrix.os == 'windows-latest' && 'ranlib' || '' }}
+      CXX: ${{ matrix.os == 'windows-latest' && 'g++' || '' }}
+      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -139,6 +147,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # Windows MinGW toolchain environment variables (set at job level to persist)
+      # These force cc-rs to use GNU toolchain instead of MSVC
+      CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
+      AR: ${{ matrix.os == 'windows-latest' && 'ar' || '' }}
+      RANLIB: ${{ matrix.os == 'windows-latest' && 'ranlib' || '' }}
+      CXX: ${{ matrix.os == 'windows-latest' && 'g++' || '' }}
+      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
     steps:
       - uses: actions/checkout@v6
 

@@ -86,7 +86,6 @@ echo "TESSDATA_PREFIX: ${TESSDATA_PREFIX:-not set}"
 cargo test \
 	--workspace \
 	--exclude kreuzberg-e2e-generator \
-	--exclude kreuzberg-rb \
 	--exclude kreuzberg-py \
 	--exclude kreuzberg-node \
 	--all-features

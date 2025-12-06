@@ -80,5 +80,25 @@ if ($IsWindowsOS) {
     }
 } else {
     Write-Host "Building for Unix target"
+
+    # Configure ONNX Runtime environment for macOS and Linux
+    if ($env:ORT_LIB_LOCATION) {
+        Write-Host "=== ONNX Runtime Configuration (Unix) ==="
+        Write-Host "ORT_STRATEGY: $($env:ORT_STRATEGY)"
+        Write-Host "ORT_LIB_LOCATION: $env:ORT_LIB_LOCATION"
+        Write-Host "ORT_SKIP_DOWNLOAD: $($env:ORT_SKIP_DOWNLOAD)"
+        Write-Host "ORT_PREFER_DYNAMIC_LINK: $($env:ORT_PREFER_DYNAMIC_LINK)"
+
+        # Ensure RUSTFLAGS includes -L flag for library directory
+        if ($env:RUSTFLAGS) {
+            if ($env:RUSTFLAGS -notmatch "-L") {
+                $env:RUSTFLAGS = "$($env:RUSTFLAGS) -L $($env:ORT_LIB_LOCATION)"
+            }
+        } else {
+            $env:RUSTFLAGS = "-L $($env:ORT_LIB_LOCATION)"
+        }
+        Write-Host "RUSTFLAGS: $env:RUSTFLAGS"
+    }
+
     cargo build -p kreuzberg-ffi --release
 }

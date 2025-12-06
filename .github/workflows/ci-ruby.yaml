@@ -105,19 +105,19 @@ jobs:
         shell: pwsh
         run: |
           # Create short path directories
-          New-Item -ItemType Directory -Path "C:\t" -Force
-          New-Item -ItemType Directory -Path "C:\b" -Force
-          New-Item -ItemType Directory -Path "C:\g" -Force
+          New-Item -ItemType Directory -Path "C:\\t" -Force
+          New-Item -ItemType Directory -Path "C:\\b" -Force
+          New-Item -ItemType Directory -Path "C:\\g" -Force
 
           # Configure bundler to use shorter path
           cd packages/ruby
-          bundle config set path "C:\b"
+          bundle config set path "C:\\b"
           bundle config set no_prune true
 
           Write-Host "Windows MAX_PATH mitigation paths configured:"
-          Write-Host "  CARGO_TARGET_DIR: C:\t"
-          Write-Host "  BUNDLE_PATH: C:\b"
-          Write-Host "  GEM_HOME: C:\g"
+          Write-Host "  CARGO_TARGET_DIR: C:\\t"
+          Write-Host "  BUNDLE_PATH: C:\\b"
+          Write-Host "  GEM_HOME: C:\\g"
 
       - name: Install Ruby deps
         if: runner.os != 'Windows'
@@ -224,18 +224,18 @@ jobs:
         shell: pwsh
         run: |
           # Create short path directories
-          New-Item -ItemType Directory -Path "C:\t" -Force
-          New-Item -ItemType Directory -Path "C:\b" -Force
-          New-Item -ItemType Directory -Path "C:\g" -Force
+          New-Item -ItemType Directory -Path "C:\\t" -Force
+          New-Item -ItemType Directory -Path "C:\\b" -Force
+          New-Item -ItemType Directory -Path "C:\\g" -Force
 
           # Configure bundler to use shorter path
-          bundle config set path "C:\b"
+          bundle config set path "C:\\b"
           bundle config set no_prune true
 
           Write-Host "Windows MAX_PATH mitigation paths configured:"
-          Write-Host "  CARGO_TARGET_DIR: C:\t"
-          Write-Host "  BUNDLE_PATH: C:\b"
-          Write-Host "  GEM_HOME: C:\g"
+          Write-Host "  CARGO_TARGET_DIR: C:\\t"
+          Write-Host "  BUNDLE_PATH: C:\\b"
+          Write-Host "  GEM_HOME: C:\\g"
 
       - name: Install Ruby deps (Windows)
         if: runner.os == 'Windows'
