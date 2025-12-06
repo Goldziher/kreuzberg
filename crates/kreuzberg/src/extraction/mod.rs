@@ -37,6 +37,9 @@ pub mod table;
 #[cfg(feature = "xml")]
 pub mod xml;
 
+#[cfg(any(feature = "office", feature = "html"))]
+pub mod markdown;
+
 pub use structured::{JsonExtractionConfig, StructuredDataResult, parse_json, parse_toml, parse_yaml};
 pub use text::parse_text;
 
@@ -75,3 +78,6 @@ pub use table::table_from_arrow_to_markdown;
 
 #[cfg(feature = "xml")]
 pub use xml::parse_xml;
+
+#[cfg(any(feature = "office", feature = "html"))]
+pub use markdown::cells_to_markdown;

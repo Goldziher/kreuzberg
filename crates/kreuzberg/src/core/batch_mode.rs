@@ -33,3 +33,87 @@ where
 {
     BATCH_MODE.scope(Cell::new(true), future).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_batch_mode_not_set_by_default() {
+        // Given: No batch mode context
+        // When: Checking batch mode
+        let result = is_batch_mode();
+        // Then: Should return false
+        assert!(!result, "batch mode should be false by default");
+    }
+
+    #[tokio::test]
+    async fn test_with_batch_mode_sets_flag() {
+        // Given: Running inside with_batch_mode
+        let result = with_batch_mode(async {
+            // When: Checking batch mode inside the future
+            is_batch_mode()
+        })
+        .await;
+
+        // Then: Should return true
+        assert!(result, "batch mode should be true inside with_batch_mode");
+    }
+
+    #[tokio::test]
+    async fn test_batch_mode_scoped_to_future() {
+        // Given: Check before entering batch mode
+        assert!(!is_batch_mode(), "batch mode should be false before");
+
+        // When: Running with batch mode and then checking after
+        with_batch_mode(async {
+            assert!(is_batch_mode(), "batch mode should be true inside");
+        })
+        .await;
+
+        // Then: Should return to false after future completes
+        assert!(
+            !is_batch_mode(),
+            "batch mode should be false after future completes"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_nested_batch_mode_calls() {
+        // Given: Nested with_batch_mode calls
+        let result = with_batch_mode(async {
+            let outer = is_batch_mode();
+            let inner = with_batch_mode(async { is_batch_mode() }).await;
+            (outer, inner)
+        })
+        .await;
+
+        // Then: Both outer and inner should be true
+        assert!(result.0, "outer batch mode should be true");
+        assert!(result.1, "inner batch mode should be true");
+    }
+
+    #[tokio::test]
+    async fn test_batch_mode_unaffected_after_with_batch_mode() {
+        // Given: Multiple sequential with_batch_mode calls
+        with_batch_mode(async {
+            assert!(is_batch_mode(), "first call should set batch mode");
+        })
+        .await;
+
+        // When: Checking between calls
+        assert!(
+            !is_batch_mode(),
+            "batch mode should be false between calls"
+        );
+
+        // Then: Second call should also work independently
+        with_batch_mode(async {
+            assert!(is_batch_mode(), "second call should set batch mode");
+        })
+        .await;
+
+        // And: Should still be false after
+        assert!(!is_batch_mode(), "batch mode should be false after all calls");
+    }
+}

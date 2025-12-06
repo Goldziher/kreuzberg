@@ -100,6 +100,17 @@ def _find_packaged_cli_binary() -> str | None:
     for name in ("kreuzberg-cli", "kreuzberg"):
         candidate = script_dir / name
         if candidate.exists():
+            # Ensure this is not a Python script entry point by checking if it's
+            # a text file (entry point scripts start with #!)
+            try:
+                with candidate.open("rb") as f:
+                    header = f.read(2)
+                    # Skip if it's a Python script entry point
+                    if header == b"#!":
+                        continue
+            except OSError:
+                # If we can't read it, skip
+                continue
             return str(candidate)
     return None
 

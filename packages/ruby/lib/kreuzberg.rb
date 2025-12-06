@@ -76,6 +76,24 @@ module Kreuzberg
 
   # List all registered OCR backends.
   module_function :list_ocr_backends
+
+  # Detect MIME type from file bytes.
+  module_function :detect_mime_type
+
+  # Detect MIME type from a file path.
+  module_function :detect_mime_type_from_path
+
+  # Validate a MIME type string.
+  module_function :validate_mime_type
+
+  # Get file extensions for a given MIME type.
+  module_function :get_extensions_for_mime
+
+  # List all available embedding presets.
+  module_function :list_embedding_presets
+
+  # Get a specific embedding preset by name.
+  module_function :get_embedding_preset
 end
 
 require_relative 'kreuzberg/cache_api'
