@@ -221,7 +221,7 @@ jobs:
           key: huggingface-${{ runner.os }}-py-${{ matrix.python-version }}-${{ hashFiles('packages/python/pyproject.toml') || 'fallback' }}
 
       - name: Download wheels
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: wheels-${{ matrix.platform }}
           path: dist/

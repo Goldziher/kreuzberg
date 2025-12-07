@@ -1408,7 +1408,7 @@ jobs:
         run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download CLI artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: cli-*
           path: dist/cli
@@ -1443,7 +1443,7 @@ jobs:
         run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download C# artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: csharp-nuget
           path: dist/csharp
@@ -1621,14 +1621,14 @@ jobs:
       id-token: write
     steps:
       - name: Download wheel artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: python-wheels-*
           path: dist
           merge-multiple: true
 
       - name: Download sdist artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: python-sdist
           path: dist
@@ -1665,7 +1665,7 @@ jobs:
       id-token: write
     steps:
       - name: Download Ruby gem artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: rubygems-*
           path: dist
@@ -1798,14 +1798,14 @@ jobs:
           package_json_file: package.json
 
       - name: Download Node artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: node-bindings-*
           path: node-artifacts
           merge-multiple: true
 
       - name: Download TypeScript definitions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: node-typescript-defs
           path: typescript-defs
@@ -2062,7 +2062,7 @@ jobs:
       contents: read
     steps:
       - name: Download NuGet artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: csharp-nuget
           path: dist
