@@ -192,7 +192,7 @@ jobs:
           echo "TESSDATA_PREFIX=${TESSDATA_PREFIX}" >> "$GITHUB_ENV"
 
       - name: Download FFI library
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: csharp-ffi-lib-${{ matrix.os }}
           path: target/release/
