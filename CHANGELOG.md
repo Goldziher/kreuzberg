@@ -33,6 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resolves: `dyld: Library not loaded: @rpath/libpdfium.dylib`
   - Impact: macOS CLI binary now functional in releases
 
+**Windows Go Builds**:
+- Fixed persistent Windows Go CI failures where `ring` crate failed with MSVC toolchain detection
+  - Set GNU as default Rust toolchain on Windows: `rustup default stable-x86_64-pc-windows-gnu`
+  - Updated Rust build cache keys to include target architecture, preventing MSVC cache reuse
+  - Added MSYS2 UCRT64 setup with comprehensive GNU toolchain configuration
+  - Resolves: `TARGET = Some(x86_64-pc-windows-msvc)` error in build scripts
+  - Impact: Windows Go bindings now build successfully with proper GNU toolchain isolation
+
+**Ruby CI Bundler 4.0 Compatibility**:
+- Fixed gem installation failures on macOS and Linux caused by empty environment variables
+  - Removed job-level `GEM_HOME=""` and `BUNDLE_PATH=""` that broke non-Windows builds
+  - These variables are now only set on Windows with proper short paths for MAX_PATH mitigation
+  - Updated to `bundle update --all` (deprecated `bundle update` removed in Bundler 4.0)
+  - Resolves: `ERROR: While executing gem ... (Errno::ENOENT) No such file or directory @ dir_s_mkdir`
+  - Impact: Ruby gem builds now succeed on all platforms with Bundler 4.0.0
+
 **Note**: rc.4 workflow fixes for Python, Node, Ruby, and Maven were committed after rc.4 tag, causing those packages not to publish. All fixes are now present for rc.5.
 
 ---
