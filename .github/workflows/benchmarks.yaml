@@ -25,6 +25,9 @@ env:
   RUST_BACKTRACE: short
   RUST_MIN_STACK: 16777216
 
+permissions:
+  contents: read
+
 defaults:
   run:
     shell: bash

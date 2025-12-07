@@ -35,6 +35,9 @@ env:
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
+permissions:
+  contents: read
+
 jobs:
   prepare:
     name: Prepare metadata

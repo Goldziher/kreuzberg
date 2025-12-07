@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <iomanip> // for std::setw
 #include <locale>  // for std::locale::classic
 #include <sstream> // for std::istringstream, std::ostringstream
@@ -167,8 +168,7 @@ void UNICHARSET::UNICHAR_PROPERTIES::CopyFrom(const UNICHAR_PROPERTIES &src) {
   fragment = saved_fragment;
 }
 
-UNICHARSET::UNICHARSET()
-    : ids(), script_table(nullptr), script_table_size_used(0) {
+UNICHARSET::UNICHARSET() : ids() {
   clear();
   for (int i = 0; i < SPECIAL_UNICHAR_CODES_COUNT; ++i) {
     unichar_insert(kSpecialUnicharCodes[i]);
@@ -960,20 +960,20 @@ void UNICHARSET::post_load_setup() {
 
   // Compute default script. Use the highest-counting alpha script, that is
   // not the common script, as that still contains some "alphas".
-  int *script_counts = new int[script_table_size_used];
-  memset(script_counts, 0, sizeof(*script_counts) * script_table_size_used);
+  const int script_count = get_script_table_size();
+  ASSERT_HOST(script_count > 0);
+  std::vector<int> script_counts(script_count, 0);
   for (unsigned id = 0; id < unichars.size(); ++id) {
     if (get_isalpha(id)) {
       ++script_counts[get_script(id)];
     }
   }
   default_sid_ = 0;
-  for (int s = 1; s < script_table_size_used; ++s) {
+  for (int s = 1; s < script_count; ++s) {
     if (script_counts[s] > script_counts[default_sid_] && s != common_sid_) {
       default_sid_ = s;
     }
   }
-  delete[] script_counts;
 }
 
 // Returns true if right_to_left scripts are significant in the unicharset,
@@ -1061,26 +1061,17 @@ bool UNICHARSET::AnyRepeatedUnicodes() const {
 }
 
 int UNICHARSET::add_script(const char *script) {
-  for (int i = 0; i < script_table_size_used; ++i) {
-    if (strcmp(script, script_table[i]) == 0) {
+  const int script_count = get_script_table_size();
+  for (int i = 0; i < script_count; ++i) {
+    if (strcmp(script, script_table_[i].get()) == 0) {
       return i;
     }
   }
-  if (script_table_size_reserved == 0) {
-    script_table_size_reserved = 8;
-    script_table = new char *[script_table_size_reserved];
-  } else if (script_table_size_used >= script_table_size_reserved) {
-    assert(script_table_size_used == script_table_size_reserved);
-    script_table_size_reserved += script_table_size_reserved;
-    char **new_script_table = new char *[script_table_size_reserved];
-    memcpy(new_script_table, script_table,
-           script_table_size_used * sizeof(char *));
-    delete[] script_table;
-    script_table = new_script_table;
-  }
-  script_table[script_table_size_used] = new char[strlen(script) + 1];
-  strcpy(script_table[script_table_size_used], script);
-  return script_table_size_used++;
+  const size_t length = strlen(script) + 1;
+  auto script_copy = std::make_unique<char[]>(length);
+  memcpy(script_copy.get(), script, length);
+  script_table_.push_back(std::move(script_copy));
+  return get_script_table_size() - 1;
 }
 
 // Returns the string that represents a fragment
@@ -1144,8 +1135,9 @@ CHAR_FRAGMENT *CHAR_FRAGMENT::parse_from_string(const char *string) {
 }
 
 int UNICHARSET::get_script_id_from_name(const char *script_name) const {
-  for (int i = 0; i < script_table_size_used; ++i) {
-    if (strcmp(script_name, script_table[i]) == 0) {
+  const int script_count = get_script_table_size();
+  for (int i = 0; i < script_count; ++i) {
+    if (strcmp(script_name, script_table_[i].get()) == 0) {
       return i;
     }
   }

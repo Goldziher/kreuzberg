@@ -26,7 +26,10 @@
 #include "helpers.h"
 #include "serialis.h"
 
+#include <cstring>
 #include <functional> // for std::function
+#include <memory>
+#include <vector>
 
 namespace tesseract {
 
@@ -322,15 +325,7 @@ public:
 
   // Clear the UNICHARSET (all the previous data is lost).
   void clear() {
-    if (script_table != nullptr) {
-      for (int i = 0; i < script_table_size_used; ++i) {
-        delete[] script_table[i];
-      }
-      delete[] script_table;
-      script_table = nullptr;
-      script_table_size_used = 0;
-    }
-    script_table_size_reserved = 0;
+    script_table_.clear();
     delete_pointers_in_unichars();
     unichars.clear();
     ids.clear();
@@ -879,15 +874,15 @@ public:
 
   // Return the (current) number of scripts in the script table
   int get_script_table_size() const {
-    return script_table_size_used;
+    return static_cast<int>(script_table_.size());
   }
 
   // Return the script string from its id
   const char *get_script_from_script_id(int id) const {
-    if (id >= script_table_size_used || id < 0) {
+    if (id < 0 || id >= get_script_table_size()) {
       return null_script;
     }
-    return script_table[id];
+    return script_table_[id].get();
   }
 
   // Returns the id from the name of the script, or 0 if script is not found.
@@ -899,7 +894,7 @@ public:
 
   // Return true if the given script is the null script
   bool is_null_script(const char *script) const {
-    return script == null_script;
+    return script != nullptr && strcmp(script, null_script) == 0;
   }
 
   // Uniquify the given script. For two scripts a and b, if strcmp(a, b) == 0,
@@ -1065,9 +1060,7 @@ private:
 
   std::vector<UNICHAR_SLOT> unichars;
   UNICHARMAP ids;
-  char **script_table;
-  int script_table_size_used;
-  int script_table_size_reserved;
+  std::vector<std::unique_ptr<char[]>> script_table_;
   // True if the unichars have their tops/bottoms set.
   bool top_bottom_set_;
   // True if the unicharset has significant upper/lower case chars.

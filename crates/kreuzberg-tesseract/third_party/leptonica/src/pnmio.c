@@ -1467,13 +1467,14 @@ char     c;
 
     if (!fp)
         return ERROR_INT("stream not open", __func__, 1);
-    while ((i = fscanf(fp, "#%c", &c))) {
-        if (i == EOF) return 1;
+    while ((i = fscanf(fp, "#%c", &c)) == 1) {
         while (c != '\n') {
             if (fscanf(fp, "%c", &c) == EOF)
                 return 1;
         }
     }
+    if (i == EOF)
+        return 1;
     return 0;
 }
 
