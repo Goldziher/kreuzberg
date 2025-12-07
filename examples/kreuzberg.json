@@ -1,5 +1,5 @@
 {
-	"$comment": "Kreuzberg Configuration File (JSON). This file demonstrates all available configuration options for Kreuzberg. Place this file in one of the following locations: 1. Current directory: ./kreuzberg.json, 2. User config: ~/.config/kreuzberg/config.json, 3. System config: /etc/kreuzberg/config.json. Documentation: https://kreuzberg.goldziher.dev/guides/configuration/",
+	"$comment": "Kreuzberg Configuration File (JSON). This file demonstrates all available configuration options for Kreuzberg. Place this file in one of the following locations: 1. Current directory: ./kreuzberg.json, 2. User config: ~/.config/kreuzberg/config.json, 3. System config: /etc/kreuzberg/config.json. Documentation: https://kreuzberg.dev/guides/configuration/",
 	"use_cache": true,
 	"enable_quality_processing": true,
 	"force_ocr": false,

@@ -103,7 +103,8 @@ cargo install kreuzberg-cli
 Docker image:
 
 ```bash
-docker pull goldziher/kreuzberg:core
+docker pull goldziher/kreuzberg:latest       # core image
+docker pull goldziher/kreuzberg:latest-all   # full image with all extras
 ```
 
 Next steps: [CLI Usage](../cli/usage.md) • [API Server Guide](../guides/api-server.md)

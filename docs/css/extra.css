@@ -196,6 +196,18 @@
 	color: #ffffff;
 }
 
+/* Improve banner readability (light mode) */
+:root > * {
+	--md-banner-fg-color: #0f172a;
+	--md-banner-bg-color: #e8f7f3;
+}
+
+/* Improve banner readability (dark mode) */
+:root[data-md-color-scheme="slate"] > * {
+	--md-banner-fg-color: #e8f7f3;
+	--md-banner-bg-color: #1f2937;
+}
+
 /* Admonition styling */
 .md-typeset .admonition {
 	border-radius: 8px;
