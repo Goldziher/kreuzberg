@@ -56,7 +56,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Configure Windows GNU toolchain env
         if: matrix.os == 'windows-latest'
@@ -87,7 +87,7 @@ jobs:
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: '1.25'
           cache-dependency-path: packages/go/go.sum
@@ -135,7 +135,7 @@ jobs:
         shell: pwsh
 
       - name: Upload FFI library
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: go-ffi-lib-${{ matrix.os }}
           path: |
@@ -157,7 +157,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Configure Windows GNU toolchain env
         if: matrix.os == 'windows-latest'
@@ -210,7 +210,7 @@ jobs:
         run: scripts/ci/go/setup-msys2-windows.ps1
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: "1.25"
           cache-dependency-path: packages/go/go.sum
@@ -236,7 +236,7 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Download FFI library
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: go-ffi-lib-${{ matrix.os }}
           path: target/release/

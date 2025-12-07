@@ -77,7 +77,7 @@ jobs:
             platform: windows-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -135,7 +135,7 @@ jobs:
           fi
 
       - name: Upload Node bindings
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: napi-${{ matrix.target }}
           path: |
@@ -187,7 +187,7 @@ jobs:
             coverage: false
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -219,7 +219,7 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Download Node bindings
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: napi-${{ matrix.target }}
           path: crates/kreuzberg-node/

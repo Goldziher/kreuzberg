@@ -65,6 +65,8 @@ jobs:
     name: Rust Unit Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -76,7 +78,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -135,7 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -197,7 +199,7 @@ jobs:
             archive: zip
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -233,7 +235,7 @@ jobs:
         run: scripts/ci/rust/package-cli-windows.ps1 -Target ${{ matrix.target }}
 
       - name: Upload CLI binary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }}

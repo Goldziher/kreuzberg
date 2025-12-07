@@ -34,10 +34,12 @@ jobs:
     name: Build harness + native libs
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     outputs:
       artifact-name: benchmarks-target
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -75,7 +77,7 @@ jobs:
           bash scripts/benchmarks/build-native-libs.sh
 
       - name: Upload target artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-target
           path: |
@@ -87,12 +89,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -131,7 +135,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-native-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -142,12 +146,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -195,7 +201,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-python-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -206,12 +212,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -259,7 +267,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-python-async-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -270,12 +278,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -323,7 +333,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-python-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -334,12 +344,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -394,7 +406,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-node-async-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -405,12 +417,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -465,7 +479,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-node-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -476,12 +490,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -530,7 +546,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-ruby-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -541,12 +557,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -595,7 +613,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-ruby-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -606,12 +624,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -636,7 +656,7 @@ jobs:
           cache-key-prefix: benchmarks-go-sync
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
           cache-dependency-path: packages/go/go.sum
@@ -663,7 +683,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-go-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -674,12 +694,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -704,7 +726,7 @@ jobs:
           cache-key-prefix: benchmarks-go-batch
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
           cache-dependency-path: packages/go/go.sum
@@ -731,7 +753,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-go-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -742,12 +764,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -795,7 +819,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-java-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -806,12 +830,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -836,7 +862,7 @@ jobs:
           cache-key-prefix: benchmarks-csharp-sync
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
@@ -858,7 +884,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-kreuzberg-csharp-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -869,12 +895,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -922,7 +950,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-docling-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -933,12 +961,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -986,7 +1016,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-docling-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -997,12 +1027,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -1050,7 +1082,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-markitdown-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -1061,12 +1093,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -1114,7 +1148,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-unstructured-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -1125,12 +1159,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         mode: [single-file, batch]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref_name }}
 
@@ -1178,7 +1214,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks-extractous-python-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/

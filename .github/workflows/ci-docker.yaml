@@ -46,6 +46,8 @@ jobs:
     name: Build and Test Docker Image (${{ matrix.variant }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
 
     strategy:
       fail-fast: false
@@ -56,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Free up disk space
         run: scripts/ci/docker/free-disk-space.sh
@@ -82,7 +84,7 @@ jobs:
 
       - name: Upload Docker image artifact
         if: success()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: docker-image-${{ matrix.variant }}
           path: /tmp/kreuzberg-${{ matrix.variant }}.tar.gz
@@ -91,7 +93,7 @@ jobs:
 
       - name: Upload test results
         if: always() && !inputs.skip_tests
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: docker-test-results-${{ matrix.variant }}
           path: /tmp/kreuzberg-docker-test-results.json
@@ -103,7 +105,7 @@ jobs:
 
       - name: Upload Docker logs
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: docker-logs-${{ matrix.variant }}
           path: /tmp/docker-logs/
