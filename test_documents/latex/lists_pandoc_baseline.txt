@@ -1,0 +1,33 @@
+Lists
+
+Itemize
+
+- First item
+
+- Second item
+
+- Third item with nested list:
+
+  - Nested item 1
+
+  - Nested item 2
+
+- Fourth item
+
+Enumerate
+
+1.  First numbered item
+
+2.  Second numbered item
+
+3.  Third numbered item
+
+Description
+
+Term 1
+
+    Definition of term 1
+
+Term 2
+
+    Definition of term 2
