@@ -650,7 +650,7 @@ mod tests {
 
     #[test]
     fn test_metadata_extraction_completeness() {
-        // Test all fields that Pandoc extracts
+        // Test metadata extraction completeness
         let yaml_str = r#"
 title: "Test Document"
 author: "Test Author"

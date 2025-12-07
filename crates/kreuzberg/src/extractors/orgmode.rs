@@ -1,7 +1,7 @@
 //! Native Org Mode extractor using the `org` library.
 //!
-//! This extractor provides comprehensive Org Mode document parsing and extraction,
-//! replacing Pandoc for .org files. It extracts:
+//! This extractor provides comprehensive Org Mode document parsing and extraction.
+//! It extracts:
 //!
 //! - **Metadata**: #+TITLE, #+AUTHOR, #+DATE, #+KEYWORDS from document preamble
 //! - **Properties**: :PROPERTIES: drawers with additional metadata
@@ -33,7 +33,7 @@ use org::Org;
 /// Org Mode document extractor.
 ///
 /// Provides native Rust-based Org Mode extraction using the `org` library,
-/// extracting structured content and metadata without external dependencies like Pandoc.
+/// extracting structured content and metadata.
 #[cfg(feature = "office")]
 pub struct OrgModeExtractor;
 
@@ -332,7 +332,6 @@ impl DocumentExtractor for OrgModeExtractor {
     }
 
     fn priority(&self) -> i32 {
-        // Higher than Pandoc (40) to prefer native implementation
         50
     }
 }

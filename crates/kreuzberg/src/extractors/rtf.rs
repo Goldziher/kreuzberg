@@ -18,7 +18,6 @@ use async_trait::async_trait;
 /// Native Rust RTF extractor.
 ///
 /// Extracts text content, metadata, and structure from RTF documents
-/// without requiring Pandoc as a dependency.
 pub struct RtfExtractor;
 
 impl RtfExtractor {
@@ -447,7 +446,6 @@ impl DocumentExtractor for RtfExtractor {
     }
 
     fn priority(&self) -> i32 {
-        // Higher priority than Pandoc (40) to prefer native Rust implementation
         50
     }
 }

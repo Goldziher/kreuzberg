@@ -81,7 +81,7 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          cache-key-prefix: go-${{ matrix.os }}
+          cache-key-prefix: ${{ matrix.os == 'windows-latest' && 'go-windows-gnu' || format('go-{0}', matrix.os) }}
           # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
           use-sccache: ${{ matrix.os != 'windows-latest' }}
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}

@@ -1,6 +1,6 @@
 //! Jupyter Notebook extractor for .ipynb files.
 //!
-//! This extractor provides native Rust parsing of Jupyter notebooks without Pandoc,
+//! This extractor provides native Rust parsing of Jupyter notebooks,
 //! extracting:
 //! - Notebook metadata (kernelspec, language_info, nbformat)
 //! - Cell content (markdown and code cells in order)
@@ -310,7 +310,7 @@ impl Plugin for JupyterExtractor {
     }
 
     fn description(&self) -> &str {
-        "Extracts content from Jupyter notebooks (.ipynb files) without Pandoc dependency"
+        "Extracts content from Jupyter notebooks (.ipynb files)"
     }
 
     fn author(&self) -> &str {

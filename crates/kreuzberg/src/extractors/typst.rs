@@ -486,14 +486,13 @@ impl TypstParser {
     }
 
     fn extract_link_text(&self, line: &str) -> String {
-        // Pattern: #link("url")[text] - preserve both URL and text for better parity
+        // Pattern: #link("url")[text]
         let pattern = r#"link\("([^"]*)"\)\[([^\]]*)\]"#;
         if let Ok(re) = Regex::new(pattern) {
             return re
                 .replace_all(line, |caps: &regex::Captures| {
                     let url = caps.get(1).map(|m| m.as_str()).unwrap_or("");
                     let text = caps.get(2).map(|m| m.as_str()).unwrap_or("");
-                    // Format as [text](url) for better Pandoc parity
                     format!("[{}]({})", text, url)
                 })
                 .to_string();

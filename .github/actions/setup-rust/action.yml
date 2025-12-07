@@ -117,9 +117,9 @@ runs:
           ~/.cargo/registry/cache
           ~/.cargo/git/db
           target/
-        key: ${{ inputs.cache-key-prefix }}-v2-${{ runner.os }}-${{ steps.cargo-hash.outputs.hash }}
+        key: ${{ inputs.cache-key-prefix }}-v3-${{ runner.os }}-${{ inputs.target || 'default' }}-${{ steps.cargo-hash.outputs.hash }}
         restore-keys: |
-          ${{ inputs.cache-key-prefix }}-v2-${{ runner.os }}-
+          ${{ inputs.cache-key-prefix }}-v3-${{ runner.os }}-${{ inputs.target || 'default' }}-
 
     - name: Cache cargo-llvm-cov
       uses: actions/cache@v4

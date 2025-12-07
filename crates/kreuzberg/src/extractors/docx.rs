@@ -15,7 +15,6 @@ use std::io::Cursor;
 /// This extractor provides:
 /// - Fast text extraction via streaming XML parsing (~160 MB/s average)
 /// - Comprehensive metadata extraction (core.xml, app.xml, custom.xml)
-/// - ~400x faster than Pandoc subprocess approach
 pub struct DocxExtractor;
 
 impl DocxExtractor {
@@ -298,7 +297,7 @@ impl DocumentExtractor for DocxExtractor {
     }
 
     fn priority(&self) -> i32 {
-        50 // Higher priority than Pandoc (40) to take precedence
+        50
     }
 }
 

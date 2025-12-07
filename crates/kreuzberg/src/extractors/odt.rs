@@ -563,7 +563,7 @@ impl DocumentExtractor for OdtExtractor {
     }
 
     fn priority(&self) -> i32 {
-        60 // Higher priority than Pandoc (40) and DOCX (50) to take precedence for ODT files
+        60
     }
 }
 

@@ -1,6 +1,6 @@
 //! Native Rust reStructuredText (RST) extractor.
 //!
-//! This extractor provides comprehensive RST document parsing without requiring Pandoc.
+//! This extractor provides comprehensive RST document parsing.
 //! It extracts:
 //! - Document title and headings
 //! - Field list metadata (:Author:, :Date:, :Version:, etc.)
@@ -495,7 +495,6 @@ impl DocumentExtractor for RstExtractor {
     }
 
     fn priority(&self) -> i32 {
-        // Slightly higher priority than Pandoc to prefer native implementation
         50
     }
 }

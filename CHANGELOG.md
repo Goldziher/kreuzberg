@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.0-rc.5] - 2025-12-01
 
-### Release Candidate 5 - macOS Binary Fix
+### Release Candidate 5 - macOS Binary Fix & Complete Pandoc Removal
+
+#### Breaking Changes
+
+**Complete Pandoc Removal**:
+- **Removed all Pandoc dependencies** from v4 codebase (100% native Rust extractors)
+  - Deleted 7 Pandoc code files (3,006 lines)
+  - Removed `pandoc-fallback` feature flag from Cargo.toml
+  - Removed Pandoc installation from all CI/CD workflows (Linux, macOS, Windows)
+  - Removed Pandoc from Docker images (saving ~500MB-1GB per image)
+  - Updated all documentation to reflect native-only approach
+  - Deleted 160+ Pandoc baseline test files
+- **Native Rust extractors** now handle all 12 previously Pandoc-supported formats:
+  - LaTeX, EPUB, BibTeX, Typst, Jupyter, FictionBook, DocBook, JATS, OPML
+  - Org-mode, reStructuredText, RTF, Markdown variants
+- **Benefits**: Simpler installation (no system dependencies), faster CI builds (~2-5 min improvement), smaller Docker images, pure Rust codebase
+- **Migration**: No action required - native extractors are drop-in replacements with equivalent or better quality
 
 #### Bug Fixes
 
@@ -259,14 +275,10 @@ v4 introduces native metadata extraction across all major document formats:
 - YAML frontmatter automatically stripped from markdown content
 - Accessible via `ExtractionResult.metadata.html`
 
-**Pandoc-Supported Formats** (via Pandoc subprocess):
-- ODT, EPUB, LaTeX, reStructuredText, RTF, Typst, Jupyter Notebooks, FictionBook, Org Mode, DocBook, JATS, OPML
-- Uses Pandoc for extraction in these formats where native Rust extractors are not yet implemented
-- Extracts whatever metadata Pandoc provides (varies by format)
 
 **Key Improvements from v3**:
 - PDF: Pure Rust `lopdf` instead of Python `playa-pdf` for better performance
-- Office: Comprehensive native metadata extraction merged with Pandoc (v3 relied solely on Pandoc)
+- Office: Comprehensive native metadata extraction via Office Open XML parsing
 - All metadata extraction is non-blocking and gracefully handles failures
 - **Python Type Safety**: All metadata types now have proper `TypedDict` definitions with comprehensive field typing
   - `PdfMetadata`, `ExcelMetadata`, `EmailMetadata`, `PptxMetadata`, `ArchiveMetadata`
@@ -276,8 +288,8 @@ v4 introduces native metadata extraction across all major document formats:
 
 **Legacy MS Office Support**:
 - LibreOffice conversion for `.doc` and `.ppt` files
-- Automatic fallback to modern format extractors
-- Optional system dependency (graceful degradation)
+- Automatic fallback to modern format extractors after LibreOffice conversion
+- Optional system dependency (graceful degradation if unavailable)
 
 **PDF Improvements**:
 - Better text extraction with pdfium-render
@@ -427,13 +439,13 @@ register_ocr_backend(CloudOCR())
 
 ### Docker Images
 
-All Docker images include LibreOffice, Pandoc, and Tesseract by default:
+All Docker images include LibreOffice and Tesseract by default:
 
-- `goldziher/kreuzberg:4.0.0-rc.1` - Core image with Tesseract OCR
-- `goldziher/kreuzberg:4.0.0-rc.1-easyocr` - Core + EasyOCR
-- `goldziher/kreuzberg:4.0.0-rc.1-paddle` - Core + PaddleOCR
-- `goldziher/kreuzberg:4.0.0-rc.1-vision-tables` - Core + vision-based table extraction
-- `goldziher/kreuzberg:4.0.0-rc.1-all` - All features included
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1` - Core image with Tesseract OCR
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-easyocr` - Core + EasyOCR
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-paddle` - Core + PaddleOCR
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-vision-tables` - Core + vision-based table extraction
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-all` - All features included
 
 ### Installation
 
@@ -527,7 +539,7 @@ See [Migration Guide](https://docs.kreuzberg.dev/migration/v3-to-v4/) for detail
 
 - All dependencies audited and updated
 - No known security vulnerabilities
-- Sandboxed subprocess execution (Pandoc, LibreOffice)
+- Sandboxed subprocess execution (LibreOffice)
 - Input validation on all user-provided data
 
 ### Contributors

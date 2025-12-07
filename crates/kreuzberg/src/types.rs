@@ -844,18 +844,6 @@ pub struct CacheStats {
     pub newest_file_age_days: f64,
 }
 
-/// Pandoc extraction result.
-///
-/// Result of extracting content from a document using Pandoc,
-/// including text and any metadata Pandoc was able to extract.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PandocExtractionResult {
-    /// Extracted text content
-    pub content: String,
-    /// Metadata extracted by Pandoc (varies by format)
-    pub metadata: HashMap<String, serde_json::Value>,
-}
-
 /// LibreOffice conversion result.
 ///
 /// Result of converting a legacy office document (e.g., .doc, .ppt)

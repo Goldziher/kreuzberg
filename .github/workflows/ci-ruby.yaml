@@ -98,8 +98,15 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
+          bundler: none
           bundler-cache: false
           working-directory: packages/ruby
+
+      - name: Install Bundler
+        shell: bash
+        run: |
+          gem install bundler -v 4.0.0 --no-document || gem install bundler --no-document
+          bundler --version
 
       - name: Configure short paths for Windows MAX_PATH mitigation
         if: runner.os == 'Windows'
@@ -222,8 +229,20 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: ${{ runner.os != 'Windows' }}
+          bundler: none
+          bundler-cache: false
           working-directory: packages/ruby
+
+      - name: Install Bundler
+        shell: bash
+        run: |
+          gem install bundler -v 4.0.0 --no-document || gem install bundler --no-document
+          bundler --version
+
+      - name: Install Ruby deps
+        if: runner.os != 'Windows'
+        shell: bash
+        run: scripts/ci/ruby/install-ruby-deps.sh
 
       - name: Configure short paths for Windows MAX_PATH mitigation
         if: runner.os == 'Windows'

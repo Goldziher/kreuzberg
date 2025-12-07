@@ -217,7 +217,7 @@ tasks:
     desc: Update Ruby dependencies
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} update"
+      - "{{.BUNDLE}} update --all"
   ruby:test:
     desc: Run Ruby tests
     dir: packages/ruby

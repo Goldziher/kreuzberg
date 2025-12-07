@@ -8,7 +8,6 @@
 //! - Content from `<body><outline>` hierarchy using text attributes
 //! - Outline hierarchy structure preserved in plain text format with indentation
 //! - Note: URLs (xmlUrl, htmlUrl) are extracted from attributes but not included in main content
-//!   to maintain parity with Pandoc extraction behavior
 //!
 //! Example OPML structure:
 //! ```xml
@@ -119,8 +118,7 @@ impl OpmlExtractor {
     /// Process outline elements recursively
     ///
     /// Extracts text content from outline hierarchy while preserving nesting depth
-    /// through indentation. URL attributes are excluded from the main content
-    /// to maintain parity with Pandoc's extraction behavior.
+    /// through indentation. URL attributes are excluded from the main content.
     #[cfg(feature = "office")]
     fn process_outline(node: Node, depth: usize, output: &mut String) {
         // Get text attribute
@@ -310,7 +308,6 @@ mod tests {
         let (content, _) = OpmlExtractor::extract_content_and_metadata(opml).expect("Should parse RSS OPML");
 
         assert!(content.contains("Hacker News"), "Should extract feed title");
-        // URLs are intentionally excluded from content to maintain parity with Pandoc extraction behavior
         assert!(
             !content.contains("https://"),
             "Should NOT extract feed URLs (text-only extraction)"

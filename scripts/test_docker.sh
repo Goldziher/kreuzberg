@@ -8,7 +8,6 @@
 # - OCR capabilities (Tesseract)
 # - API server (health, extraction endpoints)
 # - LibreOffice conversion (legacy .doc files)
-# - Pandoc conversion
 # - Security (non-root user, read-only volumes)
 #
 # Usage:

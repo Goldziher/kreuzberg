@@ -12,7 +12,7 @@ Both variants use **Debian 13 (Trixie) slim** - the latest stable Debian release
 
 **Size:** ~1.0-1.3GB
 **Base:** debian:trixie-slim
-**Features:** PDF, DOCX, PPTX, images, HTML, XML, text, Excel, email, Pandoc formats
+**Features:** PDF, DOCX, PPTX, images, HTML, XML, text, Excel, email, academic formats (LaTeX, EPUB, etc.)
 **OCR:** Tesseract (12 languages)
 **Missing:** LibreOffice (no legacy .doc, .ppt support)
 
@@ -53,7 +53,6 @@ docker build -f docker/Dockerfile.full -t kreuzberg:full .
 | Base (trixie-slim) | ~120MB | ~120MB | - |
 | Tesseract + 12 langs | ~250MB | ~250MB | - |
 | Rust binary | ~80MB | ~80MB | - |
-| Pandoc | ~50MB | ~50MB | - |
 | pdfium | ~30MB | ~30MB | - |
 | System libraries | ~100MB | ~100MB | - |
 | **LibreOffice** | - | **~500-800MB** | **+500-800MB** |
@@ -69,7 +68,7 @@ Both images support:
 - `linux/amd64` (x86_64)
 - `linux/arm64` (aarch64)
 
-Architecture-specific binaries (Pandoc, LibreOffice, pdfium) are automatically selected during build.
+Architecture-specific binaries (LibreOffice, pdfium) are automatically selected during build.
 
 ## Usage Modes
 
