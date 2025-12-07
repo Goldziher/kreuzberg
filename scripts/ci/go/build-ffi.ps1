@@ -78,6 +78,11 @@ if ($IsWindowsOS) {
             Write-Host "Set ORT_STRATEGY=system (was not set)"
         }
 
+        # For MinGW, use load_library to load the DLL at runtime instead of linking
+        # The Windows ONNX Runtime distribution only has MSVC .lib files, not MinGW .a files
+        $env:ORT_USE_LOAD_LIBRARY = "1"
+        Write-Host "ORT_USE_LOAD_LIBRARY: 1 (MinGW uses runtime DLL loading)"
+
         $EnvPath = $env:ORT_LIB_LOCATION -replace '/', '\'
         $env:RUSTFLAGS = $env:RUSTFLAGS ? "$($env:RUSTFLAGS) -L $EnvPath" : "-L $EnvPath"
         Write-Host "RUSTFLAGS: $env:RUSTFLAGS"
