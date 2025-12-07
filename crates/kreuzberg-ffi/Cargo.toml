@@ -32,5 +32,6 @@ tempfile = "3.23"
 
 [features]
 default = ["html", "embeddings"]
+core = ["html"]
 html = ["html-to-markdown-rs"]
 embeddings = ["kreuzberg/embeddings"]
