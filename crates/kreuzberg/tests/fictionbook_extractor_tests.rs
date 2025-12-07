@@ -175,7 +175,6 @@ async fn test_fictionbook_extract_tables() {
     );
 }
 
-
 #[tokio::test]
 async fn test_fictionbook_markdown_formatting_preservation() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();

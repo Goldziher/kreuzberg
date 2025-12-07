@@ -40,7 +40,6 @@ fn test_file_path(filename: &str) -> PathBuf {
         .join(filename)
 }
 
-
 // ============================================================================
 // TEST 1: MINIMAL - Basic Content Extraction
 // ============================================================================
@@ -67,7 +66,6 @@ async fn test_latex_minimal_extraction() {
         "FAIL: Should extract 'Hello World from LaTeX!' but got: '{}'",
         result.content
     );
-
 }
 
 // ============================================================================
@@ -149,7 +147,6 @@ async fn test_latex_section_hierarchy() {
         result.content.contains("This is the introduction paragraph"),
         "FAIL: Should extract paragraph text from document body"
     );
-
 }
 
 // ============================================================================
@@ -213,7 +210,6 @@ async fn test_latex_text_formatting() {
         result.content.contains("bold and italic"),
         "FAIL: Should extract text from nested formatting commands"
     );
-
 }
 
 // ============================================================================
@@ -270,7 +266,6 @@ async fn test_latex_math_extraction() {
         result.content.contains("int") || result.content.contains("∫"),
         "FAIL: Should extract display math environment content"
     );
-
 }
 
 // ============================================================================
@@ -342,7 +337,6 @@ async fn test_latex_table_extraction() {
         result.content.contains("Sample table with caption"),
         "FAIL: Should extract table caption from \\caption{{}}"
     );
-
 }
 
 // ============================================================================
@@ -471,7 +465,6 @@ async fn test_latex_lists_pandoc_parity() {
         .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
         .await
         .expect("Should extract LaTeX lists");
-
 }
 
 // ============================================================================
@@ -500,7 +493,6 @@ async fn test_latex_unicode_handling() {
         result.content.len() > 0,
         "FAIL: Should extract non-zero content from unicode.tex"
     );
-
 }
 
 // ============================================================================

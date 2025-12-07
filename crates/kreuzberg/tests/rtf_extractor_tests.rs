@@ -51,8 +51,6 @@ fn get_rtf_path(filename: &str) -> PathBuf {
         .join(filename)
 }
 
-
-
 // ============================================================================
 // TEST 1: accent.rtf
 // Baseline from Pandoc: "le café où on ne fume pas"
@@ -117,7 +115,6 @@ async fn test_rtf_accent_extraction() {
 /// Pandoc baseline: [Bookmark_1]{#bookmark_1} and [click me](#bookmark_1)
 #[tokio::test]
 async fn test_rtf_bookmark_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("bookmark.rtf");
 
@@ -151,7 +148,6 @@ async fn test_rtf_bookmark_extraction() {
 /// Pandoc baseline: Uses [^1] and [^2] syntax for footnotes
 #[tokio::test]
 async fn test_rtf_footnote_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("footnote.rtf");
 
@@ -209,7 +205,6 @@ async fn test_rtf_footnote_extraction() {
 /// Pandoc baseline: Detailed formatting in markdown syntax
 #[tokio::test]
 async fn test_rtf_formatting_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("formatting.rtf");
 
@@ -271,7 +266,6 @@ async fn test_rtf_formatting_extraction() {
 /// Pandoc baseline: Markdown heading syntax (# ## ###)
 #[tokio::test]
 async fn test_rtf_heading_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("heading.rtf");
 
@@ -328,7 +322,6 @@ async fn test_rtf_heading_extraction() {
 /// Pandoc baseline: Markdown image syntax with dimensions
 #[tokio::test]
 async fn test_rtf_image_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("image.rtf");
 
@@ -369,7 +362,6 @@ async fn test_rtf_image_extraction() {
 /// Pandoc baseline: Markdown link syntax [pandoc](http://pandoc.org)
 #[tokio::test]
 async fn test_rtf_link_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("link.rtf");
 
@@ -405,7 +397,6 @@ async fn test_rtf_link_extraction() {
 /// Pandoc baseline: Markdown nested list with mixed numbering schemes
 #[tokio::test]
 async fn test_rtf_list_complex_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("list_complex.rtf");
 
@@ -474,7 +465,6 @@ async fn test_rtf_list_complex_extraction() {
 /// Pandoc baseline: Simple markdown bullet list with nesting
 #[tokio::test]
 async fn test_rtf_list_simple_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("list_simple.rtf");
 
@@ -522,7 +512,6 @@ async fn test_rtf_list_simple_extraction() {
 /// in Pandoc's internal JSON representation but may not render in text format.
 #[tokio::test]
 async fn test_rtf_table_error_codes_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("table_error_codes.rtf");
 
@@ -565,7 +554,6 @@ async fn test_rtf_table_error_codes_extraction() {
 /// in Pandoc's internal JSON representation but may not render in text format.
 #[tokio::test]
 async fn test_rtf_table_simple_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("table_simple.rtf");
 
@@ -598,7 +586,6 @@ async fn test_rtf_table_simple_extraction() {
 /// Pandoc baseline: "hi"'hi'αä
 #[tokio::test]
 async fn test_rtf_unicode_extraction() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("unicode.rtf");
 
@@ -617,7 +604,6 @@ async fn test_rtf_unicode_extraction() {
     );
 }
 
-
 // ============================================================================
 // INTEGRATION TESTS - Quality Checks and Determinism
 // ============================================================================
@@ -626,7 +612,6 @@ async fn test_rtf_unicode_extraction() {
 /// Same input should produce identical output
 #[tokio::test]
 async fn test_rtf_extraction_deterministic_unicode() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("unicode.rtf");
 
@@ -648,7 +633,6 @@ async fn test_rtf_extraction_deterministic_unicode() {
 /// Same input should produce identical output
 #[tokio::test]
 async fn test_rtf_extraction_deterministic_list_complex() {
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("list_complex.rtf");
 
@@ -670,7 +654,6 @@ async fn test_rtf_extraction_deterministic_list_complex() {
 /// All RTF files should extract non-empty content (except possibly image-only files)
 #[tokio::test]
 async fn test_rtf_no_critical_content_loss() {
-
     let config = ExtractionConfig::default();
 
     // Test files that MUST extract content
@@ -717,7 +700,6 @@ async fn test_rtf_no_critical_content_loss() {
 /// All RTF extractions should preserve the application/rtf MIME type
 #[tokio::test]
 async fn test_rtf_mime_type_preservation() {
-
     let config = ExtractionConfig::default();
 
     let test_files = vec!["unicode.rtf", "accent.rtf", "heading.rtf", "list_simple.rtf"];

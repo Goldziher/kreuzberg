@@ -454,7 +454,6 @@ async fn test_opml_special_characters_handling() {
     println!("   Verified UTF-8 integrity and entity decoding");
 }
 
-
 // ============================================================================
 // SECTION 9: OUTLINE-SPECIFIC HIERARCHY TESTS
 // ============================================================================
