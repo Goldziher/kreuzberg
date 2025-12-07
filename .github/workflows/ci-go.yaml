@@ -111,7 +111,8 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
-      - name: Setup ONNX Runtime
+      - name: Setup ONNX Runtime (non-Windows only)
+        if: matrix.os != 'windows-latest'
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
