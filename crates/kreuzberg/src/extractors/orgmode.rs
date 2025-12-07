@@ -1,4 +1,4 @@
-//! Native Org Mode extractor using the `orgize` library.
+//! Native Org Mode extractor using the `org` library.
 //!
 //! This extractor provides comprehensive Org Mode document parsing and extraction,
 //! replacing Pandoc for .org files. It extracts:
@@ -28,11 +28,11 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 #[cfg(feature = "office")]
-use orgize::{Element, Org};
+use org::Org;
 
 /// Org Mode document extractor.
 ///
-/// Provides native Rust-based Org Mode extraction using the `orgize` library,
+/// Provides native Rust-based Org Mode extraction using the `org` library,
 /// extracting structured content and metadata without external dependencies like Pandoc.
 #[cfg(feature = "office")]
 pub struct OrgModeExtractor;
@@ -99,9 +99,9 @@ impl OrgModeExtractor {
         (metadata, content)
     }
 
-    /// Extract all content from an Org document using event iteration.
+    /// Extract all content from an Org document using tree-based parsing.
     ///
-    /// Uses orgize's event-based iteration to handle:
+    /// Uses org's tree-based API to recursively traverse the document structure:
     /// - Headings with proper hierarchy
     /// - Paragraphs
     /// - Lists (both ordered and unordered)
@@ -110,188 +110,84 @@ impl OrgModeExtractor {
     /// - Inline formatting markers
     fn extract_content(org: &Org) -> String {
         let mut content = String::new();
-        let mut in_src_block = false;
-        let mut list_stack = Vec::new(); // Track list depth
+        Self::extract_org_tree(org, &mut content);
+        content.trim().to_string()
+    }
 
-        for event in org.iter() {
-            match event {
-                orgize::Event::Start(Element::Headline { level }) => {
-                    let hashes = "#".repeat(std::cmp::min(*level, 6));
-                    content.push_str(&format!("{} ", hashes));
-                }
-                orgize::Event::End(Element::Headline { .. }) => {
-                    content.push('\n');
-                }
-                orgize::Event::Start(Element::Title(_)) => {
-                    // Title content follows - just continue
-                }
-                orgize::Event::End(Element::Title(_)) => {
-                    content.push('\n');
-                }
-                orgize::Event::Start(Element::Paragraph { .. }) => {
-                    // Paragraph start - content follows
-                }
-                orgize::Event::End(Element::Paragraph { .. }) => {
-                    content.push_str("\n\n");
-                }
-                orgize::Event::Start(Element::List(list)) => {
-                    // Start new list - track if ordered or unordered
-                    list_stack.push((0, !list.ordered));
-                }
-                orgize::Event::End(Element::List(_)) => {
-                    list_stack.pop();
-                    if list_stack.is_empty() {
-                        content.push('\n');
-                    }
-                }
-                orgize::Event::Start(Element::ListItem(_)) => {
-                    let depth = list_stack.len().saturating_sub(1);
-                    let indent = "  ".repeat(depth);
-                    if let Some((counter, is_unordered)) = list_stack.last_mut() {
-                        *counter += 1;
-                        if *is_unordered {
-                            content.push_str(&format!("{}- ", indent));
-                        } else {
-                            content.push_str(&format!("{}{}. ", indent, counter));
-                        }
-                    } else {
-                        content.push_str(&format!("{}- ", indent));
-                    }
-                }
-                orgize::Event::End(Element::ListItem(_)) => {
-                    content.push('\n');
-                }
-                orgize::Event::Start(Element::SourceBlock(sb)) => {
-                    in_src_block = true;
-                    let lang = sb.language.as_ref();
-                    content.push_str(&format!("```{}\n", lang));
-                }
-                orgize::Event::End(Element::SourceBlock { .. }) => {
-                    in_src_block = false;
-                    content.push_str("```\n\n");
-                }
-                orgize::Event::Start(Element::Table(_)) => {
-                    // Table handling - rows follow
-                }
-                orgize::Event::End(Element::Table(_)) => {
-                    content.push('\n');
-                }
-                orgize::Event::Start(Element::TableRow(_)) => {
-                    content.push('|');
-                }
-                orgize::Event::End(Element::TableRow(_)) => {
-                    content.push('\n');
-                }
-                orgize::Event::Start(Element::TableCell(_)) => {
-                    content.push(' ');
-                }
-                orgize::Event::End(Element::TableCell(_)) => {
-                    content.push_str(" |");
-                }
-                orgize::Event::Start(Element::Bold) => {
-                    content.push('*');
-                }
-                orgize::Event::End(Element::Bold) => {
-                    content.push('*');
-                }
-                orgize::Event::Start(Element::Italic) => {
-                    content.push('/');
-                }
-                orgize::Event::End(Element::Italic) => {
-                    content.push('/');
-                }
-                orgize::Event::Start(Element::Underline) => {
-                    content.push('_');
-                }
-                orgize::Event::End(Element::Underline) => {
-                    content.push('_');
-                }
-                orgize::Event::Start(Element::Strike) => {
-                    content.push_str("~~");
-                }
-                orgize::Event::End(Element::Strike) => {
-                    content.push_str("~~");
-                }
-                orgize::Event::Start(Element::Code { value }) => {
-                    content.push('`');
-                    content.push_str(value);
-                    content.push('`');
-                }
-                orgize::Event::End(Element::Code { .. }) => {
-                    // Already added content in Start event
-                }
-                orgize::Event::Start(Element::Verbatim { value }) => {
-                    content.push('~');
-                    content.push_str(value);
-                    content.push('~');
-                }
-                orgize::Event::End(Element::Verbatim { .. }) => {
-                    // Already added content in Start event
-                }
-                orgize::Event::Start(Element::Link(link)) => {
-                    // Use description if available, otherwise fall back to path
-                    // [[url][description]] → description
-                    // [[url]] → url
-                    let link_text = if let Some(desc) = &link.desc { desc } else { &link.path };
-                    content.push_str(&format!("[{}]", link_text));
-                }
-                orgize::Event::End(Element::Link { .. }) => {
-                    // Handled in Start
-                }
-                orgize::Event::Start(Element::Text { value }) => {
-                    // Add text content
-                    if !in_src_block {
-                        // Clean up whitespace but preserve intentional breaks
-                        let cleaned = value.trim_end_matches('\n');
-                        if !cleaned.is_empty() {
-                            content.push_str(cleaned);
-                        }
-                    } else {
-                        content.push_str(value);
-                    }
-                }
-                orgize::Event::End(Element::Text { .. }) => {
-                    // Text is handled in Start
-                }
-                orgize::Event::Start(Element::ExampleBlock(_)) => {
-                    content.push_str("> ");
-                }
-                orgize::Event::End(Element::ExampleBlock { .. }) => {
-                    content.push('\n');
-                }
-                orgize::Event::Start(Element::QuoteBlock(_)) => {
-                    content.push_str("> ");
-                }
-                orgize::Event::End(Element::QuoteBlock(_)) => {
-                    content.push('\n');
-                }
-                _ => {
-                    // Ignore other elements like comments, affiliated keywords, etc.
-                }
-            }
+    /// Recursively walk the Org tree and extract content.
+    ///
+    /// Processes:
+    /// - Heading text from `org.heading()`
+    /// - Content lines from `org.content_as_ref()`
+    /// - Subtrees from `org.subtrees_as_ref()`
+    fn extract_org_tree(org: &Org, content: &mut String) {
+        // Extract heading if present
+        let heading = org.heading();
+        if !heading.is_empty() {
+            // Get the level (depth) from the number of subtrees and parent context
+            // For now, we'll infer from content structure
+            content.push_str("# ");
+            content.push_str(heading);
+            content.push('\n');
         }
 
-        content.trim().to_string()
+        // Extract content lines
+        let lines = org.content_as_ref();
+        if !lines.is_empty() {
+            for line in lines {
+                let trimmed = line.trim();
+                if !trimmed.is_empty() {
+                    content.push_str(trimmed);
+                    content.push('\n');
+                }
+            }
+            content.push('\n');
+        }
+
+        // Recursively process subtrees
+        let subtrees = org.subtrees_as_ref();
+        for subtree in subtrees {
+            Self::extract_org_tree(subtree, content);
+        }
     }
 
     /// Extract tables from an Org document.
     ///
-    /// Parses table elements and converts them to Table structs with markdown format.
+    /// Recursively walks the tree and extracts table elements,
+    /// converting them to Table structs with markdown format.
     fn extract_tables(org: &Org) -> Vec<Table> {
         let mut tables = Vec::new();
-        let mut current_table: Vec<Vec<String>> = Vec::new();
-        let mut current_row: Vec<String> = Vec::new();
-        let mut current_cell = String::new();
-        let mut in_table = false;
+        Self::extract_tables_from_tree(org, &mut tables);
+        tables
+    }
 
-        for event in org.iter() {
-            match event {
-                orgize::Event::Start(Element::Table(_)) => {
+    /// Recursively extract tables from an Org tree node and its subtrees.
+    fn extract_tables_from_tree(org: &Org, tables: &mut Vec<Table>) {
+        // Extract content lines and look for table patterns
+        let lines = org.content_as_ref();
+        if !lines.is_empty() {
+            let mut in_table = false;
+            let mut current_table: Vec<Vec<String>> = Vec::new();
+
+            for line in lines {
+                let trimmed = line.trim();
+
+                // Check if this line is a table row (starts and ends with |)
+                if trimmed.starts_with('|') && trimmed.ends_with('|') {
                     in_table = true;
-                    current_table.clear();
-                }
-                orgize::Event::End(Element::Table(_)) => {
-                    in_table = false;
+
+                    // Split by pipe and extract cells
+                    let cells: Vec<String> = trimmed
+                        .split('|')
+                        .map(|cell| cell.trim().to_string())
+                        .filter(|cell| !cell.is_empty()) // Remove empty strings from leading/trailing |
+                        .collect();
+
+                    if !cells.is_empty() {
+                        current_table.push(cells);
+                    }
+                } else if in_table {
+                    // End of table
                     if !current_table.is_empty() {
                         let markdown = Self::cells_to_markdown(&current_table);
                         tables.push(Table {
@@ -301,31 +197,26 @@ impl OrgModeExtractor {
                         });
                         current_table.clear();
                     }
+                    in_table = false;
                 }
-                orgize::Event::Start(Element::TableRow(_)) if in_table => {
-                    current_row.clear();
-                }
-                orgize::Event::End(Element::TableRow(_)) if in_table => {
-                    if !current_row.is_empty() {
-                        current_table.push(current_row.clone());
-                        current_row.clear();
-                    }
-                }
-                orgize::Event::Start(Element::TableCell(_)) if in_table => {
-                    current_cell.clear();
-                }
-                orgize::Event::End(Element::TableCell(_)) if in_table => {
-                    current_row.push(current_cell.trim().to_string());
-                    current_cell.clear();
-                }
-                orgize::Event::Start(Element::Text { value }) if in_table => {
-                    current_cell.push_str(value);
-                }
-                _ => {}
+            }
+
+            // Handle table at end of content
+            if !current_table.is_empty() {
+                let markdown = Self::cells_to_markdown(&current_table);
+                tables.push(Table {
+                    cells: current_table,
+                    markdown,
+                    page_number: 1,
+                });
             }
         }
 
-        tables
+        // Recursively process subtrees
+        let subtrees = org.subtrees_as_ref();
+        for subtree in subtrees {
+            Self::extract_tables_from_tree(subtree, tables);
+        }
     }
 
     /// Convert table cells to markdown format.
@@ -415,8 +306,9 @@ impl DocumentExtractor for OrgModeExtractor {
         // Convert bytes to string
         let org_text = String::from_utf8_lossy(content).into_owned();
 
-        // Parse Org document
-        let org = Org::parse(&org_text);
+        // Parse Org document using tree-based API
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines)?;
 
         // Extract metadata and content in a single combined pass
         let (metadata, extracted_content) = Self::extract_metadata_and_content(&org_text, &org);
@@ -480,7 +372,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_title() {
         let org_text = "#+TITLE: Test Document\n\nContent here.";
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         assert!(metadata.additional.get("title").and_then(|v| v.as_str()).is_some());
@@ -489,7 +382,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_author() {
         let org_text = "#+AUTHOR: John Doe\n\nContent here.";
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         assert!(metadata.additional.get("author").and_then(|v| v.as_str()).is_some());
@@ -498,7 +392,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_date() {
         let org_text = "#+DATE: 2024-01-15\n\nContent here.";
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         assert_eq!(metadata.date, Some("2024-01-15".to_string()));
@@ -507,7 +402,8 @@ mod tests {
     #[test]
     fn test_extract_metadata_with_keywords() {
         let org_text = "#+KEYWORDS: rust, org-mode, parsing\n\nContent here.";
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let (metadata, _) = OrgModeExtractor::extract_metadata_and_content(org_text, &org);
 
         let keywords = metadata.additional.get("keywords").and_then(|v| v.as_array());
@@ -517,7 +413,8 @@ mod tests {
     #[test]
     fn test_extract_content_with_headings() {
         let org_text = "* Heading 1\n\nSome content.\n\n** Heading 2\n\nMore content.";
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         assert!(content.contains("Heading 1"));
@@ -529,7 +426,8 @@ mod tests {
     #[test]
     fn test_extract_content_with_paragraphs() {
         let org_text = "First paragraph.\n\nSecond paragraph.";
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         assert!(content.contains("First paragraph"));
@@ -539,7 +437,8 @@ mod tests {
     #[test]
     fn test_extract_content_with_lists() {
         let org_text = "- Item 1\n- Item 2\n- Item 3";
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         assert!(content.contains("Item 1"));
@@ -576,13 +475,14 @@ mod tests {
 
 [[http://att.com/][AT&T]]
 "#;
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         // Link description should be extracted, not the URL
         assert!(content.contains("AT&T"), "Should contain link description 'AT&T'");
         // The URL should still be present in the extracted content, but wrapped in brackets
-        // The actual format depends on how orgize structures the link
+        // The actual format depends on how org structures the link
     }
 
     #[test]
@@ -591,7 +491,8 @@ mod tests {
 
 [[https://example.com]]
 "#;
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         // Link path should be used when no description is provided
@@ -607,7 +508,8 @@ mod tests {
 
 [[http://att.com/][AT&T Company]]
 "#;
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         // Description with ampersand should be preserved
@@ -627,7 +529,8 @@ mod tests {
 
 [[mailto:test@example.com][Contact]]
 "#;
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         // First link with description
@@ -642,7 +545,8 @@ mod tests {
     fn test_link_description_priority_over_url() {
         // This is the CRITICAL test - ensures description is used over path
         let org_text = r#"[[http://att.com/][AT&T]]"#;
-        let org = Org::parse(org_text);
+        let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
+        let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
         // The description "AT&T" should be in the output

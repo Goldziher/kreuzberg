@@ -165,22 +165,24 @@ impl<'a> LatexParser<'a> {
                 // Check if \begin{document} and \end{document} are on the same line
                 if trimmed.contains("\\end{document}") {
                     // Extract content between them
-                    if let Some(begin_pos) = trimmed.find("\\begin{document}") {
-                        if let Some(end_pos) = trimmed.find("\\end{document}") {
-                            let content_between = trimmed[begin_pos + 16..end_pos].trim();
-                            if !content_between.is_empty() {
-                                // Handle sections
-                                if content_between.starts_with("\\section{") {
-                                    if let Some(title) = self.extract_braced(content_between, "section") {
-                                        self.output.push_str(&format!("\n# {}\n\n", title));
-                                    }
-                                } else {
-                                    let processed = self.process_line(content_between);
-                                    if !processed.is_empty() {
-                                        self.output.push_str(&processed);
-                                        self.output.push('\n');
-                                    }
-                                }
+                    let Some(begin_pos) = trimmed.find("\\begin{document}") else {
+                        break;
+                    };
+                    let Some(end_pos) = trimmed.find("\\end{document}") else {
+                        break;
+                    };
+                    let content_between = trimmed[begin_pos + 16..end_pos].trim();
+                    if !content_between.is_empty() {
+                        // Handle sections
+                        if content_between.starts_with("\\section{") {
+                            if let Some(title) = self.extract_braced(content_between, "section") {
+                                self.output.push_str(&format!("\n# {}\n\n", title));
+                            }
+                        } else {
+                            let processed = self.process_line(content_between);
+                            if !processed.is_empty() {
+                                self.output.push_str(&processed);
+                                self.output.push('\n');
                             }
                         }
                     }
@@ -200,43 +202,46 @@ impl<'a> LatexParser<'a> {
             if in_document {
                 // Handle environments
                 if trimmed.contains("\\begin{") {
-                    if let Some(env_name) = self.extract_env_name(trimmed) {
-                        match env_name.as_str() {
-                            "itemize" | "enumerate" | "description" => {
-                                let (env_content, new_i) = self.collect_environment(&lines, i, &env_name);
-                                self.process_list(&env_content, &env_name);
-                                i = new_i;
-                                continue;
-                            }
-                            "tabular" => {
-                                let (env_content, new_i) = self.collect_environment(&lines, i, "tabular");
-                                self.process_table(&env_content);
-                                i = new_i;
-                                continue;
-                            }
-                            "table" => {
-                                let (env_content, new_i) = self.collect_environment(&lines, i, "table");
-                                self.process_table_with_caption(&env_content);
-                                i = new_i;
-                                continue;
-                            }
-                            "equation" | "align" | "gather" | "multline" => {
-                                // Math environments - wrap in $$
-                                let (env_content, new_i) = self.collect_environment(&lines, i, &env_name);
-                                self.output.push_str("$$\\begin{");
-                                self.output.push_str(&env_name);
-                                self.output.push_str("}\n");
-                                self.output.push_str(&env_content);
-                                self.output.push_str("\\end{");
-                                self.output.push_str(&env_name);
-                                self.output.push_str("}$$\n\n");
-                                i = new_i;
-                                continue;
-                            }
-                            _ => {
-                                // Skip unknown environments
-                                skip_until_end = Some(env_name);
-                            }
+                    let Some(env_name) = self.extract_env_name(trimmed) else {
+                        // No environment name found, continue to next section
+                        i += 1;
+                        continue;
+                    };
+                    match env_name.as_str() {
+                        "itemize" | "enumerate" | "description" => {
+                            let (env_content, new_i) = self.collect_environment(&lines, i, &env_name);
+                            self.process_list(&env_content, &env_name);
+                            i = new_i;
+                            continue;
+                        }
+                        "tabular" => {
+                            let (env_content, new_i) = self.collect_environment(&lines, i, "tabular");
+                            self.process_table(&env_content);
+                            i = new_i;
+                            continue;
+                        }
+                        "table" => {
+                            let (env_content, new_i) = self.collect_environment(&lines, i, "table");
+                            self.process_table_with_caption(&env_content);
+                            i = new_i;
+                            continue;
+                        }
+                        "equation" | "align" | "gather" | "multline" => {
+                            // Math environments - wrap in $$
+                            let (env_content, new_i) = self.collect_environment(&lines, i, &env_name);
+                            self.output.push_str("$$\\begin{");
+                            self.output.push_str(&env_name);
+                            self.output.push_str("}\n");
+                            self.output.push_str(&env_content);
+                            self.output.push_str("\\end{");
+                            self.output.push_str(&env_name);
+                            self.output.push_str("}$$\n\n");
+                            i = new_i;
+                            continue;
+                        }
+                        _ => {
+                            // Skip unknown environments
+                            skip_until_end = Some(env_name);
                         }
                     }
                 }
@@ -291,17 +296,20 @@ impl<'a> LatexParser<'a> {
 
     fn extract_metadata_from_line(&mut self, line: &str) {
         if line.starts_with("\\title{") {
-            if let Some(title) = self.extract_braced(line, "title") {
-                self.metadata.additional.insert("title".to_string(), title.into());
-            }
+            let Some(title) = self.extract_braced(line, "title") else {
+                return;
+            };
+            self.metadata.additional.insert("title".to_string(), title.into());
         } else if line.starts_with("\\author{") {
-            if let Some(author) = self.extract_braced(line, "author") {
-                self.metadata.additional.insert("author".to_string(), author.into());
-            }
+            let Some(author) = self.extract_braced(line, "author") else {
+                return;
+            };
+            self.metadata.additional.insert("author".to_string(), author.into());
         } else if line.starts_with("\\date{") {
-            if let Some(date) = self.extract_braced(line, "date") {
-                self.metadata.additional.insert("date".to_string(), date.into());
-            }
+            let Some(date) = self.extract_braced(line, "date") else {
+                return;
+            };
+            self.metadata.additional.insert("date".to_string(), date.into());
         }
     }
 
@@ -344,59 +352,65 @@ impl<'a> LatexParser<'a> {
 
             // Handle nested lists
             if trimmed.contains("\\begin{") {
-                if let Some(env_name) = self.extract_env_name(trimmed) {
-                    if env_name == "itemize" || env_name == "enumerate" || env_name == "description" {
-                        let (nested_content, new_i) = self.collect_environment(&lines, i, &env_name);
-                        // Add indentation for nested list
-                        let current_output_len = self.output.len();
-                        self.process_list(&nested_content, &env_name);
-                        // Indent the nested list output
-                        let nested_output = self.output[current_output_len..].to_string();
-                        self.output.truncate(current_output_len);
-                        for nested_line in nested_output.lines() {
-                            self.output.push_str("  ");
-                            self.output.push_str(nested_line);
-                            self.output.push('\n');
-                        }
-                        i = new_i;
-                        continue;
+                let Some(env_name) = self.extract_env_name(trimmed) else {
+                    i += 1;
+                    continue;
+                };
+                if env_name == "itemize" || env_name == "enumerate" || env_name == "description" {
+                    let (nested_content, new_i) = self.collect_environment(&lines, i, &env_name);
+                    // Add indentation for nested list
+                    let current_output_len = self.output.len();
+                    self.process_list(&nested_content, &env_name);
+                    // Indent the nested list output
+                    let nested_output = self.output[current_output_len..].to_string();
+                    self.output.truncate(current_output_len);
+                    for nested_line in nested_output.lines() {
+                        self.output.push_str("  ");
+                        self.output.push_str(nested_line);
+                        self.output.push('\n');
                     }
+                    i = new_i;
+                    continue;
                 }
             }
 
             if trimmed.starts_with("\\item") {
-                if let Some(pos) = trimmed.find("\\item") {
-                    let after = trimmed[pos + 5..].trim();
+                let Some(pos) = trimmed.find("\\item") else {
+                    i += 1;
+                    continue;
+                };
+                let after = trimmed[pos + 5..].trim();
 
-                    // Handle description list labels [label]
-                    if after.starts_with('[') {
-                        if let Some(bracket_end) = after.find(']') {
-                            let label = after[1..bracket_end].to_string();
-                            let text = after[bracket_end + 1..].trim().to_string();
-                            if list_type == "description" {
-                                let processed_text = self.process_line(&text);
-                                self.output.push_str(&format!("{}: {}\n", label, processed_text));
-                                item_num += 1;
-                                i += 1;
-                                continue;
-                            }
-                        }
-                    }
-
-                    // Normal item (no brackets or non-description list)
-                    let prefix = if list_type == "enumerate" {
-                        format!("{}. ", item_num)
-                    } else {
-                        "- ".to_string()
+                // Handle description list labels [label]
+                if after.starts_with('[') {
+                    let Some(bracket_end) = after.find(']') else {
+                        i += 1;
+                        continue;
                     };
-                    self.output.push_str(&prefix);
-
-                    // Process the item text
-                    let item_text = self.process_line(after);
-                    self.output.push_str(item_text.trim());
-                    self.output.push('\n');
-                    item_num += 1;
+                    let label = after[1..bracket_end].to_string();
+                    let text = after[bracket_end + 1..].trim().to_string();
+                    if list_type == "description" {
+                        let processed_text = self.process_line(&text);
+                        self.output.push_str(&format!("{}: {}\n", label, processed_text));
+                        item_num += 1;
+                        i += 1;
+                        continue;
+                    }
                 }
+
+                // Normal item (no brackets or non-description list)
+                let prefix = if list_type == "enumerate" {
+                    format!("{}. ", item_num)
+                } else {
+                    "- ".to_string()
+                };
+                self.output.push_str(&prefix);
+
+                // Process the item text
+                let item_text = self.process_line(after);
+                self.output.push_str(item_text.trim());
+                self.output.push('\n');
+                item_num += 1;
             }
 
             i += 1;
@@ -460,20 +474,23 @@ impl<'a> LatexParser<'a> {
     fn process_table_with_caption(&mut self, content: &str) {
         // Extract caption if present
         if content.contains("\\caption{") {
-            if let Some(caption) = self.extract_braced_from_content(content, "caption") {
-                self.output.push_str(&caption);
-                self.output.push('\n');
-            }
+            let Some(caption) = self.extract_braced_from_content(content, "caption") else {
+                return;
+            };
+            self.output.push_str(&caption);
+            self.output.push('\n');
         }
 
         // Extract tabular if present
         if content.contains("\\begin{tabular}") {
-            if let Some(start) = content.find("\\begin{tabular}") {
-                if let Some(end) = content.find("\\end{tabular}") {
-                    let tabular_content = &content[start..end + 13];
-                    self.process_table(tabular_content);
-                }
-            }
+            let Some(start) = content.find("\\begin{tabular}") else {
+                return;
+            };
+            let Some(end) = content.find("\\end{tabular}") else {
+                return;
+            };
+            let tabular_content = &content[start..end + 13];
+            self.process_table(tabular_content);
         }
     }
 
@@ -584,7 +601,7 @@ impl<'a> LatexParser<'a> {
         let mut content = String::new();
         let mut depth = 1;
 
-        while let Some(c) = chars.next() {
+        for c in chars.by_ref() {
             match c {
                 '{' => {
                     depth += 1;
