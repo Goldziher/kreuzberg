@@ -1,6 +1,4 @@
 !benchmarks/baselines/
-!packages/go/kreuzberg/.kreuzberg/
-!packages/go/kreuzberg/.kreuzberg/sample.pdf
 !vendor/rb-sys/build/
 !vendor/rb-sys/build/**
 *$py.class

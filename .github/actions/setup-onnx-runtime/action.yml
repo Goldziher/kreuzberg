@@ -59,6 +59,13 @@ runs:
         mkdir -p "$dest"
         cp -f "$ort_root/lib/"*.so* "$dest/"
 
+        # Append to existing RUSTFLAGS if present
+        if [ -n "${RUSTFLAGS:-}" ]; then
+          rustflags="$RUSTFLAGS -L $ort_root/lib"
+        else
+          rustflags="-L $ort_root/lib"
+        fi
+
         # Add library path variables and RUSTFLAGS for complete library path resolution
         {
           echo "ORT_LIB_LOCATION=$ort_root/lib"
@@ -67,7 +74,7 @@ runs:
           echo "ORT_STRATEGY=system"
           echo "LD_LIBRARY_PATH=$ort_root/lib:$dest:${LD_LIBRARY_PATH:-}"
           echo "LIBRARY_PATH=$ort_root/lib:$dest:${LIBRARY_PATH:-}"
-          echo "RUSTFLAGS=-L $ort_root/lib"
+          echo "RUSTFLAGS=$rustflags"
         } >> "$GITHUB_ENV"
 
     - name: Prepare ONNX Runtime (macOS)
@@ -119,6 +126,13 @@ runs:
         mkdir -p "$dest"
         cp -f "$ort_root/lib/"libonnxruntime*.dylib "$dest/"
 
+        # Append to existing RUSTFLAGS if present
+        if [ -n "${RUSTFLAGS:-}" ]; then
+          rustflags="$RUSTFLAGS -L $ort_root/lib"
+        else
+          rustflags="-L $ort_root/lib"
+        fi
+
         # Add both DYLD environment variables and RUSTFLAGS for complete library path resolution
         {
           echo "ORT_LIB_LOCATION=$ort_root/lib"
@@ -128,7 +142,7 @@ runs:
           echo "DYLD_LIBRARY_PATH=$ort_root/lib:$dest:${DYLD_LIBRARY_PATH:-}"
           echo "DYLD_FALLBACK_LIBRARY_PATH=$ort_root/lib:$dest:${DYLD_FALLBACK_LIBRARY_PATH:-}"
           echo "LIBRARY_PATH=$ort_root/lib:$dest:${LIBRARY_PATH:-}"
-          echo "RUSTFLAGS=-L $ort_root/lib"
+          echo "RUSTFLAGS=$rustflags"
         } >> "$GITHUB_ENV"
 
     - name: Prepare ONNX Runtime (Windows)
@@ -169,12 +183,16 @@ runs:
         $Dest = Join-Path $env:GITHUB_WORKSPACE "${{ inputs.dest-dir }}"
         New-Item -ItemType Directory -Path $Dest -Force | Out-Null
         Copy-Item -Path (Join-Path $OrtRoot 'lib' '*') -Destination $Dest -Force
+
+        # Append to existing RUSTFLAGS if present
+        $RustFlags = if ($env:RUSTFLAGS) { "$env:RUSTFLAGS -L $OrtRoot\lib" } else { "-L $OrtRoot\lib" }
+
         @(
           "ORT_LIB_LOCATION=$OrtRoot\lib"
           "ORT_PREFER_DYNAMIC_LINK=1"
           "ORT_SKIP_DOWNLOAD=1"
           "ORT_STRATEGY=system"
-          "RUSTFLAGS=-L $OrtRoot\lib"
+          "RUSTFLAGS=$RustFlags"
           "LIB=$OrtRoot\lib;$env:LIB"
           "LIBRARY_PATH=$OrtRoot\lib;$env:LIBRARY_PATH"
           "PATH=$Dest;$env:PATH"

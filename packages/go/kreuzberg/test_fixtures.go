@@ -1,21 +1,29 @@
 package kreuzberg
 
 import (
-	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
 )
 
-//go:embed .kreuzberg/sample.pdf
-var testFixtures embed.FS
-
 // getValidPDFBytes returns a valid PDF byte content for testing.
 // This is used instead of minimal PDF headers that PDFium cannot parse.
+// It reads from the test_documents directory in the workspace root.
 func getValidPDFBytes() ([]byte, error) {
-	data, err := testFixtures.ReadFile(".kreuzberg/sample.pdf")
+	// Find workspace root (packages/go/kreuzberg -> packages/go -> packages -> workspace)
+	wd, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load embedded PDF fixture: %w", err)
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Navigate to workspace root from packages/go/kreuzberg
+	workspaceRoot := filepath.Join(wd, "..", "..", "..")
+	testPDF := filepath.Join(workspaceRoot, "test_documents", "pdf", "simple.pdf")
+
+	// #nosec G304 -- Test fixture reads from known test_documents directory
+	data, err := os.ReadFile(testPDF)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read test PDF from %s: %w", testPDF, err)
 	}
 	return data, nil
 }
