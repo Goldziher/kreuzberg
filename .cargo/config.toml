@@ -23,7 +23,6 @@ incremental = true
 # Note: These are fallback paths. Environment variables (CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER, TARGET_AR, etc.) take precedence
 linker = "x86_64-w64-mingw32-gcc"
 ar = "ar"
-ranlib = "ranlib"
 
 # Network settings for faster crate downloads
 [net]
