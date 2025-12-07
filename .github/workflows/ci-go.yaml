@@ -72,6 +72,7 @@ jobs:
             echo "TARGET_RANLIB=ranlib"
             echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
             echo "RUSTFLAGS=-C target-feature=+crt-static"
+            echo "CARGO_BUILD_TARGET=x86_64-pc-windows-gnu"
           } >> "$GITHUB_ENV"
 
       - name: Install system dependencies
@@ -172,6 +173,7 @@ jobs:
             echo "TARGET_RANLIB=ranlib"
             echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
             echo "RUSTFLAGS=-C target-feature=+crt-static"
+            echo "CARGO_BUILD_TARGET=x86_64-pc-windows-gnu"
           } >> "$GITHUB_ENV"
 
       - name: Install system dependencies

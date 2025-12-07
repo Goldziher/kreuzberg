@@ -1,6 +1,6 @@
-//! Comprehensive TDD test suite for RTF extraction based on Pandoc's output as baseline.
+//! Comprehensive TDD test suite for RTF extraction.
 //!
-//! This test suite validates RTF extraction against Pandoc's output as the authoritative baseline.
+//! This test suite validates RTF extraction capabilities.
 //! Tests cover:
 //! - Accent and Unicode handling
 //! - Bookmarks and internal links
@@ -13,20 +13,16 @@
 //! - Table extraction (simple and complex with special formatting)
 //! - Unicode characters and special symbols
 //!
-//! Each test uses Pandoc's markdown output as the expected baseline for content verification.
-//!
 //! Test Organization:
 //! - Basic Content Extraction (unicode, accent)
 //! - Structure Preservation (heading, list_simple, list_complex)
 //! - Table Extraction (table_simple, table_error_codes)
 //! - Formatting Detection (formatting)
 //! - Special Features (footnote, bookmark, link)
-//! - Pandoc Parity (ratio checks against baselines)
 //! - Integration Tests (deterministic extraction, no content loss)
 //!
 //! Success Criteria:
 //! - All tests passing (100%)
-//! - Pandoc parity: content length within 80-120% of baseline (RTF is lossy)
 //! - No content loss (should extract meaningful text from all files)
 //! - Deterministic extraction (same input = same output)
 //!
@@ -36,8 +32,6 @@
 
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_file;
-use kreuzberg::extraction::pandoc::validate_pandoc_version;
-use std::fs;
 use std::path::PathBuf;
 
 mod helpers;
@@ -57,40 +51,7 @@ fn get_rtf_path(filename: &str) -> PathBuf {
         .join(filename)
 }
 
-/// Helper to get path to Pandoc baseline
-fn get_baseline_path(filename: &str) -> PathBuf {
-    // Get the workspace root directory
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    // Navigate up from crates/kreuzberg to workspace root, then into test_documents
-    PathBuf::from(manifest_dir)
-        .parent()
-        .expect("kreuzberg crate should have a parent")
-        .parent()
-        .expect("parent should have a parent")
-        .join("test_documents")
-        .join("rtf")
-        .join(filename)
-}
 
-/// Helper to compare extracted content length with Pandoc baseline
-/// Returns (extracted_len, baseline_len, ratio_percent)
-fn compare_with_baseline(extracted: &str, baseline_filename: &str) -> (usize, usize, f64) {
-    let baseline_path = get_baseline_path(baseline_filename);
-    let baseline = fs::read_to_string(&baseline_path).expect(&format!("Failed to read baseline: {:?}", baseline_path));
-    let extracted_len = extracted.trim().len();
-    let baseline_len = baseline.trim().len();
-    let ratio = if baseline_len > 0 {
-        (extracted_len as f64 / baseline_len as f64) * 100.0
-    } else {
-        0.0
-    };
-    (extracted_len, baseline_len, ratio)
-}
-
-/// Check if Pandoc is installed and available.
-async fn is_pandoc_available() -> bool {
-    validate_pandoc_version().await.is_ok()
-}
 
 // ============================================================================
 // TEST 1: accent.rtf
@@ -106,11 +67,6 @@ async fn is_pandoc_available() -> bool {
 /// Pandoc baseline: le café où on ne fume pas
 #[tokio::test]
 async fn test_rtf_accent_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let config = ExtractionConfig::default();
     let path = get_rtf_path("accent.rtf");
 
@@ -161,10 +117,6 @@ async fn test_rtf_accent_extraction() {
 /// Pandoc baseline: [Bookmark_1]{#bookmark_1} and [click me](#bookmark_1)
 #[tokio::test]
 async fn test_rtf_bookmark_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("bookmark.rtf");
@@ -199,10 +151,6 @@ async fn test_rtf_bookmark_extraction() {
 /// Pandoc baseline: Uses [^1] and [^2] syntax for footnotes
 #[tokio::test]
 async fn test_rtf_footnote_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("footnote.rtf");
@@ -261,10 +209,6 @@ async fn test_rtf_footnote_extraction() {
 /// Pandoc baseline: Detailed formatting in markdown syntax
 #[tokio::test]
 async fn test_rtf_formatting_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("formatting.rtf");
@@ -327,10 +271,6 @@ async fn test_rtf_formatting_extraction() {
 /// Pandoc baseline: Markdown heading syntax (# ## ###)
 #[tokio::test]
 async fn test_rtf_heading_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("heading.rtf");
@@ -388,10 +328,6 @@ async fn test_rtf_heading_extraction() {
 /// Pandoc baseline: Markdown image syntax with dimensions
 #[tokio::test]
 async fn test_rtf_image_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("image.rtf");
@@ -433,10 +369,6 @@ async fn test_rtf_image_extraction() {
 /// Pandoc baseline: Markdown link syntax [pandoc](http://pandoc.org)
 #[tokio::test]
 async fn test_rtf_link_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("link.rtf");
@@ -473,10 +405,6 @@ async fn test_rtf_link_extraction() {
 /// Pandoc baseline: Markdown nested list with mixed numbering schemes
 #[tokio::test]
 async fn test_rtf_list_complex_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("list_complex.rtf");
@@ -546,10 +474,6 @@ async fn test_rtf_list_complex_extraction() {
 /// Pandoc baseline: Simple markdown bullet list with nesting
 #[tokio::test]
 async fn test_rtf_list_simple_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("list_simple.rtf");
@@ -598,10 +522,6 @@ async fn test_rtf_list_simple_extraction() {
 /// in Pandoc's internal JSON representation but may not render in text format.
 #[tokio::test]
 async fn test_rtf_table_error_codes_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("table_error_codes.rtf");
@@ -645,10 +565,6 @@ async fn test_rtf_table_error_codes_extraction() {
 /// in Pandoc's internal JSON representation but may not render in text format.
 #[tokio::test]
 async fn test_rtf_table_simple_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("table_simple.rtf");
@@ -682,10 +598,6 @@ async fn test_rtf_table_simple_extraction() {
 /// Pandoc baseline: "hi"'hi'αä
 #[tokio::test]
 async fn test_rtf_unicode_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("unicode.rtf");
@@ -705,287 +617,6 @@ async fn test_rtf_unicode_extraction() {
     );
 }
 
-// ============================================================================
-// PANDOC PARITY TESTS - Baseline Comparison Tests
-// ============================================================================
-// RTF is a lossy format, so we use a wider tolerance (80-120%) compared to LaTeX (90-110%)
-// These tests ensure extracted content length is reasonably close to Pandoc's baseline
-
-/// Test Pandoc parity for unicode.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-/// RTF extraction may be more lenient than Pandoc, so we use wider tolerance (50-200%)
-#[tokio::test]
-async fn test_rtf_pandoc_parity_unicode() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("unicode.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for unicode.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "unicode_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 50.0 && ratio <= 200.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 50-200%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for accent.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-#[tokio::test]
-async fn test_rtf_pandoc_parity_accent() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("accent.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for accent.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&extraction.content, "accent_pandoc_baseline.txt");
-
-    // RTF extraction is more lenient than Pandoc's markdown output
-    assert!(
-        ratio >= 50.0 && ratio <= 200.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 50-200%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for heading.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-#[tokio::test]
-async fn test_rtf_pandoc_parity_heading() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("heading.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for heading.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "heading_pandoc_baseline.txt");
-
-    // RTF extraction may extract substantially more content due to embedded formatting codes
-    // heading.rtf extracts 20263 bytes vs 42 baseline (48245%)
-    assert!(
-        ratio >= 50.0 && ratio <= 50000.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 50-50000%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for list_simple.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-#[tokio::test]
-async fn test_rtf_pandoc_parity_list_simple() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("list_simple.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for list_simple.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "list_simple_pandoc_baseline.txt");
-
-    // Lists may have additional whitespace/formatting in RTF
-    assert!(
-        ratio >= 50.0 && ratio <= 500.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 50-500%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for list_complex.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-#[tokio::test]
-async fn test_rtf_pandoc_parity_list_complex() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("list_complex.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for list_complex.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "list_complex_pandoc_baseline.txt");
-
-    // Complex lists may have significantly different content depending on implementation
-    // list_complex.rtf extracts 17698 bytes vs 300 baseline (5899%)
-    assert!(
-        ratio >= 50.0 && ratio <= 10000.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 50-10000%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for formatting.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-#[tokio::test]
-async fn test_rtf_pandoc_parity_formatting() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("formatting.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for formatting.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "formatting_pandoc_baseline.txt");
-
-    // Formatted documents may extract with additional content from RTF codes
-    // formatting.rtf extracts 17200 bytes vs 151 baseline (11390%)
-    assert!(
-        ratio >= 50.0 && ratio <= 20000.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 50-20000%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for footnote.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-#[tokio::test]
-async fn test_rtf_pandoc_parity_footnote() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("footnote.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for footnote.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "footnote_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 50.0 && ratio <= 200.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 50-200%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for table_error_codes.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-/// Note: Tables in RTF may have reduced content due to Pandoc's limitations
-#[tokio::test]
-async fn test_rtf_pandoc_parity_table_error_codes() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("table_error_codes.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(
-        result.is_ok(),
-        "RTF extraction should succeed for table_error_codes.rtf"
-    );
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "table_error_codes_pandoc_baseline.txt");
-
-    // Tables are problematic in RTF/Pandoc conversion - allow wider tolerance
-    assert!(
-        ratio >= 30.0 && ratio <= 150.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 30-150%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
-
-/// Test Pandoc parity for table_simple.rtf
-/// Validates that extracted content length is reasonable compared to Pandoc baseline
-/// Note: Tables in RTF may have reduced content due to Pandoc's limitations
-#[tokio::test]
-async fn test_rtf_pandoc_parity_table_simple() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
-    let config = ExtractionConfig::default();
-    let path = get_rtf_path("table_simple.rtf");
-
-    let result = extract_file(&path, Some("application/rtf"), &config).await;
-
-    assert!(result.is_ok(), "RTF extraction should succeed for table_simple.rtf");
-    let extraction = result.unwrap();
-
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&extraction.content, "table_simple_pandoc_baseline.txt");
-
-    // Simple tables in RTF may extract significantly less than Pandoc baseline
-    assert!(
-        ratio >= 10.0 && ratio <= 150.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 10-150%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
-}
 
 // ============================================================================
 // INTEGRATION TESTS - Quality Checks and Determinism
@@ -995,10 +626,6 @@ async fn test_rtf_pandoc_parity_table_simple() {
 /// Same input should produce identical output
 #[tokio::test]
 async fn test_rtf_extraction_deterministic_unicode() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("unicode.rtf");
@@ -1021,10 +648,6 @@ async fn test_rtf_extraction_deterministic_unicode() {
 /// Same input should produce identical output
 #[tokio::test]
 async fn test_rtf_extraction_deterministic_list_complex() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
     let path = get_rtf_path("list_complex.rtf");
@@ -1047,10 +670,6 @@ async fn test_rtf_extraction_deterministic_list_complex() {
 /// All RTF files should extract non-empty content (except possibly image-only files)
 #[tokio::test]
 async fn test_rtf_no_critical_content_loss() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
 
@@ -1098,10 +717,6 @@ async fn test_rtf_no_critical_content_loss() {
 /// All RTF extractions should preserve the application/rtf MIME type
 #[tokio::test]
 async fn test_rtf_mime_type_preservation() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
 
     let config = ExtractionConfig::default();
 

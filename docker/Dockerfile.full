@@ -70,7 +70,6 @@ FROM debian:trixie-slim
 WORKDIR /app
 
 # Download and install dependencies
-ARG PANDOC_VERSION=3.6.3
 ARG LIBREOFFICE_VERSION=25.8.2
 ARG TARGETARCH
 
@@ -99,22 +98,14 @@ RUN apt-get update && \
         libxrender1 \
         libsm6 \
         && \
-    # Download and install Pandoc (arch-aware)
+    # Download and install LibreOffice (arch-aware)
     if [ "$TARGETARCH" = "arm64" ]; then \
-        PANDOC_ARCH="arm64"; \
         LO_ARCH="aarch64"; \
         LO_FILE_ARCH="aarch64"; \
     else \
-        PANDOC_ARCH="amd64"; \
         LO_ARCH="x86_64"; \
         LO_FILE_ARCH="x86-64"; \
     fi && \
-    curl -fL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
-        -o /tmp/pandoc.tar.gz && \
-    tar -xzf /tmp/pandoc.tar.gz -C /tmp && \
-    cp /tmp/pandoc-${PANDOC_VERSION}/bin/pandoc /usr/local/bin/ && \
-    rm -rf /tmp/pandoc* && \
-    # Download and install LibreOffice (arch-aware)
     curl -fL "https://download.documentfoundation.org/libreoffice/stable/${LIBREOFFICE_VERSION}/deb/${LO_ARCH}/LibreOffice_${LIBREOFFICE_VERSION}_Linux_${LO_FILE_ARCH}_deb.tar.gz" \
         -o /tmp/libreoffice.tar.gz && \
     mkdir -p /tmp/libreoffice && \

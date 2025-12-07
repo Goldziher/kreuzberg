@@ -42,9 +42,6 @@ pub mod fictionbook;
 #[cfg(feature = "office")]
 pub mod markdown;
 
-#[cfg(feature = "pandoc-fallback")]
-pub mod pandoc;
-
 #[cfg(feature = "office")]
 pub mod rst;
 
@@ -116,9 +113,6 @@ pub use fictionbook::FictionBookExtractor;
 
 #[cfg(feature = "office")]
 pub use markdown::MarkdownExtractor as EnhancedMarkdownExtractor;
-
-#[cfg(feature = "pandoc-fallback")]
-pub use pandoc::PandocExtractor;
 
 #[cfg(feature = "office")]
 pub use rst::RstExtractor;
@@ -254,11 +248,6 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(TypstExtractor::new()))?;
     }
 
-    #[cfg(feature = "pandoc-fallback")]
-    {
-        registry.register(Arc::new(PandocExtractor::new()))?;
-    }
-
     #[cfg(feature = "email")]
     registry.register(Arc::new(EmailExtractor::new()))?;
 
@@ -344,12 +333,6 @@ mod tests {
             assert!(extractor_names.contains(&"orgmode-extractor".to_string()));
             assert!(extractor_names.contains(&"opml-extractor".to_string()));
             assert!(extractor_names.contains(&"typst-extractor".to_string()));
-        }
-
-        #[cfg(feature = "pandoc-fallback")]
-        {
-            expected_count += 1;
-            assert!(extractor_names.contains(&"pandoc-extractor".to_string()));
         }
 
         #[cfg(feature = "email")]

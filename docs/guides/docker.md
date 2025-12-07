@@ -13,7 +13,6 @@ Kreuzberg offers two Docker image variants optimized for different use cases:
 
 **Included Features:**
 - Tesseract OCR with 12 language packs (eng, spa, fra, deu, ita, por, chi-sim, chi-tra, jpn, ara, rus, hin)
-- Pandoc 3.6.3 for document conversion
 - pdfium for PDF rendering
 - Full support for modern file formats
 
@@ -425,7 +424,6 @@ docker run -v $(pwd)/documents:/data:ro \
 | **Base Image** | debian:trixie-slim | debian:trixie-slim | - |
 | **Size** | ~1.0-1.3GB | ~1.5-2.1GB | ~500-800MB |
 | **Tesseract OCR** | ✅ 12 languages | ✅ 12 languages | - |
-| **Pandoc** | ✅ 3.6.3 | ✅ 3.6.3 | - |
 | **pdfium** | ✅ | ✅ | - |
 | **Modern Office** | ✅ DOCX, PPTX, XLSX | ✅ DOCX, PPTX, XLSX | - |
 | **Legacy Office** | ❌ | ✅ DOC, PPT, XLS | LibreOffice 25.8.2 |

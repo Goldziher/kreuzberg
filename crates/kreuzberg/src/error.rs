@@ -60,7 +60,7 @@ pub type Result<T> = std::result::Result<T, KreuzbergError>;
 /// - `Cache` - Cache operation errors (non-fatal, can be ignored)
 /// - `ImageProcessing` - Image manipulation errors
 /// - `Serialization` - JSON/MessagePack serialization errors
-/// - `MissingDependency` - Missing optional dependencies (tesseract, pandoc, etc.)
+/// - `MissingDependency` - Missing optional dependencies (tesseract, etc.)
 /// - `Plugin` - Plugin-specific errors
 /// - `LockPoisoned` - Mutex/RwLock poisoning (should not happen in normal operation)
 /// - `UnsupportedFormat` - Unsupported MIME type or file format

@@ -1,7 +1,7 @@
 //! Comprehensive TDD test suite for Org Mode extraction
 //!
-//! This test suite validates Org Mode extraction capabilities using Pandoc's output as a baseline.
-//! Each test extracts an Org Mode file, compares the output against Pandoc's baseline, and validates:
+//! This test suite validates Org Mode extraction capabilities.
+//! Each test extracts an Org Mode file and validates:
 //!
 //! - Metadata extraction (title, author, date from #+TITLE, #+AUTHOR, #+DATE)
 //! - Heading hierarchy (* ** ***)
@@ -12,16 +12,12 @@
 //! - Link syntax ([[url][description]])
 //! - Code blocks (#+BEGIN_SRC ... #+END_SRC)
 //! - Unicode and special character handling
-//! - Content quality validation against Pandoc baseline
-//!
-//! The tests use Pandoc as the reference standard for content extraction and validate
-//! that Kreuzberg's extraction provides comparable results.
+//! - Content quality validation
 
 #![cfg(feature = "office")]
 
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_bytes;
-use kreuzberg::extraction::pandoc::validate_pandoc_version;
 use std::path::PathBuf;
 
 /// Helper to resolve workspace root and construct test file paths
@@ -32,11 +28,6 @@ fn get_test_orgmode_path(filename: &str) -> PathBuf {
         .parent()
         .unwrap();
     workspace_root.join(format!("test_documents/orgmode/{}", filename))
-}
-
-/// Helper to check if Pandoc is available before running tests
-async fn skip_if_no_pandoc() -> bool {
-    validate_pandoc_version().await.is_err()
 }
 
 /// Helper to validate that content contains expected text
@@ -72,11 +63,6 @@ fn assert_not_contains_ci(content: &str, needle: &str, description: &str) {
 /// - Basic document structure is preserved
 #[tokio::test]
 async fn test_orgmode_basic_extraction() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("tables.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -116,11 +102,6 @@ async fn test_orgmode_basic_extraction() {
 /// - #+DATE metadata is extracted
 #[tokio::test]
 async fn test_orgmode_metadata_extraction() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     // Create a test with metadata
     let org_content = r#"#+TITLE: Test Document
 #+AUTHOR: John Doe
@@ -163,11 +144,6 @@ async fn test_orgmode_metadata_extraction() {
 /// - Heading text is properly extracted
 #[tokio::test]
 async fn test_orgmode_headings() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let org_content = r#"* Top Level Heading
 Text under top level.
 
@@ -216,11 +192,6 @@ Deep nested content.
 /// - Multiple tables in document are all extracted
 #[tokio::test]
 async fn test_orgmode_tables() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("tables.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -260,11 +231,6 @@ async fn test_orgmode_tables() {
 /// - Table captions are extracted
 #[tokio::test]
 async fn test_orgmode_tables_complex() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("tables.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -308,11 +274,6 @@ async fn test_orgmode_tables_complex() {
 /// - Nested lists are handled
 #[tokio::test]
 async fn test_orgmode_lists() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let org_content = r#"* Lists Section
 
 ** Unordered List
@@ -367,11 +328,6 @@ async fn test_orgmode_lists() {
 /// - +underline+ text is handled
 #[tokio::test]
 async fn test_orgmode_inline_formatting() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let org_content = r#"* Formatting Test
 
 This text has *bold emphasis* and /italic text/.
@@ -411,11 +367,6 @@ Mixed formatting like *bold /italic/ text* is also supported.
 /// - Custom properties are preserved
 #[tokio::test]
 async fn test_orgmode_properties() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let org_content = r#"* Task with Properties
 :PROPERTIES:
 :ID:       12345-abcde-67890
@@ -451,11 +402,6 @@ This is content after properties.
 /// - Link text is preserved (description when available)
 #[tokio::test]
 async fn test_orgmode_links() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("links.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -490,11 +436,6 @@ async fn test_orgmode_links() {
 /// - Multiple code blocks are extracted
 #[tokio::test]
 async fn test_orgmode_code_blocks() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("../misc/readme.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -523,11 +464,6 @@ async fn test_orgmode_code_blocks() {
 /// - Language syntax is preserved
 #[tokio::test]
 async fn test_orgmode_code_blocks_multilang() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("code-blocks.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -565,11 +501,6 @@ async fn test_orgmode_code_blocks_multilang() {
 /// - UTF-8 encoding is maintained
 #[tokio::test]
 async fn test_orgmode_unicode() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let org_content = r#"* Unicode Test
 
 French: Café, naïve, résumé
@@ -616,11 +547,6 @@ Emoji: 🎉 ✨ 📚 🌟
 /// - Ampersands, brackets, etc. are preserved
 #[tokio::test]
 async fn test_orgmode_special_characters() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let org_content = r#"* Special Characters
 
 This contains & ampersand, < less than, > greater than.
@@ -657,11 +583,6 @@ Backslash: \ and other symbols: | ~ `
 /// - Content doesn't contain raw markup
 #[tokio::test]
 async fn test_orgmode_content_quality() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("tables.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -717,11 +638,6 @@ async fn test_orgmode_content_quality() {
 /// - Content type remains consistent
 #[tokio::test]
 async fn test_orgmode_mime_type() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let org_content = r#"* Test Document
 Content here.
 "#;
@@ -739,10 +655,10 @@ Content here.
 }
 
 // ============================================================================
-// SECTION 12: PANDOC BASELINE COMPLIANCE TESTS
+// SECTION 12: CONTENT COMPLIANCE TESTS
 // ============================================================================
 
-/// Test 16: Pandoc baseline compliance
+/// Test 16: Content compliance validation
 ///
 /// Validates:
 /// - Extracted content doesn't contain raw XML/HTML
@@ -750,12 +666,7 @@ Content here.
 /// - Content is well-formed
 /// - No unprocessed Org Mode syntax remains
 #[tokio::test]
-async fn test_orgmode_pandoc_baseline_compliance() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
+async fn test_orgmode_content_compliance() {
     let test_file = get_test_orgmode_path("tables.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -796,7 +707,7 @@ async fn test_orgmode_pandoc_baseline_compliance() {
         "Should have heading structure or document content"
     );
 
-    println!("✅ Org Mode Pandoc baseline compliance test passed!");
+    println!("✅ Org Mode content compliance test passed!");
     println!("   Raw markup: ✓ (not found)");
     println!("   UTF-8 encoding: ✓");
     println!("   Content structure: ✓");
@@ -814,11 +725,6 @@ async fn test_orgmode_pandoc_baseline_compliance() {
 /// - Result is valid (even if empty)
 #[tokio::test]
 async fn test_orgmode_empty_document() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let empty_org = "";
 
     let result = extract_bytes(empty_org.as_bytes(), "text/x-org", &ExtractionConfig::default())
@@ -842,11 +748,6 @@ async fn test_orgmode_empty_document() {
 /// - No panic occurs
 #[tokio::test]
 async fn test_orgmode_metadata_only() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let metadata_only = r#"#+TITLE: Document Title
 #+AUTHOR: Author Name
 #+DATE: 2024-01-01
@@ -870,11 +771,6 @@ async fn test_orgmode_metadata_only() {
 /// - All levels are extracted
 #[tokio::test]
 async fn test_orgmode_deep_nesting() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let deep_org = r#"* Level 1
 Text at level 1
 ** Level 2
@@ -913,11 +809,6 @@ Text at level 6
 /// - Output is coherent and complete
 #[tokio::test]
 async fn test_orgmode_comprehensive_document() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_file = get_test_orgmode_path("comprehensive.org");
     if !test_file.exists() {
         println!("Skipping test: Test file not found at {:?}", test_file);
@@ -957,11 +848,6 @@ async fn test_orgmode_comprehensive_document() {
 /// for validation and debugging purposes.
 #[tokio::test]
 async fn test_orgmode_extraction_statistics() {
-    if skip_if_no_pandoc().await {
-        println!("Skipping test: Pandoc not installed");
-        return;
-    }
-
     let test_files = vec!["tables.org", "../misc/readme.org"];
 
     println!("\n╔════════════════════════════════════════════════════════════╗");

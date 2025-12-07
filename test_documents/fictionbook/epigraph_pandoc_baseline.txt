@@ -1,5 +1,0 @@
-Body epigraph
-
-Section epigraph
-
-Subsection epigraph

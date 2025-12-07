@@ -78,6 +78,7 @@ Add-Content -Path $env:GITHUB_ENV -Value "RUSTFLAGS=-C target-feature=+crt-stati
 Add-Content -Path $env:GITHUB_ENV -Value "TARGET_CC=gcc"
 Add-Content -Path $env:GITHUB_ENV -Value "TARGET_AR=ar"
 Add-Content -Path $env:GITHUB_ENV -Value "TARGET_RANLIB=ranlib"
+Add-Content -Path $env:GITHUB_ENV -Value "CARGO_BUILD_TARGET=x86_64-pc-windows-gnu"
 
 # Also set target-specific variables for cc crate (with underscores, cc-rs also checks these)
 Add-Content -Path $env:GITHUB_ENV -Value "CC_x86_64_pc_windows_gnu=gcc"

@@ -112,26 +112,6 @@ kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", tag = "v4.0.0"
 # kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", branch = "main" }
 ```
 
-#### Optional Pandoc Dependency
-
-By default, Kreuzberg uses native Rust extractors for all supported formats. Pandoc is completely optional and only needed as a fallback for formats without native extractors.
-
-To include Pandoc support:
-
-```toml
-[dependencies]
-kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", features = ["pandoc-fallback"] }
-```
-
-To build without Pandoc (minimal dependencies):
-
-```toml
-[dependencies]
-kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", default-features = false, features = ["pdf", "excel", "office", "html", "xml"] }
-```
-
-**Note:** Pandoc 3.8+ is required if the `pandoc-fallback` feature is enabled. If not installed, the library will gracefully degrade and skip Pandoc-based extraction.
-
 **[Rust Documentation →](crates/kreuzberg/README.md)**
 
 ### CLI
@@ -249,7 +229,7 @@ Model Context Protocol server for Claude and other AI assistants. Enables AI age
 
 Official Docker images available in multiple variants:
 
-- **Core** (~1.0-1.3GB): Tesseract OCR, Pandoc, modern Office formats
+- **Core** (~1.0-1.3GB): Tesseract OCR, modern Office formats
 - **Full** (~1.5-2.1GB): Adds LibreOffice for legacy Office formats (.doc, .ppt)
 
 All images support API server, CLI, and MCP server modes with automatic platform detection for linux/amd64 and linux/arm64.

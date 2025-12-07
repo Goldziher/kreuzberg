@@ -4,13 +4,13 @@ This document acknowledges the sources of test documents and baseline data used 
 
 ## Pandoc Test Suite
 
-Test documents and baseline outputs derived from the Pandoc test suite:
+Test documents and reference baseline outputs derived from the Pandoc test suite:
 
 - **Source**: https://github.com/jgm/pandoc
 - **License**: GPL-2.0-or-later
-- **Usage**: Test documents only (no code copied from Pandoc)
+- **Usage**: Test documents and reference baselines only (no code copied from Pandoc)
 - **Attribution**: John MacFarlane and Pandoc contributors
-- **Purpose**: Behavioral testing and validation of our native Rust extractors against Pandoc's extraction capabilities
+- **Purpose**: Baseline reference testing - used to validate our native Rust extractors work correctly on the same documents that Pandoc processes
 
 ### Test Documents from Pandoc
 

@@ -38,7 +38,13 @@
 //! - Deterministic extraction (same input = same output)
 //! - Metadata properly extracted (Dublin Core fields)
 
-#![cfg(feature = "office")]
+// NOTE: This test file has been disabled as part of removing Pandoc dependencies (Part 1).
+// The tests in this file relied on the Pandoc extract_file function which has been removed.
+// Part 2 of the refactoring will rewrite these tests to use the native EpubExtractor.
+// See crates/kreuzberg/tests/epub_native_extractor_tests.rs for native extractor tests.
+//
+// To re-enable these tests after rewriting them for native extraction, remove the cfg gate below.
+#![cfg(all(feature = "office", feature = "disabled_pandoc_epub_tests"))]
 
 use kreuzberg::extraction::pandoc::{extract_file, validate_pandoc_version};
 use std::fs;

@@ -598,13 +598,6 @@ brew install tesseract  # macOS
 sudo apt-get install tesseract-ocr  # Ubuntu
 ```
 
-**Issue: "Pandoc not found"**
-
-```bash
-# Install Pandoc
-brew install pandoc  # macOS
-sudo apt-get install pandoc  # Ubuntu
-```
 
 **Issue: "Out of memory"**
 

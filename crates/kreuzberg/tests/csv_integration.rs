@@ -1,6 +1,6 @@
 //! CSV and spreadsheet integration tests.
 //!
-//! Tests for CSV and TSV extraction via Pandoc.
+//! Tests for CSV and TSV extraction.
 //! Validates data extraction, custom delimiters, quoted fields, and edge cases.
 
 use kreuzberg::core::config::ExtractionConfig;
@@ -15,14 +15,13 @@ async fn test_csv_basic_extraction() {
 
     let csv_content = b"Name,Age,City\nAlice,30,NYC\nBob,25,LA";
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert_eq!(extraction.mime_type, "text/csv");
     assert!(
@@ -55,14 +54,13 @@ async fn test_csv_with_headers() {
 
     let csv_content = b"Product,Price,Quantity\nApple,1.50,100\nBanana,0.75,200\nOrange,2.00,150";
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),
@@ -105,14 +103,13 @@ async fn test_csv_custom_delimiter() {
 
     let csv_content = b"Name;Age;City\nAlice;30;NYC\nBob;25;LA";
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),
@@ -138,14 +135,13 @@ async fn test_tsv_file() {
 
     let tsv_content = b"Name\tAge\tCity\nAlice\t30\tNYC\nBob\t25\tLA";
 
-    let result = extract_bytes(tsv_content, "text/tab-separated-values", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(tsv_content, "text/tab-separated-values", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: TSV extraction not available");
+            return;
+        }
+    };
 
     assert_eq!(extraction.mime_type, "text/tab-separated-values");
     assert!(
@@ -175,14 +171,13 @@ async fn test_csv_quoted_fields() {
     let csv_content =
         b"Name,Description,Price\n\"Smith, John\",\"Product A, premium\",100\n\"Doe, Jane\",\"Product B, standard\",50";
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),
@@ -212,14 +207,13 @@ async fn test_csv_special_characters() {
 
     let csv_content = "Name,City,Emoji\nAlice,Tokyo 東京,🎉\nBob,París,✅\nCarlos,Москва,🌍".as_bytes();
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),
@@ -251,14 +245,13 @@ async fn test_csv_large_file() {
         csv_content.push_str(&format!("{},Item{},{}.00\n", i, i, i * 10));
     }
 
-    let result = extract_bytes(csv_content.as_bytes(), "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content.as_bytes(), "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),
@@ -322,14 +315,13 @@ async fn test_csv_headers_only() {
 
     let csv_content = b"Name,Age,City";
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),
@@ -354,14 +346,13 @@ async fn test_csv_blank_lines() {
 
     let csv_content = b"Name,Age\nAlice,30\n\nBob,25\n\nCarlos,35";
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),
@@ -383,14 +374,13 @@ async fn test_csv_numeric_data() {
 
     let csv_content = b"ID,Price,Quantity,Discount\n1,19.99,100,0.15\n2,29.99,50,0.20\n3,9.99,200,0.10";
 
-    let result = extract_bytes(csv_content, "text/csv", &config).await;
-
-    if result.is_err() {
-        println!("Skipping test: Pandoc may not be installed");
-        return;
-    }
-
-    let extraction = result.unwrap();
+    let extraction = match extract_bytes(csv_content, "text/csv", &config).await {
+        Ok(result) => result,
+        Err(_) => {
+            println!("Skipping test: CSV extraction not available");
+            return;
+        }
+    };
 
     assert!(
         extraction.chunks.is_none(),

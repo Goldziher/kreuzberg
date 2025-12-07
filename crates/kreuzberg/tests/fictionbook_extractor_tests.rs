@@ -175,55 +175,6 @@ async fn test_fictionbook_extract_tables() {
     );
 }
 
-#[tokio::test]
-async fn test_fictionbook_pandoc_baseline_tables() {
-    let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/tables.fb2");
-
-    let result = extractor
-        .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
-        .await
-        .expect("Failed to extract FB2 file");
-
-    // Read Pandoc baseline for comparison
-    let baseline_path =
-        PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/tables.pandoc.md");
-    if baseline_path.exists() {
-        let baseline = std::fs::read_to_string(&baseline_path).expect("Failed to read Pandoc baseline");
-        // Both should have content
-        assert!(
-            !result.content.is_empty() || !baseline.is_empty(),
-            "Either extracted or baseline content should be present"
-        );
-    }
-}
-
-#[tokio::test]
-async fn test_fictionbook_pandoc_baseline_emphasis() {
-    let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/emphasis.fb2");
-
-    let result = extractor
-        .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
-        .await
-        .expect("Failed to extract FB2 file");
-
-    // Read Pandoc baseline for comparison
-    let baseline_path =
-        PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/emphasis.pandoc.md");
-    if baseline_path.exists() {
-        let baseline = std::fs::read_to_string(&baseline_path).expect("Failed to read Pandoc baseline");
-        // Both should have content with formatting words
-        assert!(
-            result.content.contains("strong") || baseline.contains("strong"),
-            "Either extracted or baseline should contain 'strong'"
-        );
-        assert!(
-            result.content.contains("emphasis") || baseline.contains("emphasis"),
-            "Either extracted or baseline should contain 'emphasis'"
-        );
-    }
-}
 
 #[tokio::test]
 async fn test_fictionbook_markdown_formatting_preservation() {

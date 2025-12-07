@@ -43,14 +43,6 @@ brew install libreoffice
 sudo apt-get install libreoffice
 ```
 
-**Pandoc** (Optional, for advanced document conversion):
-```bash
-# macOS
-brew install pandoc
-
-# Ubuntu/Debian
-sudo apt-get install pandoc
-```
 
 ## Quick Start
 

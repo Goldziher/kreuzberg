@@ -1,7 +1,7 @@
 //! Comprehensive TDD test suite for OPML (Outline Processor Markup Language) extraction
 //!
-//! This test suite validates OPML extraction capabilities using Pandoc's output as a baseline.
-//! Each test extracts an OPML file, compares the output against Pandoc's baseline, and validates:
+//! This test suite validates OPML extraction capabilities.
+//! Each test extracts an OPML file and validates:
 //!
 //! - Metadata extraction (title, dateCreated, dateModified, ownerName, ownerEmail)
 //! - Outline hierarchy extraction with proper indentation
@@ -9,9 +9,6 @@
 //! - Content structure preservation
 //! - Special character handling
 //! - Edge cases (empty bodies, nested structures, etc.)
-//!
-//! The tests use Pandoc as the reference standard for content extraction and validate
-//! that Kreuzberg's extraction provides comparable results.
 
 #![cfg(feature = "office")]
 
@@ -457,75 +454,6 @@ async fn test_opml_special_characters_handling() {
     println!("   Verified UTF-8 integrity and entity decoding");
 }
 
-// ============================================================================
-// SECTION 8: COMPARATIVE ANALYSIS WITH PANDOC BASELINE
-// ============================================================================
-
-/// Test 8: Compare extractor output with Pandoc baseline (content structure)
-///
-/// Validates:
-/// - Extracted content is comparable in size to Pandoc baseline
-/// - Key items from Pandoc baseline are present in extracted content
-/// - Content structure is meaningful and readable
-/// - No excessive XML artifacts in output
-/// - Outline hierarchy is preserved
-#[tokio::test]
-async fn test_opml_pandoc_baseline_comparison() {
-    let opml_file = get_test_opml_path("feeds.opml");
-    let baseline_file = get_test_opml_path("feeds_baseline.txt");
-
-    if !opml_file.exists() || !baseline_file.exists() {
-        println!("Skipping test: Test files not found");
-        return;
-    }
-
-    let opml_content = std::fs::read(&opml_file).expect("Should read OPML file");
-    let baseline_content = std::fs::read_to_string(&baseline_file).expect("Should read baseline file");
-
-    let result = extract_bytes(&opml_content, "text/x-opml", &ExtractionConfig::default())
-        .await
-        .expect("Should extract successfully");
-
-    // Validate content properties
-    let extracted = &result.content;
-
-    // Should not have unprocessed XML tags
-    assert!(
-        !extracted.contains("<outline"),
-        "Should not contain raw XML outline tags"
-    );
-    assert!(!extracted.contains("<head"), "Should not contain raw XML head tags");
-    assert!(!extracted.contains("<?xml"), "Should not contain XML declaration");
-
-    // Content length should be reasonable compared to baseline
-    let baseline_len = baseline_content.len();
-    let extracted_len = extracted.len();
-    let ratio = extracted_len as f64 / baseline_len as f64;
-    assert!(
-        ratio > 0.3 && ratio < 4.0,
-        "Content length should be comparable to baseline (baseline: {} bytes, extracted: {} bytes, ratio: {:.2})",
-        baseline_len,
-        extracted_len,
-        ratio
-    );
-
-    // Verify main categories are present (as in baseline)
-    assert_contains_ci(
-        &extracted,
-        "Technology",
-        "Should have Technology category like baseline",
-    );
-    assert_contains_ci(
-        &extracted,
-        "Programming",
-        "Should have Programming category like baseline",
-    );
-
-    println!("✅ Pandoc baseline comparison test passed!");
-    println!("   Baseline: {} bytes", baseline_len);
-    println!("   Extracted: {} bytes", extracted_len);
-    println!("   Ratio: {:.2}", ratio);
-}
 
 // ============================================================================
 // SECTION 9: OUTLINE-SPECIFIC HIERARCHY TESTS

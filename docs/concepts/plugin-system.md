@@ -85,7 +85,6 @@ pub trait DocumentExtractor: Plugin {
 - **XMLExtractor**: Streaming XML parser for `application/xml`, `text/xml`
 - **TextExtractor**: Streaming text parser for `text/plain`, `text/markdown`
 - **EmailExtractor**: Parses `message/rfc822` (EML) and `application/vnd.ms-outlook` (MSG)
-- **PandocExtractor**: Fallback for unsupported formats via Pandoc
 
 **Priority System:**
 

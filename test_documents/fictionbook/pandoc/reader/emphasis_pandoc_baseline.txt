@@ -1,7 +1,0 @@
-Plain, strong, emphasis, strong emphasis, emphasized strong.
-
-Strikethrough: ~~deleted~~
-
-_(Subscript) and ^(superscript)
-
-Some code

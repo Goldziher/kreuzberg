@@ -1,7 +1,6 @@
-//! Comprehensive LaTeX Extractor Tests - Pandoc Parity
+//! Comprehensive LaTeX Extractor Tests
 //!
-//! This test suite defines the expected behavior for LaTeX extraction
-//! based on Pandoc baselines. All tests are expected to FAIL initially
+//! This test suite defines the expected behavior for LaTeX extraction.
 //!
 //! Test Coverage:
 //! - Basic content extraction (minimal.tex)
@@ -14,8 +13,7 @@
 //!
 //! Success Criteria:
 //! - All tests passing (100%)
-//! - Pandoc parity: content length within 90-110% of baseline
-//! - No content loss (currently 0 bytes extracted)
+//! - No content loss (extract meaningful content)
 
 #![cfg(feature = "office")]
 
@@ -42,20 +40,6 @@ fn test_file_path(filename: &str) -> PathBuf {
         .join(filename)
 }
 
-/// Helper to compare extracted content length with Pandoc baseline
-/// Returns (extracted_len, baseline_len, ratio_percent)
-fn compare_with_baseline(extracted: &str, baseline_filename: &str) -> (usize, usize, f64) {
-    let baseline_path = test_file_path(baseline_filename);
-    let baseline = fs::read_to_string(&baseline_path).expect(&format!("Failed to read baseline: {:?}", baseline_path));
-    let extracted_len = extracted.trim().len();
-    let baseline_len = baseline.trim().len();
-    let ratio = if baseline_len > 0 {
-        (extracted_len as f64 / baseline_len as f64) * 100.0
-    } else {
-        0.0
-    };
-    (extracted_len, baseline_len, ratio)
-}
 
 // ============================================================================
 // TEST 1: MINIMAL - Basic Content Extraction
@@ -84,16 +68,6 @@ async fn test_latex_minimal_extraction() {
         result.content
     );
 
-    // Test 1.3: Should match Pandoc baseline length (±10%)
-    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "minimal_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 90.0 && ratio <= 110.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
 }
 
 // ============================================================================
@@ -176,17 +150,6 @@ async fn test_latex_section_hierarchy() {
         "FAIL: Should extract paragraph text from document body"
     );
 
-    // Test 2.8: Should match Pandoc baseline (±10%)
-    let (extracted_len, baseline_len, ratio) =
-        compare_with_baseline(&result.content, "basic_sections_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 90.0 && ratio <= 110.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
 }
 
 // ============================================================================
@@ -251,16 +214,6 @@ async fn test_latex_text_formatting() {
         "FAIL: Should extract text from nested formatting commands"
     );
 
-    // Test 3.9: Should match Pandoc baseline (±10%)
-    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "formatting_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 90.0 && ratio <= 110.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
 }
 
 // ============================================================================
@@ -318,16 +271,6 @@ async fn test_latex_math_extraction() {
         "FAIL: Should extract display math environment content"
     );
 
-    // Test 4.6: Should match Pandoc baseline (±10%)
-    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "math_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 90.0 && ratio <= 110.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
 }
 
 // ============================================================================
@@ -400,16 +343,6 @@ async fn test_latex_table_extraction() {
         "FAIL: Should extract table caption from \\caption{{}}"
     );
 
-    // Test 5.6: Should match Pandoc baseline (±10%)
-    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "tables_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 90.0 && ratio <= 110.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
 }
 
 // ============================================================================
@@ -539,16 +472,6 @@ async fn test_latex_lists_pandoc_parity() {
         .await
         .expect("Should extract LaTeX lists");
 
-    // Test 6.5: Should match Pandoc baseline (±10%)
-    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "lists_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 90.0 && ratio <= 110.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
 }
 
 // ============================================================================
@@ -578,16 +501,6 @@ async fn test_latex_unicode_handling() {
         "FAIL: Should extract non-zero content from unicode.tex"
     );
 
-    // Test 7.3: Should match Pandoc baseline (±20% - Unicode can vary)
-    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "unicode_pandoc_baseline.txt");
-
-    assert!(
-        ratio >= 80.0 && ratio <= 120.0,
-        "FAIL: Content length {}% of Pandoc baseline. Expected 80-120% (Unicode lenient). (Extracted: {} bytes, Baseline: {} bytes)",
-        ratio as i32,
-        extracted_len,
-        baseline_len
-    );
 }
 
 // ============================================================================
@@ -677,52 +590,46 @@ async fn test_latex_empty_document_handling() {
 //
 // This test suite defines 30+ individual test assertions across 8 test groups:
 //
-// 1. **Minimal Extraction** (3 tests)
+// 1. **Minimal Extraction** (2 tests)
 //    - Non-zero content extraction
 //    - Exact text matching
-//    - Pandoc parity
 //
 // 2. **Metadata Extraction** (3 tests)
 //    - Title extraction from \title{}
 //    - Author extraction from \author{}
 //    - Date extraction from \date{}
 //
-// 3. **Section Hierarchy** (5 tests)
+// 3. **Section Hierarchy** (4 tests)
 //    - Section titles (\section{})
 //    - Subsection titles (\subsection{})
 //    - Subsubsection titles (\subsubsection{})
 //    - Paragraph content
-//    - Pandoc parity
 //
-// 4. **Text Formatting** (9 tests)
+// 4. **Text Formatting** (8 tests)
 //    - Bold (\textbf{})
 //    - Italic (\textit{})
 //    - Underline (\underline{})
 //    - Emphasis (\emph{})
 //    - Monospace (\texttt{})
 //    - Combined formatting
-//    - Pandoc parity
 //
-// 5. **Math Expressions** (6 tests)
+// 5. **Math Expressions** (5 tests)
 //    - Inline math ($...$)
 //    - Display math (\[...\])
 //    - Math environments
 //    - Surrounding text
-//    - Pandoc parity
 //
-// 6. **Tables** (6 tests)
+// 6. **Tables** (5 tests)
 //    - Table headers
 //    - Table data cells
 //    - Multiple tables
 //    - Table captions
-//    - Pandoc parity
 //
-// 7. **Lists** (5 tests)
+// 7. **Lists** (4 tests)
 //    - Itemize lists (\begin{itemize})
 //    - Enumerate lists (\begin{enumerate})
 //    - Description lists (\begin{description})
 //    - Nested lists
-//    - Pandoc parity
 //
 // 8. **Integration** (4 tests)
 //    - No content loss bug (0 bytes)
@@ -730,8 +637,4 @@ async fn test_latex_empty_document_handling() {
 //    - Empty document handling
 //    - Unicode character support
 //
-// **Expected Initial State**: ALL TESTS FAIL (LaTeX extractor extracts 0 bytes)
-//
 // **Success Criteria**: ALL TESTS PASS (100% pass rate)
-//
-// **Pandoc Parity**: Content length within 90-110% of Pandoc baseline

@@ -225,7 +225,6 @@ v4 introduces native metadata extraction across all major document formats:
 - **DOCX**: Core properties (Dublin Core metadata), app properties (page/word/character/line/paragraph counts, template, editing time), custom properties
 - **XLSX**: Core properties, app properties (worksheet names, sheet count), custom properties
 - **PPTX**: Core properties, app properties (slide count, notes, hidden slides, slide titles), custom properties
-- Automatic merging with Pandoc metadata for DOCX (Pandoc takes precedence for conflicts)
 - Non-blocking extraction (falls back gracefully if metadata unavailable)
 
 **Email** (via `mail-parser`):
@@ -260,8 +259,9 @@ v4 introduces native metadata extraction across all major document formats:
 - YAML frontmatter automatically stripped from markdown content
 - Accessible via `ExtractionResult.metadata.html`
 
-**Pandoc-Only Formats** (metadata via Pandoc subprocess):
+**Pandoc-Supported Formats** (via Pandoc subprocess):
 - ODT, EPUB, LaTeX, reStructuredText, RTF, Typst, Jupyter Notebooks, FictionBook, Org Mode, DocBook, JATS, OPML
+- Uses Pandoc for extraction in these formats where native Rust extractors are not yet implemented
 - Extracts whatever metadata Pandoc provides (varies by format)
 
 **Key Improvements from v3**:

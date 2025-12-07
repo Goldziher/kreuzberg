@@ -18,7 +18,6 @@
 
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_file;
-use kreuzberg::extraction::pandoc::validate_pandoc_version;
 use std::path::{Path, PathBuf};
 
 mod helpers;
@@ -33,10 +32,6 @@ fn get_test_file_path(filename: &str) -> PathBuf {
     workspace_root.join(format!("test_documents/odt/{}", filename))
 }
 
-/// Check if Pandoc is installed and available
-async fn is_pandoc_available() -> bool {
-    validate_pandoc_version().await.is_ok()
-}
 
 /// Helper to verify a test file exists before running test
 fn ensure_test_file_exists(path: &Path) -> bool {
@@ -55,10 +50,6 @@ fn ensure_test_file_exists(path: &Path) -> bool {
 /// Validates: creator, creation date, modification date, document statistics
 #[tokio::test]
 async fn test_odt_metadata_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("bold.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -98,10 +89,6 @@ async fn test_odt_metadata_extraction() {
 /// ```
 #[tokio::test]
 async fn test_odt_table_with_caption_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("simpleTableWithCaption.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -137,10 +124,6 @@ async fn test_odt_table_with_caption_extraction() {
 /// Expected: Table with "Content" and "More content" cells
 #[tokio::test]
 async fn test_odt_simple_table_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("simpleTable.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -178,10 +161,6 @@ async fn test_odt_simple_table_extraction() {
 /// - H1: "Back to Level 1"
 #[tokio::test]
 async fn test_odt_heading_structure_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("headers.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -218,10 +197,6 @@ async fn test_odt_heading_structure_extraction() {
 /// Expected Pandoc output: "Here comes **bold** text"
 #[tokio::test]
 async fn test_odt_bold_formatting_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("bold.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -256,10 +231,6 @@ async fn test_odt_bold_formatting_extraction() {
 /// Expected Pandoc output: "Here comes *italic* text"
 #[tokio::test]
 async fn test_odt_italic_formatting_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("italic.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -294,10 +265,6 @@ async fn test_odt_italic_formatting_extraction() {
 /// Expected Pandoc output: "Here comes text that was ~~striken out~~."
 #[tokio::test]
 async fn test_odt_strikeout_formatting_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("strikeout.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -334,10 +301,6 @@ async fn test_odt_strikeout_formatting_extraction() {
 /// ```
 #[tokio::test]
 async fn test_odt_image_with_caption_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("imageWithCaption.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -375,10 +338,6 @@ async fn test_odt_image_with_caption_extraction() {
 /// Expected Pandoc output: "$$E = {m \\cdot c^{2}}$$"
 #[tokio::test]
 async fn test_odt_formula_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("formula.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -415,10 +374,6 @@ async fn test_odt_formula_extraction() {
 /// ```
 #[tokio::test]
 async fn test_odt_footnote_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("footnote.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -450,10 +405,6 @@ async fn test_odt_footnote_extraction() {
 /// Expected: Endnote content with reference (similar to footnotes)
 #[tokio::test]
 async fn test_odt_endnote_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("endnote.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -485,10 +436,6 @@ async fn test_odt_endnote_extraction() {
 /// Expected Pandoc output: "Some text[@Ex] with a citation."
 #[tokio::test]
 async fn test_odt_citation_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("citation.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -521,10 +468,6 @@ async fn test_odt_citation_extraction() {
 /// Expected Pandoc output: ""'çӨ©¼вбФШöÉµ"
 #[tokio::test]
 async fn test_odt_unicode_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("unicode.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -554,10 +497,6 @@ async fn test_odt_unicode_extraction() {
 /// Expected Pandoc output: "Here comes `inlined code` text and `an another` one."
 #[tokio::test]
 async fn test_odt_inlined_code_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("inlinedCode.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -589,10 +528,6 @@ async fn test_odt_inlined_code_extraction() {
 /// Expected: Multiple paragraphs separated by blank lines
 #[tokio::test]
 async fn test_odt_paragraph_structure_extraction() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("paragraph.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -625,10 +560,6 @@ async fn test_odt_paragraph_structure_extraction() {
 /// Integration test: Verify ODT extraction works with standard API
 #[tokio::test]
 async fn test_odt_extraction_api_integration() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("bold.odt");
     if !ensure_test_file_exists(&test_file) {
@@ -650,10 +581,6 @@ async fn test_odt_extraction_api_integration() {
 /// Test error handling for non-existent files
 #[tokio::test]
 async fn test_odt_extraction_missing_file_handling() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_file = get_test_file_path("nonexistent.odt");
     let config = ExtractionConfig::default();
@@ -668,10 +595,6 @@ async fn test_odt_extraction_missing_file_handling() {
 /// Test extraction from multiple representative files
 #[tokio::test]
 async fn test_odt_extraction_variety() {
-    if !is_pandoc_available().await {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
 
     let test_files = vec![
         "bold.odt",
