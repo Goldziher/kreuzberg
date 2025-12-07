@@ -16,16 +16,29 @@ High-performance document intelligence for Go backed by the Rust core that power
 go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 ```
 
-The Go binding uses cgo to link against the `kreuzberg-ffi` library:
+The Go binding uses cgo to link against the `kreuzberg-ffi` library.
 
-1. Build the Rust FFI crate once per platform:
+### Platform-Specific Build Instructions
+
+**Linux/macOS:**
+1. Build the Rust FFI crate with full features:
    ```bash
    cargo build -p kreuzberg-ffi --release
    ```
+
+**Windows (MinGW):**
+1. Build the Rust FFI crate with the `core` feature (embeddings not available):
+   ```bash
+   cargo build -p kreuzberg-ffi --release --target x86_64-pc-windows-gnu --no-default-features --features core
+   ```
+
+   **Note:** The `embeddings` feature requires ONNX Runtime, which is only available with MSVC toolchain on Windows. MinGW builds must use the `core` feature.
+
 2. Ensure the resulting shared libraries are discoverable at runtime:
    - macOS: `export DYLD_FALLBACK_LIBRARY_PATH=$PWD/target/release`
    - Linux: `export LD_LIBRARY_PATH=$PWD/target/release`
-   - Windows: add `target\release` to `PATH`
+   - Windows: add `target\release` or `target\x86_64-pc-windows-gnu\release` to `PATH`
+
 3. Pdfium is bundled in `target/release`, so no extra system packages are required unless you customize the build.
 
 ## Quickstart
@@ -144,6 +157,7 @@ func init() {
 | `Missing dependency: tesseract` | Install the OCR backend and ensure it is on `PATH`. Errors bubble up as `*kreuzberg.MissingDependencyError`. |
 | `undefined: C.customValidator` during build | Export the callback with `//export` in a `*_cgo.go` file before using it in `Register*` helpers. |
 | `github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg` tests fail | Set the library path as above before running `go test ./...`. |
+| Embeddings not available on Windows | Windows Go bindings use MinGW which cannot link ONNX Runtime (MSVC-only). Embeddings are unavailable on Windows for Go. |
 
 ## Testing / Tooling
 

@@ -89,11 +89,24 @@ bundle exec rake native:gem  # Builds platform gem
 
 **Go** (cgo):
 ```bash
+# Linux/macOS - Build FFI with full features
+cargo build -p kreuzberg-ffi --release
+
+# Windows - Build FFI with core feature (MinGW cannot link ONNX Runtime)
+cargo build -p kreuzberg-ffi --release --target x86_64-pc-windows-gnu --no-default-features --features core
+
+# Set library path before running Go commands
+export DYLD_FALLBACK_LIBRARY_PATH=$PWD/target/release  # macOS
+export LD_LIBRARY_PATH=$PWD/target/release             # Linux
+# Windows: add target\release to PATH
+
 task go:install        # Installs golangci-lint and downloads modules
 task go:lint           # gofmt + golangci-lint
 task go:test           # go test ./... (requires libkreuzberg_ffi in target/release)
 task e2e:go:verify     # Regenerates fixtures and runs e2e/go tests with LD_LIBRARY_PATH set
 ```
+
+**Note:** Windows Go builds use MinGW (GNU toolchain) which cannot link MSVC-only ONNX Runtime. The `core` feature excludes embeddings but includes all other functionality.
 
 **Java** (FFM API):
 ```bash

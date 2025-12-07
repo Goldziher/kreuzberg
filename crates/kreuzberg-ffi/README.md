@@ -618,18 +618,48 @@ private static extern IntPtr kreuzberg_extract_file(
 
 ### Default Features
 - `html`: HTML to Markdown conversion support
-- `embeddings`: Text embedding extraction
+- `embeddings`: Text embedding extraction via fastembed-rs (requires ONNX Runtime)
 
-### Optional Features
-- None; core extraction is always included
+### Core Feature (Windows MinGW Compatibility)
+- `core`: Minimal feature set for cross-platform compatibility
+  - Includes: `html` (HTML to Markdown conversion)
+  - Excludes: `embeddings` (ONNX Runtime not available on MinGW)
+  - Use case: Windows Go bindings with MinGW toolchain
+
+### Platform-Specific Build Requirements
+
+**Windows MinGW (Go bindings):**
+
+The Windows ONNX Runtime library only provides MSVC-compatible .lib files. MinGW cannot link against these, requiring the core feature:
+
+```bash
+# Windows MinGW - Use core feature
+cargo build --release -p kreuzberg-ffi --target x86_64-pc-windows-gnu --no-default-features --features core
+
+# Windows MSVC - Full features available
+cargo build --release -p kreuzberg-ffi --target x86_64-pc-windows-msvc
+
+# Unix (Linux/macOS) - Full features available
+cargo build --release -p kreuzberg-ffi
+```
+
+**Why MinGW Requires core Feature:**
+- ONNX Runtime distributes Windows binaries compiled with MSVC toolchain
+- MSVC .lib files use different name mangling and linking conventions than MinGW
+- MinGW's GNU toolchain cannot consume MSVC import libraries
+- The `core` feature excludes the `embeddings` dependency, which depends on ort-sys (ONNX Runtime)
+- HTML support (via html-to-markdown-rs) is pure Rust and works on all platforms
 
 ### Building with Features
 
 ```bash
 # Build with HTML and embeddings support (default)
-cargo build --release -p kreuzberg-ffi --features html,embeddings
+cargo build --release -p kreuzberg-ffi
 
-# Build core only
+# Build with core feature only (Windows MinGW compatibility)
+cargo build --release -p kreuzberg-ffi --no-default-features --features core
+
+# Build without any features (minimal FFI)
 cargo build --release -p kreuzberg-ffi --no-default-features
 ```
 

@@ -5,6 +5,39 @@ All notable changes to Kreuzberg will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0-rc.6] - 2025-12-07
+
+### Release Candidate 6 - FFI Core Feature & CI/Build Improvements
+
+#### New Features
+
+**FFI Bindings**:
+- Added `core` feature for kreuzberg-ffi without embeddings support
+  - Provides lightweight FFI build option excluding ONNX Runtime dependency
+  - Enables Windows MinGW compatibility for Go bindings
+  - Includes HTML processing and all document extraction features
+  - Use `--no-default-features --features core` for MinGW builds
+
+#### Bug Fixes
+
+**Go Bindings**:
+- Fixed Windows MinGW builds by disabling embeddings feature
+  - Windows ONNX Runtime only provides MSVC .lib files incompatible with MinGW
+  - Go bindings on Windows now use `core` feature (no embeddings)
+  - Full features (including embeddings) remain available on Linux, macOS, and Windows MSVC
+- Fixed test execution to use `test_documents` instead of `.kreuzberg` cache
+  - Ensures reproducible test runs without relying on user cache directory
+  - Improves CI/CD reliability and test isolation
+
+**CI/CD Infrastructure**:
+- Upgraded `upload-artifact` from v4 to v5 for compatibility with `download-artifact@v6`
+  - Fixes artifact version mismatch causing benchmark and CI failures
+  - Affects 10 workflow files with 42 total changes
+  - Resolves "artifact not found" errors in multi-job workflows
+- Fixed RUSTFLAGS handling in `setup-onnx-runtime` action
+  - Now appends to existing RUSTFLAGS instead of overwriting
+  - Preserves `-C target-feature=+crt-static` for Windows GNU builds
+
 ## [4.0.0-rc.5] - 2025-12-01
 
 ### Release Candidate 5 - macOS Binary Fix & Complete Pandoc Removal

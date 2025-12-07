@@ -43,6 +43,7 @@ Each language binding provides comprehensive documentation with examples and bes
 - **[Ruby](packages/ruby/README.md)** – Installation, basic usage, configuration
 - **[TypeScript/Node.js](crates/kreuzberg-node/README.md)** – Installation, types, promises
 - **[Go](packages/go/README.md)** – Installation, native library setup, sync/async extraction + batch APIs
+  _Note: Windows builds use MinGW and don't support embeddings (ONNX Runtime requires MSVC)_
 - **[Java](packages/java/README.md)** – Installation, FFM API usage, Maven/Gradle setup
 - **[C#](packages/csharp/README.md)** – Installation, P/Invoke usage, NuGet package
 - **[Rust](crates/kreuzberg/README.md)** – Crate usage, features, async/sync APIs
@@ -200,7 +201,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details. Kreuzberg’s open-source is released under the MIT license, one of the most permissive licenses available ❤️  
+MIT License - see [LICENSE](LICENSE) for details. Kreuzberg’s open-source is released under the MIT license, one of the most permissive licenses available ❤️
 This means you can use it freely in both commercial and closed-source products with no obligations, no viral effects, and no licensing restrictions.
 
 Unlike AGPL-licensed PDF engines like MuPDF (which require you to open-source your entire codebase unless you buy a commercial license), MIT is safe for enterprise adoption and creates zero legal friction.

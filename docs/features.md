@@ -452,7 +452,7 @@ kreuzberg mcp
 | **Processing** | | | | | | |
 | Language detection | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Content chunking | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Embeddings | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Embeddings | ✓ | ✓* | ✓ | ✓ | ✓ | ✓ |
 | Token reduction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Quality processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Keyword extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -473,6 +473,9 @@ kreuzberg mcp
 | Async API | ✗ | ✗ | ✓ | ✗ | ✓ | ✓ |
 | Batch processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Streaming | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ |
+
+**Platform Notes:**
+- `*` Go embeddings not available on Windows (MinGW cannot link ONNX Runtime which requires MSVC)
 
 ### Package Distribution
 
