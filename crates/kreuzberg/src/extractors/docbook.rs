@@ -291,18 +291,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<(String, String, Option<St
     Ok((final_output.trim().to_string(), title, author, date, tables))
 }
 
-/// Backwards-compatible wrapper used by existing tests: returns content, title, author, date.
-fn parse_docbook_content(content: &str) -> Result<(String, String, Option<String>, Option<String>)> {
-    let (body, title, author, date, _tables) = parse_docbook_single_pass(content)?;
-    Ok((body, title, author, date))
-}
-
-/// Extract only tables (compat shim for older callers/tests).
-fn extract_docbook_tables(content: &str) -> Result<Vec<Table>> {
-    let (_body, _title, _author, _date, tables) = parse_docbook_single_pass(content)?;
-    Ok(tables)
-}
-
 /// Extract text content from a DocBook element and its children.
 /// Used for extracting nested content within elements.
 fn extract_element_text(reader: &mut Reader<&[u8]>) -> Result<String> {
@@ -486,7 +474,7 @@ mod tests {
   <para>Test content.</para>
 </article>"#;
 
-        let (content, title, _, _) = parse_docbook_content(docbook).expect("Parse failed");
+        let (content, title, _, _, _) = parse_docbook_single_pass(docbook).expect("Parse failed");
         assert_eq!(title, "Test Article");
         assert!(content.contains("Test content"));
     }
@@ -513,7 +501,7 @@ mod tests {
   </table>
 </article>"#;
 
-        let tables = extract_docbook_tables(docbook).expect("Table extraction failed");
+        let (_, _, _, _, tables) = parse_docbook_single_pass(docbook).expect("Table extraction failed");
         assert_eq!(tables.len(), 1);
         assert_eq!(tables[0].cells.len(), 2);
         assert_eq!(tables[0].cells[0], vec!["Col1", "Col2"]);
