@@ -1,1111 +1,738 @@
-//! TDD Test Suite for LaTeX Extraction
+//! Comprehensive LaTeX Extractor Tests - Pandoc Parity
 //!
-//! This comprehensive test suite is based on Pandoc's extraction capabilities
-//! and serves as a baseline for LaTeX extraction quality. Tests are designed to fail
-//! initially (following TDD principles) until a full LaTeX extractor is implemented.
+//! This test suite defines the expected behavior for LaTeX extraction
+//! based on Pandoc baselines. All tests are expected to FAIL initially
+//! until the LaTeX extractor is implemented with tree-sitter.
 //!
-//! Pandoc Extraction Baseline:
-//! - Metadata: Extracts title, author (multiple), and date from LaTeX document header
-//! - Content: Preserves document structure including headers, emphasis, links, lists
-//! - Tables: Correctly parses LaTeX tabular environments
-//! - Special handling: Citations, footnotes, code blocks, blockquotes
+//! Test Coverage:
+//! - Basic content extraction (minimal.tex)
+//! - Section hierarchy (basic_sections.tex)
+//! - Text formatting (formatting.tex)
+//! - Mathematical expressions (math.tex)
+//! - Tables (tables.tex)
+//! - Lists (lists.tex)
+//! - Unicode handling (unicode.tex)
+//!
+//! Success Criteria:
+//! - All tests passing (100%)
+//! - Pandoc parity: content length within 90-110% of baseline
+//! - No content loss (currently 0 bytes extracted)
 
+#![cfg(feature = "office")]
+
+use kreuzberg::core::config::ExtractionConfig;
+use kreuzberg::extractors::latex::LatexExtractor;
+use kreuzberg::plugins::DocumentExtractor;
 use std::fs;
-use std::path::Path;
+use std::path::PathBuf;
 
-// Constants for test document path
-const TEST_LATEX_FILE: &str = "test_documents/latex/latex-reader.latex";
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
-/// Helper function to load the test LaTeX file
-fn load_test_latex() -> Vec<u8> {
-    fs::read(TEST_LATEX_FILE).expect("Failed to read test LaTeX file")
+/// Helper to get absolute path to test documents
+fn test_file_path(filename: &str) -> PathBuf {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    PathBuf::from(manifest_dir)
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("test_documents")
+        .join("latex")
+        .join(filename)
 }
 
-/// Helper function to check if file exists
-fn test_file_exists() -> bool {
-    Path::new(TEST_LATEX_FILE).exists()
+/// Helper to compare extracted content length with Pandoc baseline
+/// Returns (extracted_len, baseline_len, ratio_percent)
+fn compare_with_baseline(extracted: &str, baseline_filename: &str) -> (usize, usize, f64) {
+    let baseline_path = test_file_path(baseline_filename);
+    let baseline = fs::read_to_string(&baseline_path).expect(&format!("Failed to read baseline: {:?}", baseline_path));
+    let extracted_len = extracted.trim().len();
+    let baseline_len = baseline.trim().len();
+    let ratio = if baseline_len > 0 {
+        (extracted_len as f64 / baseline_len as f64) * 100.0
+    } else {
+        0.0
+    };
+    (extracted_len, baseline_len, ratio)
 }
 
 // ============================================================================
-// METADATA EXTRACTION TESTS
+// TEST 1: MINIMAL - Basic Content Extraction
 // ============================================================================
 
-/// Test that LaTeX title metadata is correctly extracted
-/// Expected from Pandoc: "Pandoc Test Suite"
-#[test]
-fn test_latex_metadata_title_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_minimal_extraction() {
+    let content = fs::read(test_file_path("minimal.tex")).expect("Failed to read minimal.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract minimal LaTeX");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected behavior: Extract title from \title{Pandoc Test Suite}
-    let _expected_title = "Pandoc Test Suite";
+    // Test 1.1: Should extract non-zero content
+    assert!(
+        result.content.len() > 0,
+        "FAIL: Extracted 0 bytes (current bug). Should extract content from minimal.tex"
+    );
 
-    // TODO: Implement LaTeX extractor that extracts title from document metadata
-    // assert_eq!(extracted_metadata.title, Some(expected_title.to_string()));
-}
+    // Test 1.2: Should extract the actual text
+    assert!(
+        result.content.contains("Hello World from LaTeX!"),
+        "FAIL: Should extract 'Hello World from LaTeX!' but got: '{}'",
+        result.content
+    );
 
-/// Test that LaTeX author metadata (multiple authors) are correctly extracted
-/// Expected from Pandoc: ["John MacFarlane", "Anonymous"]
-#[test]
-fn test_latex_metadata_authors_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 1.3: Should match Pandoc baseline length (±10%)
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "minimal_pandoc_baseline.txt");
 
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected behavior: Extract multiple authors from \author{John MacFarlane \and Anonymous}
-    let _expected_authors = vec!["John MacFarlane", "Anonymous"];
-
-    // TODO: Implement LaTeX extractor that extracts authors array from document metadata
-    // assert_eq!(extracted_metadata.authors, expected_authors);
-}
-
-/// Test that LaTeX date metadata is correctly extracted
-/// Expected from Pandoc: "July 17, 2006"
-#[test]
-fn test_latex_metadata_date_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected behavior: Extract date from \date{July 17, 2006}
-    let _expected_date = "July 17, 2006";
-
-    // TODO: Implement LaTeX extractor that extracts date from document metadata
-    // assert_eq!(extracted_metadata.date, Some(expected_date.to_string()));
-}
-
-/// Test that metadata completeness is verified
-/// Pandoc extracts all three standard metadata fields
-#[test]
-fn test_latex_metadata_completeness() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: All three metadata fields should be present
-    // - title
-    // - authors (as array or comma-separated)
-    // - date
-
-    // TODO: Implement LaTeX extractor
-    // assert!(extracted_metadata.has_title());
-    // assert!(extracted_metadata.has_authors());
-    // assert!(extracted_metadata.has_date());
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
 }
 
 // ============================================================================
-// CONTENT EXTRACTION TESTS
+// TEST 2: BASIC SECTIONS - Metadata and Hierarchy
 // ============================================================================
 
-/// Test that plain text content is correctly extracted from LaTeX
-/// Pandoc preserves paragraph text while stripping LaTeX syntax
-#[test]
-fn test_latex_content_plain_text_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_metadata_extraction() {
+    let content = fs::read(test_file_path("basic_sections.tex")).expect("Failed to read basic_sections.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX with metadata");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: First paragraph should be preserved
-    let _expected_text = "This is a set of tests for pandoc. Most of them are adapted from";
+    // Test 2.1: Should extract title from \title{Test Document}
+    assert_eq!(
+        result.metadata.additional.get("title").and_then(|v| v.as_str()),
+        Some("Test Document"),
+        "FAIL: Should extract title 'Test Document' from \\title{{}} command"
+    );
 
-    // TODO: Implement LaTeX extractor that extracts and cleans LaTeX content
-    // assert!(extracted_content.contains(expected_text));
+    // Test 2.2: Should extract author from \author{John Doe}
+    assert_eq!(
+        result.metadata.additional.get("author").and_then(|v| v.as_str()),
+        Some("John Doe"),
+        "FAIL: Should extract author 'John Doe' from \\author{{}} command"
+    );
+
+    // Test 2.3: Should extract date from \date{2025-12-07}
+    assert_eq!(
+        result.metadata.additional.get("date").and_then(|v| v.as_str()),
+        Some("2025-12-07"),
+        "FAIL: Should extract date '2025-12-07' from \\date{{}} command"
+    );
 }
 
-/// Test that section headers are correctly identified and extracted
-/// LaTeX \section{} maps to heading level 1
-#[test]
-fn test_latex_content_section_headers() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_section_hierarchy() {
+    let content = fs::read(test_file_path("basic_sections.tex")).expect("Failed to read basic_sections.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX sections");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Headers section should be present
-    let _expected_headers = vec!["Headers", "Paragraphs", "Block Quotes", "Lists"];
+    // Test 2.4: Should extract section titles
+    assert!(
+        result.content.contains("Introduction"),
+        "FAIL: Should extract \\section{{Introduction}} as text"
+    );
 
-    // TODO: Implement LaTeX extractor that identifies \section{} commands
-    // for header in expected_headers {
-    //     assert!(extracted_content.contains(header));
-    // }
-}
+    assert!(
+        result.content.contains("Methods"),
+        "FAIL: Should extract \\section{{Methods}} as text"
+    );
 
-/// Test that subsection headers are correctly identified
-/// LaTeX \subsection{} maps to heading level 2
-#[test]
-fn test_latex_content_subsection_headers() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    assert!(
+        result.content.contains("Results"),
+        "FAIL: Should extract \\section{{Results}} as text"
+    );
 
-    let _content = load_test_latex();
+    // Test 2.5: Should extract subsection titles
+    assert!(
+        result.content.contains("Background"),
+        "FAIL: Should extract \\subsection{{Background}} as text"
+    );
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Subsection headers should be identified as level 2
-    let _expected_subsections = vec!["Unordered", "Ordered", "Nested"];
+    // Test 2.6: Should extract subsubsection titles
+    assert!(
+        result.content.contains("Historical Context"),
+        "FAIL: Should extract \\subsubsection{{Historical Context}} as text"
+    );
 
-    // TODO: Implement LaTeX extractor that identifies \subsection{} commands
-    // for subsection in expected_subsections {
-    //     assert!(extracted_content.contains(subsection));
-    // }
-}
+    // Test 2.7: Should extract paragraph content
+    assert!(
+        result.content.contains("This is the introduction paragraph"),
+        "FAIL: Should extract paragraph text from document body"
+    );
 
-/// Test that emphasis (italic) text is correctly identified
-/// LaTeX \emph{} or \textit{} marks emphasized text
-#[test]
-fn test_latex_content_emphasis_preservation() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 2.8: Should match Pandoc baseline (±10%)
+    let (extracted_len, baseline_len, ratio) =
+        compare_with_baseline(&result.content, "basic_sections_pandoc_baseline.txt");
 
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Emphasis markers should be preserved in markdown (e.g., *text*)
-    // Source: \emph{emphasis}
-
-    // TODO: Implement LaTeX extractor that converts \emph{} to markdown *text*
-    // assert!(extracted_content.contains("*emphasis*") || extracted_content.contains("_emphasis_"));
-}
-
-/// Test that strong (bold) text is correctly identified
-/// LaTeX \textbf{} marks strong text
-#[test]
-fn test_latex_content_strong_preservation() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Strong markers should be preserved in markdown (e.g., **text**)
-    // Source: \textbf{strong}
-
-    // TODO: Implement LaTeX extractor that converts \textbf{} to markdown **text**
-    // assert!(extracted_content.contains("**strong**"));
-}
-
-/// Test that links are correctly extracted
-/// LaTeX \href{url}{text} should be converted to markdown [text](url)
-#[test]
-fn test_latex_content_links_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Links in markdown format [text](url)
-    // Source: \href{/url}{embedded link}
-
-    // TODO: Implement LaTeX extractor that converts \href{}{} to markdown links
-    // assert!(extracted_content.contains("[embedded link]"));
-    // assert!(extracted_content.contains("/url"));
-}
-
-/// Test that inline code is correctly preserved
-/// LaTeX \verb!code! marks inline code
-#[test]
-fn test_latex_content_inline_code() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Inline code should be preserved with backticks
-    // Source: \verb!>! \verb!$!
-
-    // TODO: Implement LaTeX extractor that converts \verb{} to markdown `code`
-    // assert!(extracted_content.contains("`>`"));
-    // assert!(extracted_content.contains("`$`"));
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
 }
 
 // ============================================================================
-// LIST EXTRACTION TESTS
+// TEST 3: FORMATTING - Text Formatting Commands
 // ============================================================================
 
-/// Test that unordered lists are correctly extracted
-/// LaTeX \begin{itemize}...\end{itemize} marks unordered lists
-#[test]
-fn test_latex_content_unordered_lists() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_text_formatting() {
+    let content = fs::read(test_file_path("formatting.tex")).expect("Failed to read formatting.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX formatting");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Bullet list items should be identified
-    // Source: \begin{itemize} \item asterisk 1 \end{itemize}
+    // Test 3.1: Should extract section title
+    assert!(
+        result.content.contains("Text Formatting"),
+        "FAIL: Should extract \\section{{Text Formatting}}"
+    );
 
-    // TODO: Implement LaTeX extractor that converts itemize to markdown bullets
-    // assert!(extracted_content.contains("asterisk 1"));
-    // assert!(extracted_content.contains("asterisk 2"));
-    // assert!(extracted_content.contains("asterisk 3"));
-}
+    // Test 3.2: Should extract normal text
+    assert!(
+        result.content.contains("This is normal text"),
+        "FAIL: Should extract plain paragraph text"
+    );
 
-/// Test that ordered lists are correctly extracted
-/// LaTeX \begin{enumerate}...\end{enumerate} marks ordered lists
-#[test]
-fn test_latex_content_ordered_lists() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 3.3: Should extract bold text (from \textbf{})
+    assert!(
+        result.content.contains("bold text"),
+        "FAIL: Should extract text from \\textbf{{bold text}}"
+    );
 
-    let _content = load_test_latex();
+    // Test 3.4: Should extract italic text (from \textit{})
+    assert!(
+        result.content.contains("italic text"),
+        "FAIL: Should extract text from \\textit{{italic text}}"
+    );
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Numbered list items should be identified
-    // Source: \begin{enumerate}[1.] \item First \end{enumerate}
+    // Test 3.5: Should extract underlined text (from \underline{})
+    assert!(
+        result.content.contains("underlined text"),
+        "FAIL: Should extract text from \\underline{{underlined text}}"
+    );
 
-    // TODO: Implement LaTeX extractor that converts enumerate to markdown numbers
-    // assert!(extracted_content.contains("First"));
-    // assert!(extracted_content.contains("Second"));
-    // assert!(extracted_content.contains("Third"));
-}
+    // Test 3.6: Should extract emphasized text (from \emph{})
+    assert!(
+        result.content.contains("emphasized text"),
+        "FAIL: Should extract text from \\emph{{emphasized text}}"
+    );
 
-/// Test that nested lists are correctly extracted
-/// LaTeX supports nested itemize/enumerate environments
-#[test]
-fn test_latex_content_nested_lists() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 3.7: Should extract monospace text (from \texttt{})
+    assert!(
+        result.content.contains("monospace text"),
+        "FAIL: Should extract text from \\texttt{{monospace text}}"
+    );
 
-    let _content = load_test_latex();
+    // Test 3.8: Should extract combined formatting
+    assert!(
+        result.content.contains("bold and italic"),
+        "FAIL: Should extract text from nested formatting commands"
+    );
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Nested list structure should be preserved
-    // Source: Nested itemize/enumerate in test document
+    // Test 3.9: Should match Pandoc baseline (±10%)
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "formatting_pandoc_baseline.txt");
 
-    // TODO: Implement LaTeX extractor that preserves list nesting
-    // assert!(extracted_content.contains("Tab")); // Appears 3 times (3 levels deep)
-}
-
-/// Test that definition lists are correctly extracted
-/// LaTeX \begin{description}...\end{description} marks definition lists
-#[test]
-fn test_latex_content_definition_lists() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Definition list items should be identified
-    // Source: \begin{description} \item[apple] red fruit \end{description}
-
-    // TODO: Implement LaTeX extractor that converts description to markdown definitions
-    // assert!(extracted_content.contains("apple"));
-    // assert!(extracted_content.contains("red fruit"));
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
 }
 
 // ============================================================================
-// TABLE EXTRACTION TESTS
+// TEST 4: MATH - Mathematical Expressions
 // ============================================================================
 
-/// Test that LaTeX tables are correctly identified and extracted
-/// Pandoc converts LaTeX tabular to markdown table format
-#[test]
-fn test_latex_table_basic_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_math_extraction() {
+    let content = fs::read(test_file_path("math.tex")).expect("Failed to read math.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX math");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected table structure from:
-    // \begin{tabular}{|l|l|}\hline
-    // Animal & Number \\ \hline
-    // Dog    & 2      \\
-    // Cat    & 1      \\ \hline
-    // \end{tabular}
+    // Test 4.1: Should extract section title
+    assert!(
+        result.content.contains("Math Formulas"),
+        "FAIL: Should extract \\section{{Math Formulas}}"
+    );
 
-    // Expected: 2 columns (Animal, Number), 2 data rows (Dog, Cat)
+    // Test 4.2: Should extract subsection titles
+    assert!(
+        result.content.contains("Inline Math"),
+        "FAIL: Should extract \\subsection{{Inline Math}}"
+    );
 
-    // TODO: Implement LaTeX extractor that parses tabular environments
-    // assert_eq!(extracted_tables.len(), 1);
-    // let table = &extracted_tables[0];
-    // assert_eq!(table.rows.len(), 2);
-    // assert_eq!(table.columns.len(), 2);
-}
+    assert!(
+        result.content.contains("Display Math"),
+        "FAIL: Should extract \\subsection{{Display Math}}"
+    );
 
-/// Test that table headers are correctly identified
-#[test]
-fn test_latex_table_headers() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 4.3: Should extract inline math content (E=mc²)
+    // Math can be extracted as LaTeX or as Unicode - just check it's present
+    assert!(
+        result.content.contains("mc") || result.content.contains("mc²"),
+        "FAIL: Should extract inline math content from $E = mc^2$"
+    );
 
-    let _content = load_test_latex();
+    // Test 4.4: Should extract text surrounding math
+    assert!(
+        result.content.contains("The equation"),
+        "FAIL: Should extract text before inline math"
+    );
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected headers: "Animal", "Number"
+    assert!(
+        result.content.contains("is famous"),
+        "FAIL: Should extract text after inline math"
+    );
 
-    // TODO: Implement LaTeX extractor that identifies table headers
-    // let table = &extracted_tables[0];
-    // assert_eq!(table.headers[0], "Animal");
-    // assert_eq!(table.headers[1], "Number");
-}
+    // Test 4.5: Should extract display math (integral)
+    assert!(
+        result.content.contains("int") || result.content.contains("∫"),
+        "FAIL: Should extract display math environment content"
+    );
 
-/// Test that table cell content is correctly extracted
-#[test]
-fn test_latex_table_cell_content() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 4.6: Should match Pandoc baseline (±10%)
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "math_pandoc_baseline.txt");
 
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected cell values:
-    // Row 1: ["Dog", "2"]
-    // Row 2: ["Cat", "1"]
-
-    // TODO: Implement LaTeX extractor that extracts table cells
-    // let table = &extracted_tables[0];
-    // assert_eq!(table.rows[0][0], "Dog");
-    // assert_eq!(table.rows[0][1], "2");
-    // assert_eq!(table.rows[1][0], "Cat");
-    // assert_eq!(table.rows[1][1], "1");
-}
-
-/// Test that single-column tables are handled correctly
-/// Pandoc extracts single-column tabular environments
-#[test]
-fn test_latex_table_single_column() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Second table with single column
-    // \begin{tabular}{c}
-    // Animal \\
-    // Vegetable
-    // \end{tabular}
-
-    // TODO: Implement LaTeX extractor that handles single-column tables
-    // assert!(extracted_tables.len() >= 2);
-    // let single_col_table = &extracted_tables[1];
-    // assert_eq!(single_col_table.columns.len(), 1);
-}
-
-/// Test that multiple tables in document are all extracted
-#[test]
-fn test_latex_multiple_tables_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: At least 2 tables in the test document
-
-    // TODO: Implement LaTeX extractor that extracts all tables
-    // assert!(extracted_tables.len() >= 2);
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
 }
 
 // ============================================================================
-// BLOCKQUOTE EXTRACTION TESTS
+// TEST 5: TABLES - Table Extraction
 // ============================================================================
 
-/// Test that block quotes are correctly identified
-/// LaTeX \begin{quote}...\end{quote} marks block quotes
-#[test]
-fn test_latex_blockquote_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_table_extraction() {
+    let content = fs::read(test_file_path("tables.tex")).expect("Failed to read tables.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX tables");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Block quote content should be identified
-    // Source: \begin{quote} This is a block quote. ... \end{quote}
+    // Test 5.1: Should extract section title
+    assert!(
+        result.content.contains("Tables"),
+        "FAIL: Should extract \\section{{Tables}}"
+    );
 
-    // TODO: Implement LaTeX extractor that identifies quote environments
-    // assert!(extracted_content.contains("This is a block quote"));
-}
+    // Test 5.2: Should extract table headers
+    assert!(
+        result.content.contains("Name"),
+        "FAIL: Should extract table header 'Name' from tabular"
+    );
 
-/// Test that nested block quotes are handled correctly
-#[test]
-fn test_latex_nested_blockquotes() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    assert!(
+        result.content.contains("Age"),
+        "FAIL: Should extract table header 'Age' from tabular"
+    );
 
-    let _content = load_test_latex();
+    assert!(
+        result.content.contains("Score"),
+        "FAIL: Should extract table header 'Score' from tabular"
+    );
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Nested quote structure should be preserved
-    // Source: Nested \begin{quote}...\begin{quote}...\end{quote}...\end{quote}
+    // Test 5.3: Should extract table data
+    assert!(
+        result.content.contains("Alice"),
+        "FAIL: Should extract table cell 'Alice'"
+    );
 
-    // TODO: Implement LaTeX extractor that preserves nested quotes
-    // assert!(extracted_content.contains("nested"));
-}
+    assert!(result.content.contains("30"), "FAIL: Should extract table cell '30'");
 
-// ============================================================================
-// CODE BLOCK EXTRACTION TESTS
-// ============================================================================
+    assert!(result.content.contains("95"), "FAIL: Should extract table cell '95'");
 
-/// Test that verbatim code blocks are correctly extracted
-/// LaTeX \begin{verbatim}...\end{verbatim} marks code blocks
-#[test]
-fn test_latex_code_block_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    assert!(result.content.contains("Bob"), "FAIL: Should extract table cell 'Bob'");
 
-    let _content = load_test_latex();
+    assert!(
+        result.content.contains("Charlie"),
+        "FAIL: Should extract table cell 'Charlie'"
+    );
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Code blocks should be identified and preserved
-    // Source: \begin{verbatim} sub status { print "working"; } \end{verbatim}
+    // Test 5.4: Should extract second table headers
+    assert!(
+        result.content.contains("Column 1"),
+        "FAIL: Should extract 'Column 1' from second table"
+    );
 
-    // TODO: Implement LaTeX extractor that extracts verbatim blocks
-    // assert!(extracted_content.contains("sub status"));
-    // assert!(extracted_content.contains("print"));
-}
+    assert!(
+        result.content.contains("Column 2"),
+        "FAIL: Should extract 'Column 2' from second table"
+    );
 
-/// Test that special characters in code blocks are preserved
-#[test]
-fn test_latex_code_block_special_characters() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 5.5: Should extract table caption
+    assert!(
+        result.content.contains("Sample table with caption"),
+        "FAIL: Should extract table caption from \\caption{{}}"
+    );
 
-    let _content = load_test_latex();
+    // Test 5.6: Should match Pandoc baseline (±10%)
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "tables_pandoc_baseline.txt");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Special chars like \$ \\ \> \[ \{ should be preserved in code
-    // Source: These should not be escaped: \$ \\ \> \[ \{
-
-    // TODO: Implement LaTeX extractor that preserves code block escaping
-    // assert!(extracted_content.contains("\\$"));
-    // assert!(extracted_content.contains("\\\\"));
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
 }
 
 // ============================================================================
-// SPECIAL CHARACTER HANDLING TESTS
+// TEST 6: LISTS - List Structure Extraction
 // ============================================================================
 
-/// Test that Unicode characters are correctly handled
-/// LaTeX includes Unicode characters like Î, ö, §, ∈, ©
-#[test]
-fn test_latex_unicode_characters() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_list_itemize() {
+    let content = fs::read(test_file_path("lists.tex")).expect("Failed to read lists.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX lists");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Unicode characters should be preserved
-    // Source: Î, ö, §, ∈, ©
+    // Test 6.1: Should extract itemize list items
+    assert!(
+        result.content.contains("First item"),
+        "FAIL: Should extract \\item First item from itemize"
+    );
 
-    // TODO: Implement LaTeX extractor that preserves Unicode
-    // assert!(extracted_content.contains("Î"));
-    // assert!(extracted_content.contains("ö"));
-    // assert!(extracted_content.contains("§"));
-    // assert!(extracted_content.contains("∈"));
-    // assert!(extracted_content.contains("©"));
+    assert!(
+        result.content.contains("Second item"),
+        "FAIL: Should extract \\item Second item from itemize"
+    );
+
+    assert!(
+        result.content.contains("Third item with nested list"),
+        "FAIL: Should extract \\item Third item with nested list"
+    );
+
+    assert!(
+        result.content.contains("Fourth item"),
+        "FAIL: Should extract \\item Fourth item from itemize"
+    );
 }
 
-/// Test that LaTeX special characters are correctly escaped
-/// Ampersand (&), hash (#), underscore (_) have special meanings
-#[test]
-fn test_latex_escaped_special_characters() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_list_nested() {
+    let content = fs::read(test_file_path("lists.tex")).expect("Failed to read lists.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX nested lists");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: AT&T (ampersand should be unescaped)
-    // Source: AT\&T has an ampersand in their name.
+    // Test 6.2: Should extract nested list items
+    assert!(
+        result.content.contains("Nested item 1"),
+        "FAIL: Should extract nested \\item Nested item 1"
+    );
 
-    // TODO: Implement LaTeX extractor that handles escaped characters
-    // assert!(extracted_content.contains("AT&T"));
+    assert!(
+        result.content.contains("Nested item 2"),
+        "FAIL: Should extract nested \\item Nested item 2"
+    );
 }
 
-/// Test that smart quotes are correctly converted
-/// LaTeX uses \`\` and '' for quote marks
-#[test]
-fn test_latex_smart_quotes() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_list_enumerate() {
+    let content = fs::read(test_file_path("lists.tex")).expect("Failed to read lists.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX enumerate");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Smart quotes should be converted to proper characters
-    // Source: ``Hello,'' said the spider
+    // Test 6.3: Should extract numbered list items
+    assert!(
+        result.content.contains("First numbered item"),
+        "FAIL: Should extract \\item First numbered item from enumerate"
+    );
 
-    // TODO: Implement LaTeX extractor that converts LaTeX quotes
-    // assert!(extracted_content.contains("\"") || extracted_content.contains("""));
+    assert!(
+        result.content.contains("Second numbered item"),
+        "FAIL: Should extract \\item Second numbered item from enumerate"
+    );
+
+    assert!(
+        result.content.contains("Third numbered item"),
+        "FAIL: Should extract \\item Third numbered item from enumerate"
+    );
 }
 
-// ============================================================================
-// CITATION AND BIBLIOGRAPHY TESTS
-// ============================================================================
+#[tokio::test]
+async fn test_latex_list_description() {
+    let content = fs::read(test_file_path("lists.tex")).expect("Failed to read lists.tex");
 
-/// Test that citations are correctly identified
-/// LaTeX \cite{} command marks citations
-#[test]
-fn test_latex_citation_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX description lists");
 
-    let _content = load_test_latex();
+    // Test 6.4: Should extract description list terms and definitions
+    assert!(
+        result.content.contains("Term 1"),
+        "FAIL: Should extract \\item[Term 1] from description list"
+    );
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Citations should be identified
-    // Source: \cite[22-23]{smith.1899}
+    assert!(
+        result.content.contains("Definition of term 1"),
+        "FAIL: Should extract definition text from description list"
+    );
 
-    // TODO: Implement LaTeX extractor that identifies citations
-    // assert!(extracted_content.contains("smith.1899") || extracted_content.contains("citation"));
+    assert!(
+        result.content.contains("Term 2"),
+        "FAIL: Should extract \\item[Term 2] from description list"
+    );
+
+    assert!(
+        result.content.contains("Definition of term 2"),
+        "FAIL: Should extract definition text from description list"
+    );
 }
 
-/// Test that citation ranges are preserved
-/// Pandoc converts \cite[22-23]{key} to citation with page range
-#[test]
-fn test_latex_citation_with_pages() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_lists_pandoc_parity() {
+    let content = fs::read(test_file_path("lists.tex")).expect("Failed to read lists.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX lists");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Citation with page numbers [22-23] should be preserved
+    // Test 6.5: Should match Pandoc baseline (±10%)
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "lists_pandoc_baseline.txt");
 
-    // TODO: Implement LaTeX extractor that preserves citation details
-    // assert!(extracted_content.contains("22-23"));
-}
-
-// ============================================================================
-// FOOTNOTE EXTRACTION TESTS
-// ============================================================================
-
-/// Test that footnotes are correctly extracted
-/// LaTeX \footnote{} command marks footnotes
-#[test]
-fn test_latex_footnote_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Footnote content should be extracted
-    // Source: footnote reference,\footnote{ Here is the footnote. ... }
-
-    // TODO: Implement LaTeX extractor that extracts footnotes
-    // assert!(extracted_content.contains("Here is the footnote"));
-}
-
-/// Test that multiple footnotes are all extracted
-#[test]
-fn test_latex_multiple_footnotes() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: All footnotes in document should be extracted
-    // The test document contains at least 2 footnotes
-
-    // TODO: Implement LaTeX extractor that handles multiple footnotes
-    // assert!(extracted_footnotes.len() >= 2);
-}
-
-/// Test that footnotes with complex content are handled
-/// Footnotes can contain code blocks, lists, and other structures
-#[test]
-fn test_latex_footnote_with_complex_content() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Complex footnote structures should be preserved
-    // Source: Footnote with nested code blocks and paragraphs
-
-    // TODO: Implement LaTeX extractor that handles complex footnotes
-    // The long note contains multiple blocks and code
-    // assert!(extracted_footnotes.iter().any(|f| f.contains("block")));
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
 }
 
 // ============================================================================
-// MATH EXPRESSION TESTS
+// TEST 7: UNICODE - Unicode Character Handling
 // ============================================================================
 
-/// Test that inline math expressions are correctly identified
-/// LaTeX $...$ marks inline math
-#[test]
-fn test_latex_inline_math() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_unicode_handling() {
+    let content = fs::read(test_file_path("unicode.tex")).expect("Failed to read unicode.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX with Unicode");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Math expressions should be preserved
-    // Source: $2+2=4$, $x \in y$
+    // Test 7.1: Should extract Hebrew characters
+    assert!(
+        result.content.contains("אֳרָנִים") || result.content.contains("Hebrew"),
+        "FAIL: Should extract Hebrew characters or 'Hebrew' text"
+    );
 
-    // TODO: Implement LaTeX extractor that preserves math expressions
-    // assert!(extracted_content.contains("2+2=4"));
-    // assert!(extracted_content.contains("x \\in y"));
-}
+    // Test 7.2: Should handle Unicode modifiers
+    // The exact representation may vary, but content should be extracted
+    assert!(
+        result.content.len() > 0,
+        "FAIL: Should extract non-zero content from unicode.tex"
+    );
 
-/// Test that display math is correctly handled
-/// LaTeX $$...$$ marks display math (equation environment)
-#[test]
-fn test_latex_display_math() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    // Test 7.3: Should match Pandoc baseline (±20% - Unicode can vary)
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "unicode_pandoc_baseline.txt");
 
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Display math should be identified separately from inline
-
-    // TODO: Implement LaTeX extractor that distinguishes display math
-}
-
-/// Test that complex mathematical notation is preserved
-#[test]
-fn test_latex_complex_math_expressions() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Complex expressions like fractions and limits
-    // Source: $\frac{d}{dx}f(x)=\lim_{h\to 0}\frac{f(x+h)-f(x)}{h}$
-
-    // TODO: Implement LaTeX extractor that preserves complex math
-    // assert!(extracted_content.contains("\\frac"));
-    // assert!(extracted_content.contains("\\lim"));
+    assert!(
+        ratio >= 80.0 && ratio <= 120.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 80-120% (Unicode lenient). (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
 }
 
 // ============================================================================
-// IMAGE EXTRACTION TESTS
+// TEST 8: INTEGRATION - Overall Quality Checks
 // ============================================================================
 
-/// Test that image references are correctly extracted
-/// LaTeX \includegraphics{} command marks images
-#[test]
-fn test_latex_image_reference_extraction() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_no_content_loss_bug() {
+    // This test specifically targets the current bug: 0 bytes extracted
+    let content = fs::read(test_file_path("minimal.tex")).expect("Failed to read minimal.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract minimal LaTeX");
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Image references should be identified
-    // Source: \includegraphics{lalune.jpg}, \includegraphics{movie.jpg}
+    // Test 8.1: CRITICAL - Must extract more than 0 bytes
+    assert!(
+        result.content.len() > 0,
+        "FAIL: CRITICAL BUG - Extracted 0 bytes from minimal.tex. Current LaTeX extractor is completely broken."
+    );
 
-    // TODO: Implement LaTeX extractor that extracts image references
-    // assert!(extracted_content.contains("lalune.jpg"));
-    // assert!(extracted_content.contains("movie.jpg"));
+    // Test 8.2: Content should be at least 10 bytes (reasonable minimum)
+    assert!(
+        result.content.len() >= 10,
+        "FAIL: Extracted only {} bytes, expected at least 10. Content: '{}'",
+        result.content.len(),
+        result.content
+    );
 }
 
-/// Test that inline images are handled correctly
-#[test]
-fn test_latex_inline_images() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+#[tokio::test]
+async fn test_latex_extraction_deterministic() {
+    // Test that extraction is deterministic (same input = same output)
+    let content = fs::read(test_file_path("minimal.tex")).expect("Failed to read minimal.tex");
 
-    let _content = load_test_latex();
+    let extractor = LatexExtractor::new();
 
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Inline images (in the middle of text) should be preserved
-    // Source: "Here is a movie \includegraphics{movie.jpg} icon."
+    let result1 = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX (first run)");
 
-    // TODO: Implement LaTeX extractor that preserves inline image placement
-    // assert!(extracted_content.contains("movie"));
-    // assert!(extracted_content.contains("icon"));
+    let result2 = extractor
+        .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should extract LaTeX (second run)");
+
+    // Test 8.3: Results should be identical
+    assert_eq!(
+        result1.content, result2.content,
+        "FAIL: Extraction is not deterministic. Same input produced different outputs."
+    );
+
+    assert_eq!(
+        result1.metadata.additional, result2.metadata.additional,
+        "FAIL: Metadata extraction is not deterministic."
+    );
 }
 
-// ============================================================================
-// DOCUMENT STRUCTURE TESTS
-// ============================================================================
+#[tokio::test]
+async fn test_latex_empty_document_handling() {
+    // Test graceful handling of empty LaTeX documents
+    let empty_latex = b"\\documentclass{article}\n\\begin{document}\n\\end{document}";
 
-/// Test that the overall document structure is preserved
-/// Sections, subsections, and content should maintain hierarchy
-#[test]
-fn test_latex_document_structure() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
+    let extractor = LatexExtractor::new();
+    let result = extractor
+        .extract_bytes(empty_latex, "text/x-tex", &ExtractionConfig::default())
+        .await
+        .expect("Should handle empty LaTeX without panicking");
 
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Document should have clear hierarchical structure
-
-    // TODO: Implement LaTeX extractor that preserves document structure
-    // The test document has:
-    // - 1 document title
-    // - Multiple sections (Headers, Lists, etc.)
-    // - Multiple subsections (Unordered, Ordered, Nested within Lists)
-    // - Content within each section
-}
-
-/// Test that horizontal rules are correctly identified
-/// LaTeX \begin{center}\rule{3in}{0.4pt}\end{center} marks horizontal rules
-#[test]
-fn test_latex_horizontal_rules() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Horizontal rules should be identified
-    // Source: \begin{center}\rule{3in}{0.4pt}\end{center}
-
-    // TODO: Implement LaTeX extractor that identifies horizontal rules
-    // The test document contains multiple horizontal rules separating sections
+    // Test 8.4: Should not panic on empty document
+    // Content can be empty or contain minimal whitespace
+    assert!(
+        result.content.trim().len() == 0,
+        "Empty document should produce empty content (got: '{}')",
+        result.content
+    );
 }
 
 // ============================================================================
-// EDGE CASE TESTS
+// DOCUMENTATION
 // ============================================================================
 
-/// Test that empty documents are handled gracefully
-#[test]
-fn test_latex_empty_document() {
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Empty document should produce empty but valid result
-
-    // TODO: Implement LaTeX extractor that handles empty documents
-    // let empty_latex = b"\\documentclass{article}\\begin{document}\\end{document}";
-    // Should not panic and should return valid (empty) result
-}
-
-/// Test that documents with only preamble are handled
-#[test]
-fn test_latex_preamble_only() {
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Document with preamble but no content should work
-
-    // TODO: Implement LaTeX extractor that handles preamble-only docs
-    // let preamble_latex = b"\\documentclass{article}\\usepackage{...}\\begin{document}\\end{document}";
-}
-
-/// Test that documents with encoding declarations are handled
-#[test]
-fn test_latex_utf8_encoding() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // The test document uses \usepackage[utf8x]{inputenc}
-    // Expected: UTF-8 characters should be correctly decoded
-
-    // TODO: Implement LaTeX extractor that handles UTF-8 encoded documents
-    // Should support Unicode characters throughout
-}
-
-/// Test that documents with special package dependencies are handled
-#[test]
-fn test_latex_with_packages() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // The test document uses multiple packages:
-    // - hyperref (for links)
-    // - ulem (for strikethrough with \sout)
-    // - enumerate, setspace, graphicx, etc.
-
-    // TODO: Implement LaTeX extractor that handles documents with various packages
-    // Should still extract meaningful content despite package-specific commands
-}
-
-/// Test that strikethrough text is correctly identified
-/// LaTeX \sout{} from ulem package marks strikethrough
-#[test]
-fn test_latex_strikethrough_text() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Strikethrough text should be identified
-    // Source: \sout{This is \emph{strikeout}.}
-
-    // TODO: Implement LaTeX extractor that identifies strikethrough
-    // assert!(extracted_content.contains("strikeout"));
-}
-
-/// Test that superscripts and subscripts are handled
-/// LaTeX \textsuperscript{} and \textsubscript{} mark super/subscripts
-#[test]
-fn test_latex_superscripts_subscripts() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Super/subscripts should be identified
-    // Source: a\textsuperscript{bc}d, H\textsubscript{2}O
-
-    // TODO: Implement LaTeX extractor that extracts super/subscripts
-    // assert!(extracted_content.contains("bc") || extracted_content.contains("^"));
-    // assert!(extracted_content.contains("2") || extracted_content.contains("_"));
-}
-
-// ============================================================================
-// INTEGRATION AND QUALITY TESTS
-// ============================================================================
-
-/// Test that extraction produces valid markdown output
-/// The extracted content should be in valid markdown format
-#[test]
-fn test_latex_extracts_valid_markdown() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Output should be valid markdown that can be parsed
-
-    // TODO: Implement LaTeX extractor that produces valid markdown
-    // The output should be parseably by markdown parsers
-}
-
-/// Test that content extraction quality meets baseline
-/// Compare against known good Pandoc output
-#[test]
-fn test_latex_content_quality_vs_pandoc_baseline() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Key content from Pandoc extraction should be present
-
-    // TODO: Implement LaTeX extractor
-    // Expected Pandoc extractions to verify:
-    // 1. Title: "Pandoc Test Suite"
-    // 2. Authors: ["John MacFarlane", "Anonymous"]
-    // 3. Date: "July 17, 2006"
-    // 4. First paragraph: "This is a set of tests for pandoc..."
-    // 5. Sections: Headers, Paragraphs, Block Quotes, Code Blocks, Lists, etc.
-    // 6. Tables: 2 tables with correct structure
-    // 7. Various inline formatting: emphasis, strong, links, code
-    // 8. Lists: unordered, ordered, nested, definition lists
-}
-
-/// Test that metadata extraction is complete and accurate
-#[test]
-fn test_latex_metadata_extraction_completeness() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: All extractable metadata should be present
-
-    // TODO: Implement LaTeX extractor that captures all metadata
-    // - title
-    // - author(s)
-    // - date
-    // - Any other metadata fields in YAML front matter
-}
-
-/// Test that the extractor handles large documents efficiently
-#[test]
-fn test_latex_extraction_performance() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Extraction should complete in reasonable time
-
-    // TODO: Implement LaTeX extractor with acceptable performance
-    // Should extract document in < 1 second for typical documents
-    // let start = std::time::Instant::now();
-    // let _result = extract_latex(&content);
-    // let elapsed = start.elapsed();
-    // assert!(elapsed.as_secs() < 1);
-}
-
-/// Test that extraction is deterministic
-/// Same input should always produce same output
-#[test]
-fn test_latex_extraction_deterministic() {
-    if !test_file_exists() {
-        println!("Skipping: test file not found");
-        return;
-    }
-
-    let _content = load_test_latex();
-
-    // This test will fail until LaTeX extractor is implemented
-    // Expected: Multiple extractions should produce identical results
-
-    // TODO: Implement LaTeX extractor with deterministic behavior
-    // let result1 = extract_latex(&content);
-    // let result2 = extract_latex(&content);
-    // assert_eq!(result1, result2);
-}
-
-// ============================================================================
-// DOCUMENTATION AND REFERENCE TESTS
-// ============================================================================
-
-// NOTE: These tests document what Pandoc extracts from the LaTeX test file
-// and serve as a reference implementation for the expected extraction behavior.
+// Test Suite Summary
 //
-// METADATA EXTRACTION:
-// From: \title{Pandoc Test Suite}
-//       \author{John MacFarlane \and Anonymous}
-//       \date{July 17, 2006}
-// Extracted by Pandoc as:
-//   title: Pandoc Test Suite
-//   author:
-//   - John MacFarlane
-//   - Anonymous
-//   date: July 17, 2006
+// This test suite defines 30+ individual test assertions across 8 test groups:
 //
-// CONTENT STRUCTURE:
-// - 8+ major sections (\section{})
-// - 15+ subsections and lower-level headers
-// - 100+ paragraphs of text
-// - Multiple inline formatting types (emphasis, strong, links, code)
-// - 25+ list items across various list types
-// - 2+ tables with proper structure
-// - 5+ code blocks in verbatim environments
-// - Multiple block quotes with nesting
-// - Citations in \cite{} format
-// - Footnotes with complex content
-// - Mathematical expressions in inline math ($...$)
-// - Image references via \includegraphics{}
-// - Special Unicode and escaped characters
+// 1. **Minimal Extraction** (3 tests)
+//    - Non-zero content extraction
+//    - Exact text matching
+//    - Pandoc parity
 //
-// TABLE STRUCTURE:
-// Table 1: 2x2 grid (Animal/Number headers, Dog/2, Cat/1)
-// Table 2: Single column (Animal, Vegetable)
+// 2. **Metadata Extraction** (3 tests)
+//    - Title extraction from \title{}
+//    - Author extraction from \author{}
+//    - Date extraction from \date{}
 //
-// SPECIAL FEATURES:
-// - Strikethrough via \sout{}
-// - Superscripts via \textsuperscript{}
-// - Subscripts via \textsubscript{}
-// - Smart quotes via `` and ''
-// - Ellipses via \ldots{}
-// - Various dashes (en-dash, em-dash)
-// - Unicode characters (Î, ö, §, ∈, ©)
-// - Escaped special characters (\&, \#, \_)
+// 3. **Section Hierarchy** (5 tests)
+//    - Section titles (\section{})
+//    - Subsection titles (\subsection{})
+//    - Subsubsection titles (\subsubsection{})
+//    - Paragraph content
+//    - Pandoc parity
+//
+// 4. **Text Formatting** (9 tests)
+//    - Bold (\textbf{})
+//    - Italic (\textit{})
+//    - Underline (\underline{})
+//    - Emphasis (\emph{})
+//    - Monospace (\texttt{})
+//    - Combined formatting
+//    - Pandoc parity
+//
+// 5. **Math Expressions** (6 tests)
+//    - Inline math ($...$)
+//    - Display math (\[...\])
+//    - Math environments
+//    - Surrounding text
+//    - Pandoc parity
+//
+// 6. **Tables** (6 tests)
+//    - Table headers
+//    - Table data cells
+//    - Multiple tables
+//    - Table captions
+//    - Pandoc parity
+//
+// 7. **Lists** (5 tests)
+//    - Itemize lists (\begin{itemize})
+//    - Enumerate lists (\begin{enumerate})
+//    - Description lists (\begin{description})
+//    - Nested lists
+//    - Pandoc parity
+//
+// 8. **Integration** (4 tests)
+//    - No content loss bug (0 bytes)
+//    - Deterministic extraction
+//    - Empty document handling
+//    - Unicode character support
+//
+// **Expected Initial State**: ALL TESTS FAIL (LaTeX extractor extracts 0 bytes)
+//
+// **Success Criteria**: ALL TESTS PASS (100% pass rate)
+//
+// **Pandoc Parity**: Content length within 90-110% of Pandoc baseline
