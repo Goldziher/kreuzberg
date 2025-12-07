@@ -308,10 +308,10 @@ output=$(docker run --rm \
 log_verbose "DOCX extraction output (first 100 chars): ${output:0:100}"
 
 docx_length=${#output}
-if [ "$docx_length" -gt 10 ] && echo "$output" | grep -qi "sample"; then
+if [ "$docx_length" -gt 100 ] && echo "$output" | grep -qi "swim"; then
 	pass_test
 else
-	fail_test "DOCX extraction" "Output too short (${docx_length} chars) or missing expected content"
+	fail_test "DOCX extraction" "Output too short (${docx_length} chars) or missing expected doc text"
 fi
 
 # ============================================================================
