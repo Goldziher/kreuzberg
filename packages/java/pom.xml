@@ -256,7 +256,6 @@
                 <version>${maven-pmd-plugin.version}</version>
                 <configuration>
                     <targetJdk>23</targetJdk>
-                    <pmdVersion>${pmd.version}</pmdVersion>
                     <typeResolution>false</typeResolution>
                     <rulesets>
                         <ruleset>/rulesets/java/quickstart.xml</ruleset>

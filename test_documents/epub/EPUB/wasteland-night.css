@@ -1,0 +1,19 @@
+@charset "UTF-8";
+@import "wasteland.css";
+
+body {
+	color: rgb(255, 250, 205);
+	background-color: rgb(20, 20, 20);
+}
+
+span.lnum {
+	color: rgb(175, 170, 125);
+}
+
+a.noteref {
+	color: rgb(120, 120, 120);
+}
+
+section#rearnotes a {
+	color: rgb(255, 250, 205);
+}

@@ -2,7 +2,12 @@
 //!
 //! Supports: Rich Text Format (.rtf)
 //!
-//! This native Rust extractor provides basic text extraction from RTF documents.
+//! This native Rust extractor provides text extraction from RTF documents with:
+//! - Character encoding support (Windows-1252 for 0x80-0x9F range)
+//! - Common RTF control words (paragraph breaks, tabs, bullets, quotes, dashes)
+//! - Unicode escape sequences
+//! - Image metadata extraction
+//! - Whitespace normalization
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
@@ -53,6 +58,29 @@ impl Plugin for RtfExtractor {
     fn author(&self) -> &str {
         "Kreuzberg Team"
     }
+}
+
+/// Convert a hex digit character to its numeric value.
+///
+/// Returns None if the character is not a valid hex digit.
+#[inline]
+fn hex_digit_to_u8(c: char) -> Option<u8> {
+    match c {
+        '0'..='9' => Some((c as u8) - b'0'),
+        'a'..='f' => Some((c as u8) - b'a' + 10),
+        'A'..='F' => Some((c as u8) - b'A' + 10),
+        _ => None,
+    }
+}
+
+/// Parse a hex-encoded byte from two characters.
+///
+/// Returns the decoded byte if both characters are valid hex digits.
+#[inline]
+fn parse_hex_byte(h1: char, h2: char) -> Option<u8> {
+    let high = hex_digit_to_u8(h1)?;
+    let low = hex_digit_to_u8(h2)?;
+    Some((high << 4) | low)
 }
 
 /// Parse an RTF control word and extract its value.
@@ -129,10 +157,46 @@ fn extract_text_from_rtf(content: &str) -> String {
                             let hex1 = chars.next();
                             let hex2 = chars.next();
                             if let (Some(h1), Some(h2)) = (hex1, hex2)
-                                && let Ok(code) = u8::from_str_radix(&format!("{}{}", h1, h2), 16)
+                                && let Some(byte) = parse_hex_byte(h1, h2)
                             {
-                                // For Western European, assume Latin-1
-                                result.push(code as char);
+                                // Use Windows-1252 decoding for bytes 0x80-0x9F
+                                // For other bytes, treat as direct character mapping
+                                let decoded = match byte {
+                                    0x80 => '\u{20AC}', // Euro sign
+                                    0x81 => '?',        // Undefined
+                                    0x82 => '\u{201A}', // Single low quote
+                                    0x83 => '\u{0192}', // Florin
+                                    0x84 => '\u{201E}', // Double low quote
+                                    0x85 => '\u{2026}', // Ellipsis
+                                    0x86 => '\u{2020}', // Dagger
+                                    0x87 => '\u{2021}', // Double dagger
+                                    0x88 => '\u{02C6}', // Caret
+                                    0x89 => '\u{2030}', // Per mille
+                                    0x8A => '\u{0160}', // S caron
+                                    0x8B => '\u{2039}', // Single angle quote left
+                                    0x8C => '\u{0152}', // OE ligature
+                                    0x8D => '?',        // Undefined
+                                    0x8E => '\u{017D}', // Z caron
+                                    0x8F => '?',        // Undefined
+                                    0x90 => '?',        // Undefined
+                                    0x91 => '\u{2018}', // Left single quote
+                                    0x92 => '\u{2019}', // Right single quote
+                                    0x93 => '\u{201C}', // Left double quote
+                                    0x94 => '\u{201D}', // Right double quote
+                                    0x95 => '\u{2022}', // Bullet
+                                    0x96 => '\u{2013}', // En dash
+                                    0x97 => '\u{2014}', // Em dash
+                                    0x98 => '\u{02DC}', // Tilde
+                                    0x99 => '\u{2122}', // Trademark
+                                    0x9A => '\u{0161}', // s caron
+                                    0x9B => '\u{203A}', // Single angle quote right
+                                    0x9C => '\u{0153}', // oe ligature
+                                    0x9D => '?',        // Undefined
+                                    0x9E => '\u{017E}', // z caron
+                                    0x9F => '\u{0178}', // Y diaeresis
+                                    _ => byte as char,  // Latin-1 for 0x00-0x7F and 0xA0-0xFF
+                                };
+                                result.push(decoded);
                             }
                         }
                         'u' => {
@@ -159,21 +223,65 @@ fn extract_text_from_rtf(content: &str) -> String {
                             }
                         }
                         _ => {
-                            // Regular control word - parse and check if it's pict
+                            // Regular control word - parse and check special control words
                             let (control_word, _) = parse_rtf_control_word(&mut chars);
 
-                            if control_word == "pict" {
-                                // Found an image! Extract image metadata
-                                let image_metadata = extract_image_metadata(&mut chars);
-                                if !image_metadata.is_empty() {
-                                    result.push('!');
-                                    result.push('[');
-                                    result.push_str("image");
-                                    result.push(']');
-                                    result.push('(');
-                                    result.push_str(&image_metadata);
-                                    result.push(')');
-                                    result.push(' ');
+                            match control_word.as_str() {
+                                "pict" => {
+                                    // Found an image! Extract image metadata
+                                    let image_metadata = extract_image_metadata(&mut chars);
+                                    if !image_metadata.is_empty() {
+                                        result.push('!');
+                                        result.push('[');
+                                        result.push_str("image");
+                                        result.push(']');
+                                        result.push('(');
+                                        result.push_str(&image_metadata);
+                                        result.push(')');
+                                        result.push(' ');
+                                    }
+                                }
+                                "par" => {
+                                    // Paragraph break
+                                    if !result.is_empty() && !result.ends_with('\n') {
+                                        result.push('\n');
+                                        result.push('\n');
+                                    }
+                                }
+                                "tab" => {
+                                    // Tab character
+                                    result.push('\t');
+                                }
+                                "bullet" => {
+                                    // Bullet character
+                                    result.push('•');
+                                }
+                                "lquote" => {
+                                    // Left single quote
+                                    result.push('\u{2018}');
+                                }
+                                "rquote" => {
+                                    // Right single quote
+                                    result.push('\u{2019}');
+                                }
+                                "ldblquote" => {
+                                    // Left double quote
+                                    result.push('\u{201C}');
+                                }
+                                "rdblquote" => {
+                                    // Right double quote
+                                    result.push('\u{201D}');
+                                }
+                                "endash" => {
+                                    // En dash
+                                    result.push('\u{2013}');
+                                }
+                                "emdash" => {
+                                    // Em dash
+                                    result.push('\u{2014}');
+                                }
+                                _ => {
+                                    // Unknown control word - skip it
                                 }
                             }
                         }
@@ -199,10 +307,31 @@ fn extract_text_from_rtf(content: &str) -> String {
         }
     }
 
-    // Clean up whitespace
-    let cleaned = result.split_whitespace().collect::<Vec<_>>().join(" ");
+    // Clean up whitespace using single-pass algorithm
+    normalize_whitespace(&result)
+}
 
-    cleaned.trim().to_string()
+/// Normalize whitespace in a string using a single-pass algorithm.
+///
+/// Collapses multiple consecutive whitespace characters into single spaces
+/// and trims leading/trailing whitespace.
+fn normalize_whitespace(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut last_was_space = false;
+
+    for ch in s.chars() {
+        if ch.is_whitespace() {
+            if !last_was_space {
+                result.push(' ');
+                last_was_space = true;
+            }
+        } else {
+            result.push(ch);
+            last_was_space = false;
+        }
+    }
+
+    result.trim().to_string()
 }
 
 /// Extract image metadata from within a \pict group.
@@ -210,77 +339,72 @@ fn extract_text_from_rtf(content: &str) -> String {
 /// Looks for image type (jpegblip, pngblip, etc.) and dimensions.
 fn extract_image_metadata(chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
     let mut metadata = String::new();
-    let mut image_type = String::new();
+    let mut image_type: Option<&str> = None;
     let mut width_goal: Option<i32> = None;
     let mut height_goal: Option<i32> = None;
     let mut depth = 0;
 
     // Scan for image metadata control words
     while let Some(&ch) = chars.peek() {
-        if ch == '{' {
-            depth += 1;
-            chars.next();
-        } else if ch == '}' {
-            if depth == 0 {
-                break;
+        match ch {
+            '{' => {
+                depth += 1;
+                chars.next();
             }
-            depth -= 1;
-            chars.next();
-        } else if ch == '\\' {
-            chars.next(); // consume backslash
-            let (control_word, value) = parse_rtf_control_word(chars);
+            '}' => {
+                if depth == 0 {
+                    break;
+                }
+                depth -= 1;
+                chars.next();
+            }
+            '\\' => {
+                chars.next(); // consume backslash
+                let (control_word, value) = parse_rtf_control_word(chars);
 
-            // Check for image type
-            if control_word == "jpegblip" {
-                image_type = "jpg".to_string();
-            } else if control_word == "pngblip" {
-                image_type = "png".to_string();
-            } else if control_word == "wmetafile" {
-                image_type = "wmf".to_string();
-            } else if control_word == "dibitmap" {
-                image_type = "bmp".to_string();
-            }
-            // Check for dimensions (goal dimensions are in twips, 1 inch = 1440 twips)
-            else if control_word == "picwgoal" {
-                if let Some(val) = value {
-                    width_goal = Some(val);
+                // Check for image type
+                match control_word.as_str() {
+                    "jpegblip" => image_type = Some("jpg"),
+                    "pngblip" => image_type = Some("png"),
+                    "wmetafile" => image_type = Some("wmf"),
+                    "dibitmap" => image_type = Some("bmp"),
+                    "picwgoal" => width_goal = value,
+                    "pichgoal" => height_goal = value,
+                    "bin" => break, // End of control words, rest is binary data
+                    _ => {}
                 }
-            } else if control_word == "pichgoal" {
-                if let Some(val) = value {
-                    height_goal = Some(val);
-                }
-            } else if control_word == "bin" {
-                // End of control words, rest is binary data
-                break;
             }
-        } else if ch == ' ' {
-            chars.next();
-        } else {
-            // Skip other characters (like binary data)
-            chars.next();
+            ' ' => {
+                chars.next();
+            }
+            _ => {
+                // Skip other characters (like binary data)
+                chars.next();
+            }
         }
     }
 
     // Build metadata string
-    if !image_type.is_empty() {
+    if let Some(itype) = image_type {
         metadata.push_str("image.");
-        metadata.push_str(&image_type);
+        metadata.push_str(itype);
     }
 
     // Add dimensions if available
+    // Goal dimensions are in twips, 1 inch = 1440 twips
     if let Some(width) = width_goal {
-        let width_inches = width as f64 / 1440.0;
+        let width_inches = f64::from(width) / 1440.0;
         metadata.push_str(&format!(" width=\"{:.1}in\"", width_inches));
     }
 
     if let Some(height) = height_goal {
-        let height_inches = height as f64 / 1440.0;
+        let height_inches = f64::from(height) / 1440.0;
         metadata.push_str(&format!(" height=\"{:.1}in\"", height_inches));
     }
 
     // If no metadata found, just return a generic image reference
     if metadata.is_empty() {
-        metadata = "image.jpg".to_string();
+        metadata.push_str("image.jpg");
     }
 
     metadata
@@ -302,7 +426,7 @@ impl DocumentExtractor for RtfExtractor {
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         // Convert bytes to string for RTF processing
-        let rtf_content = String::from_utf8_lossy(content).to_string();
+        let rtf_content = String::from_utf8_lossy(content);
 
         // Extract text from RTF
         let extracted_text = extract_text_from_rtf(&rtf_content);
@@ -310,7 +434,7 @@ impl DocumentExtractor for RtfExtractor {
         Ok(ExtractionResult {
             content: extracted_text,
             mime_type: mime_type.to_string(),
-            metadata: Metadata { ..Default::default() },
+            metadata: Metadata::default(),
             tables: vec![],
             detected_languages: None,
             chunks: None,

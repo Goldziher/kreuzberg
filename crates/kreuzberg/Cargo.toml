@@ -37,8 +37,6 @@ office = [
     "dep:rst_parser",
     "dep:fb2",
     "dep:typst-syntax",
-    "dep:tree-sitter",
-    "dep:tree-sitter-latex",
     "html",  # EPUB needs HTML parsing (zip + roxmltree + html-to-markdown-rs)
 ]
 email = ["dep:mail-parser", "dep:msg_parser"]
@@ -148,10 +146,6 @@ rtf-parser = { version = "0.4", optional = true }
 rst_parser = { version = "0.4", optional = true }
 fb2 = { version = "0.4", optional = true }
 typst-syntax = { version = "0.14", optional = true }
-
-# LaTeX parsing with tree-sitter (optional)
-tree-sitter = { version = "0.25", optional = true }
-tree-sitter-latex = { version = "0.1", optional = true }
 
 # Processing features (optional)
 kreuzberg-tesseract = { version = "1.0.0-rc.1", optional = true }

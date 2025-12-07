@@ -2,7 +2,6 @@
 //!
 //! This test suite defines the expected behavior for LaTeX extraction
 //! based on Pandoc baselines. All tests are expected to FAIL initially
-//! until the LaTeX extractor is implemented with tree-sitter.
 //!
 //! Test Coverage:
 //! - Basic content extraction (minimal.tex)

@@ -13,8 +13,6 @@
 //! - Citations and references
 //! - Supplementary material information
 
-#![cfg(feature = "xml")]
-
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::cells_to_markdown;
@@ -156,11 +154,10 @@ fn extract_jats_all_in_one(content: &str) -> Result<(JatsMetadataExtracted, Stri
                     "article" => {
                         // Extract article-type attribute
                         for attr in e.attributes() {
-                            if let Ok(attr) = attr {
-                                if String::from_utf8_lossy(attr.key.as_ref()) == "article-type" {
-                                    metadata.article_type =
-                                        Some(String::from_utf8_lossy(attr.value.as_ref()).to_string());
-                                }
+                            if let Ok(attr) = attr
+                                && String::from_utf8_lossy(attr.key.as_ref()) == "article-type"
+                            {
+                                metadata.article_type = Some(String::from_utf8_lossy(attr.value.as_ref()).to_string());
                             }
                         }
                     }
@@ -187,10 +184,10 @@ fn extract_jats_all_in_one(content: &str) -> Result<(JatsMetadataExtracted, Stri
                     "article-id" if in_article_meta => {
                         let mut id_type = String::new();
                         for attr in e.attributes() {
-                            if let Ok(attr) = attr {
-                                if String::from_utf8_lossy(attr.key.as_ref()) == "pub-id-type" {
-                                    id_type = String::from_utf8_lossy(attr.value.as_ref()).to_string();
-                                }
+                            if let Ok(attr) = attr
+                                && String::from_utf8_lossy(attr.key.as_ref()) == "pub-id-type"
+                            {
+                                id_type = String::from_utf8_lossy(attr.value.as_ref()).to_string();
                             }
                         }
 
@@ -215,7 +212,7 @@ fn extract_jats_all_in_one(content: &str) -> Result<(JatsMetadataExtracted, Stri
                     "fpage" | "lpage" if in_article_meta => {
                         let page_text = extract_text_content(&mut reader)?;
                         if let Some(pages) = &mut metadata.pages {
-                            pages.push_str("-");
+                            pages.push('-');
                             pages.push_str(&page_text);
                         } else {
                             metadata.pages = Some(page_text);

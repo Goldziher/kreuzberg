@@ -29,10 +29,10 @@ use std::path::Path;
 /// Converts "{http://docbook.org/ns/docbook}title" to "title"
 /// and leaves non-namespaced "title" unchanged.
 fn strip_namespace(tag: &str) -> &str {
-    if tag.starts_with('{') {
-        if let Some(pos) = tag.find('}') {
-            return &tag[pos + 1..];
-        }
+    if tag.starts_with('{')
+        && let Some(pos) = tag.find('}')
+    {
+        return &tag[pos + 1..];
     }
     tag
 }
@@ -67,9 +67,12 @@ impl DocbookExtractor {
     }
 }
 
+/// Type alias for DocBook parsing results: (content, title, author, date, tables)
+type DocBookParseResult = (String, String, Option<String>, Option<String>, Vec<Table>);
+
 /// Single-pass DocBook parser that extracts all content in one document traversal.
 /// Returns: (content, title, author, date, tables)
-fn parse_docbook_single_pass(content: &str) -> Result<(String, String, Option<String>, Option<String>, Vec<Table>)> {
+fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
     let mut reader = Reader::from_str(content);
     let mut output = String::new();
     let mut title = String::new();
@@ -198,7 +201,7 @@ fn parse_docbook_single_pass(content: &str) -> Result<(String, String, Option<St
                         if !footnote_text.is_empty() {
                             output.push_str(&footnote_text);
                         }
-                        output.push_str("]");
+                        output.push(']');
                     }
 
                     // Tables - single-pass table extraction

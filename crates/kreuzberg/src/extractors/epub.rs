@@ -17,7 +17,7 @@ use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
 use roxmltree;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::Cursor;
 use zip::ZipArchive;
 
@@ -79,13 +79,68 @@ impl EpubExtractor {
         match crate::extraction::html::convert_html_to_markdown(xhtml, None) {
             Ok(markdown) => {
                 // Clean up the markdown to plain text
-                Self::markdown_to_plain_text(&markdown)
+                let text = Self::markdown_to_plain_text(&markdown);
+                // Remove HTML comments to ensure deterministic output
+                // (roxmltree may reorder XML attributes, affecting comment content)
+                Self::remove_html_comments(&text)
             }
             Err(_) => {
                 // Fallback to manual HTML tag stripping if conversion fails
                 Self::strip_html_tags(xhtml)
             }
         }
+    }
+
+    /// Remove HTML comments from text
+    fn remove_html_comments(text: &str) -> String {
+        let mut result = String::new();
+        let mut in_comment = false;
+        let mut chars = text.chars().peekable();
+
+        while let Some(ch) = chars.next() {
+            if !in_comment && ch == '<' {
+                // Check if this is the start of a comment
+                if chars.peek() == Some(&'!') {
+                    chars.next();
+                    // Check for -- which starts a comment
+                    if chars.peek() == Some(&'-') {
+                        chars.next();
+                        if chars.peek() == Some(&'-') {
+                            chars.next();
+                            in_comment = true;
+                            continue;
+                        } else {
+                            // Not a comment, add what we skipped
+                            result.push('<');
+                            result.push('!');
+                            result.push('-');
+                            continue;
+                        }
+                    } else {
+                        // Not a comment, add what we skipped
+                        result.push('<');
+                        result.push('!');
+                        continue;
+                    }
+                } else {
+                    result.push(ch);
+                }
+            } else if in_comment {
+                // Check for end of comment: -->
+                if ch == '-' && chars.peek() == Some(&'-') {
+                    chars.next();
+                    if chars.peek() == Some(&'>') {
+                        chars.next();
+                        in_comment = false;
+                        result.push('\n');
+                    }
+                }
+            } else {
+                result.push(ch);
+            }
+        }
+
+        result
     }
 
     /// Convert markdown output to plain text by removing markdown syntax
@@ -267,8 +322,8 @@ impl EpubExtractor {
     }
 
     /// Extract metadata from EPUB OPF file
-    fn extract_metadata(opf_xml: &str) -> Result<HashMap<String, serde_json::Value>> {
-        let mut metadata = HashMap::new();
+    fn extract_metadata(opf_xml: &str) -> Result<BTreeMap<String, serde_json::Value>> {
+        let mut metadata = BTreeMap::new();
 
         let (epub_metadata, _) = Self::parse_opf(opf_xml)?;
 
@@ -344,7 +399,7 @@ impl EpubExtractor {
                 let root = doc.root();
 
                 let mut metadata = OepbMetadata::default();
-                let mut manifest: HashMap<String, String> = HashMap::new();
+                let mut manifest: BTreeMap<String, String> = BTreeMap::new();
                 let mut spine_order: Vec<String> = Vec::new();
 
                 // Extract metadata from package/metadata section
@@ -403,15 +458,17 @@ impl EpubExtractor {
                                 manifest.insert(id.to_string(), href.to_string());
                             }
                         }
-                        "itemref" => {
-                            // Spine references items by id
-                            if let Some(idref) = node.attribute("idref")
-                                && let Some(href) = manifest.get(idref)
-                            {
-                                spine_order.push(href.clone());
-                            }
-                        }
                         _ => {}
+                    }
+                }
+
+                // Second pass: Resolve spine itemrefs using complete manifest
+                for node in root.descendants() {
+                    if node.tag_name().name() == "itemref"
+                        && let Some(idref) = node.attribute("idref")
+                        && let Some(href) = manifest.get(idref)
+                    {
+                        spine_order.push(href.clone());
                     }
                 }
 
@@ -548,7 +605,8 @@ impl DocumentExtractor for EpubExtractor {
         let extracted_content = Self::extract_content(&mut archive, &opf_path, &manifest_dir)?;
 
         // Extract metadata
-        let metadata_map = Self::extract_metadata(&opf_xml)?;
+        let metadata_btree = Self::extract_metadata(&opf_xml)?;
+        let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata_btree.into_iter().collect();
 
         Ok(ExtractionResult {
             content: extracted_content,

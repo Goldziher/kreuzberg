@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns:ncx="http://www.daisy.org/z3986/2005/ncx/" xmlns="http://www.daisy.org/z3986/2005/ncx/"
+    version="2005-1" xml:lang="en">
+    <head>
+        <meta name="dtb:uid" content="code.google.com.epub-samples.wasteland-basic"/>
+    </head>
+    <docTitle>
+        <text>The Waste Land</text>
+    </docTitle>
+    <navMap>
+        <!-- 2.01 NCX: playOrder is optional -->
+        <navPoint id="ch1">
+            <navLabel>
+                <text>I. THE BURIAL OF THE DEAD</text>
+            </navLabel>
+            <content src="wasteland-content.xhtml#ch1"/>
+        </navPoint>
+        <navPoint id="ch2">
+            <navLabel>
+                <text>II. A GAME OF CHESS</text>
+            </navLabel>
+            <content src="wasteland-content.xhtml#ch2"/>
+        </navPoint>
+        <navPoint id="rearnotes">
+            <navLabel>
+                <text>NOTES ON "THE WASTE LAND"</text>
+            </navLabel>
+            <content src="wasteland-content.xhtml#rearnotes"/>
+        </navPoint>
+    </navMap>
+</ncx>
