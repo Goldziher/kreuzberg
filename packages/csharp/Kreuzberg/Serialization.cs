@@ -50,12 +50,8 @@ internal static class Serialization
             ["mime_type"] = result.MimeType,
             ["metadata"] = BuildMetadataNode(result.Metadata),
             ["success"] = result.Success,
+            ["tables"] = JsonSerializer.SerializeToNode(result.Tables, Options),
         };
-
-        if (result.Tables?.Count > 0)
-        {
-            root["tables"] = JsonSerializer.SerializeToNode(result.Tables, Options);
-        }
 
         if (result.DetectedLanguages != null)
         {
