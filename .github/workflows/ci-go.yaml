@@ -55,22 +55,24 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      # Windows MinGW toolchain environment variables (set at job level to persist)
-      # These force cc-rs to use GNU toolchain instead of MSVC
-      CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
-      AR: ${{ matrix.os == 'windows-latest' && 'ar' || '' }}
-      RANLIB: ${{ matrix.os == 'windows-latest' && 'ranlib' || '' }}
-      CXX: ${{ matrix.os == 'windows-latest' && 'g++' || '' }}
-      # Target-specific variables that cc-rs checks first
-      TARGET_CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
-      TARGET_AR: ${{ matrix.os == 'windows-latest' && 'ar' || '' }}
-      TARGET_RANLIB: ${{ matrix.os == 'windows-latest' && 'ranlib' || '' }}
-      # Cargo/Rust specific linker settings
-      CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: ${{ matrix.os == 'windows-latest' && 'x86_64-w64-mingw32-gcc' || '' }}
-      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Configure Windows GNU toolchain env
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          {
+            echo "CC=gcc"
+            echo "AR=ar"
+            echo "RANLIB=ranlib"
+            echo "CXX=g++"
+            echo "TARGET_CC=gcc"
+            echo "TARGET_AR=ar"
+            echo "TARGET_RANLIB=ranlib"
+            echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
+            echo "RUSTFLAGS=-C target-feature=+crt-static"
+          } >> "$GITHUB_ENV"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -153,22 +155,24 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      # Windows MinGW toolchain environment variables (set at job level to persist)
-      # These force cc-rs to use GNU toolchain instead of MSVC
-      CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
-      AR: ${{ matrix.os == 'windows-latest' && 'ar' || '' }}
-      RANLIB: ${{ matrix.os == 'windows-latest' && 'ranlib' || '' }}
-      CXX: ${{ matrix.os == 'windows-latest' && 'g++' || '' }}
-      # Target-specific variables that cc-rs checks first
-      TARGET_CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
-      TARGET_AR: ${{ matrix.os == 'windows-latest' && 'ar' || '' }}
-      TARGET_RANLIB: ${{ matrix.os == 'windows-latest' && 'ranlib' || '' }}
-      # Cargo/Rust specific linker settings
-      CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: ${{ matrix.os == 'windows-latest' && 'x86_64-w64-mingw32-gcc' || '' }}
-      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Configure Windows GNU toolchain env
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          {
+            echo "CC=gcc"
+            echo "AR=ar"
+            echo "RANLIB=ranlib"
+            echo "CXX=g++"
+            echo "TARGET_CC=gcc"
+            echo "TARGET_AR=ar"
+            echo "TARGET_RANLIB=ranlib"
+            echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
+            echo "RUSTFLAGS=-C target-feature=+crt-static"
+          } >> "$GITHUB_ENV"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps

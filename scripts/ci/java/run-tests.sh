@@ -12,5 +12,5 @@ REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
 echo "=== Running Java tests ==="
 cd "$REPO_ROOT/packages/java"
-mvn test
+mvn -B -DtrimStackTrace=false -Dsurefire.useFile=false test
 echo "Java tests complete"

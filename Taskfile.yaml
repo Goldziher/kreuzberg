@@ -459,7 +459,7 @@ tasks:
     desc: Run Java E2E tests
     dir: e2e/java
     cmds:
-      - mvn test
+      - mvn -B -DtrimStackTrace=false -Dsurefire.useFile=false test
   e2e:java:verify:
     desc: Regenerate and validate Java E2E suite
     cmds:

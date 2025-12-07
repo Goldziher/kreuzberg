@@ -159,4 +159,24 @@ jobs:
       - name: Run E2E tests
         shell: pwsh
         run: |
-          bash -lc "task e2e:java:test"
+          bash -lc "set -x; task -vv e2e:java:test"
+
+      - name: Upload Java unit test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: java-unit-reports-${{ matrix.os }}
+          path: |
+            packages/java/target/surefire-reports
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Java E2E test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: java-e2e-reports-${{ matrix.os }}
+          path: |
+            e2e/java/target/surefire-reports
+          if-no-files-found: ignore
+          retention-days: 7

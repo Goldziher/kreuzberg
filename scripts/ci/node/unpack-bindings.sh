@@ -34,6 +34,6 @@ echo "Found package: $pkg"
 
 # Install the package from tarball in the TypeScript workspace
 cd ../../packages/typescript
-pnpm add "file:../../crates/kreuzberg-node/$pkg"
+pnpm add --workspace-root "file:../../crates/kreuzberg-node/$pkg"
 
 echo "Installation complete"

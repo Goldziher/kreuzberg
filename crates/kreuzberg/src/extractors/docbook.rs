@@ -291,6 +291,18 @@ fn parse_docbook_single_pass(content: &str) -> Result<(String, String, Option<St
     Ok((final_output.trim().to_string(), title, author, date, tables))
 }
 
+/// Backwards-compatible wrapper used by existing tests: returns content, title, author, date.
+fn parse_docbook_content(content: &str) -> Result<(String, String, Option<String>, Option<String>)> {
+    let (body, title, author, date, _tables) = parse_docbook_single_pass(content)?;
+    Ok((body, title, author, date))
+}
+
+/// Extract only tables (compat shim for older callers/tests).
+fn extract_docbook_tables(content: &str) -> Result<Vec<Table>> {
+    let (_body, _title, _author, _date, tables) = parse_docbook_single_pass(content)?;
+    Ok(tables)
+}
+
 /// Extract text content from a DocBook element and its children.
 /// Used for extracting nested content within elements.
 fn extract_element_text(reader: &mut Reader<&[u8]>) -> Result<String> {
@@ -374,8 +386,9 @@ impl DocumentExtractor for DocbookExtractor {
         &self,
         content: &[u8],
         mime_type: &str,
-        _config: &ExtractionConfig,
+        config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
+        let _ = config;
         let docbook_content = std::str::from_utf8(content)
             .map(|s| s.to_string())
             .unwrap_or_else(|_| String::from_utf8_lossy(content).to_string());
