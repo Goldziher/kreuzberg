@@ -39,21 +39,16 @@ impl EpubExtractor {
         opf_path: &str,
         manifest_dir: &str,
     ) -> Result<String> {
-        // Parse the OPF file to get metadata and spine order
         let opf_xml = Self::read_file_from_zip(archive, opf_path)?;
         let (_, spine_hrefs) = Self::parse_opf(&opf_xml)?;
 
         let mut content = String::new();
 
-        // Process each XHTML file in spine order
         for (index, href) in spine_hrefs.iter().enumerate() {
-            // Resolve relative path
             let file_path = Self::resolve_path(manifest_dir, href);
 
-            // Try to read the file from the archive
             match Self::read_file_from_zip(archive, &file_path) {
                 Ok(xhtml_content) => {
-                    // Convert XHTML to text
                     let text = Self::extract_text_from_xhtml(&xhtml_content);
                     if !text.is_empty() {
                         if index > 0 && !content.ends_with('\n') {
@@ -64,7 +59,6 @@ impl EpubExtractor {
                     }
                 }
                 Err(_) => {
-                    // Skip files that can't be read
                     continue;
                 }
             }
@@ -75,19 +69,12 @@ impl EpubExtractor {
 
     /// Extract text from XHTML content using html-to-markdown-rs
     fn extract_text_from_xhtml(xhtml: &str) -> String {
-        // Use html-to-markdown-rs to convert XHTML to plain text
         match crate::extraction::html::convert_html_to_markdown(xhtml, None) {
             Ok(markdown) => {
-                // Clean up the markdown to plain text
                 let text = Self::markdown_to_plain_text(&markdown);
-                // Remove HTML comments to ensure deterministic output
-                // (roxmltree may reorder XML attributes, affecting comment content)
                 Self::remove_html_comments(&text)
             }
-            Err(_) => {
-                // Fallback to manual HTML tag stripping if conversion fails
-                Self::strip_html_tags(xhtml)
-            }
+            Err(_) => Self::strip_html_tags(xhtml),
         }
     }
 
@@ -99,10 +86,8 @@ impl EpubExtractor {
 
         while let Some(ch) = chars.next() {
             if !in_comment && ch == '<' {
-                // Check if this is the start of a comment
                 if chars.peek() == Some(&'!') {
                     chars.next();
-                    // Check for -- which starts a comment
                     if chars.peek() == Some(&'-') {
                         chars.next();
                         if chars.peek() == Some(&'-') {
@@ -110,14 +95,12 @@ impl EpubExtractor {
                             in_comment = true;
                             continue;
                         } else {
-                            // Not a comment, add what we skipped
                             result.push('<');
                             result.push('!');
                             result.push('-');
                             continue;
                         }
                     } else {
-                        // Not a comment, add what we skipped
                         result.push('<');
                         result.push('!');
                         continue;
@@ -126,7 +109,6 @@ impl EpubExtractor {
                     result.push(ch);
                 }
             } else if in_comment {
-                // Check for end of comment: -->
                 if ch == '-' && chars.peek() == Some(&'-') {
                     chars.next();
                     if chars.peek() == Some(&'>') {
@@ -151,7 +133,6 @@ impl EpubExtractor {
         for line in markdown.lines() {
             let trimmed = line.trim();
 
-            // Skip empty lines between content
             if trimmed.is_empty() {
                 if !text.is_empty() && !text.ends_with('\n') {
                     text.push('\n');
@@ -159,7 +140,6 @@ impl EpubExtractor {
                 continue;
             }
 
-            // Skip code block markers
             if trimmed.starts_with("```") {
                 in_code_block = !in_code_block;
                 continue;
@@ -171,7 +151,6 @@ impl EpubExtractor {
                 continue;
             }
 
-            // Remove markdown list markers
             let cleaned = if let Some(stripped) = trimmed.strip_prefix("- ").or_else(|| trimmed.strip_prefix("* ")) {
                 stripped
             } else if let Some(stripped) = trimmed.strip_prefix(|c: char| c.is_ascii_digit()) {
@@ -184,17 +163,14 @@ impl EpubExtractor {
                 trimmed
             };
 
-            // Remove markdown heading markers
             let cleaned = cleaned.trim_start_matches('#').trim();
 
-            // Remove markdown bold/italic markers
             let cleaned = cleaned
                 .replace("**", "")
                 .replace("__", "")
                 .replace("*", "")
                 .replace("_", "");
 
-            // Remove markdown links [text](url) -> text
             let cleaned = Self::remove_markdown_links(&cleaned);
 
             if !cleaned.is_empty() {
@@ -213,7 +189,6 @@ impl EpubExtractor {
 
         while let Some(ch) = chars.next() {
             if ch == '[' {
-                // Collect link text
                 let mut link_text = String::new();
                 let mut depth = 1;
 
@@ -233,7 +208,6 @@ impl EpubExtractor {
                     }
                 }
 
-                // Skip the URL part (url)
                 if let Some(&'(') = chars.peek() {
                     chars.next();
                     let mut paren_depth = 1;
@@ -276,7 +250,6 @@ impl EpubExtractor {
             if ch == '>' {
                 in_tag = false;
 
-                // Check if we're entering/exiting script or style tags
                 let tag_lower = tag_name.to_lowercase();
                 if tag_lower.contains("script") || tag_lower.contains("style") {
                     in_script_style = !tag_name.starts_with('/');
@@ -293,7 +266,6 @@ impl EpubExtractor {
                 continue;
             }
 
-            // Normalize whitespace
             if ch == '\n' || ch == '\r' || ch == '\t' || ch == ' ' {
                 if !text.is_empty() && !text.ends_with(' ') {
                     text.push(' ');
@@ -303,7 +275,6 @@ impl EpubExtractor {
             }
         }
 
-        // Clean up multiple spaces
         let mut result = String::new();
         let mut prev_space = false;
         for ch in text.chars() {
@@ -327,7 +298,6 @@ impl EpubExtractor {
 
         let (epub_metadata, _) = Self::parse_opf(opf_xml)?;
 
-        // Add extracted metadata
         if let Some(title) = epub_metadata.title {
             metadata.insert("title".to_string(), serde_json::json!(title));
         }
@@ -372,7 +342,6 @@ impl EpubExtractor {
     fn parse_container_xml(xml: &str) -> Result<String> {
         match roxmltree::Document::parse(xml) {
             Ok(doc) => {
-                // Look for rootfile element
                 for node in doc.descendants() {
                     if node.tag_name().name() == "rootfile"
                         && let Some(full_path) = node.attribute("full-path")
@@ -402,7 +371,6 @@ impl EpubExtractor {
                 let mut manifest: BTreeMap<String, String> = BTreeMap::new();
                 let mut spine_order: Vec<String> = Vec::new();
 
-                // Extract metadata from package/metadata section
                 for node in root.descendants() {
                     match node.tag_name().name() {
                         "title" => {
@@ -451,7 +419,6 @@ impl EpubExtractor {
                             }
                         }
                         "item" => {
-                            // Build manifest map: id -> href
                             if let Some(id) = node.attribute("id")
                                 && let Some(href) = node.attribute("href")
                             {
@@ -462,7 +429,6 @@ impl EpubExtractor {
                     }
                 }
 
-                // Second pass: Resolve spine itemrefs using complete manifest
                 for node in root.descendants() {
                     if node.tag_name().name() == "itemref"
                         && let Some(idref) = node.attribute("idref")
@@ -578,33 +544,26 @@ impl DocumentExtractor for EpubExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Create a cursor from the content bytes
         let cursor = Cursor::new(content.to_vec());
 
-        // Open EPUB archive
         let mut archive = ZipArchive::new(cursor).map_err(|e| crate::KreuzbergError::Parsing {
             message: format!("Failed to open EPUB as ZIP: {}", e),
             source: None,
         })?;
 
-        // Find the OPF file path from container.xml
         let container_xml = Self::read_file_from_zip(&mut archive, "META-INF/container.xml")?;
         let opf_path = Self::parse_container_xml(&container_xml)?;
 
-        // Extract the directory containing the OPF file
         let manifest_dir = if let Some(last_slash) = opf_path.rfind('/') {
             opf_path[..last_slash].to_string()
         } else {
             String::new()
         };
 
-        // Read the OPF file for metadata and spine
         let opf_xml = Self::read_file_from_zip(&mut archive, &opf_path)?;
 
-        // Extract content in spine order
         let extracted_content = Self::extract_content(&mut archive, &opf_path, &manifest_dir)?;
 
-        // Extract metadata
         let metadata_btree = Self::extract_metadata(&opf_xml)?;
         let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata_btree.into_iter().collect();
 

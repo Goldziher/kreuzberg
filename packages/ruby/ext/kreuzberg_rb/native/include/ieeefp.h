@@ -8,4 +8,4 @@
 #include_next <ieeefp.h>
 #endif
 
-#endif  // KREUZBERG_RUBY_IEEFP_H
+#endif

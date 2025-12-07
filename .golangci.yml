@@ -81,24 +81,19 @@ linters:
   exclusions:
     generated: lax
     rules:
-      # Test files: More lenient for repeated strings
       - linters:
           - goconst
         path: _test\.go
-      # Test files: More lenient for cyclomatic complexity
       - linters:
           - gocyclo
         path: _test\.go
-      # Test files: Skip all gosec security checks (tests don't need production security standards)
       - linters:
           - gosec
         path: _test\.go
-      # Test files: Allow flexible context parameter ordering in test helpers
       - linters:
           - revive
         path: _test\.go
         text: "context-as-argument"
-      # Test files: Allow unused writes (test setup artifacts)
       - linters:
           - goconst
           - revive
@@ -106,11 +101,9 @@ linters:
           - govet
         path: _test\.go
         text: "unusedwrite:"
-      # All files: Field alignment is not critical
       - linters:
           - govet
         text: "fieldalignment:"
-      # Test files: Disable errcheck entirely (test assertions handle errors differently)
       - linters:
           - errcheck
         path: _test\.go

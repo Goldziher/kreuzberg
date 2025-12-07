@@ -107,7 +107,6 @@ public final class OcrConfig {
     private TesseractConfig tesseractConfig;
 
     private Builder() {
-      // Use defaults
     }
 
     /**

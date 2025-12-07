@@ -63,9 +63,7 @@ impl FictionBookExtractor {
                         "sup" => {
                             text.push('^');
                         }
-                        "a" | "empty-line" => {
-                            // Links and empty lines - just continue
-                        }
+                        "a" | "empty-line" => {}
                         _ => {}
                     }
                     para_depth += 1;
@@ -74,7 +72,6 @@ impl FictionBookExtractor {
                     let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
                     match tag.as_str() {
                         "p" if para_depth == 1 => {
-                            // End of paragraph
                             break;
                         }
                         "emphasis" => {
@@ -140,11 +137,8 @@ impl FictionBookExtractor {
             match reader.read_event() {
                 Ok(Event::Start(e)) => {
                     let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
-                    // Handle formatting tags
                     match tag.as_str() {
-                        "emphasis" | "strong" | "strikethrough" | "code" | "sub" | "sup" => {
-                            // These are inline formatting, just continue parsing
-                        }
+                        "emphasis" | "strong" | "strikethrough" | "code" | "sub" | "sup" => {}
                         "empty-line" => {
                             text.push('\n');
                         }
@@ -194,7 +188,6 @@ impl FictionBookExtractor {
             }
         }
 
-        // Clean up extra whitespace and normalize
         let text = text
             .lines()
             .map(|line| line.trim())
@@ -225,7 +218,6 @@ impl FictionBookExtractor {
                             in_title_info = true;
                         }
                         "genre" if in_title_info => {
-                            // Extract genre
                             if let Ok(Event::Text(t)) = reader.read_event() {
                                 let genre = String::from_utf8_lossy(t.as_ref()).to_string();
                                 if !genre.trim().is_empty() && genre.trim() != "unrecognised" {
@@ -234,7 +226,6 @@ impl FictionBookExtractor {
                             }
                         }
                         "date" if in_title_info => {
-                            // Extract date
                             if let Ok(Event::Text(t)) = reader.read_event() {
                                 let date = String::from_utf8_lossy(t.as_ref()).to_string();
                                 if !date.trim().is_empty() {
@@ -243,7 +234,6 @@ impl FictionBookExtractor {
                             }
                         }
                         "lang" if in_title_info => {
-                            // Extract language
                             if let Ok(Event::Text(t)) = reader.read_event() {
                                 let lang = String::from_utf8_lossy(t.as_ref()).to_string();
                                 if !lang.trim().is_empty() {
@@ -284,7 +274,6 @@ impl FictionBookExtractor {
                     let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                     if tag == "body" {
-                        // Check if it's the notes body
                         for a in e.attributes().flatten() {
                             let attr_name = String::from_utf8_lossy(a.key.as_ref()).to_string();
                             if attr_name == "name" {
@@ -300,7 +289,6 @@ impl FictionBookExtractor {
                             in_body = true;
                         }
                     } else if tag == "section" && in_body {
-                        // Extract section content
                         match Self::extract_section_content(&mut reader) {
                             Ok(section_content) if !section_content.is_empty() => {
                                 content.push_str(&section_content);
@@ -309,7 +297,6 @@ impl FictionBookExtractor {
                             _ => {}
                         }
                     } else if tag == "p" && in_body && !skip_notes_body {
-                        // Extract paragraph content with formatting preservation
                         match Self::extract_paragraph_content(&mut reader) {
                             Ok(para) if !para.is_empty() => {
                                 content.push_str(&para);
@@ -318,7 +305,6 @@ impl FictionBookExtractor {
                             _ => {}
                         }
                     } else if tag == "title" && in_body {
-                        // Extract title from body
                         match Self::extract_text_content(&mut reader) {
                             Ok(title_content) if !title_content.is_empty() => {
                                 content.push_str(&format!("# {}\n", title_content));
@@ -442,10 +428,8 @@ impl DocumentExtractor for FictionBookExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Extract metadata
         let metadata = Self::extract_metadata(content)?;
 
-        // Extract body content
         let extracted_content = Self::extract_body_content(content)?;
 
         Ok(ExtractionResult {

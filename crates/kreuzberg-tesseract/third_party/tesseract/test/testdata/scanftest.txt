@@ -1,7 +1,0 @@
-42.5 17 0.001000 -0.001000
-0 1 123 -123 0x100
-abcdefghijklmnopqrstuvwxyz
-abcdefghijklmnopqrstuvwxyz
-MF 25 6.25e-2 0.5e5 -1e+4
-42 MF 25 6.25e-2 0.5
-24

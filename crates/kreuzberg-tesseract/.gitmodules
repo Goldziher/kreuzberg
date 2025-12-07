@@ -1,6 +1,0 @@
-[submodule "third_party/leptonica"]
-	path = third_party/leptonica
-	url = https://github.com/DanBloomberg/leptonica.git
-[submodule "third_party/tesseract"]
-	path = third_party/tesseract
-	url = https://github.com/tesseract-ocr/tesseract.git

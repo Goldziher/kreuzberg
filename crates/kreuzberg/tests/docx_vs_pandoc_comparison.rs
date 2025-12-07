@@ -20,10 +20,8 @@ async fn test_docx_kreuzberg_vs_pandoc_comparison() {
         return;
     }
 
-    // Read file
     let content = std::fs::read(&docx_path).expect("Failed to read DOCX");
 
-    // Create and run Kreuzberg extraction
     let extractor = DocxExtractor::new();
     let config = ExtractionConfig::default();
 
@@ -36,14 +34,12 @@ async fn test_docx_kreuzberg_vs_pandoc_comparison() {
         .await
         .expect("Kreuzberg extraction failed");
 
-    // Print detailed comparison report
     println!("\n");
     println!("╔════════════════════════════════════════════════════════════════╗");
     println!("║         KREUZBERG vs PANDOC - DOCX EXTRACTION COMPARISON       ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
     println!();
 
-    // Document Info
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("DOCUMENT INFORMATION");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -53,7 +49,6 @@ async fn test_docx_kreuzberg_vs_pandoc_comparison() {
     println!("Content Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     println!();
 
-    // Kreuzberg metrics
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("KREUZBERG EXTRACTION RESULTS");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -79,7 +74,6 @@ async fn test_docx_kreuzberg_vs_pandoc_comparison() {
     println!("─────────────────────────────────────────────────────────────────");
     println!();
 
-    // Metadata
     println!(
         "Metadata Fields Extracted: {}",
         kreuzberg_result.metadata.additional.len()
@@ -176,7 +170,6 @@ async fn test_docx_kreuzberg_vs_pandoc_comparison() {
     );
     println!();
 
-    // Tables
     println!("Tables:");
     println!("  Count: {}", kreuzberg_result.tables.len());
     for (idx, table) in kreuzberg_result.tables.iter().enumerate() {
@@ -192,13 +185,10 @@ async fn test_docx_kreuzberg_vs_pandoc_comparison() {
     }
     println!();
 
-    // Pandoc comparison (via external process for reference)
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("PANDOC EXTRACTION RESULTS (for comparison)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-    // Note: We would extract via pandoc subprocess here if the feature is available
-    // For this test, we're showing what Pandoc produces (from separate testing)
     println!("Pandoc Text Output Metrics:");
     println!("  Lines: 52");
     println!("  Words: 135");
@@ -244,7 +234,6 @@ Here are some interesting things a respectful duck could eat:
     println!("─────────────────────────────────────────────────────────────────");
     println!();
 
-    // Comparison and Analysis
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("COMPARATIVE ANALYSIS");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

@@ -8,16 +8,13 @@ describe("MIME Utility Functions", () => {
 	let tempDir: string;
 
 	beforeEach(() => {
-		// Create a unique temp directory for each test
 		tempDir = join(tmpdir(), `kreuzberg-mime-test-${Date.now()}`);
 		if (!existsSync(tempDir)) {
 			mkdirSync(tempDir, { recursive: true });
 		}
 	});
 
-	afterEach(() => {
-		// Cleanup is optional for temp files, OS will clean up eventually
-	});
+	afterEach(() => {});
 
 	describe("detectMimeTypeFromPath", () => {
 		it("should detect MIME type for PDF files", () => {
@@ -119,7 +116,6 @@ describe("MIME Utility Functions", () => {
 		it.skip("should work without checking file existence when checkExists is false", () => {
 			const nonExistentFile = join(tempDir, "nonexistent.pdf");
 
-			// Should not throw when checkExists is false
 			const mimeType = detectMimeTypeFromPath(nonExistentFile, false);
 			expect(mimeType).toBe("application/pdf");
 		});
@@ -167,7 +163,6 @@ describe("MIME Utility Functions", () => {
 		});
 
 		it("should validate any image/* MIME type", () => {
-			// Rust implementation allows any image/* MIME type
 			const customImageType = "image/custom-format";
 			const result = validateMimeType(customImageType);
 			expect(result).toBe(customImageType);

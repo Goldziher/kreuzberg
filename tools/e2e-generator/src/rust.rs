@@ -15,11 +15,9 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
 
     clean_rs_files(&tests_dir)?;
 
-    // Separate document extraction and plugin API fixtures
     let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
     let api_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
 
-    // Generate document extraction tests
     let mut grouped = doc_fixtures
         .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
@@ -35,7 +33,6 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
     }
 
-    // Generate plugin API tests
     if !api_fixtures.is_empty() {
         generate_plugin_api_tests(&api_fixtures, &tests_dir)?;
     }
@@ -267,12 +264,10 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
 
     let mut buffer = String::new();
 
-    // File header
     writeln!(buffer, "// Auto-generated tests for plugin API fixtures.")?;
     writeln!(buffer, "#![allow(clippy::too_many_lines)]")?;
     writeln!(buffer)?;
 
-    // Imports
     writeln!(buffer, "use kreuzberg::core::config::ExtractionConfig;")?;
     writeln!(buffer, "use kreuzberg::plugins::{{list_validators, clear_validators}};")?;
     writeln!(
@@ -290,7 +285,6 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
     )?;
     writeln!(buffer)?;
 
-    // Generate tests
     for fixture in fixtures {
         generate_plugin_test(fixture, &mut buffer)?;
     }
@@ -314,7 +308,6 @@ fn generate_plugin_test(fixture: &Fixture, buf: &mut String) -> Result<()> {
     writeln!(buf, "    // {}", fixture.description)?;
     writeln!(buf)?;
 
-    // Generate test body based on pattern
     match test_spec.pattern.as_str() {
         "simple_list" => generate_simple_list_test_rust(test_spec, buf)?,
         "clear_registry" => generate_clear_registry_test_rust(test_spec, buf)?,
@@ -337,20 +330,17 @@ fn generate_simple_list_test_rust(test_spec: &PluginTestSpec, buf: &mut String) 
     let func_name = &test_spec.function_call.name;
     let assertions = &test_spec.assertions;
 
-    // Map Python function names to Rust function names
     let rust_func_name = match func_name.as_str() {
         "list_document_extractors" => "list_extractors",
         _ => func_name.as_str(),
     };
 
-    // Call function - need to unwrap Result
     writeln!(
         buf,
         "    let result = {}().expect(\"Failed to list registry\");",
         rust_func_name
     )?;
 
-    // Assertions
     if let Some(item_type) = &assertions.list_item_type
         && item_type == "string"
     {
@@ -371,7 +361,6 @@ fn generate_simple_list_test_rust(test_spec: &PluginTestSpec, buf: &mut String) 
 fn generate_clear_registry_test_rust(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
     let func_name = &test_spec.function_call.name;
 
-    // Handle special case for clear_post_processors which doesn't have a helper function
     if func_name == "clear_post_processors" {
         writeln!(buf, "    // Clear post-processors via registry (no helper function)")?;
         writeln!(
@@ -391,16 +380,13 @@ fn generate_clear_registry_test_rust(test_spec: &PluginTestSpec, buf: &mut Strin
         )?;
         writeln!(buf, "    assert!(result.is_empty());")?;
     } else {
-        // Map Python function names to Rust function names
         let rust_func_name = match func_name.as_str() {
             "clear_document_extractors" => "clear_extractors",
             _ => func_name.as_str(),
         };
 
-        // Call clear function - need to unwrap Result
         writeln!(buf, "    {}().expect(\"Failed to clear registry\");", rust_func_name)?;
 
-        // Verify cleanup
         let list_func = rust_func_name.replace("clear_", "list_");
         writeln!(
             buf,
@@ -420,13 +406,11 @@ fn generate_graceful_unregister_test_rust(test_spec: &PluginTestSpec, buf: &mut 
         .as_str()
         .with_context(|| format!("Expected string argument in {}", func_name))?;
 
-    // Map Python function names to Rust function names
     let rust_func_name = match func_name.as_str() {
         "unregister_document_extractor" => "unregister_extractor",
         _ => func_name.as_str(),
     };
 
-    // Should not panic - need to unwrap Result
     writeln!(
         buf,
         "    {}(\"{}\").expect(\"Unregister should not fail\");",
@@ -448,7 +432,6 @@ fn generate_config_from_file_test_rust(test_spec: &PluginTestSpec, buf: &mut Str
         .as_ref()
         .context("config_from_file requires temp_file_name")?;
 
-    // Create temp file
     writeln!(
         buf,
         "    let temp_dir = tempfile::tempdir().expect(\"Failed to create temp dir\");"
@@ -458,7 +441,6 @@ fn generate_config_from_file_test_rust(test_spec: &PluginTestSpec, buf: &mut Str
         "    let config_path = temp_dir.path().join(\"{}\");",
         escape_rust_string(file_name)
     )?;
-    // Use raw string literal but the content needs actual newlines, not escaped ones
     let toml_content = file_content.replace("\\n", "\n");
     writeln!(
         buf,
@@ -467,12 +449,10 @@ fn generate_config_from_file_test_rust(test_spec: &PluginTestSpec, buf: &mut Str
     )?;
     writeln!(buf)?;
 
-    // Load config
     writeln!(buf, "    let config = ExtractionConfig::from_file(&config_path)")?;
     writeln!(buf, "        .expect(\"Failed to load config from file\");")?;
     writeln!(buf)?;
 
-    // Generate assertions
     generate_object_property_assertions_rust(&test_spec.assertions, buf)?;
 
     Ok(())
@@ -493,7 +473,6 @@ fn generate_config_discover_test_rust(test_spec: &PluginTestSpec, buf: &mut Stri
         .as_ref()
         .context("config_discover requires subdirectory_name")?;
 
-    // Create temp directory structure
     writeln!(
         buf,
         "    let temp_dir = tempfile::tempdir().expect(\"Failed to create temp dir\");"
@@ -503,7 +482,6 @@ fn generate_config_discover_test_rust(test_spec: &PluginTestSpec, buf: &mut Stri
         "    let config_path = temp_dir.path().join(\"{}\");",
         escape_rust_string(file_name)
     )?;
-    // Use raw string literal but the content needs actual newlines, not escaped ones
     let toml_content = file_content.replace("\\n", "\n");
     writeln!(
         buf,
@@ -523,7 +501,6 @@ fn generate_config_discover_test_rust(test_spec: &PluginTestSpec, buf: &mut Stri
     )?;
     writeln!(buf)?;
 
-    // Change directory and discover
     writeln!(
         buf,
         "    let original_dir = std::env::current_dir().expect(\"Failed to get current dir\");"
@@ -545,7 +522,6 @@ fn generate_config_discover_test_rust(test_spec: &PluginTestSpec, buf: &mut Stri
     )?;
     writeln!(buf)?;
 
-    // Generate assertions
     generate_object_property_assertions_rust(&test_spec.assertions, buf)?;
 
     Ok(())
@@ -556,15 +532,11 @@ fn generate_mime_from_bytes_test_rust(test_spec: &PluginTestSpec, buf: &mut Stri
     let test_data = setup.test_data.as_ref().context("mime_from_bytes requires test_data")?;
     let assertions = &test_spec.assertions;
 
-    // Convert test data to bytes (like Python's b"...")
-    // The test_data is already escaped in JSON (e.g., "%PDF-1.4\n")
     writeln!(buf, "    let data = b\"{}\";", test_data)?;
 
-    // Call detect_mime_type_from_bytes
     writeln!(buf, "    let result = detect_mime_type_from_bytes(data)")?;
     writeln!(buf, "        .expect(\"Failed to detect MIME type from bytes\");")?;
 
-    // Assertions
     if let Some(expected) = &assertions.string_contains {
         writeln!(
             buf,
@@ -588,7 +560,6 @@ fn generate_mime_from_path_test_rust(test_spec: &PluginTestSpec, buf: &mut Strin
         .context("mime_from_path requires temp_file_content")?;
     let assertions = &test_spec.assertions;
 
-    // Create temp file
     writeln!(
         buf,
         "    let temp_dir = tempfile::tempdir().expect(\"Failed to create temp dir\");"
@@ -605,11 +576,9 @@ fn generate_mime_from_path_test_rust(test_spec: &PluginTestSpec, buf: &mut Strin
     )?;
     writeln!(buf)?;
 
-    // Call detect_mime_type (it takes a path, not bytes)
     writeln!(buf, "    let result = detect_mime_type(&file_path, true)")?;
     writeln!(buf, "        .expect(\"Failed to detect MIME type\");")?;
 
-    // Assertions
     if let Some(expected) = &assertions.string_contains {
         writeln!(
             buf,
@@ -627,7 +596,6 @@ fn generate_mime_extension_lookup_test_rust(test_spec: &PluginTestSpec, buf: &mu
     let mime_type = arg.as_str().context("Expected string argument for MIME type")?;
     let assertions = &test_spec.assertions;
 
-    // Call get_extensions_for_mime
     writeln!(
         buf,
         "    let result = get_extensions_for_mime(\"{}\")",
@@ -635,7 +603,6 @@ fn generate_mime_extension_lookup_test_rust(test_spec: &PluginTestSpec, buf: &mu
     )?;
     writeln!(buf, "        .expect(\"Failed to get extensions for MIME type\");")?;
 
-    // Assertions
     if let Some(contains) = &assertions.list_contains {
         writeln!(
             buf,
@@ -659,7 +626,6 @@ fn generate_object_property_assertions_rust(
                 if exists {
                     writeln!(buf, "    // Verify {} exists", path)?;
 
-                    // For nested paths like "chunking.max_chars", we need to unwrap the Option
                     if path.contains('.') {
                         let parts: Vec<&str> = path.split('.').collect();
                         if parts.len() == 2 {
@@ -674,7 +640,6 @@ fn generate_object_property_assertions_rust(
             }
 
             if let Some(value) = &prop.value {
-                // For nested paths like "chunking.max_chars", unwrap the Option first
                 if path.contains('.') {
                     let parts: Vec<&str> = path.split('.').collect();
                     if parts.len() == 2 {

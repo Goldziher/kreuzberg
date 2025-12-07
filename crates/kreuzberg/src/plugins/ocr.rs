@@ -252,8 +252,6 @@ pub trait OcrBackend: Plugin {
     }
 }
 
-// Public registration APIs
-
 /// Register an OCR backend with the global registry.
 ///
 /// The OCR backend will be registered with its name from the `name()` method
@@ -320,8 +318,6 @@ pub fn register_ocr_backend(backend: Arc<dyn OcrBackend>) -> crate::Result<()> {
 
     let registry = get_ocr_backend_registry();
     // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-    // This is a critical runtime error (similar to OOM) that should bubble up
-    // as it indicates the registry is in an inconsistent state.
     let mut registry = registry
         .write()
         .expect("OCR backend registry lock poisoned - critical runtime error");
@@ -357,8 +353,6 @@ pub fn unregister_ocr_backend(name: &str) -> crate::Result<()> {
 
     let registry = get_ocr_backend_registry();
     // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-    // This is a critical runtime error (similar to OOM) that should bubble up
-    // as it indicates the registry is in an inconsistent state.
     let mut registry = registry
         .write()
         .expect("OCR backend registry lock poisoned - critical runtime error");
@@ -392,8 +386,6 @@ pub fn list_ocr_backends() -> crate::Result<Vec<String>> {
 
     let registry = get_ocr_backend_registry();
     // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-    // This is a critical runtime error (similar to OOM) that should bubble up
-    // as it indicates the registry is in an inconsistent state.
     let registry = registry
         .read()
         .expect("OCR backend registry lock poisoned - critical runtime error");
@@ -425,8 +417,6 @@ pub fn clear_ocr_backends() -> crate::Result<()> {
 
     let registry = get_ocr_backend_registry();
     // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-    // This is a critical runtime error (similar to OOM) that should bubble up
-    // as it indicates the registry is in an inconsistent state.
     let mut registry = registry
         .write()
         .expect("OCR backend registry lock poisoned - critical runtime error");

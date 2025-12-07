@@ -70,7 +70,6 @@ impl TesseractAPI {
         let datapath_str = datapath.as_ref().to_str().unwrap().to_owned();
         let language_str = language.to_owned();
 
-        // Önce konfigürasyonu güncelle
         {
             let mut config = self.config.lock().map_err(|_| TesseractError::MutexLockError)?;
             config.datapath = datapath_str.clone();
@@ -725,7 +724,7 @@ impl TesseractAPI {
                 filename.as_ptr(),
                 retry_config.map_or(std::ptr::null(), |rc| rc.as_ptr()),
                 timeout_millisec,
-                std::ptr::null_mut(), // renderer
+                std::ptr::null_mut(),
             )
         };
         if result.is_null() {
@@ -1013,7 +1012,6 @@ impl TesseractAPI {
         bytes_per_pixel: i32,
         bytes_per_line: i32,
     ) -> Result<()> {
-        // Validate input parameters
         if width <= 0 || height <= 0 {
             return Err(TesseractError::InvalidDimensions);
         }
@@ -1026,7 +1024,6 @@ impl TesseractAPI {
             return Err(TesseractError::InvalidBytesPerLine);
         }
 
-        // Check if image_data size matches the parameters
         let expected_size = (height * bytes_per_line) as usize;
         if image_data.len() < expected_size {
             return Err(TesseractError::InvalidImageData);
@@ -1103,7 +1100,6 @@ impl TesseractAPI {
     pub fn get_utf8_text(&self) -> Result<String> {
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
 
-        // Check if handle is properly initialized
         if *handle == std::ptr::null_mut() {
             return Err(TesseractError::UninitializedError);
         }
@@ -1113,7 +1109,6 @@ impl TesseractAPI {
             return Err(TesseractError::OcrError);
         }
 
-        // Safely convert C string to Rust string
         let result = unsafe {
             let c_str = CStr::from_ptr(text_ptr);
             let result = c_str.to_str()?.to_owned();
@@ -1201,12 +1196,10 @@ impl TesseractAPI {
 
     /// Gets both page and result iterators for full text analysis
     pub fn get_iterators(&self) -> Result<(PageIterator, ResultIterator)> {
-        // Önce OCR işlemini gerçekleştir
         self.recognize()?;
 
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
 
-        // İki iterator'ı da al
         let page_iter = unsafe { TessBaseAPIAnalyseLayout(*handle) };
         let result_iter = unsafe { TessBaseAPIGetIterator(*handle) };
 
@@ -1375,106 +1368,4 @@ unsafe extern "C" {
     fn TessBaseAPIGetDatapath(handle: *mut c_void) -> *const c_char;
     fn TessBaseAPIGetThresholdedImage(handle: *mut c_void) -> *mut c_void;
 
-    // unimplemented functions
-    /*
-    fn TessHOcrRendererCreate2(outputbase: *const c_char, font_info: c_int) -> *mut c_void;
-    fn TessAltoRendererCreate(outputbase: *const c_char) -> *mut c_void;
-    fn TessPAGERendererCreate(outputbase: *const c_char) -> *mut c_void;
-    fn TessTsvRendererCreate(outputbase: *const c_char) -> *mut c_void;
-    fn TessUnlvRendererCreate(outputbase: *const c_char) -> *mut c_void;
-    fn TessWordStrBoxRendererCreate(outputbase: *const c_char) -> *mut c_void;
-    fn TessLSTMBoxRendererCreate(outputbase: *const c_char) -> *mut c_void;
-
-    fn TessResultRendererInsert(renderer: *mut c_void, next: *mut c_void);
-    fn TessResultRendererNext(renderer: *mut c_void) -> *mut c_void;
-    fn TessBaseAPIPrintVariables(handle: *mut c_void, fp: *mut c_void);
-    fn TessBaseAPIRect(
-        handle: *mut c_void,
-        imagedata: *const u8,
-        bytes_per_pixel: c_int,
-        bytes_per_line: c_int,
-        left: c_int,
-        top: c_int,
-        width: c_int,
-        height: c_int,
-    ) -> *mut c_char;
-    fn TessBaseAPIGetGradient(handle: *mut c_void) -> c_float;
-    fn TessBaseAPIGetRegions(handle: *mut c_void, pixa: *mut *mut c_void) -> *mut c_void;
-    fn TessBaseAPIGetTextlines(
-        handle: *mut c_void,
-        pixa: *mut *mut c_void,
-        blockids: *mut *mut c_int,
-    ) -> *mut c_void;
-    fn TessBaseAPIGetTextlines1(
-        handle: *mut c_void,
-        raw_image: c_int,
-        raw_padding: c_int,
-        pixa: *mut *mut c_void,
-        blockids: *mut *mut c_int,
-        paraids: *mut *mut c_int,
-    ) -> *mut c_void;
-    fn TessBaseAPIGetStrips(
-        handle: *mut c_void,
-        pixa: *mut *mut c_void,
-        blockids: *mut *mut c_int,
-    ) -> *mut c_void;
-    fn TessBaseAPIGetWords(handle: *mut c_void, pixa: *mut *mut c_void) -> *mut c_void;
-    fn TessBaseAPIGetConnectedComponents(
-        handle: *mut c_void,
-        pixa: *mut *mut c_void,
-    ) -> *mut c_void;
-    fn TessBaseAPIGetComponentImages(
-        handle: *mut c_void,
-        level: c_int,
-        text_only: c_int,
-        pixa: *mut *mut c_void,
-        blockids: *mut *mut c_int,
-    ) -> *mut c_void;
-    fn TessBaseAPIGetComponentImages1(
-        handle: *mut c_void,
-        level: c_int,
-        text_only: c_int,
-        raw_image: c_int,
-        raw_padding: c_int,
-        pixa: *mut *mut c_void,
-    ) -> *mut c_void;
-    fn TessBaseAPIProcessPagesWithOptions(
-        handle: *mut c_void,
-        filename: *const c_char,
-        retry_config: *const c_char,
-        timeout_millisec: c_int,
-        renderer: *mut c_void,
-    ) -> *mut c_char;
-    fn TessBaseAPIOem(handle: *mut c_void) -> c_int;
-    fn TessBaseAPIGetBlockTextOrientations(
-        handle: *mut c_void,
-        block_orientation: *mut *mut c_int,
-        vertical_writing: *mut bool,
-    );
-    fn TessPageIteratorCopy(handle: *mut c_void) -> *mut c_void;
-    fn TessPageIteratorGetBinaryImage(handle: *mut c_void, level: c_int) -> *mut c_void;
-    fn TessPageIteratorGetImage(
-        handle: *mut c_void,
-        level: c_int,
-        padding: c_int,
-        original_image: *mut c_void,
-        left: *mut c_int,
-        top: *mut c_int,
-    ) -> *mut c_void;
-    fn TessPageIteratorParagraphInfo(
-        handle: *mut c_void,
-        justification: *mut c_int,
-        is_list_item: *mut bool,
-        is_crown: *mut bool,
-        first_line_indent: *mut c_int,
-    ) -> c_int;
-    fn TessResultIteratorCopy(handle: *mut c_void) -> *mut c_void;
-    fn TessResultIteratorGetPageIterator(handle: *mut c_void) -> *mut c_void;
-    fn TessResultIteratorGetPageIteratorConst(handle: *mut c_void) -> *const c_void;
-    fn TessResultIteratorGetChoiceIterator(handle: *mut c_void) -> *mut c_void;
-    fn TessMonitorSetCancelFunc(monitor: *mut c_void, cancel_func: *mut c_void);
-    fn TessMonitorSetCancelThis(monitor: *mut c_void, cancel_this: *mut c_void);
-    fn TessMonitorGetCancelThis(monitor: *mut c_void) -> *mut c_void;
-    fn TessMonitorSetProgressFunc(monitor: *mut c_void, progress_func: *mut c_void);
-    */
 }

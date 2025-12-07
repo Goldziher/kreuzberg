@@ -46,7 +46,6 @@ public final class TokenReductionConfig {
     private boolean preserveImportantWords = true;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder mode(String mode) {

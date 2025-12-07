@@ -92,8 +92,6 @@ pub fn extract_text_from_pdf_with_passwords(pdf_bytes: &[u8], passwords: &[&str]
 pub fn extract_text_from_pdf_document(document: &PdfDocument<'_>) -> Result<String> {
     let page_count = document.pages().len() as usize;
 
-    // Pre-allocate capacity based on estimated page size (average 2KB per page)
-    // This reduces memory reallocations during string concatenation
     let estimated_size = page_count * 2048;
     let mut content = String::with_capacity(estimated_size);
 
@@ -110,7 +108,6 @@ pub fn extract_text_from_pdf_document(document: &PdfDocument<'_>) -> Result<Stri
         content.push_str(&page_text);
     }
 
-    // Shrink to actual size to free unused capacity
     content.shrink_to_fit();
 
     Ok(content)

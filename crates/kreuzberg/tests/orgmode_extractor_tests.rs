@@ -51,10 +51,6 @@ fn assert_not_contains_ci(content: &str, needle: &str, description: &str) {
     );
 }
 
-// ============================================================================
-// SECTION 1: BASIC EXTRACTION TESTS
-// ============================================================================
-
 /// Test 1: Basic Org Mode extraction from simple.org
 ///
 /// Validates:
@@ -74,7 +70,6 @@ async fn test_orgmode_basic_extraction() {
         .await
         .expect("Should extract Org Mode successfully");
 
-    // Validate content extraction
     assert!(
         !result.content.is_empty(),
         "Content should not be empty for Org Mode file"
@@ -82,17 +77,12 @@ async fn test_orgmode_basic_extraction() {
 
     assert!(result.content.len() > 50, "Content should have substantial length");
 
-    // Validate no raw Org Mode markup in output
     assert_not_contains_ci(&result.content, "#+TITLE", "Should not contain raw #+TITLE");
     assert_not_contains_ci(&result.content, "#+BEGIN_", "Should not contain raw #+BEGIN_");
 
     println!("✅ Org Mode basic extraction test passed!");
     println!("   Content length: {} bytes", result.content.len());
 }
-
-// ============================================================================
-// SECTION 2: METADATA EXTRACTION TESTS
-// ============================================================================
 
 /// Test 2: Metadata extraction (title, author, date)
 ///
@@ -102,7 +92,6 @@ async fn test_orgmode_basic_extraction() {
 /// - #+DATE metadata is extracted
 #[tokio::test]
 async fn test_orgmode_metadata_extraction() {
-    // Create a test with metadata
     let org_content = r#"#+TITLE: Test Document
 #+AUTHOR: John Doe
 #+DATE: 2024-01-15
@@ -115,14 +104,11 @@ async fn test_orgmode_metadata_extraction() {
         .await
         .expect("Should extract metadata from Org Mode");
 
-    // Metadata fields should be present (may be in content or metadata map)
-    // Content should have the title or document structure
     assert!(
         !result.content.is_empty(),
         "Content should be extracted from Org Mode with metadata"
     );
 
-    // Should contain document content (after metadata)
     assert_contains_ci(&result.content, "First Section", "Should contain section heading");
     assert_contains_ci(&result.content, "content", "Should contain document content");
 
@@ -130,10 +116,6 @@ async fn test_orgmode_metadata_extraction() {
     println!("   Metadata fields: {}", result.metadata.additional.len());
     println!("   Content length: {} bytes", result.content.len());
 }
-
-// ============================================================================
-// SECTION 3: HEADING HIERARCHY TESTS
-// ============================================================================
 
 /// Test 3: Heading hierarchy extraction
 ///
@@ -161,7 +143,6 @@ Deep nested content.
         .await
         .expect("Should extract headings from Org Mode");
 
-    // All heading levels should be present in content
     assert_contains_ci(&result.content, "Top Level Heading", "Should contain level 1 heading");
     assert_contains_ci(
         &result.content,
@@ -178,10 +159,6 @@ Deep nested content.
     println!("✅ Org Mode headings test passed!");
     println!("   All heading levels extracted successfully");
 }
-
-// ============================================================================
-// SECTION 4: TABLE EXTRACTION TESTS
-// ============================================================================
 
 /// Test 4: Table extraction with proper structure
 ///
@@ -203,19 +180,16 @@ async fn test_orgmode_tables() {
         .await
         .expect("Should extract tables from Org Mode");
 
-    // Tables should be present in content
     assert!(
         result.content.contains("Right") || result.content.contains("Left"),
         "Should contain table headers"
     );
 
-    // Table data should be present
     assert!(
         result.content.contains("12") || result.content.contains("123"),
         "Should contain table data"
     );
 
-    // Multiple tables should be detected
     let table_count = result.content.matches("Right").count();
     assert!(table_count >= 1, "Should extract at least one table from document");
 
@@ -242,7 +216,6 @@ async fn test_orgmode_tables_complex() {
         .await
         .expect("Should extract complex tables from Org Mode");
 
-    // Multiline table content
     assert!(
         result.content.contains("Centered Header")
             || result.content.contains("Left Aligned")
@@ -250,7 +223,6 @@ async fn test_orgmode_tables_complex() {
         "Should contain multiline table headers"
     );
 
-    // Multiline cell content
     assert!(
         result.content.contains("span multiple lines")
             || result.content.contains("First")
@@ -260,10 +232,6 @@ async fn test_orgmode_tables_complex() {
 
     println!("✅ Org Mode complex tables test passed!");
 }
-
-// ============================================================================
-// SECTION 5: LIST EXTRACTION TESTS
-// ============================================================================
 
 /// Test 6: Ordered and unordered list extraction
 ///
@@ -299,24 +267,17 @@ async fn test_orgmode_lists() {
         .await
         .expect("Should extract lists from Org Mode");
 
-    // Unordered list items
     assert_contains_ci(&result.content, "First item", "Should contain unordered list items");
     assert_contains_ci(&result.content, "Second item", "Should contain unordered list items");
 
-    // Ordered list items
     assert_contains_ci(&result.content, "One", "Should contain ordered list items");
     assert_contains_ci(&result.content, "Two", "Should contain ordered list items");
 
-    // Nested items
     assert_contains_ci(&result.content, "Nested", "Should contain nested list items");
     assert_contains_ci(&result.content, "Item A", "Should contain parent list items");
 
     println!("✅ Org Mode lists test passed!");
 }
-
-// ============================================================================
-// SECTION 6: INLINE FORMATTING TESTS
-// ============================================================================
 
 /// Test 7: Inline formatting (bold, italic, code, strikethrough)
 ///
@@ -343,21 +304,15 @@ Mixed formatting like *bold /italic/ text* is also supported.
         .await
         .expect("Should extract inline formatting from Org Mode");
 
-    // Formatted text should be present (may be with or without markers)
     assert_contains_ci(&result.content, "bold", "Should contain bold text");
     assert_contains_ci(&result.content, "italic", "Should contain italic text");
     assert_contains_ci(&result.content, "code", "Should contain code text");
 
-    // Text content should be preserved even if markup is converted
     assert_contains_ci(&result.content, "emphasis", "Should preserve text content");
     assert_contains_ci(&result.content, "strikethrough", "Should preserve strikethrough text");
 
     println!("✅ Org Mode inline formatting test passed!");
 }
-
-// ============================================================================
-// SECTION 7: PROPERTIES DRAWER TESTS
-// ============================================================================
 
 /// Test 8: Properties drawer extraction
 ///
@@ -381,17 +336,11 @@ This is content after properties.
         .await
         .expect("Should extract properties from Org Mode");
 
-    // Properties may be extracted into metadata or included in content
-    // The important thing is that the heading and main content are preserved
     assert_contains_ci(&result.content, "Task with Properties", "Should contain heading");
     assert_contains_ci(&result.content, "content", "Should contain main content");
 
     println!("✅ Org Mode properties test passed!");
 }
-
-// ============================================================================
-// SECTION 8: LINK EXTRACTION TESTS
-// ============================================================================
 
 /// Test 9: Link syntax extraction with description priority
 ///
@@ -413,7 +362,6 @@ async fn test_orgmode_links() {
         .await
         .expect("Should extract links from Org Mode");
 
-    // Links with descriptions should extract the description (not the URL)
     assert_contains_ci(&result.content, "AT&T", "Should contain AT&T link description");
     assert_contains_ci(&result.content, "URL", "Should contain 'URL' link description");
     assert_contains_ci(&result.content, "email", "Should contain 'email' link description");
@@ -422,10 +370,6 @@ async fn test_orgmode_links() {
 
     println!("✅ Org Mode links test passed!");
 }
-
-// ============================================================================
-// SECTION 9: CODE BLOCK EXTRACTION TESTS
-// ============================================================================
 
 /// Test 10: Code block extraction
 ///
@@ -447,7 +391,6 @@ async fn test_orgmode_code_blocks() {
         .await
         .expect("Should extract code blocks from Org Mode");
 
-    // Code block content should be present
     assert!(
         result.content.contains("curl") || result.content.contains("bash") || result.content.contains("bash"),
         "Should contain code block content or language specification"
@@ -475,8 +418,6 @@ async fn test_orgmode_code_blocks_multilang() {
         .await
         .expect("Should extract multi-language code blocks");
 
-    // Code blocks should be recognized (language markers or section headers should be present)
-    // Note: Pandoc converts code blocks but may not always include all internal content
     assert_contains_ci(&result.content, "Python", "Should contain Python code reference");
     assert_contains_ci(&result.content, "Bash", "Should contain Bash code reference");
     assert_contains_ci(
@@ -487,10 +428,6 @@ async fn test_orgmode_code_blocks_multilang() {
 
     println!("✅ Org Mode multi-language code blocks test passed!");
 }
-
-// ============================================================================
-// SECTION 10: UNICODE AND SPECIAL CHARACTERS TESTS
-// ============================================================================
 
 /// Test 12: Unicode character handling
 ///
@@ -519,7 +456,6 @@ Emoji: 🎉 ✨ 📚 🌟
         .await
         .expect("Should extract unicode characters from Org Mode");
 
-    // Unicode text should be preserved
     assert!(
         result.content.contains("Café") || result.content.contains("Caf"),
         "Should contain French text"
@@ -533,8 +469,7 @@ Emoji: 🎉 ✨ 📚 🌟
         "Should contain copyright symbol"
     );
 
-    // Should not have corrupted UTF-8
-    let _ = result.content.chars().count(); // Will panic if invalid UTF-8
+    let _ = result.content.chars().count();
 
     println!("✅ Org Mode unicode test passed!");
 }
@@ -562,17 +497,12 @@ Backslash: \ and other symbols: | ~ `
         .await
         .expect("Should extract special characters from Org Mode");
 
-    // Special characters should be preserved or properly converted
     assert_contains_ci(&result.content, "ampersand", "Should contain ampersand text");
     assert_contains_ci(&result.content, "AT&T", "Should preserve ampersands in company names");
     assert_contains_ci(&result.content, "bracket", "Should contain bracket text");
 
     println!("✅ Org Mode special characters test passed!");
 }
-
-// ============================================================================
-// SECTION 11: CONTENT QUALITY VALIDATION TESTS
-// ============================================================================
 
 /// Test 14: Content extraction quality
 ///
@@ -596,14 +526,11 @@ async fn test_orgmode_content_quality() {
 
     let extracted = &result.content;
 
-    // Validate non-empty content
     assert!(!extracted.is_empty(), "Content should not be empty");
 
-    // Validate UTF-8 validity
     let char_count = extracted.chars().count();
     assert!(char_count > 0, "Content should have valid UTF-8 characters");
 
-    // Validate no excessive control characters (except newlines/tabs/carriage returns)
     let control_chars = extracted
         .chars()
         .filter(|c| c.is_control() && *c != '\n' && *c != '\t' && *c != '\r')
@@ -614,7 +541,6 @@ async fn test_orgmode_content_quality() {
         control_chars
     );
 
-    // Validate raw Org Mode markup is removed
     assert!(
         !extracted.contains("#+TITLE:"),
         "Should not contain raw #+TITLE directive"
@@ -654,10 +580,6 @@ Content here.
     println!("✅ Org Mode MIME type test passed!");
 }
 
-// ============================================================================
-// SECTION 12: CONTENT COMPLIANCE TESTS
-// ============================================================================
-
 /// Test 16: Content compliance validation
 ///
 /// Validates:
@@ -680,7 +602,6 @@ async fn test_orgmode_content_compliance() {
 
     let extracted = &result.content;
 
-    // Should not have unprocessed Org Mode markup
     assert!(
         !extracted.contains("#+TITLE"),
         "Should not contain raw #+TITLE directive"
@@ -691,17 +612,13 @@ async fn test_orgmode_content_compliance() {
     );
     assert!(!extracted.contains("#+DATE"), "Should not contain raw #+DATE directive");
 
-    // Should not have unprocessed source block markers
     assert!(
         !extracted.contains("#+BEGIN_") || !extracted.contains("#+END_"),
         "Should have processed BEGIN/END blocks"
     );
 
-    // Should have content (tables with headers and data)
     assert!(extracted.len() > 100, "Should have substantial content extracted");
 
-    // Should have markdown-like structure markers (from Pandoc conversion)
-    // Pandoc converts to markdown which has # for headers
     assert!(
         extracted.contains("#") || extracted.contains("Table"),
         "Should have heading structure or document content"
@@ -712,10 +629,6 @@ async fn test_orgmode_content_compliance() {
     println!("   UTF-8 encoding: ✓");
     println!("   Content structure: ✓");
 }
-
-// ============================================================================
-// SECTION 13: EDGE CASES AND ERROR HANDLING
-// ============================================================================
 
 /// Test 17: Empty document handling
 ///
@@ -731,7 +644,6 @@ async fn test_orgmode_empty_document() {
         .await
         .expect("Should handle empty Org Mode document");
 
-    // Empty document may produce empty or minimal content
     assert_eq!(
         result.mime_type, "text/x-org",
         "MIME type should be set even for empty documents"
@@ -757,7 +669,6 @@ async fn test_orgmode_metadata_only() {
         .await
         .expect("Should handle metadata-only document");
 
-    // Should produce a result without panicking
     assert_eq!(result.mime_type, "text/x-org");
 
     println!("✅ Org Mode metadata-only document test passed!");
@@ -789,17 +700,12 @@ Text at level 6
         .await
         .expect("Should handle deeply nested structure");
 
-    // All levels should be present
     assert_contains_ci(&result.content, "Level 1", "Should contain level 1");
     assert_contains_ci(&result.content, "Level 2", "Should contain level 2");
     assert_contains_ci(&result.content, "Level 6", "Should contain level 6");
 
     println!("✅ Org Mode deep nesting test passed!");
 }
-
-// ============================================================================
-// SECTION 14: INTEGRATION AND COMPREHENSIVE TESTS
-// ============================================================================
 
 /// Test 20: Comprehensive document with mixed features
 ///
@@ -820,7 +726,6 @@ async fn test_orgmode_comprehensive_document() {
         .await
         .expect("Should extract comprehensive document");
 
-    // All major elements should be present from comprehensive.org
     assert_contains_ci(&result.content, "Headers", "Should contain Headers section");
     assert_contains_ci(&result.content, "Paragraphs", "Should contain Paragraphs section");
     assert_contains_ci(&result.content, "Block Quotes", "Should contain Block Quotes section");
@@ -837,10 +742,6 @@ async fn test_orgmode_comprehensive_document() {
     println!("✅ Org Mode comprehensive document test passed!");
     println!("   Content extracted: {} bytes", result.content.len());
 }
-
-// ============================================================================
-// SUMMARY AND STATISTICS
-// ============================================================================
 
 /// Test 21: Extraction statistics and summary
 ///
@@ -866,42 +767,38 @@ async fn test_orgmode_extraction_statistics() {
         }
 
         match std::fs::read(&test_file) {
-            Ok(content) => {
-                match extract_bytes(&content, "text/x-org", &ExtractionConfig::default()).await {
-                    Ok(result) => {
-                        total_files += 1;
-                        total_content_bytes += result.content.len();
-                        total_metadata_fields += result.metadata.additional.len();
+            Ok(content) => match extract_bytes(&content, "text/x-org", &ExtractionConfig::default()).await {
+                Ok(result) => {
+                    total_files += 1;
+                    total_content_bytes += result.content.len();
+                    total_metadata_fields += result.metadata.additional.len();
 
-                        println!("✓ {}", orgmode_file);
-                        println!("  Content: {} bytes", result.content.len());
-                        println!("  Metadata fields: {}", result.metadata.additional.len());
+                    println!("✓ {}", orgmode_file);
+                    println!("  Content: {} bytes", result.content.len());
+                    println!("  Metadata fields: {}", result.metadata.additional.len());
 
-                        // List metadata keys found
-                        if !result.metadata.additional.is_empty() {
-                            let keys: Vec<String> = result.metadata.additional.keys().map(|k| k.clone()).collect();
-                            println!("  Keys: {}", keys.join(", "));
-                        }
-
-                        // Check for major elements
-                        if result.content.contains("#") {
-                            println!("  Structure: ✓ (headings detected)");
-                        }
-                        if result.content.contains("|") {
-                            println!("  Tables: ✓ (detected)");
-                        }
-                        if result.content.contains("-") || result.content.contains("1.") {
-                            println!("  Lists: ✓ (detected)");
-                        }
-
-                        println!();
+                    if !result.metadata.additional.is_empty() {
+                        let keys: Vec<String> = result.metadata.additional.keys().map(|k| k.clone()).collect();
+                        println!("  Keys: {}", keys.join(", "));
                     }
-                    Err(e) => {
-                        println!("✗ {} - Error: {:?}", orgmode_file, e);
-                        println!();
+
+                    if result.content.contains("#") {
+                        println!("  Structure: ✓ (headings detected)");
                     }
+                    if result.content.contains("|") {
+                        println!("  Tables: ✓ (detected)");
+                    }
+                    if result.content.contains("-") || result.content.contains("1.") {
+                        println!("  Lists: ✓ (detected)");
+                    }
+
+                    println!();
                 }
-            }
+                Err(e) => {
+                    println!("✗ {} - Error: {:?}", orgmode_file, e);
+                    println!();
+                }
+            },
             Err(e) => {
                 println!("✗ {} - Read error: {:?}", orgmode_file, e);
                 println!();

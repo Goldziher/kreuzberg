@@ -42,9 +42,6 @@ fn ensure_test_file_exists(path: &Path) -> bool {
     }
 }
 
-// ============================================================================
-// Test 1: Metadata Extraction from meta.xml
-// ============================================================================
 /// Tests extraction of document metadata from ODT meta.xml
 /// Validates: creator, creation date, modification date, document statistics
 #[tokio::test]
@@ -59,23 +56,16 @@ async fn test_odt_metadata_extraction() {
         .await
         .expect("Should extract ODT metadata successfully");
 
-    // Validate basic metadata extraction
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Note: ODT metadata would come from meta.xml parsing
-    // Expected from bold.odt: creator="Martin Linnemann"
     println!("Content extracted: {}", result.content);
     println!("Metadata format: {:?}", result.metadata.format);
 
-    // Verify content contains expected text
     assert!(result.content.contains("bold"), "Content should contain 'bold' text");
 
     println!("✅ ODT metadata extraction test passed!");
 }
 
-// ============================================================================
-// Test 2: Table Extraction with Captions
-// ============================================================================
 /// Tests extraction of tables with captions from ODT
 /// Baseline from Pandoc: simpleTableWithCaption.odt
 /// Expected Pandoc output:
@@ -95,10 +85,7 @@ async fn test_odt_table_with_caption_extraction() {
     let config = ExtractionConfig::default();
     let result = extract_file(&test_file, None, &config).await;
 
-    // If extraction fails or returns no content, the test is still valid
-    // (some formats may have limited ODT support without full Pandoc integration)
     if let Ok(result) = result {
-        // Verify tables are extracted when content is available
         if !result.content.is_empty() {
             let content_lower = result.content.to_lowercase();
             assert!(
@@ -113,9 +100,6 @@ async fn test_odt_table_with_caption_extraction() {
     }
 }
 
-// ============================================================================
-// Test 3: Simple Table Extraction (without caption)
-// ============================================================================
 /// Tests extraction of basic tables without captions
 /// Baseline from Pandoc: simpleTable.odt
 /// Expected: Table with "Content" and "More content" cells
@@ -129,10 +113,7 @@ async fn test_odt_simple_table_extraction() {
     let config = ExtractionConfig::default();
     let result = extract_file(&test_file, None, &config).await;
 
-    // If extraction fails or returns no content, the test is still valid
-    // (some formats may have limited ODT support without full Pandoc integration)
     if let Ok(result) = result {
-        // Verify table data is present when content is available
         if !result.content.is_empty() {
             let content_lower = result.content.to_lowercase();
             assert!(
@@ -146,9 +127,6 @@ async fn test_odt_simple_table_extraction() {
     }
 }
 
-// ============================================================================
-// Test 4: Heading Structure Extraction
-// ============================================================================
 /// Tests extraction of document heading hierarchy
 /// Baseline from Pandoc: headers.odt
 /// Expected:
@@ -169,13 +147,11 @@ async fn test_odt_heading_structure_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Check for heading levels
     assert!(
         result.content.contains("header") || result.content.contains("Header"),
         "Should contain heading text"
     );
 
-    // Check for heading indicators (# in markdown format)
     assert!(
         result.content.contains("#") || result.content.contains("header"),
         "Should indicate heading structure"
@@ -184,9 +160,6 @@ async fn test_odt_heading_structure_extraction() {
     println!("✅ ODT heading structure extraction test passed!");
 }
 
-// ============================================================================
-// Test 5: Bold Formatting Preservation
-// ============================================================================
 /// Tests extraction of bold text formatting
 /// Baseline from Pandoc: bold.odt
 /// Expected Pandoc output: "Here comes **bold** text"
@@ -204,11 +177,9 @@ async fn test_odt_bold_formatting_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify content contains the bold text
     let content = result.content.to_lowercase();
     assert!(content.contains("bold"), "Should contain 'bold' text");
 
-    // Either preserve as markdown bold (**bold**) or plain text
     assert!(
         result.content.contains("**bold**") || result.content.contains("bold"),
         "Should preserve bold text"
@@ -217,9 +188,6 @@ async fn test_odt_bold_formatting_extraction() {
     println!("✅ ODT bold formatting extraction test passed!");
 }
 
-// ============================================================================
-// Test 6: Italic Formatting Preservation
-// ============================================================================
 /// Tests extraction of italic text formatting
 /// Baseline from Pandoc: italic.odt
 /// Expected Pandoc output: "Here comes *italic* text"
@@ -237,11 +205,9 @@ async fn test_odt_italic_formatting_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify content contains the italic text
     let content = result.content.to_lowercase();
     assert!(content.contains("italic"), "Should contain 'italic' text");
 
-    // Either preserve as markdown italic (*italic*) or plain text
     assert!(
         result.content.contains("*italic*") || result.content.contains("italic"),
         "Should preserve italic text"
@@ -250,9 +216,6 @@ async fn test_odt_italic_formatting_extraction() {
     println!("✅ ODT italic formatting extraction test passed!");
 }
 
-// ============================================================================
-// Test 7: Strikeout Formatting Preservation
-// ============================================================================
 /// Tests extraction of strikeout/strikethrough text formatting
 /// Baseline from Pandoc: strikeout.odt
 /// Expected Pandoc output: "Here comes text that was ~~striken out~~."
@@ -270,7 +233,6 @@ async fn test_odt_strikeout_formatting_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify content contains strikeout text
     let content = result.content.to_lowercase();
     assert!(
         content.contains("strike") || content.contains("striken"),
@@ -280,9 +242,6 @@ async fn test_odt_strikeout_formatting_extraction() {
     println!("✅ ODT strikeout formatting extraction test passed!");
 }
 
-// ============================================================================
-// Test 8: Image Extraction with Caption
-// ============================================================================
 /// Tests extraction of images with captions
 /// Baseline from Pandoc: imageWithCaption.odt
 /// Expected: Image reference with caption
@@ -301,10 +260,7 @@ async fn test_odt_image_with_caption_extraction() {
     let config = ExtractionConfig::default();
     let result = extract_file(&test_file, None, &config).await;
 
-    // If extraction fails or returns no content, the test is still valid
-    // (image extraction requires additional setup)
     if let Ok(result) = result {
-        // Check for image references or captions when content is available
         if !result.content.is_empty() {
             let content_lower = result.content.to_lowercase();
             assert!(
@@ -321,9 +277,6 @@ async fn test_odt_image_with_caption_extraction() {
     }
 }
 
-// ============================================================================
-// Test 9: Mathematical Formula Extraction
-// ============================================================================
 /// Tests extraction of mathematical formulas
 /// Baseline from Pandoc: formula.odt
 /// Expected Pandoc output: "$$E = {m \\cdot c^{2}}$$"
@@ -341,7 +294,6 @@ async fn test_odt_formula_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Check for formula indicators
     let content = &result.content;
     assert!(
         content.contains("E") && (content.contains("m") || content.contains("$")),
@@ -351,9 +303,6 @@ async fn test_odt_formula_extraction() {
     println!("✅ ODT formula extraction test passed!");
 }
 
-// ============================================================================
-// Test 10: Footnote Extraction
-// ============================================================================
 /// Tests extraction of footnotes
 /// Baseline from Pandoc: footnote.odt
 /// Expected Pandoc output:
@@ -376,7 +325,6 @@ async fn test_odt_footnote_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify footnote content is present
     let content_lower = result.content.to_lowercase();
     assert!(
         content_lower.contains("footnote") || content_lower.contains("[^"),
@@ -386,9 +334,6 @@ async fn test_odt_footnote_extraction() {
     println!("✅ ODT footnote extraction test passed!");
 }
 
-// ============================================================================
-// Test 11: Endnote Extraction
-// ============================================================================
 /// Tests extraction of endnotes
 /// Baseline from Pandoc: endnote.odt
 /// Expected: Endnote content with reference (similar to footnotes)
@@ -406,7 +351,6 @@ async fn test_odt_endnote_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify endnote content is present
     let content_lower = result.content.to_lowercase();
     assert!(
         content_lower.contains("endnote") || content_lower.contains("[^"),
@@ -416,9 +360,6 @@ async fn test_odt_endnote_extraction() {
     println!("✅ ODT endnote extraction test passed!");
 }
 
-// ============================================================================
-// Test 12: Citation/Reference Extraction
-// ============================================================================
 /// Tests extraction of citations and references
 /// Baseline from Pandoc: citation.odt
 /// Expected Pandoc output: "Some text[@Ex] with a citation."
@@ -436,7 +377,6 @@ async fn test_odt_citation_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify citation content is present
     let content_lower = result.content.to_lowercase();
     assert!(
         content_lower.contains("citation") || content_lower.contains("text") || content_lower.contains("@"),
@@ -446,9 +386,6 @@ async fn test_odt_citation_extraction() {
     println!("✅ ODT citation extraction test passed!");
 }
 
-// ============================================================================
-// Test 13: Unicode and Special Character Handling
-// ============================================================================
 /// Tests extraction of unicode characters and special symbols
 /// Baseline from Pandoc: unicode.odt
 /// Expected: Proper preservation of unicode characters
@@ -467,17 +404,12 @@ async fn test_odt_unicode_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify unicode characters are present
-    // Should contain various unicode symbols
     assert!(result.content.len() > 0, "Should extract unicode content (not empty)");
 
     println!("✅ ODT unicode extraction test passed!");
     println!("   Extracted unicode content: {:?}", result.content);
 }
 
-// ============================================================================
-// Test 14: Inline Code Extraction
-// ============================================================================
 /// Tests extraction of inline code formatting
 /// Baseline from Pandoc: inlinedCode.odt
 /// Expected Pandoc output: "Here comes `inlined code` text and `an another` one."
@@ -495,7 +427,6 @@ async fn test_odt_inlined_code_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify code content is present
     let content_lower = result.content.to_lowercase();
     assert!(
         content_lower.contains("code") || content_lower.contains("`"),
@@ -505,9 +436,6 @@ async fn test_odt_inlined_code_extraction() {
     println!("✅ ODT inline code extraction test passed!");
 }
 
-// ============================================================================
-// Test 15: Paragraph Structure Extraction
-// ============================================================================
 /// Tests extraction of paragraph structure and content
 /// Baseline from Pandoc: paragraph.odt
 /// Expected: Multiple paragraphs separated by blank lines
@@ -525,21 +453,15 @@ async fn test_odt_paragraph_structure_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify multiple paragraphs are extracted
     let content_lower = result.content.to_lowercase();
     assert!(content_lower.contains("paragraph"), "Should contain paragraph text");
 
-    // Count paragraphs (at least 2 should be present)
     let paragraph_count = result.content.split('\n').filter(|l| !l.is_empty()).count();
     assert!(paragraph_count >= 2, "Should extract multiple paragraphs");
 
     println!("✅ ODT paragraph structure extraction test passed!");
     println!("   Extracted {} paragraph segments", paragraph_count);
 }
-
-// ============================================================================
-// Additional Integration Tests
-// ============================================================================
 
 /// Integration test: Verify ODT extraction works with standard API
 #[tokio::test]
@@ -554,7 +476,6 @@ async fn test_odt_extraction_api_integration() {
         .await
         .expect("Should extract via standard API");
 
-    // Verify basic structure
     assert!(!result.content.is_empty(), "Should have content");
     assert_eq!(result.mime_type, "application/vnd.oasis.opendocument.text");
 

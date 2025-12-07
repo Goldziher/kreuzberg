@@ -10,16 +10,14 @@ mod latex_security_tests {
     /// Test for infinite loop in braced content with unterminated braces
     #[test]
     fn test_latex_unterminated_braces_protection() {
-        let latex = r#"\title{"#; // Unterminated brace
-        // Should not hang or crash
+        let latex = r#"\title{"#;
         let (text, _, _) = LatexExtractor::extract_from_latex(latex);
-        assert!(!text.is_empty() || text.is_empty()); // Just shouldn't crash
+        assert!(!text.is_empty() || text.is_empty());
     }
 
     /// Test for deeply nested braces that could cause stack overflow
     #[test]
     fn test_latex_deeply_nested_braces() {
-        // Create deeply nested structure: {{{{{...}}}}}
         let mut latex = String::from("\\title{");
         for _ in 0..200 {
             latex.push('{');
@@ -30,9 +28,7 @@ mod latex_security_tests {
         }
         latex.push('}');
 
-        // Should handle gracefully without stack overflow
         let (text, _, _) = LatexExtractor::extract_from_latex(&latex);
-        // Verification: should complete without crashing
         assert!(text.len() >= 0);
     }
 
@@ -40,9 +36,8 @@ mod latex_security_tests {
     #[test]
     fn test_latex_unclosed_math_mode() {
         let latex = r#"This is $inline math without closing"#;
-        // Should not hang indefinitely
         let (text, _, _) = LatexExtractor::extract_from_latex(latex);
-        assert!(text.contains("inline") || true); // Just verify it completes
+        assert!(text.contains("inline") || true);
     }
 
     /// Test for unclosed display math mode
@@ -50,20 +45,18 @@ mod latex_security_tests {
     fn test_latex_unclosed_display_math() {
         let latex = r#"Display math: $$x^2 + y^2 without closing"#;
         let (text, _, _) = LatexExtractor::extract_from_latex(latex);
-        assert!(text.len() >= 0); // Just verify it completes
+        assert!(text.len() >= 0);
     }
 
     /// Test for extremely long entity names in command parsing
     #[test]
     fn test_latex_long_command_names() {
         let mut latex = String::from("\\");
-        // Add very long command name
         for _ in 0..10000 {
             latex.push('a');
         }
         latex.push_str("{content}");
 
-        // Should not exhaust memory or hang
         let (text, _, _) = LatexExtractor::extract_from_latex(&latex);
         assert!(text.len() >= 0);
     }
@@ -80,7 +73,6 @@ mod latex_security_tests {
             latex.push_str(&format!("\\end{{env{}}}\n", i));
         }
 
-        // Should handle without stack overflow
         let (text, _, _) = LatexExtractor::extract_from_latex(&latex);
         assert!(text.contains("content") || !text.contains("content"));
     }
@@ -94,13 +86,11 @@ mod latex_security_tests {
         }
         latex.push_str("\\end{itemize}\n");
 
-        // Should handle memory properly
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let (text, _, _) = LatexExtractor::extract_from_latex(&latex);
             text.len()
         }));
 
-        // Should not panic or crash
         assert!(result.is_ok());
     }
 }
@@ -110,24 +100,19 @@ mod epub_security_tests {
     /// Test for entity expansion attacks in XHTML content
     #[test]
     fn test_epub_entity_expansion_protection() {
-        // Malicious XHTML with extremely long entity
         let html = "&";
         for _ in 0..10000 {
             html.to_string();
         }
         let malicious = format!("{};", html);
 
-        // Entity validator should reject this if limit is <10000
-        // This is a placeholder for when entity validation is added
         assert!(malicious.len() > 100);
     }
 
     /// Test that EPUB with many chapters doesn't cause DoS
     #[test]
     fn test_epub_chapter_count_limit() {
-        // Placeholder: actual test would create mock EPUB with many chapters
-        // and verify it respects max chapter limit
-        assert!(true); // Placeholder
+        assert!(true);
     }
 }
 
@@ -136,34 +121,28 @@ mod odt_security_tests {
     /// Test for XXE protection in ODT XML parsing
     #[test]
     fn test_odt_xxe_protection() {
-        // Malicious XML with entity references
         let malicious_xml = r#"<?xml version="1.0"?>
             <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
             <root>&xxe;</root>"#;
 
-        // This should be protected by roxmltree and our validation
-        // Placeholder for actual XXE validation test
         assert!(malicious_xml.contains("DOCTYPE"));
     }
 
     /// Test for ZIP bomb detection in ODT files
     #[test]
     fn test_odt_zip_bomb_protection() {
-        // Placeholder: would create ZIP bomb and verify detection
         assert!(true);
     }
 
     /// Test for too many files in ZIP archive
     #[test]
     fn test_odt_too_many_files_protection() {
-        // Placeholder: verify archive with >10k files is rejected
         assert!(true);
     }
 
     /// Test for deeply nested XML causing stack overflow
     #[test]
     fn test_odt_xml_depth_protection() {
-        // Create deeply nested XML structure
         let mut xml = String::from(r#"<?xml version="1.0"?><root>"#);
         for i in 0..500 {
             xml.push_str(&format!("<level{}>", i));
@@ -174,15 +153,12 @@ mod odt_security_tests {
         }
         xml.push_str("</root>");
 
-        // Should handle without stack overflow
-        // Actual test would parse this XML and verify depth is limited
         assert!(xml.len() > 1000);
     }
 
     /// Test for unbounded table cell iteration
     #[test]
     fn test_odt_table_cell_limit() {
-        // Placeholder: create table with >100k cells and verify limit
         assert!(true);
     }
 }
@@ -192,7 +168,6 @@ mod jupyter_security_tests {
     /// Test for too many cells in notebook
     #[test]
     fn test_jupyter_cell_limit() {
-        // Would create JSON with 100k+ cells and verify limit
         let test_json = r#"{"cells":[], "metadata":{}, "nbformat":4, "nbformat_minor":0}"#;
         assert!(test_json.contains("cells"));
     }
@@ -200,21 +175,18 @@ mod jupyter_security_tests {
     /// Test for too many outputs per cell
     #[test]
     fn test_jupyter_output_limit() {
-        // Placeholder: verify output count is limited
         assert!(true);
     }
 
     /// Test for huge MIME type data
     #[test]
     fn test_jupyter_mime_data_size_limit() {
-        // Placeholder: verify large base64 image data is limited
         assert!(true);
     }
 
     /// Test for deeply nested JSON causing stack overflow
     #[test]
     fn test_jupyter_json_depth_protection() {
-        // Create deeply nested JSON
         let mut json = String::from("{");
         for i in 0..500 {
             json.push_str(&format!("\"a{}\":{{", i));
@@ -225,14 +197,12 @@ mod jupyter_security_tests {
         }
         json.push('}');
 
-        // Should handle without stack overflow
         assert!(json.len() > 1000);
     }
 
     /// Test for unbounded traceback lines
     #[test]
     fn test_jupyter_traceback_line_limit() {
-        // Placeholder: verify traceback lines are limited to max
         assert!(true);
     }
 }
@@ -247,7 +217,6 @@ mod rst_security_tests {
             rst.push_str(&format!("Line {}\n", i));
         }
 
-        // Should handle memory properly
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| rst.len()));
 
         assert!(result.is_ok());
@@ -261,7 +230,6 @@ mod rst_security_tests {
             rst.push_str(&format!("    line {}\n", i));
         }
 
-        // Should not exhaust memory
         assert!(rst.len() > 1000);
     }
 
@@ -290,7 +258,6 @@ mod rtf_security_tests {
         }
         rtf.push_str(" text}");
 
-        // Should handle without crashing
         assert!(rtf.len() > 1000);
     }
 
@@ -298,7 +265,6 @@ mod rtf_security_tests {
     #[test]
     fn test_rtf_huge_numeric_params() {
         let rtf = format!("{{\\rtf1 \\fs{}}", "9".repeat(100));
-        // Should handle without integer overflow
         assert!(rtf.len() > 100);
     }
 
@@ -320,7 +286,6 @@ mod rtf_security_tests {
     /// Test for image metadata extraction limits
     #[test]
     fn test_rtf_image_metadata_depth() {
-        // Create RTF with deeply nested picture group
         let mut rtf = String::from("{\\rtf1 {\\pict");
         for i in 0..500 {
             rtf.push('{');

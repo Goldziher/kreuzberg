@@ -73,7 +73,6 @@ public final class ImageExtractionConfig {
     private int maxDpi = 600;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder extractImages(boolean extractImages) {

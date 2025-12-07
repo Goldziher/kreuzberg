@@ -7,7 +7,6 @@ use std::fs;
 use std::os::raw::c_char;
 use tempfile::TempDir;
 
-// External FFI functions
 unsafe extern "C" {
     fn kreuzberg_load_extraction_config_from_file(file_path: *const c_char) -> *mut c_char;
     fn kreuzberg_free_string(s: *mut c_char);
@@ -56,7 +55,6 @@ max_overlap = 100
         let json_str = c_str_to_string(result).expect("Should have valid JSON");
         kreuzberg_free_string(result);
 
-        // Verify the JSON contains expected fields
         let json_value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert!(json_value.get("ocr").is_some(), "Should have OCR config");
         assert!(json_value.get("chunking").is_some(), "Should have chunking config");
@@ -89,7 +87,6 @@ chunking:
         let json_str = c_str_to_string(result).expect("Should have valid JSON");
         kreuzberg_free_string(result);
 
-        // Verify the JSON contains expected fields
         let json_value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert!(json_value.get("ocr").is_some(), "Should have OCR config");
         assert!(json_value.get("chunking").is_some(), "Should have chunking config");
@@ -126,7 +123,6 @@ fn test_load_config_from_json_file_succeeds() {
         let json_str = c_str_to_string(result).expect("Should have valid JSON");
         kreuzberg_free_string(result);
 
-        // Verify the JSON is valid
         let json_value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert!(json_value.get("ocr").is_some(), "Should have OCR config");
         assert!(json_value.get("chunking").is_some(), "Should have chunking config");
@@ -240,13 +236,11 @@ fn test_load_config_from_malformed_json_fails_gracefully() {
 #[test]
 fn test_load_config_with_invalid_utf8_fails_gracefully() {
     unsafe {
-        // Create a CString with invalid UTF-8 bytes
         let invalid_bytes = vec![0xFF, 0xFE, 0xFD];
         let invalid_cstr = CString::new(invalid_bytes).unwrap_or_else(|_| CString::new("").unwrap());
 
         let result = kreuzberg_load_extraction_config_from_file(invalid_cstr.as_ptr());
 
-        // Should fail gracefully (null result)
         assert!(result.is_null(), "Result should be null for invalid UTF-8");
 
         let error = get_last_error();
@@ -266,13 +260,11 @@ fn test_load_config_from_empty_file_uses_defaults() {
         let path_cstr = CString::new(config_path.to_str().unwrap()).unwrap();
         let result = kreuzberg_load_extraction_config_from_file(path_cstr.as_ptr());
 
-        // Empty file should use defaults
         assert!(!result.is_null(), "Result should not be null for empty file");
 
         let json_str = c_str_to_string(result).expect("Should have valid JSON");
         kreuzberg_free_string(result);
 
-        // Verify it's valid JSON (default config)
         let json_value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert!(json_value.is_object(), "Should be a JSON object");
     }
@@ -283,7 +275,6 @@ fn test_load_config_from_empty_file_uses_defaults() {
 fn test_config_format_detection_from_extension() {
     let temp_dir = TempDir::new().unwrap();
 
-    // Test .yml extension
     let yml_path = temp_dir.path().join("config.yml");
     let yaml_content = "ocr:\n  enabled: true";
     fs::write(&yml_path, yaml_content).unwrap();
@@ -295,7 +286,6 @@ fn test_config_format_detection_from_extension() {
         kreuzberg_free_string(result);
     }
 
-    // Test .json extension
     let json_path = temp_dir.path().join("config.json");
     let json_content = r#"{"ocr": {"enabled": true}}"#;
     fs::write(&json_path, json_content).unwrap();

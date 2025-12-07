@@ -66,7 +66,6 @@ public final class Kreuzberg {
     private static final Map<String, CallbackHandle> OCR_CALLBACKS = new ConcurrentHashMap<>();
 
     private Kreuzberg() {
-        // Private constructor to prevent instantiation
     }
 
     public static ExtractionResult extractFile(String path) throws IOException, KreuzbergException {
@@ -246,7 +245,6 @@ public final class Kreuzberg {
                 if (error != null && !error.isBlank()) {
                     throw new KreuzbergException("Failed to discover config: " + error);
                 }
-                // No config found, return null
                 return null;
             }
             try {
@@ -1078,7 +1076,6 @@ public final class Kreuzberg {
             try {
                 handle.arena().close();
             } catch (Exception ignored) {
-                // Ignore errors while closing arenas on cleanup
             }
         }
     }

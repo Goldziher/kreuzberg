@@ -255,7 +255,6 @@ pub async fn convert_office_doc(
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
-        // Build detailed error message with both stdout and stderr
         let mut error_details = format!(
             "LibreOffice process failed with return code {}",
             output.status.code().unwrap_or(-1)

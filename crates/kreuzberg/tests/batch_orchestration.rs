@@ -19,6 +19,18 @@ use kreuzberg::core::extractor::extract_file_sync;
 
 mod helpers;
 
+fn trim_trailing_newlines(value: &str) -> &str {
+    value.trim_end_matches(|c| c == '\n' || c == '\r')
+}
+
+fn assert_text_content(actual: &str, expected: &str) {
+    assert_eq!(
+        trim_trailing_newlines(actual),
+        expected,
+        "Content mismatch after trimming trailing newlines"
+    );
+}
+
 /// Test that batch extraction processes documents in parallel.
 ///
 /// Validates:
@@ -305,7 +317,8 @@ async fn test_batch_bytes_parallel_processing() {
     assert_eq!(results.len(), 30);
 
     for (i, result) in results.iter().enumerate() {
-        assert_eq!(result.content, format!("Test content number {}", i));
+        let expected = format!("Test content number {}", i);
+        assert_text_content(&result.content, &expected);
     }
 
     println!("Batch processed 30 byte arrays in {:?}", duration);
@@ -330,9 +343,9 @@ async fn test_batch_bytes_mixed_valid_invalid() {
     let results = results.unwrap();
     assert_eq!(results.len(), 5);
 
-    assert_eq!(results[0].content, "valid content 1");
-    assert_eq!(results[2].content, "valid content 2");
-    assert_eq!(results[4].content, "valid content 3");
+    assert_text_content(&results[0].content, "valid content 1");
+    assert_text_content(&results[2].content, "valid content 2");
+    assert_text_content(&results[4].content, "valid content 3");
 
     assert!(results[1].metadata.error.is_some());
     assert!(results[3].metadata.error.is_some());
@@ -534,7 +547,8 @@ async fn test_batch_accuracy_under_load() {
     for (i, result) in results.iter().enumerate() {
         let expected = format!("Document number {} with unique content", i);
         assert_eq!(
-            result.content, expected,
+            trim_trailing_newlines(&result.content),
+            expected,
             "Document {} content mismatch - possible cross-contamination",
             i
         );

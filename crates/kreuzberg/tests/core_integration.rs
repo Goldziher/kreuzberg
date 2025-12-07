@@ -11,6 +11,18 @@ use std::fs::{self, File};
 use std::io::Write;
 use tempfile::tempdir;
 
+fn trim_trailing_newlines(value: &str) -> &str {
+    value.trim_end_matches(|c| c == '\n' || c == '\r')
+}
+
+fn assert_text_content(actual: &str, expected: &str) {
+    assert_eq!(
+        trim_trailing_newlines(actual),
+        expected,
+        "Content mismatch after trimming trailing newlines"
+    );
+}
+
 /// Test basic file extraction with MIME detection.
 #[tokio::test]
 async fn test_extract_file_basic() {
@@ -25,7 +37,7 @@ async fn test_extract_file_basic() {
     assert!(result.is_ok(), "Basic file extraction should succeed");
     let result = result.unwrap();
 
-    assert_eq!(result.content, "Hello, Kreuzberg!");
+    assert_text_content(&result.content, "Hello, Kreuzberg!");
     assert_eq!(result.mime_type, "text/plain");
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");
@@ -181,7 +193,12 @@ async fn test_batch_extract_bytes_concurrency() {
 
     for (i, result) in results.iter().enumerate() {
         let expected_content = format!("content {}", i + 1);
-        assert_eq!(result.content, expected_content, "Content mismatch for item {}", i);
+        assert_eq!(
+            trim_trailing_newlines(&result.content),
+            expected_content,
+            "Content mismatch for item {}",
+            i
+        );
         assert_eq!(result.mime_type, "text/plain", "MIME type should be text/plain");
         assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
         assert!(result.detected_languages.is_none(), "Language detection not enabled");
@@ -201,13 +218,13 @@ fn test_sync_wrappers() {
     let result = extract_file_sync(&file_path, None, &config);
     assert!(result.is_ok(), "Sync file extraction should succeed");
     let extraction = result.unwrap();
-    assert_eq!(extraction.content, "sync content");
+    assert_text_content(&extraction.content, "sync content");
     assert!(extraction.chunks.is_none(), "Chunks should be None");
 
     let result = extract_bytes_sync(b"test bytes", "text/plain", &config);
     assert!(result.is_ok(), "Sync bytes extraction should succeed");
     let extraction = result.unwrap();
-    assert_eq!(extraction.content, "test bytes");
+    assert_text_content(&extraction.content, "test bytes");
     assert!(extraction.chunks.is_none(), "Chunks should be None");
 
     let paths = vec![file_path];
@@ -215,7 +232,7 @@ fn test_sync_wrappers() {
     assert!(results.is_ok(), "Batch sync file should succeed");
     let results = results.unwrap();
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].content, "sync content");
+    assert_text_content(&results[0].content, "sync content");
     assert!(results[0].chunks.is_none(), "Chunks should be None");
 
     let contents = vec![(b"test".as_slice(), "text/plain")];
@@ -223,7 +240,7 @@ fn test_sync_wrappers() {
     assert!(results.is_ok(), "Batch bytes sync should succeed");
     let results = results.unwrap();
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].content, "test");
+    assert_text_content(&results[0].content, "test");
     assert!(results[0].chunks.is_none(), "Chunks should be None");
 }
 
@@ -415,7 +432,7 @@ async fn test_pipeline_execution() {
     assert!(result.is_ok(), "Pipeline execution should succeed");
 
     let result = result.unwrap();
-    assert_eq!(result.content, "pipeline content");
+    assert_text_content(&result.content, "pipeline content");
     assert_eq!(result.mime_type, "text/plain");
     assert!(result.chunks.is_none(), "Chunks should be None without chunking config");
     assert!(result.detected_languages.is_none(), "Language detection not enabled");

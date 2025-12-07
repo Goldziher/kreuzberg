@@ -176,7 +176,6 @@ async def test_init_easyocr_missing_dependency() -> None:
 
 @pytest.mark.anyio
 async def test_init_easyocr_imports_when_not_initialized(mocker: MockerFixture) -> None:
-    # Simulate no imports yet
     with patch("kreuzberg._ocr._easyocr.HAS_EASYOCR", False), patch("kreuzberg._ocr._easyocr.easyocr", None), patch(
         "kreuzberg._ocr._easyocr.torch", None
     ):

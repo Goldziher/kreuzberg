@@ -290,7 +290,6 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
         return;
     }
 
-    // Fix install_name on macOS to use @rpath
     if target.contains("darwin") {
         fix_macos_install_name(&src_lib, &runtime_lib_name);
         codesign_if_needed(target, &src_lib);
@@ -299,10 +298,7 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
     let crate_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let workspace_root = crate_dir.parent().unwrap().parent().unwrap();
 
-    // Copy to target directory for CLI binary
     if let Ok(profile) = env::var("PROFILE") {
-        // When building with --target, the output goes to target/$TARGET/$PROFILE/
-        // When building without --target, the output goes to target/$PROFILE/
         let target_dir = if let Ok(cargo_target) = env::var("TARGET") {
             workspace_root.join("target").join(cargo_target).join(profile)
         } else {
@@ -442,7 +438,6 @@ fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
 fn fix_macos_install_name(lib_path: &Path, lib_name: &str) {
     use std::process::Command;
 
-    // Change install_name from ./libpdfium.dylib to @rpath/libpdfium.dylib
     let new_install_name = format!("@rpath/{}", lib_name);
 
     tracing::debug!("Fixing install_name for {} to {}", lib_path.display(), new_install_name);

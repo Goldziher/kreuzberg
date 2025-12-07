@@ -7,15 +7,6 @@ mod build_tesseract {
     use std::fs;
     use std::path::{Path, PathBuf};
 
-    // Windows MAX_PATH (260 character) workarounds:
-    // 1. Use temp directory for cache instead of deeply nested gem paths in Ruby on Windows
-    //    Ruby on Windows creates paths like: C:\hostedtoolcache\windows\Ruby\x.y.z\x64\lib\ruby\gems\...
-    // 2. Use NMake generator instead of Visual Studio to avoid generator-specific path nesting
-    // 3. Disable CMAKE_CL_SHOWINCLUDES_PREFIX to reduce file tracker log file paths
-    // 4. Disable incremental linking (/INCREMENTAL:NO) to avoid .ilk file path issues
-    // 5. Support TESSERACT_RS_CACHE_DIR environment variable for custom short paths
-
-    // Use specific release versions for stability
     const LEPTONICA_VERSION: &str = "1.86.0";
     const TESSERACT_VERSION: &str = "5.5.1";
 
@@ -36,8 +27,6 @@ mod build_tesseract {
     fn workspace_cache_dir_from_out_dir() -> Option<PathBuf> {
         let out_dir = env::var_os("OUT_DIR")?;
         let mut path = PathBuf::from(out_dir);
-        // OUT_DIR looks like target/<triple>/<profile>/build/<crate-hash>/out
-        // Pop until we get back to target/<triple>
         for _ in 0..4 {
             if !path.pop() {
                 return None;
@@ -52,8 +41,6 @@ mod build_tesseract {
         }
 
         if cfg!(target_os = "windows") {
-            // Avoid deeply nested OUT_DIR paths (e.g., Ruby gems) that blow past MAX_PATH.
-            // Always prefer a short, deterministic cache root.
             return PathBuf::from("C:\\tess");
         }
 
@@ -175,7 +162,6 @@ mod build_tesseract {
             let leptonica_src_dir = leptonica_dir.join("src");
             let environ_h_path = leptonica_src_dir.join("environ.h");
 
-            // Only modify environ.h if it exists
             if environ_h_path.exists() {
                 let environ_h = std::fs::read_to_string(&environ_h_path)
                     .expect("Failed to read environ.h")
@@ -201,7 +187,6 @@ mod build_tesseract {
                 }
             }
 
-            // Only modify makefile.static if it exists
             if makefile_static_path.exists() {
                 let makefile_static = std::fs::read_to_string(&makefile_static_path)
                     .expect("Failed to read makefile.static")
@@ -212,21 +197,16 @@ mod build_tesseract {
                 std::fs::write(makefile_static_path, makefile_static).expect("Failed to write makefile.static");
             }
 
-            // Configure build tools for Windows
             if windows_target {
                 if mingw_target {
                     leptonica_config.generator("MinGW Makefiles");
-                    // Prevent MSYS argument conversion from touching MSVC-style flags if they sneak in
                     leptonica_config.define("MSYS2_ARG_CONV_EXCL", "/MD;/MDd");
                 } else if msvc_target && env::var("VSINSTALLDIR").is_ok() {
-                    // Use NMake on Windows to avoid Visual Studio generator path length issues
                     leptonica_config.generator("NMake Makefiles");
                 }
-                // Disable multi-tool task to reduce intermediate path depth
                 leptonica_config.define("CMAKE_CL_SHOWINCLUDES_PREFIX", "");
             }
 
-            // Only use sccache if not in CI
             if env::var("CI").is_err() && env::var("RUSTC_WRAPPER").unwrap_or_default() == "sccache" {
                 leptonica_config.env("CC", "sccache cc").env("CXX", "sccache c++");
             }
@@ -250,19 +230,16 @@ mod build_tesseract {
                 .define("ENABLE_LTO", "OFF")
                 .define("CMAKE_INSTALL_PREFIX", &leptonica_install_dir);
 
-            // Windows-specific defines
             if windows_target {
                 if msvc_target {
                     leptonica_config
                         .define("CMAKE_C_FLAGS_RELEASE", "/MD /O2")
                         .define("CMAKE_C_FLAGS_DEBUG", "/MDd /Od");
                 } else if mingw_target {
-                    // MinGW/GNU toolchains reject MSVC-style flags, use GCC syntax
                     leptonica_config
                         .define("CMAKE_C_FLAGS_RELEASE", "-O2 -DNDEBUG")
                         .define("CMAKE_C_FLAGS_DEBUG", "-O0 -g");
                 } else {
-                    // Fallback for other Windows toolchains
                     leptonica_config
                         .define("CMAKE_C_FLAGS_RELEASE", "-O2")
                         .define("CMAKE_C_FLAGS_DEBUG", "-O0 -g");
@@ -280,8 +257,6 @@ mod build_tesseract {
         let leptonica_lib_dir = leptonica_install_dir.join("lib");
         let tesseract_install_dir = out_dir.join("tesseract");
         let tesseract_cache_dir = cache_dir.join("tesseract");
-        // TESSDATA_PREFIX should point to parent directory of tessdata, not tessdata itself
-        // Tesseract will append the platform-specific path separator and 'tessdata' directory internally
         let tessdata_prefix = project_dir.clone();
         let tessdata_prefix_cmake = normalize_cmake_path(&tessdata_prefix);
 
@@ -293,22 +268,16 @@ mod build_tesseract {
             std::fs::write(&cmakelists_path, cmakelists).expect("Failed to write CMakeLists.txt");
 
             let mut tesseract_config = Config::new(&tesseract_dir);
-            // Configure build tools for Windows
             if windows_target {
                 if mingw_target {
-                    // Explicitly pick MinGW generator to avoid MSVC flags like /MD being added
                     tesseract_config.generator("MinGW Makefiles");
-                    // Prevent MSYS from path-converting /MD flags that may sneak in
                     tesseract_config.define("MSYS2_ARG_CONV_EXCL", "/MD;/MDd");
                 } else if msvc_target && env::var("VSINSTALLDIR").is_ok() {
-                    // Use NMake on MSVC to avoid Visual Studio generator path length issues
                     tesseract_config.generator("NMake Makefiles");
                 }
-                // Disable multi-tool task to reduce intermediate path depth
                 tesseract_config.define("CMAKE_CL_SHOWINCLUDES_PREFIX", "");
             }
 
-            // Only use sccache if not in CI
             if env::var("CI").is_err() && env::var("RUSTC_WRAPPER").unwrap_or_default() == "sccache" {
                 tesseract_config.env("CC", "sccache cc").env("CXX", "sccache c++");
             }
@@ -371,7 +340,6 @@ mod build_tesseract {
             "cargo:rustc-link-search=native={}",
             tesseract_install_dir.join("lib").display()
         );
-        // Don't emit link directives here - let build_or_use_cached handle it
 
         set_os_specific_link_flags();
 
@@ -399,14 +367,11 @@ mod build_tesseract {
             cmake_cxx_flags.push_str("-std=c++17 ");
         } else if target_linux {
             cmake_cxx_flags.push_str("-std=c++17 ");
-            // Check if we're on a system using clang
             if target_musl || env::var("CC").map(|cc| cc.contains("clang")).unwrap_or(false) {
                 cmake_cxx_flags.push_str("-stdlib=libc++ ");
-                // Use CXX env var if set, otherwise derive from target for cross-compilation
                 let cxx_compiler = env::var("CXX").unwrap_or_else(|_| {
                     if let Ok(target) = env::var("TARGET") {
                         if target != env::var("HOST").unwrap_or_default() {
-                            // Cross-compiling - use target-prefixed compiler
                             format!("{}-clang++", target)
                         } else {
                             "clang++".to_string()
@@ -417,11 +382,9 @@ mod build_tesseract {
                 });
                 additional_defines.push(("CMAKE_CXX_COMPILER".to_string(), cxx_compiler));
             } else {
-                // Assume GCC - use CXX env var if set, otherwise derive from target for cross-compilation
                 let cxx_compiler = env::var("CXX").unwrap_or_else(|_| {
                     if let Ok(target) = env::var("TARGET") {
                         if target != env::var("HOST").unwrap_or_default() {
-                            // Cross-compiling - use target-prefixed compiler
                             format!("{}-g++", target)
                         } else {
                             "g++".to_string()
@@ -434,8 +397,6 @@ mod build_tesseract {
             }
         } else if target_windows {
             if target_msvc {
-                // Windows-specific MSVC flags
-                // Add TESSERACT_STATIC to prevent __declspec(dllimport) on API functions
                 cmake_cxx_flags.push_str("/EHsc /MP /std:c++17 /DTESSERACT_STATIC ");
                 additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "/MD /O2".to_string()));
                 additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "/MDd /Od".to_string()));
@@ -447,16 +408,11 @@ mod build_tesseract {
                     "CMAKE_CXX_FLAGS_DEBUG".to_string(),
                     "/MDd /Od /DTESSERACT_STATIC".to_string(),
                 ));
-                // Do NOT set CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS for static libraries
-                // This flag causes CMake to export symbols for DLL linkage which creates
-                // __imp_ prefixed symbols that the linker can't find in static libraries
                 additional_defines.push(("CMAKE_MSVC_RUNTIME_LIBRARY".to_string(), "MultiThreadedDLL".to_string()));
             } else if target_mingw {
-                // MinGW/GNU toolchains reject MSVC-style flags, use GCC syntax
                 cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
                 additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "-O2 -DNDEBUG".to_string()));
                 additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "-O0 -g".to_string()));
-                // Force CMake to pick the MinGW GCC toolchain instead of defaulting to MSVC
                 additional_defines.push(("CMAKE_C_COMPILER".to_string(), "gcc".to_string()));
                 additional_defines.push(("CMAKE_CXX_COMPILER".to_string(), "g++".to_string()));
                 additional_defines.push(("CMAKE_SYSTEM_NAME".to_string(), "Windows".to_string()));
@@ -469,7 +425,6 @@ mod build_tesseract {
                     "-O0 -g -DTESSERACT_STATIC".to_string(),
                 ));
             } else {
-                // Fallback for other Windows toolchains
                 cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
                 additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "-O2 -DNDEBUG".to_string()));
                 additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "-O0 -g".to_string()));
@@ -484,16 +439,11 @@ mod build_tesseract {
             }
         }
 
-        // Common flags and defines for all platforms
         cmake_cxx_flags.push_str("-DUSE_STD_NAMESPACE ");
         additional_defines.push(("CMAKE_POSITION_INDEPENDENT_CODE".to_string(), "ON".to_string()));
 
-        // Windows-specific path length mitigation
         if target_windows && target_msvc {
-            // MSVC-specific flags to reduce intermediate path depth
-            // /d2Zi+ uses shorter symbol names, /permissive- speeds up and uses less space
             cmake_cxx_flags.push_str("/permissive- ");
-            // Disable incremental linking which creates longer paths
             additional_defines.push(("CMAKE_EXE_LINKER_FLAGS".to_string(), "/INCREMENTAL:NO".to_string()));
             additional_defines.push(("CMAKE_SHARED_LINKER_FLAGS".to_string(), "/INCREMENTAL:NO".to_string()));
             additional_defines.push(("CMAKE_MODULE_LINKER_FLAGS".to_string(), "/INCREMENTAL:NO".to_string()));
@@ -517,8 +467,6 @@ mod build_tesseract {
                 println!("cargo:rustc-link-lib=c++");
             } else {
                 println!("cargo:rustc-link-lib=stdc++");
-                // GCC < 9 requires explicit linking of stdc++fs for filesystem support
-                // It's safe to link even if not needed (GCC 9+ has it built-in)
                 println!("cargo:rustc-link-lib=stdc++fs");
             }
             println!("cargo:rustc-link-lib=pthread");
@@ -528,7 +476,6 @@ mod build_tesseract {
             if target_mingw {
                 println!("cargo:rustc-link-lib=stdc++");
             }
-            // Windows requires explicit linking of system libraries for static tesseract
             println!("cargo:rustc-link-lib=user32");
             println!("cargo:rustc-link-lib=gdi32");
             println!("cargo:rustc-link-lib=ws2_32");
@@ -573,13 +520,11 @@ mod build_tesseract {
 
         let mut archive = ZipArchive::new(fs::File::open(&temp_file).unwrap()).unwrap();
 
-        // Extract files, ignoring the top-level directory
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
             let file_path = file.mangled_name();
             let file_path = file_path.to_str().unwrap();
 
-            // Skip the top-level directory
             let path = Path::new(file_path);
             let path = path.strip_prefix(path.components().next().unwrap()).unwrap();
 
@@ -654,7 +599,6 @@ mod build_tesseract {
         let is_windows = target_triple.contains("windows");
         let is_windows_gnu = is_windows && target_env == "gnu";
 
-        // Expected library name for caching
         let lib_name = if is_windows && !is_windows_gnu {
             format!("{}.lib", name)
         } else {
@@ -665,8 +609,6 @@ mod build_tesseract {
         let marker_path = cache_dir.join(format!("{}.target", name));
         let out_path = install_dir.join("lib").join(&lib_name);
 
-        // For Windows, check multiple possible library names
-        // Include both release and debug variants (debug has 'd' suffix)
         let possible_lib_names: Vec<String> = if is_windows {
             let mut base = match name {
                 "leptonica" => vec![
@@ -675,7 +617,6 @@ mod build_tesseract {
                     "leptonica-static.lib".to_string(),
                     "leptonica-1.84.1.lib".to_string(),
                     "leptonica-1.86.0.lib".to_string(),
-                    // Debug variants
                     "leptonicad.lib".to_string(),
                     "libleptonica_d.lib".to_string(),
                     "leptonica-1.84.1d.lib".to_string(),
@@ -688,7 +629,6 @@ mod build_tesseract {
                     "tesseract53.lib".to_string(),
                     "tesseract54.lib".to_string(),
                     "tesseract55.lib".to_string(),
-                    // Debug variants
                     "tesseractd.lib".to_string(),
                     "libtesseract_d.lib".to_string(),
                     "tesseract53d.lib".to_string(),
@@ -729,7 +669,6 @@ mod build_tesseract {
             install_dir.join("lib").join("tesseract"),
         ];
 
-        // Determine which library name to use for linking
         let cache_valid = cached_path.exists()
             && {
                 match fs::read_to_string(&marker_path) {
@@ -742,7 +681,6 @@ mod build_tesseract {
                                 cached_target.trim(),
                                 target_triple
                             );
-                            // Delete invalid cached library to force rebuild
                             let _ = fs::remove_file(&cached_path);
                             let _ = fs::remove_file(&marker_path);
                         }
@@ -753,7 +691,6 @@ mod build_tesseract {
                             "cargo:warning=Cached {} library missing target marker, rebuilding",
                             name
                         );
-                        // Delete cached library without marker to force rebuild
                         let _ = fs::remove_file(&cached_path);
                         false
                     }
@@ -764,23 +701,19 @@ mod build_tesseract {
             println!("cargo:warning=Using cached {} library for {}", name, target_triple);
             if let Err(e) = fs::copy(&cached_path, &out_path) {
                 println!("cargo:warning=Failed to copy cached library: {}", e);
-                // If cache copy fails, rebuild
                 build_fn();
             }
-            // Use generic name for cached libraries
             name.to_string()
         } else {
             println!("Building {} library", name);
             build_fn();
 
-            // Look for the library with various possible names
             let mut found_lib_name = None;
             'search: for lib_name in &possible_lib_names {
                 for dir in &candidate_lib_dirs {
                     let lib_path = dir.join(lib_name);
                     if lib_path.exists() {
                         println!("cargo:warning=Found {} library at: {}", name, lib_path.display());
-                        // Extract the library name without extension for linking
                         let link_name = if lib_name.ends_with(".lib") {
                             lib_name.strip_suffix(".lib").unwrap_or(lib_name).to_string()
                         } else if lib_name.ends_with(".a") {
@@ -799,7 +732,6 @@ mod build_tesseract {
             }
 
             if let Some((lib_path, link_name)) = found_lib_name {
-                // Copy to expected location for caching
                 if out_path.exists() {
                     println!(
                         "cargo:warning=Library already available at expected location: {}",
@@ -808,16 +740,12 @@ mod build_tesseract {
                 } else if let Err(e) = fs::copy(&lib_path, &out_path) {
                     println!("cargo:warning=Failed to copy library to standard location: {}", e);
                 }
-                // Cache the library
                 if let Err(e) = fs::copy(&lib_path, &cached_path) {
                     println!("cargo:warning=Failed to cache library: {}", e);
+                } else if let Err(e) = fs::write(&marker_path, &target_triple) {
+                    println!("cargo:warning=Failed to write cache marker: {}", e);
                 } else {
-                    // Write target marker file
-                    if let Err(e) = fs::write(&marker_path, &target_triple) {
-                        println!("cargo:warning=Failed to write cache marker: {}", e);
-                    } else {
-                        println!("cargo:warning=Cached {} library for {}", name, target_triple);
-                    }
+                    println!("cargo:warning=Cached {} library for {}", name, target_triple);
                 }
                 link_name
             } else {
@@ -836,17 +764,14 @@ mod build_tesseract {
                         println!("cargo:warning=Directory not accessible: {}", dir.display());
                     }
                 }
-                // Fallback to generic name
                 name.to_string()
             }
         };
 
-        // Set up linking using the determined library name
         for dir in candidate_lib_dirs.iter().filter(|d| d.exists()) {
             println!("cargo:rustc-link-search=native={}", dir.display());
         }
 
-        // Determine link type based on features
         #[cfg(feature = "dynamic-linking")]
         let link_type = "dylib";
         #[cfg(not(feature = "dynamic-linking"))]
@@ -868,7 +793,6 @@ fn main() {
 
     #[cfg(all(feature = "dynamic-linking", not(feature = "build-tesseract")))]
     {
-        // Dynamic linking with system libraries - no build needed
         println!("cargo:warning=Using dynamic linking with system-installed Tesseract libraries");
         println!("cargo:rustc-link-lib=dylib=tesseract");
         println!("cargo:rustc-link-lib=dylib=leptonica");

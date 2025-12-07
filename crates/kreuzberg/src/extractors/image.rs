@@ -39,7 +39,6 @@ impl ImageExtractor {
             registry.get(&ocr_config.backend)?
         };
 
-        // Process image using the backend - returns full ExtractionResult with tables/metadata
         backend.process_image(content, ocr_config).await
     }
 }
@@ -100,13 +99,11 @@ impl DocumentExtractor for ImageExtractor {
             exif: extraction_metadata.exif_data,
         };
 
-        // If OCR is enabled, use OCR result (which includes tables and OCR-specific metadata)
         if config.ocr.is_some() {
             #[cfg(feature = "ocr")]
             {
                 let mut ocr_result = self.extract_with_ocr(content, config).await?;
 
-                // Add image metadata to the OCR result
                 ocr_result.metadata.format = Some(crate::types::FormatMetadata::Image(image_metadata));
                 ocr_result.mime_type = mime_type.to_string();
 
@@ -134,7 +131,6 @@ impl DocumentExtractor for ImageExtractor {
             }
         }
 
-        // No OCR - just return image dimensions
         Ok(ExtractionResult {
             content: format!(
                 "Image: {} {}x{}",

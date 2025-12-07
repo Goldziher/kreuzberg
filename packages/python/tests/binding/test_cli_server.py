@@ -31,7 +31,6 @@ def test_serve_command_help() -> None:
             check=False,
         )
     except subprocess.TimeoutExpired as e:
-        # If subprocess.run times out, ensure process is cleaned up
         stdout = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout if e.stdout else "")
         raise AssertionError(f"serve --help command timed out after 10 seconds. Output: {stdout}") from e
 
@@ -54,7 +53,6 @@ def test_mcp_command_help() -> None:
             check=False,
         )
     except subprocess.TimeoutExpired as e:
-        # If subprocess.run times out, ensure process is cleaned up
         stdout = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout if e.stdout else "")
         raise AssertionError(f"mcp --help command timed out after 10 seconds. Output: {stdout}") from e
 
@@ -97,14 +95,12 @@ def test_serve_command_starts_and_responds() -> None:
         assert info_data["rust_backend"] is True
 
     finally:
-        # Ensure clean shutdown: terminate gracefully first, then force kill if needed
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
             with contextlib.suppress(subprocess.TimeoutExpired):
-                # Last resort: if it still hangs, leave it (OS will clean up)
                 process.wait(timeout=2)
 
 
@@ -155,14 +151,12 @@ language = "eng"
         assert response.status_code == 200
 
     finally:
-        # Ensure clean shutdown: terminate gracefully first, then force kill if needed
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
             with contextlib.suppress(subprocess.TimeoutExpired):
-                # Last resort: if it still hangs, leave it (OS will clean up)
                 process.wait(timeout=2)
 
         config_path.unlink(missing_ok=True)
@@ -201,12 +195,10 @@ def test_serve_command_extract_endpoint(tmp_path: Path) -> None:
         assert "Hello, Kreuzberg API!" in results[0]["content"]
 
     finally:
-        # Ensure clean shutdown: terminate gracefully first, then force kill if needed
         process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
             with contextlib.suppress(subprocess.TimeoutExpired):
-                # Last resort: if it still hangs, leave it (OS will clean up)
                 process.wait(timeout=2)

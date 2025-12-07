@@ -403,16 +403,12 @@ impl FrameworkAdapter for SubprocessAdapter {
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        // For batch, we don't parse individual file results - we just measure total batch time
-        // The JSON parsing was used for per-file breakdown which we no longer need
-
         let batch_throughput = if duration.as_secs_f64() > 0.0 {
             total_file_size as f64 / duration.as_secs_f64()
         } else {
             0.0
         };
 
-        // For batch extraction, return single result for the entire batch operation
         Ok(vec![BenchmarkResult {
             framework: self.name.clone(),
             file_path: PathBuf::from(format!("batch-{}-files", file_paths.len())),

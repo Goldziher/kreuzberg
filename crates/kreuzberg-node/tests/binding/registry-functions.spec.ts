@@ -10,10 +10,8 @@
  * - ExtractionConfig.fromFile, ExtractionConfig.discover
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-	__resetBindingForTests,
-	__setBindingForTests,
 	clearDocumentExtractors,
 	clearOcrBackends,
 	clearPostProcessors,
@@ -40,7 +38,6 @@ import {
 	type ValidatorProtocol,
 	validateMimeType,
 } from "../../dist/index.js";
-import { createMockExtractionBinding } from "./helpers/mock-binding.js";
 
 describe("listPostProcessors", () => {
 	beforeEach(() => {
@@ -180,9 +177,7 @@ describe("listValidators", () => {
 				return "test_validator";
 			}
 
-			validate(result) {
-				// Pass
-			}
+			validate(result) {}
 		}
 
 		registerValidator(new TestValidator());
@@ -202,9 +197,7 @@ describe("unregisterValidator", () => {
 				return "test_validator";
 			}
 
-			validate(result) {
-				// Pass
-			}
+			validate(result) {}
 		}
 
 		registerValidator(new TestValidator());
@@ -224,9 +217,7 @@ describe("clearValidators", () => {
 				return "validator_1";
 			}
 
-			validate(result) {
-				// Pass
-			}
+			validate(result) {}
 		}
 
 		class Validator2 implements ValidatorProtocol {
@@ -234,9 +225,7 @@ describe("clearValidators", () => {
 				return "validator_2";
 			}
 
-			validate(result) {
-				// Pass
-			}
+			validate(result) {}
 		}
 
 		registerValidator(new Validator1());
@@ -255,7 +244,6 @@ describe("listOcrBackends", () => {
 	it("should return array of registered OCR backends", () => {
 		const backends = listOcrBackends();
 		expect(Array.isArray(backends)).toBe(true);
-		// Should include default Tesseract backend
 		expect(backends.some((b) => b.toLowerCase().includes("tesseract"))).toBe(true);
 	});
 });
@@ -317,10 +305,10 @@ describe("clearOcrBackends", () => {
 		const afterRegister = listOcrBackends();
 		expect(afterRegister).toContain("test_clear_backend");
 
-		unregisterOcrBackend("test_clear_backend");
-		const afterUnregister = listOcrBackends();
-		expect(afterUnregister).not.toContain("test_clear_backend");
-		expect(afterUnregister.length).toBe(initialBackends.length);
+		clearOcrBackends();
+		const afterClear = listOcrBackends();
+		expect(afterClear).not.toContain("test_clear_backend");
+		expect(afterClear.length).toBe(initialBackends.length);
 	});
 });
 
@@ -328,7 +316,6 @@ describe("listDocumentExtractors", () => {
 	it("should return array of document extractors", () => {
 		const extractors = listDocumentExtractors();
 		expect(Array.isArray(extractors)).toBe(true);
-		// Extractors might be empty if not initialized
 	});
 });
 
@@ -365,19 +352,19 @@ describe("clearDocumentExtractors", () => {
 
 describe("detectMimeType", () => {
 	it("should detect MIME type from PDF bytes", () => {
-		const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // %PDF
+		const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
 		const mimeType = detectMimeType(Buffer.from(pdfBytes));
 		expect(mimeType).toContain("pdf");
 	});
 
 	it("should detect MIME type from JPEG bytes", () => {
-		const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]); // JPEG magic
+		const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
 		const mimeType = detectMimeType(Buffer.from(jpegBytes));
 		expect(mimeType).toContain("image");
 	});
 
 	it("should detect MIME type from PNG bytes", () => {
-		const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]); // PNG magic
+		const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 		const mimeType = detectMimeType(Buffer.from(pngBytes));
 		expect(mimeType).toContain("png");
 	});
@@ -388,18 +375,14 @@ describe("detectMimeTypeFromPath", () => {
 		try {
 			const mimeType = detectMimeTypeFromPath("document.pdf", false);
 			expect(mimeType).toContain("pdf");
-		} catch {
-			// If implementation still checks existence, that's acceptable
-		}
+		} catch {}
 	});
 
 	it("should detect MIME type from .docx extension with checkExists false", () => {
 		try {
 			const mimeType = detectMimeTypeFromPath("document.docx", false);
 			expect(mimeType).toContain("wordprocessingml");
-		} catch {
-			// If implementation still checks existence, that's acceptable
-		}
+		} catch {}
 	});
 
 	it("should throw for non-existent file when checkExists is true", () => {
@@ -476,7 +459,6 @@ describe("listEmbeddingPresets", () => {
 	it("should include standard preset names", () => {
 		const presets = listEmbeddingPresets();
 		const presetNames = presets.map((p) => p.toLowerCase());
-		// Should have some common presets
 		expect(presetNames.length).toBeGreaterThan(0);
 	});
 });

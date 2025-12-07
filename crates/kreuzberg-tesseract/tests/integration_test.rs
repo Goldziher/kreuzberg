@@ -15,7 +15,6 @@ fn get_default_tessdata_dir() -> PathBuf {
             .join("tesseract-rs")
             .join("tessdata")
     } else if cfg!(target_os = "linux") {
-        // Try system tesseract installation first (Ubuntu/Debian), then user home
         let system_paths = [
             PathBuf::from("/usr/share/tesseract-ocr/5/tessdata"),
             PathBuf::from("/usr/share/tesseract-ocr/tessdata"),
@@ -25,7 +24,6 @@ fn get_default_tessdata_dir() -> PathBuf {
                 return path.clone();
             }
         }
-        // Fallback to user home directory
         let home_dir = std::env::var("HOME").expect("HOME environment variable not set");
         PathBuf::from(home_dir).join(".tesseract-rs").join("tessdata")
     } else if cfg!(target_os = "windows") {
@@ -41,9 +39,6 @@ fn get_tessdata_dir() -> PathBuf {
     match std::env::var("TESSDATA_PREFIX") {
         Ok(dir) => {
             let prefix_path = PathBuf::from(dir);
-            // TESSDATA_PREFIX can point to either:
-            // 1. The tessdata directory itself (/path/to/tessdata)
-            // 2. The parent directory (/path/to where tessdata is the subdirectory)
             let tessdata_path = if prefix_path.ends_with("tessdata") {
                 prefix_path
             } else {
@@ -102,7 +97,6 @@ fn test_multiple_languages_with_lstm() {
 
     api.set_variable("tessedit_pageseg_mode", "1")
         .expect("Failed to set PSM");
-    //api.set_variable("tessedit_char_blacklist", "!?@#$%&*()_+-=[]{}|\\")
     //    .expect("Failed to set char blacklist");
 
     let img = image::open("tests/test_images/multilang_sample.png").expect("Failed to open image");
@@ -216,13 +210,7 @@ fn test_image_operation_errors() {
 
     let (image_data, width, height) = load_test_image("sample_text.png").expect("Failed to load test image");
 
-    let res = api.set_image(
-        &image_data,
-        0, // Invalid width
-        height as i32,
-        3,
-        3 * width as i32,
-    );
+    let res = api.set_image(&image_data, 0, height as i32, 3, 3 * width as i32);
     assert!(res.is_err());
 }
 
@@ -231,7 +219,6 @@ fn test_invalid_language_code() {
     let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
 
-    // Test invalid language code
     let result = api.init(tessdata_dir.to_str().unwrap(), "invalid_lang");
     assert!(result.is_err());
 }
@@ -243,7 +230,6 @@ fn test_empty_image_data() {
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
 
-    // Test with empty image data
     let empty_data: Vec<u8> = Vec::new();
     let res = api.set_image(&empty_data, 100, 100, 3, 300);
     assert!(res.is_err());
@@ -258,20 +244,16 @@ fn test_invalid_image_parameters() {
 
     let (image_data, width, height) = load_test_image("sample_text.png").expect("Failed to load test image");
 
-    // Test negative dimensions
     let res = api.set_image(&image_data, -1, height as i32, 3, 3 * width as i32);
     assert!(res.is_err());
 
-    // Test zero height
     let res = api.set_image(&image_data, width as i32, 0, 3, 3 * width as i32);
     assert!(res.is_err());
 
-    // Test invalid bytes_per_pixel
     let res = api.set_image(&image_data, width as i32, height as i32, 0, 3 * width as i32);
     assert!(res.is_err());
 
-    // Test mismatched bytes_per_line
-    let res = api.set_image(&image_data, width as i32, height as i32, 3, width as i32); // Should be 3 * width
+    let res = api.set_image(&image_data, width as i32, height as i32, 3, width as i32);
     assert!(res.is_err());
 }
 
@@ -282,15 +264,12 @@ fn test_variable_setting() {
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
 
-    // Test invalid variable name
     let res = api.set_variable("invalid_variable_name", "1");
     assert!(res.is_err());
 
-    // Test empty variable value
     let res = api.set_variable("tessedit_char_whitelist", "");
-    assert!(res.is_ok()); // Empty whitelist is actually valid
+    assert!(res.is_ok());
 
-    // Test valid variable settings
     assert!(api.set_variable("tessedit_pageseg_mode", "1").is_ok());
     assert!(api.set_variable("tessedit_ocr_engine_mode", "1").is_ok());
 }
@@ -304,7 +283,6 @@ fn test_multiple_operations() {
 
     let (image_data, width, height) = load_test_image("sample_text.png").expect("Failed to load test image");
 
-    // Set image multiple times
     for _ in 0..3 {
         let res = api.set_image(&image_data, width as i32, height as i32, 3, 3 * width as i32);
         assert!(res.is_ok());
@@ -322,7 +300,6 @@ fn test_preprocessing_effects() {
 
     let img = image::open("tests/test_images/sample_text.png").expect("Failed to open image");
 
-    // Test with preprocessed image
     let preprocessed = preprocess_image(&img);
     let (width, height) = preprocessed.dimensions();
 
@@ -342,33 +319,28 @@ fn test_concurrent_access() {
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
 
-    // Multiple threads trying to access the API simultaneously
     let mut handles = vec![];
 
     for i in 0..3 {
         let api_clone = api.clone();
-        let handle = thread::spawn(move || {
-            match i % 3 {
-                0 => {
-                    let res = api_clone.set_variable("tessedit_pageseg_mode", "1");
-                    assert!(res.is_ok());
-                }
-                1 => {
-                    let res = api_clone.set_variable("tessedit_char_whitelist", "0123456789");
-                    assert!(res.is_ok());
-                }
-                2 => {
-                    let text = api_clone.get_utf8_text();
-                    // Text might be empty since we haven't set an image, but it shouldn't panic
-                    assert!(text.is_err());
-                }
-                _ => unreachable!(),
+        let handle = thread::spawn(move || match i % 3 {
+            0 => {
+                let res = api_clone.set_variable("tessedit_pageseg_mode", "1");
+                assert!(res.is_ok());
             }
+            1 => {
+                let res = api_clone.set_variable("tessedit_char_whitelist", "0123456789");
+                assert!(res.is_ok());
+            }
+            2 => {
+                let text = api_clone.get_utf8_text();
+                assert!(text.is_err());
+            }
+            _ => unreachable!(),
         });
         handles.push(handle);
     }
 
-    // Wait for all threads to complete
     for handle in handles {
         handle.join().unwrap();
     }
@@ -382,7 +354,6 @@ fn test_thread_safety_with_image() {
     let tessdata_dir = get_tessdata_dir();
     let api = TesseractAPI::new();
 
-    // Ana API'yi configure et
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize Tesseract");
     api.set_variable("tessedit_pageseg_mode", "1")
@@ -390,16 +361,14 @@ fn test_thread_safety_with_image() {
 
     let (image_data, width, height) = load_test_image("sample_text.png").expect("Failed to load test image");
 
-    // Image'ı ana thread'de set et
     let res = api.set_image(&image_data, width as i32, height as i32, 3, 3 * width as i32);
     assert!(res.is_ok());
 
     let image_data = Arc::new(image_data);
     let mut handles = vec![];
 
-    // Thread'lerde clone'lanmış API'yi kullan
     for _ in 0..3 {
-        let api_clone = api.clone(); // Bu artık tüm konfigürasyonu da kopyalayacak
+        let api_clone = api.clone();
         let image_data = Arc::clone(&image_data);
 
         let handle = thread::spawn(move || {
@@ -426,7 +395,6 @@ fn test_thread_safety_init() {
 
     let mut handles = vec![];
 
-    // Try to initialize from multiple threads
     for i in 0..3 {
         let api_clone = api.clone();
         let tessdata_dir = tessdata_dir.clone();
@@ -440,7 +408,6 @@ fn test_thread_safety_init() {
             };
 
             let res = api_clone.init(tessdata_dir.to_str().unwrap(), lang);
-            // Note: Only one initialization should succeed due to mutex
             if res.is_err() {
                 println!("Init failed for lang {}, which is expected in some cases", lang);
             }
@@ -457,38 +424,23 @@ fn test_thread_safety_init() {
 fn test_dynamic_image_setting() {
     let api = TesseractAPI::new();
 
-    // Get tessdata directory (uses default location or TESSDATA_PREFIX if set)
     let tessdata_dir = get_tessdata_dir();
     api.init(tessdata_dir.to_str().unwrap(), "eng")
         .expect("Failed to initialize API");
 
-    // Set whitelist for digits only BEFORE setting image for better recognition
-    // This ensures the whitelist is applied during OCR processing
     api.set_variable("tessedit_char_whitelist", "0123456789")
         .expect("Failed to set whitelist");
 
-    // Load an existing digits image for reliable OCR testing
     let (image_data, width, height) = load_test_image("digits.png").expect("Failed to load test digits image");
 
-    // Set the image data first
-    // IMPORTANT: Image must be set before calling SetSourceResolution
     api.set_image(&image_data, width as i32, height as i32, 3, 3 * width as i32)
         .expect("Failed to set image");
 
-    // Set DPI AFTER setting image for better OCR accuracy
-    // Note: SetSourceResolution must be called after SetImage, otherwise Tesseract
-    // returns a warning and produces no OCR output
     api.set_source_resolution(300).expect("Failed to set source resolution");
 
-    // Get the recognized text
     let text = api.get_utf8_text().expect("Failed to get text");
     println!("Recognized text: {}", text.trim());
 
-    // Check if the result contains recognized digits
-    // The test validates that:
-    // 1. Variables are properly set before image recognition
-    // 2. SetSourceResolution is called in correct order (after SetImage)
-    // 3. OCR returns non-empty results with proper digit recognition
     assert!(!text.trim().is_empty(), "OCR result is empty");
     assert!(
         text.chars().any(|c| c.is_ascii_digit()),

@@ -65,7 +65,6 @@ impl Plugin for DocxExtractor {
 /// # Returns
 /// * `Table` - Converted table with cells and markdown representation
 fn convert_docx_table_to_table(docx_table: &docx_lite::Table, table_index: usize) -> Table {
-    // Extract cells as 2D vector
     let cells: Vec<Vec<String>> = docx_table
         .rows
         .iter()
@@ -73,7 +72,6 @@ fn convert_docx_table_to_table(docx_table: &docx_lite::Table, table_index: usize
             row.cells
                 .iter()
                 .map(|cell| {
-                    // Extract text from all paragraphs in the cell
                     cell.paragraphs
                         .iter()
                         .map(|para| para.to_text())
@@ -86,13 +84,12 @@ fn convert_docx_table_to_table(docx_table: &docx_lite::Table, table_index: usize
         })
         .collect();
 
-    // Generate markdown representation
     let markdown = cells_to_markdown(&cells);
 
     Table {
         cells,
         markdown,
-        page_number: table_index + 1, // 1-indexed
+        page_number: table_index + 1,
     }
 }
 
@@ -119,22 +116,17 @@ impl DocumentExtractor for DocxExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Parse the DOCX document to extract both text and tables
         let (text, tables) = if crate::core::batch_mode::is_batch_mode() {
-            // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || -> crate::error::Result<(String, Vec<Table>)> {
                 let _guard = span.entered();
-                // Parse document structure
                 let cursor = Cursor::new(&content_owned);
                 let doc = docx_lite::parse_document(cursor)
                     .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX parsing failed: {}", e)))?;
 
-                // Extract text
                 let text = doc.extract_text();
 
-                // Extract tables
                 let tables: Vec<Table> = doc
                     .tables
                     .iter()
@@ -147,15 +139,12 @@ impl DocumentExtractor for DocxExtractor {
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX extraction task failed: {}", e)))??
         } else {
-            // Single-file mode: Direct extraction (no spawn overhead)
             let cursor = Cursor::new(content);
             let doc = docx_lite::parse_document(cursor)
                 .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX parsing failed: {}", e)))?;
 
-            // Extract text
             let text = doc.extract_text();
 
-            // Extract tables
             let tables: Vec<Table> = doc
                 .tables
                 .iter()
@@ -166,9 +155,7 @@ impl DocumentExtractor for DocxExtractor {
             (text, tables)
         };
 
-        // Extract metadata using existing office_metadata module
         let mut archive = if crate::core::batch_mode::is_batch_mode() {
-            // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
@@ -180,8 +167,6 @@ impl DocumentExtractor for DocxExtractor {
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("Task join error: {}", e)))??
         } else {
-            // Single-file mode: Direct extraction (no spawn overhead)
-            // Note: We still need to clone for ZipArchive type consistency with batch mode
             let content_owned = content.to_vec();
             let cursor = Cursor::new(content_owned);
             zip::ZipArchive::new(cursor)
@@ -190,7 +175,6 @@ impl DocumentExtractor for DocxExtractor {
 
         let mut metadata_map = std::collections::HashMap::new();
 
-        // Extract core properties (title, creator, dates, keywords, etc.)
         if let Ok(core) = office_metadata::extract_core_properties(&mut archive) {
             if let Some(title) = core.title {
                 metadata_map.insert("title".to_string(), serde_json::Value::String(title));
@@ -234,7 +218,6 @@ impl DocumentExtractor for DocxExtractor {
             }
         }
 
-        // Extract app properties (page count, word count, etc.)
         if let Ok(app) = office_metadata::extract_docx_app_properties(&mut archive) {
             if let Some(pages) = app.pages {
                 metadata_map.insert("page_count".to_string(), serde_json::Value::Number(pages.into()));
@@ -271,7 +254,6 @@ impl DocumentExtractor for DocxExtractor {
             }
         }
 
-        // Extract custom properties
         if let Ok(custom) = office_metadata::extract_custom_properties(&mut archive) {
             for (key, value) in custom {
                 metadata_map.insert(format!("custom_{}", key), value);
@@ -341,10 +323,8 @@ mod tests {
     fn test_convert_docx_table_to_table() {
         use docx_lite::{Paragraph, Run, Table as DocxTable, TableCell, TableRow};
 
-        // Create a simple docx-lite table
         let mut table = DocxTable::new();
 
-        // Header row
         let mut header_row = TableRow::default();
         let mut cell1 = TableCell::default();
         let mut para1 = Paragraph::new();
@@ -360,7 +340,6 @@ mod tests {
 
         table.rows.push(header_row);
 
-        // Data row
         let mut data_row = TableRow::default();
         let mut cell3 = TableCell::default();
         let mut para3 = Paragraph::new();
@@ -376,11 +355,10 @@ mod tests {
 
         table.rows.push(data_row);
 
-        // Convert to Kreuzberg Table
         let result = convert_docx_table_to_table(&table, 0);
 
-        assert_eq!(result.page_number, 1); // 0 + 1 = 1 (1-indexed)
-        assert_eq!(result.cells.len(), 2); // 2 rows
+        assert_eq!(result.page_number, 1);
+        assert_eq!(result.cells.len(), 2);
         assert_eq!(result.cells[0], vec!["Name", "Age"]);
         assert_eq!(result.cells[1], vec!["Alice", "30"]);
         assert!(result.markdown.contains("| Name | Age |"));

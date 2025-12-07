@@ -71,7 +71,6 @@ public final class ChunkingConfig {
     private Boolean enabled = true;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder maxChars(int maxChars) {

@@ -1,9 +1,12 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
 		"useIgnoreFile": true
+	},
+	"files": {
+		"includes": ["**/*", "!crates/kreuzberg-tesseract/third_party", "!test_documents"]
 	},
 	"formatter": {
 		"enabled": true,

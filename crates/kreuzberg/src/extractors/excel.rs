@@ -31,46 +31,34 @@ impl ExcelExtractor {
         let mut tables = Vec::with_capacity(workbook.sheets.len());
 
         for (sheet_index, sheet) in workbook.sheets.iter().enumerate() {
-            // Skip empty sheets
             if sheet.row_count == 0 || sheet.col_count == 0 {
                 continue;
             }
 
-            // We need to re-parse the sheet to get structured cell data
-            // The workbook.sheets only contains markdown, not raw cell data
-            // So we'll extract from the markdown table representation
-
-            // Parse cells from markdown
             let lines: Vec<&str> = sheet.markdown.lines().collect();
             let mut cells: Vec<Vec<String>> = Vec::new();
 
-            // Find the table content (skip header line "## Sheet Name" and blank line)
             let table_start = lines.iter().position(|line| line.starts_with("| "));
 
             if let Some(start_idx) = table_start {
                 for line in lines.iter().skip(start_idx) {
                     if line.starts_with("| ") && !line.contains("---") {
-                        // Parse table row
                         let row: Vec<String> = line
                             .trim_start_matches("| ")
                             .trim_end_matches(" |")
                             .split(" | ")
-                            .map(|cell| {
-                                // Unescape markdown pipes and backslashes
-                                cell.replace("\\|", "|").replace("\\\\", "\\")
-                            })
+                            .map(|cell| cell.replace("\\|", "|").replace("\\\\", "\\"))
                             .collect();
                         cells.push(row);
                     }
                 }
             }
 
-            // Only create table if we have data
             if !cells.is_empty() {
                 tables.push(Table {
                     cells,
                     markdown: sheet.markdown.clone(),
-                    page_number: sheet_index + 1, // 1-indexed
+                    page_number: sheet_index + 1,
                 });
             }
         }
@@ -124,9 +112,7 @@ impl DocumentExtractor for ExcelExtractor {
             _ => ".xlsx",
         };
 
-        // Extract workbook
         let workbook = if crate::core::batch_mode::is_batch_mode() {
-            // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             let extension_owned = extension.to_string();
             let span = tracing::Span::current();
@@ -137,7 +123,6 @@ impl DocumentExtractor for ExcelExtractor {
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("Excel extraction task failed: {}", e)))??
         } else {
-            // Single-file mode: Direct extraction (no spawn overhead)
             crate::extraction::excel::read_excel_bytes(content, extension)?
         };
 
@@ -259,7 +244,6 @@ mod tests {
         use crate::types::ExcelSheet;
         use std::collections::HashMap;
 
-        // Create a mock workbook with a single sheet
         let sheet = ExcelSheet {
             name: "TestSheet".to_string(),
             markdown: r#"## TestSheet
@@ -284,7 +268,7 @@ mod tests {
 
         assert_eq!(tables.len(), 1);
         assert_eq!(tables[0].page_number, 1);
-        assert_eq!(tables[0].cells.len(), 3); // Header + 2 data rows
+        assert_eq!(tables[0].cells.len(), 3);
         assert_eq!(tables[0].cells[0], vec!["Name", "Age", "City"]);
         assert_eq!(tables[0].cells[1], vec!["Alice", "30", "NYC"]);
         assert_eq!(tables[0].cells[2], vec!["Bob", "25", "LA"]);
@@ -309,7 +293,7 @@ mod tests {
         };
 
         let tables = ExcelExtractor::sheets_to_tables(&workbook);
-        assert_eq!(tables.len(), 0); // Empty sheets should not create tables
+        assert_eq!(tables.len(), 0);
     }
 
     #[test]

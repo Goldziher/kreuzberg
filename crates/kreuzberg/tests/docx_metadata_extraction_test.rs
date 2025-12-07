@@ -2,15 +2,10 @@
 
 #![cfg(feature = "office")]
 
-use kreuzberg::extraction::pandoc::extract_file;
+use kreuzberg::{ExtractionConfig, extract_file};
 
 #[tokio::test]
 async fn test_docx_full_metadata_extraction() {
-    if kreuzberg::extraction::pandoc::validate_pandoc_version().await.is_err() {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
-
     let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -23,7 +18,7 @@ async fn test_docx_full_metadata_extraction() {
         return;
     }
 
-    let result = extract_file(&test_file, "docx")
+    let result = extract_file(&test_file, None, &ExtractionConfig::default())
         .await
         .expect("Should extract DOCX successfully");
 
@@ -34,63 +29,66 @@ async fn test_docx_full_metadata_extraction() {
     );
 
     assert_eq!(
-        result.metadata.get("created_by").and_then(|v| v.as_str()),
+        result.metadata.additional.get("created_by").and_then(|v| v.as_str()),
         Some("Christoph Auer"),
         "Should have correct creator"
     );
     assert_eq!(
-        result.metadata.get("modified_by").and_then(|v| v.as_str()),
+        result.metadata.additional.get("modified_by").and_then(|v| v.as_str()),
         Some("Maxim Lysak"),
         "Should have correct last modified by"
     );
     assert_eq!(
-        result.metadata.get("created_at").and_then(|v| v.as_str()),
+        result.metadata.additional.get("created_at").and_then(|v| v.as_str()),
         Some("2024-10-09T12:43:00Z"),
         "Should have correct creation date"
     );
     assert_eq!(
-        result.metadata.get("revision").and_then(|v| v.as_str()),
+        result.metadata.additional.get("revision").and_then(|v| v.as_str()),
         Some("7"),
         "Should have revision number"
     );
 
     assert_eq!(
-        result.metadata.get("page_count").and_then(|v| v.as_i64()),
+        result.metadata.additional.get("page_count").and_then(|v| v.as_i64()),
         Some(2),
         "Should have 2 pages"
     );
     assert_eq!(
-        result.metadata.get("word_count").and_then(|v| v.as_i64()),
+        result.metadata.additional.get("word_count").and_then(|v| v.as_i64()),
         Some(108),
         "Should have 108 words"
     );
     assert_eq!(
-        result.metadata.get("character_count").and_then(|v| v.as_i64()),
+        result
+            .metadata
+            .additional
+            .get("character_count")
+            .and_then(|v| v.as_i64()),
         Some(620),
         "Should have 620 characters"
     );
     assert_eq!(
-        result.metadata.get("line_count").and_then(|v| v.as_i64()),
+        result.metadata.additional.get("line_count").and_then(|v| v.as_i64()),
         Some(5),
         "Should have 5 lines"
     );
     assert_eq!(
-        result.metadata.get("paragraph_count").and_then(|v| v.as_i64()),
+        result
+            .metadata
+            .additional
+            .get("paragraph_count")
+            .and_then(|v| v.as_i64()),
         Some(1),
         "Should have 1 paragraph"
     );
 
     println!("✅ DOCX metadata extraction test passed!");
-    println!("   Found {} metadata fields", result.metadata.len());
+    println!("   Found {} metadata fields", result.metadata.additional.len());
 }
 
 #[tokio::test]
 async fn test_docx_minimal_metadata_extraction() {
-    if kreuzberg::extraction::pandoc::validate_pandoc_version().await.is_err() {
-        println!("Skipping test: Pandoc not available");
-        return;
-    }
-
     let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -103,19 +101,19 @@ async fn test_docx_minimal_metadata_extraction() {
         return;
     }
 
-    let result = extract_file(&test_file, "docx")
+    let result = extract_file(&test_file, None, &ExtractionConfig::default())
         .await
         .expect("Should extract DOCX successfully");
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
     assert_eq!(
-        result.metadata.get("page_count").and_then(|v| v.as_i64()),
+        result.metadata.additional.get("page_count").and_then(|v| v.as_i64()),
         Some(1),
         "Should have 1 page"
     );
     assert_eq!(
-        result.metadata.get("word_count").and_then(|v| v.as_i64()),
+        result.metadata.additional.get("word_count").and_then(|v| v.as_i64()),
         Some(520),
         "Should have 520 words"
     );

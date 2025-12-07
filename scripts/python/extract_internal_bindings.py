@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Extract compiled _internal_bindings artifacts from a wheel into the package directory.
 

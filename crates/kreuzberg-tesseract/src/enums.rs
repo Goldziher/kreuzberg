@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(TessPageSegMode::from_int(0), TessPageSegMode::PSM_OSD_ONLY);
         assert_eq!(TessPageSegMode::from_int(3), TessPageSegMode::PSM_AUTO);
         assert_eq!(TessPageSegMode::from_int(10), TessPageSegMode::PSM_SINGLE_CHAR);
-        assert_eq!(TessPageSegMode::from_int(999), TessPageSegMode::PSM_AUTO); // default
+        assert_eq!(TessPageSegMode::from_int(999), TessPageSegMode::PSM_AUTO);
     }
 
     #[test]
@@ -218,21 +218,21 @@ mod tests {
     fn test_page_iterator_level_from_int() {
         assert_eq!(TessPageIteratorLevel::from_int(0), TessPageIteratorLevel::RIL_BLOCK);
         assert_eq!(TessPageIteratorLevel::from_int(3), TessPageIteratorLevel::RIL_WORD);
-        assert_eq!(TessPageIteratorLevel::from_int(-1), TessPageIteratorLevel::RIL_BLOCK); // default
+        assert_eq!(TessPageIteratorLevel::from_int(-1), TessPageIteratorLevel::RIL_BLOCK);
     }
 
     #[test]
     fn test_poly_block_type_from_int() {
         assert_eq!(TessPolyBlockType::from_int(1), TessPolyBlockType::PT_FLOWING_TEXT);
         assert_eq!(TessPolyBlockType::from_int(6), TessPolyBlockType::PT_TABLE);
-        assert_eq!(TessPolyBlockType::from_int(100), TessPolyBlockType::PT_UNKNOWN); // default
+        assert_eq!(TessPolyBlockType::from_int(100), TessPolyBlockType::PT_UNKNOWN);
     }
 
     #[test]
     fn test_orientation_from_int() {
         assert_eq!(TessOrientation::from_int(0), TessOrientation::ORIENTATION_PAGE_UP);
         assert_eq!(TessOrientation::from_int(2), TessOrientation::ORIENTATION_PAGE_DOWN);
-        assert_eq!(TessOrientation::from_int(5), TessOrientation::ORIENTATION_PAGE_UP); // default
+        assert_eq!(TessOrientation::from_int(5), TessOrientation::ORIENTATION_PAGE_UP);
     }
 
     #[test]

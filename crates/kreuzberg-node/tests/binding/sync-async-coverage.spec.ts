@@ -321,23 +321,18 @@ describe("batchExtractBytes - comprehensive async tests", () => {
 describe("Extraction function argument validation", () => {
 	it("extractBytesSync should validate Uint8Array argument", () => {
 		expect(() => {
-			// biome-ignore lint/suspicious/noExplicitAny: Testing invalid input
 			extractBytesSync("not a uint8array" as any, "application/pdf");
 		}).toThrow();
 	});
 
 	it("batchExtractBytesSync should validate Uint8Array array", () => {
 		expect(() => {
-			// biome-ignore lint/suspicious/noExplicitAny: Testing invalid input
 			batchExtractBytesSync(["not uint8array"] as any, ["application/pdf"]);
 		}).toThrow();
 	});
 
 	it("extractBytes should validate Uint8Array argument", async () => {
-		await expect(
-			// biome-ignore lint/suspicious/noExplicitAny: Testing invalid input
-			extractBytes("not a uint8array" as any, "application/pdf"),
-		).rejects.toThrow();
+		await expect(extractBytes("not a uint8array" as any, "application/pdf")).rejects.toThrow();
 	});
 
 	it("batchExtractBytes should validate Uint8Array array length", async () => {

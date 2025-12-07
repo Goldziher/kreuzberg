@@ -21,13 +21,9 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::ffi::CStr;
 
-// Ensure kreuzberg-ffi is linked (required for C FFI symbols)
-// The underscore here is Rust's internal name normalization of the hyphenated crate name
 #[allow(unused_extern_crates)]
 extern crate kreuzberg_ffi;
 
-// FFI bindings to kreuzberg-ffi error context functions
-// These are C ABI functions exported by kreuzberg-ffi
 unsafe extern "C" {
     /// Get the last error code from FFI.
     ///
@@ -60,16 +56,13 @@ fn get_panic_context() -> Option<serde_json::Value> {
             return None;
         }
 
-        // Convert C string to Rust string
         let c_str = CStr::from_ptr(ptr as *const i8);
         if let Ok(json_str) = c_str.to_str() {
-            // Parse JSON and free memory
             let result = serde_json::from_str(json_str).ok();
             kreuzberg_free_string(ptr as *mut u8);
             return result;
         }
 
-        // Free memory even if parsing failed
         kreuzberg_free_string(ptr as *mut u8);
         None
     }

@@ -46,15 +46,15 @@ pub struct SecurityLimits {
 impl Default for SecurityLimits {
     fn default() -> Self {
         Self {
-            max_archive_size: 500 * 1024 * 1024, // 500 MB
-            max_compression_ratio: 100,          // 100:1
-            max_files_in_archive: 10_000,        // 10k files
-            max_nesting_depth: 100,              // 100 levels
-            max_entity_length: 32,               // 32 chars
-            max_content_size: 100 * 1024 * 1024, // 100 MB
-            max_iterations: 10_000_000,          // 10M iterations
-            max_xml_depth: 100,                  // 100 levels
-            max_table_cells: 100_000,            // 100k cells
+            max_archive_size: 500 * 1024 * 1024,
+            max_compression_ratio: 100,
+            max_files_in_archive: 10_000,
+            max_nesting_depth: 100,
+            max_entity_length: 32,
+            max_content_size: 100 * 1024 * 1024,
+            max_iterations: 10_000_000,
+            max_xml_depth: 100,
+            max_table_cells: 100_000,
         }
     }
 }
@@ -160,7 +160,6 @@ impl ZipBombValidator {
     pub fn validate<R: Read + Seek>(&self, archive: &mut zip::ZipArchive<R>) -> Result<(), SecurityError> {
         let file_count = archive.len();
 
-        // Check file count
         if file_count > self.limits.max_files_in_archive {
             return Err(SecurityError::TooManyFiles {
                 count: file_count,
@@ -171,7 +170,6 @@ impl ZipBombValidator {
         let mut total_uncompressed: u64 = 0;
         let mut total_compressed: u64 = 0;
 
-        // Validate each file
         for i in 0..file_count {
             if let Ok(file) = archive.by_index(i) {
                 let compressed_size = file.compressed_size();
@@ -180,7 +178,6 @@ impl ZipBombValidator {
                 total_uncompressed += uncompressed_size;
                 total_compressed += compressed_size;
 
-                // Check for individual file compression ratio
                 if compressed_size > 0 && uncompressed_size > 0 {
                     let ratio = uncompressed_size as f64 / compressed_size as f64;
                     if ratio > self.limits.max_compression_ratio as f64 {
@@ -194,7 +191,6 @@ impl ZipBombValidator {
             }
         }
 
-        // Check total uncompressed size
         if total_uncompressed > self.limits.max_archive_size as u64 {
             return Err(SecurityError::ArchiveTooLarge {
                 size: total_uncompressed,
@@ -202,7 +198,6 @@ impl ZipBombValidator {
             });
         }
 
-        // Check overall compression ratio
         if total_compressed > 0 {
             let ratio = total_uncompressed as f64 / total_compressed as f64;
             if ratio > self.limits.max_compression_ratio as f64 {
@@ -413,23 +408,18 @@ mod tests {
     fn test_depth_validator() {
         let mut validator = DepthValidator::new(3);
 
-        // First push should succeed
         assert!(validator.push().is_ok());
         assert_eq!(validator.current_depth(), 1);
 
-        // Second push should succeed
         assert!(validator.push().is_ok());
         assert_eq!(validator.current_depth(), 2);
 
-        // Third push should succeed
         assert!(validator.push().is_ok());
         assert_eq!(validator.current_depth(), 3);
 
-        // Fourth push should fail
         assert!(validator.push().is_err());
         assert_eq!(validator.current_depth(), 4);
 
-        // Pop should decrease
         validator.pop();
         assert_eq!(validator.current_depth(), 3);
     }
@@ -438,13 +428,10 @@ mod tests {
     fn test_entity_validator() {
         let validator = EntityValidator::new(10);
 
-        // Valid entity
         assert!(validator.validate("short").is_ok());
 
-        // Boundary case
         assert!(validator.validate("0123456789").is_ok());
 
-        // Too long
         assert!(validator.validate("01234567890").is_err());
     }
 

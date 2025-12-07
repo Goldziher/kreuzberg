@@ -24,7 +24,6 @@ final class KreuzbergFFI {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup LOOKUP;
 
-    // Function handles
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC;
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG;
     static final MethodHandle KREUZBERG_EXTRACT_BYTES_SYNC;
@@ -65,7 +64,6 @@ final class KreuzbergFFI {
     static final MethodHandle KREUZBERG_LIST_EMBEDDING_PRESETS;
     static final MethodHandle KREUZBERG_GET_EMBEDDING_PRESET;
 
-    // Memory layouts
     static final StructLayout C_EXTRACTION_RESULT_LAYOUT = MemoryLayout.structLayout(
         ValueLayout.ADDRESS.withName("content"),
         ValueLayout.ADDRESS.withName("mime_type"),
@@ -78,7 +76,7 @@ final class KreuzbergFFI {
         ValueLayout.ADDRESS.withName("chunks_json"),
         ValueLayout.ADDRESS.withName("images_json"),
         ValueLayout.JAVA_BOOLEAN.withName("success"),
-        MemoryLayout.paddingLayout(7) // Padding to align to 8 bytes
+        MemoryLayout.paddingLayout(7)
     );
 
     static final long CONTENT_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
@@ -132,11 +130,9 @@ final class KreuzbergFFI {
 
     static {
         try {
-            // Load the native library
             loadNativeLibrary();
             LOOKUP = SymbolLookup.loaderLookup();
 
-            // Link to C functions
             KREUZBERG_EXTRACT_FILE_SYNC = linkFunction(
                 "kreuzberg_extract_file_sync",
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS)
@@ -379,7 +375,6 @@ final class KreuzbergFFI {
     }
 
     private KreuzbergFFI() {
-        // Private constructor to prevent instantiation
     }
 
     /**
@@ -404,7 +399,6 @@ final class KreuzbergFFI {
         String libExt;
         String pdfiumLibName;
 
-        // Determine library name and extension based on OS
         if (osName.contains("mac") || osName.contains("darwin")) {
             libName = "libkreuzberg_ffi";
             pdfiumLibName = "libpdfium";
@@ -419,7 +413,6 @@ final class KreuzbergFFI {
             libExt = ".so";
         }
 
-        // Check for KREUZBERG_FFI_DIR environment variable (set by benchmark harness)
         String ffiDir = System.getenv("KREUZBERG_FFI_DIR");
         if (ffiDir != null && !ffiDir.isEmpty()) {
             java.nio.file.Path ffiPath = java.nio.file.Path.of(ffiDir);
@@ -428,31 +421,27 @@ final class KreuzbergFFI {
 
             if (java.nio.file.Files.exists(libPath)) {
                 try {
-                    // Load pdfium first if it exists
                     if (java.nio.file.Files.exists(pdfiumPath)) {
                         System.load(pdfiumPath.toAbsolutePath().toString());
                     }
                     System.load(libPath.toAbsolutePath().toString());
                     return;
-                } catch (UnsatisfiedLinkError e) { // NOPMD - fallback on error
-                    // Fall through to try other locations
+                } catch (UnsatisfiedLinkError e) {
+                    System.err.println("[KreuzbergFFI] Failed to load native libraries from "
+                        + libPath + ": " + e.getMessage());
                 }
             }
         }
 
-        // Try to load from classpath first (for packaged JAR)
         String resourcePath = "/" + libName + libExt;
         String pdfiumResourcePath = "/" + pdfiumLibName + libExt;
         var resource = KreuzbergFFI.class.getResource(resourcePath);
 
         if (resource != null) {
-            // Library found in classpath, extract and load it
             try (java.io.InputStream in = KreuzbergFFI.class.getResourceAsStream(resourcePath)) {
-                // Create temp directory for both libraries
                 java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("kreuzberg_native");
                 tempDir.toFile().deleteOnExit();
 
-                // Extract pdfium library first (dependency of FFI library)
                 java.nio.file.Path tempPdfium = null;
                 var pdfiumResource = KreuzbergFFI.class.getResource(pdfiumResourcePath);
                 if (pdfiumResource != null) {
@@ -465,25 +454,23 @@ final class KreuzbergFFI {
                     }
                 }
 
-                // Extract FFI library
                 java.nio.file.Path tempLib = tempDir.resolve(libName + libExt);
                 tempLib.toFile().deleteOnExit();
                 java.nio.file.Files.copy(in, tempLib, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
-                // Load pdfium first (dependency must be loaded before dependent library)
                 if (tempPdfium != null) {
                     System.load(tempPdfium.toAbsolutePath().toString());
                 }
 
-                // Now load FFI library
                 System.load(tempLib.toAbsolutePath().toString());
                 return;
-            } catch (Exception e) { // NOPMD - fallback to loading from system path
-                // Fall through to try loading from library path
+            } catch (Exception e) {
+                System.err.println("[KreuzbergFFI] Failed to extract and load native libraries "
+                    + "from resources: " + e.getMessage());
+                e.printStackTrace();
             }
         }
 
-        // Try to load from build directory (for development/testing)
         String projectRoot = System.getProperty("user.dir");
         java.nio.file.Path targetLib = java.nio.file.Path.of(
             projectRoot, "target", "classes", libName + libExt);
@@ -491,7 +478,6 @@ final class KreuzbergFFI {
             projectRoot, "target", "classes", pdfiumLibName + libExt);
 
         if (java.nio.file.Files.exists(targetLib)) {
-            // Load pdfium first if it exists
             if (java.nio.file.Files.exists(targetPdfium)) {
                 System.load(targetPdfium.toAbsolutePath().toString());
             }
@@ -499,12 +485,10 @@ final class KreuzbergFFI {
             return;
         }
 
-        // Fall back to system library path
-        // (assumes libraries are in LD_LIBRARY_PATH/DYLD_LIBRARY_PATH)
         try {
             System.loadLibrary("pdfium");
-        } catch (UnsatisfiedLinkError e) { // NOPMD - pdfium might already be loaded
-            // Ignore error - pdfium might already be loaded or not needed
+        } catch (UnsatisfiedLinkError e) {
+            System.err.println("[KreuzbergFFI] Failed to load optional pdfium library: " + e.getMessage());
         }
         System.loadLibrary("kreuzberg_ffi");
     }
@@ -556,8 +540,6 @@ final class KreuzbergFFI {
             try {
                 KREUZBERG_FREE_STRING.invoke(result);
             } catch (Exception ex) {
-                // Cleanup errors are silently ignored as the panic context
-                // has already been extracted (e.g., memory already freed)
                 System.err.println("Failed to free panic context: " + ex);
             }
             if (jsonString != null) {

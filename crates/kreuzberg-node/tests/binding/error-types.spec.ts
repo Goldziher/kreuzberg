@@ -149,7 +149,6 @@ describe("Error Types", () => {
 
 	describe("CacheError", () => {
 		it("should be importable from the package", async () => {
-			// This test verifies that CacheError is exported
 			const module = await import("../../dist/index.js");
 			expect(module).toHaveProperty("CacheError");
 		});

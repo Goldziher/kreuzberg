@@ -5,11 +5,13 @@ use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::extractors::BibtexExtractor;
 use kreuzberg::plugins::DocumentExtractor;
 
+mod helpers;
+use helpers::get_test_file_path;
+
 #[tokio::test]
 async fn test_all_entry_types() {
     let extractor = BibtexExtractor::new();
 
-    // Test all standard BibTeX entry types
     let test_cases = vec![
         (
             "@article{test, author={John Doe}, title={Test}, journal={Journal}, year={2023}}",
@@ -65,7 +67,6 @@ async fn test_all_entry_types() {
         assert!(result.is_ok(), "Failed to parse {} entry", expected_type);
         let result = result.unwrap();
 
-        // Check that the entry type is captured
         if let Some(entry_types) = result.metadata.additional.get("entry_types") {
             assert!(entry_types.as_object().is_some(), "Entry types should be an object");
             println!("Entry type '{}' extracted successfully", expected_type);
@@ -77,7 +78,6 @@ async fn test_all_entry_types() {
 async fn test_all_common_fields() {
     let extractor = BibtexExtractor::new();
 
-    // Test entry with many fields
     let bibtex_content = r#"
 @article{comprehensive,
     author = {Smith, John and Doe, Jane},
@@ -118,7 +118,6 @@ async fn test_all_common_fields() {
     assert!(result.is_ok());
     let result = result.unwrap();
 
-    // The content should contain all these fields
     let content = &result.content;
 
     let expected_fields = vec![
@@ -171,9 +170,7 @@ async fn test_author_parsing() {
             "author = {John Doe and Jane Smith and Bob Jones}",
             vec!["John Doe", "Jane Smith", "Bob Jones"],
         ),
-        // Test with 'von' particle
         ("author = {van der Berg, Hans}", vec!["van der Berg, Hans"]),
-        // Test with 'Jr.' suffix
         ("author = {Smith, Jr., John}", vec!["Smith, Jr., John"]),
     ];
 
@@ -226,13 +223,11 @@ async fn test_special_characters() {
     assert!(result.is_ok());
     let result = result.unwrap();
 
-    // Should extract the entry successfully
     assert_eq!(
         result.metadata.additional.get("entry_count"),
         Some(&serde_json::json!(1))
     );
 
-    // Authors should be extracted (the biblatex crate should handle LaTeX commands)
     if let Some(authors) = result.metadata.additional.get("authors") {
         let authors_array = authors.as_array().expect("Authors should be an array");
         assert!(authors_array.len() >= 3, "Should have 3 authors");
@@ -355,7 +350,6 @@ async fn test_unicode_support() {
     assert!(result.is_ok());
     let result = result.unwrap();
 
-    // Should successfully parse the entry
     assert_eq!(
         result.metadata.additional.get("entry_count"),
         Some(&serde_json::json!(1))
@@ -381,7 +375,6 @@ async fn test_empty_fields() {
         .extract_bytes(bibtex_content.as_bytes(), "application/x-bibtex", &config)
         .await;
 
-    // Should not fail on empty fields
     assert!(result.is_ok());
     let result = result.unwrap();
     assert_eq!(
@@ -394,8 +387,9 @@ async fn test_empty_fields() {
 async fn test_comprehensive_file() {
     let extractor = BibtexExtractor::new();
 
-    let bibtex_content = std::fs::read("/Users/naamanhirschfeld/workspace/kreuzberg/test_comprehensive.bib")
-        .expect("Failed to read test file");
+    let fixture_path = get_test_file_path("bibtex/comprehensive.bib");
+    let bibtex_content = std::fs::read(&fixture_path)
+        .unwrap_or_else(|err| panic!("Failed to read test file at {}: {}", fixture_path.display(), err));
 
     let config = ExtractionConfig::default();
     let result = extractor
@@ -405,25 +399,21 @@ async fn test_comprehensive_file() {
     assert!(result.is_ok());
     let result = result.unwrap();
 
-    // Should have parsed all 20 entries
     assert_eq!(
         result.metadata.additional.get("entry_count"),
         Some(&serde_json::json!(20))
     );
 
-    // Check we have multiple entry types
     if let Some(entry_types) = result.metadata.additional.get("entry_types") {
         let types_obj = entry_types.as_object().expect("Entry types should be an object");
         assert!(types_obj.len() >= 10, "Should have at least 10 different entry types");
     }
 
-    // Check we have authors
     if let Some(authors) = result.metadata.additional.get("authors") {
         let authors_array = authors.as_array().expect("Authors should be an array");
         assert!(authors_array.len() > 10, "Should have many unique authors");
     }
 
-    // Check year range
     if let Some(year_range) = result.metadata.additional.get("year_range") {
         assert!(year_range.get("min").is_some());
         assert!(year_range.get("max").is_some());

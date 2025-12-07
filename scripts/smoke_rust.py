@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Smoke-test helper for the Kreuzberg Rust crate."""
 
 from __future__ import annotations

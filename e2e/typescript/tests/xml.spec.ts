@@ -1,5 +1,3 @@
-// Auto-generated tests for xml fixtures.
-
 import { existsSync } from "node:fs";
 import type { ExtractionResult } from "@kreuzberg/node";
 import { extractFileSync } from "@kreuzberg/node";

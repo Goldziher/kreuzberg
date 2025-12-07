@@ -374,12 +374,10 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     clean_tests(&go_root)?;
     write_helpers(&go_root)?;
 
-    // Separate document extraction and plugin API fixtures
     let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
 
     let plugin_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
 
-    // Generate document extraction tests
     let mut grouped = doc_fixtures
         .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
@@ -395,7 +393,6 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
             .with_context(|| format!("failed to write Go test file {filename}"))?;
     }
 
-    // Generate plugin API tests
     if !plugin_fixtures.is_empty() {
         generate_plugin_api_tests(&go_root, &plugin_fixtures)?;
     }
@@ -598,7 +595,6 @@ fn indent_with_tabs(text: &str) -> String {
 fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Result<()> {
     let mut buffer = String::new();
 
-    // File header
     writeln!(buffer, "// Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
     writeln!(buffer, "//")?;
     writeln!(buffer, "// E2E tests for plugin/config/utility APIs.")?;
@@ -624,7 +620,6 @@ fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Resul
     writeln!(buffer, ")")?;
     writeln!(buffer)?;
 
-    // Group fixtures by API category
     let mut grouped: Vec<(String, Vec<&Fixture>)> = Vec::new();
     for fixture in fixtures.iter() {
         let category = fixture
@@ -634,7 +629,6 @@ fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Resul
             .as_str()
             .to_string();
 
-        // Find or create the category group
         if let Some(entry_pos) = grouped.iter().position(|(cat, _)| cat == &category) {
             grouped[entry_pos].1.push(fixture);
         } else {
@@ -643,11 +637,9 @@ fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Resul
     }
     grouped.sort_by(|a, b| a.0.cmp(&b.0));
 
-    // Generate tests for each category
     for (category, mut category_fixtures) in grouped {
         category_fixtures.sort_by(|a, b| a.id.cmp(&b.id));
 
-        // Category header comment
         writeln!(buffer, "// {} Tests", to_title_case(&category))?;
         writeln!(buffer)?;
 
@@ -657,7 +649,6 @@ fn generate_plugin_api_tests(go_root: &Utf8Path, fixtures: &[&Fixture]) -> Resul
         }
     }
 
-    // Write to file
     let output_path = go_root.join("plugin_apis_test.go");
     let formatted_buffer = indent_with_tabs(&buffer);
     fs::write(output_path.as_std_path(), formatted_buffer).context("failed to write plugin_apis_test.go")?;
@@ -674,11 +665,9 @@ fn render_plugin_test(fixture: &Fixture) -> Result<String> {
 
     let mut code = String::new();
 
-    // Generate test function name
     let test_name = format!("Test{}", to_pascal_case(&test_spec.function_call.name));
     writeln!(code, "func {test_name}(t *testing.T) {{")?;
 
-    // Handle different test patterns
     match test_spec.pattern.as_str() {
         "simple_list" => render_simple_list(fixture, test_spec, &mut code)?,
         "clear_registry" => render_clear_registry(fixture, test_spec, &mut code)?,
@@ -698,16 +687,13 @@ fn render_plugin_test(fixture: &Fixture) -> Result<String> {
 /// Convert snake_case to PascalCase, handling acronyms like OCR
 fn to_pascal_case(s: &str) -> String {
     s.split('_')
-        .map(|word| {
-            // Handle special acronyms that should be all caps
-            match word.to_uppercase().as_str() {
-                "OCR" => "OCR".to_string(),
-                _ => {
-                    let mut chars = word.chars();
-                    match chars.next() {
-                        None => String::new(),
-                        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                    }
+        .map(|word| match word.to_uppercase().as_str() {
+            "OCR" => "OCR".to_string(),
+            _ => {
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
                 }
             }
         })
@@ -736,12 +722,10 @@ fn render_simple_list(
 ) -> Result<()> {
     let func_name = to_pascal_case(&test_spec.function_call.name);
 
-    // Check for lazy initialization
     if let Some(setup) = &test_spec.setup
         && let Some(lazy_init) = &setup.lazy_init_required
         && lazy_init.languages.contains(&"go".to_string())
     {
-        // Special handling for Go lazy initialization
         writeln!(code, "    tmpDir := t.TempDir()")?;
         writeln!(code, "    testFile := filepath.Join(tmpDir, \"test.pdf\")")?;
         writeln!(code, "    pdfContent := []byte(\"%PDF-1.4\\\\n%EOF\\\\n\")")?;
@@ -863,7 +847,6 @@ fn render_config_from_file(
     writeln!(code, "    }}")?;
     writeln!(code)?;
 
-    // Render property assertions
     for prop in &test_spec.assertions.object_properties {
         render_property_assertion(prop, code)?;
     }
@@ -938,7 +921,6 @@ fn render_config_discover(
     )?;
     writeln!(code, "    }}")?;
 
-    // Render property assertions
     for prop in &test_spec.assertions.object_properties {
         render_property_assertion(prop, code)?;
     }
@@ -1100,7 +1082,6 @@ fn render_property_assertion(prop: &crate::fixtures::ObjectPropertyAssertion, co
     let parts: Vec<&str> = prop.path.split('.').collect();
 
     if parts.len() == 1 {
-        // Top-level property
         if let Some(exists) = prop.exists
             && exists
         {
@@ -1109,7 +1090,6 @@ fn render_property_assertion(prop: &crate::fixtures::ObjectPropertyAssertion, co
             writeln!(code, "    }}")?;
         }
     } else if parts.len() == 2 {
-        // Nested property
         let parent = to_pascal_case(parts[0]);
         let child = to_pascal_case(parts[1]);
 

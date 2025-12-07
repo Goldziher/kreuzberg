@@ -74,7 +74,6 @@ public final class TesseractConfig {
     private String tesseditCharWhitelist;
 
     private Builder() {
-      // defaults
     }
 
     public Builder psm(Integer psm) {

@@ -18,7 +18,6 @@ pub struct Fixture {
     #[serde(default)]
     pub category: Option<String>,
 
-    // Document extraction fields (required for document fixtures)
     #[serde(default)]
     pub document: Option<DocumentSpec>,
     #[serde(default)]
@@ -28,7 +27,6 @@ pub struct Fixture {
     #[serde(default)]
     pub skip: Option<SkipDirective>,
 
-    // Plugin API fields (required for plugin API fixtures)
     #[serde(default)]
     pub api_category: Option<String>,
     #[serde(default)]
@@ -196,8 +194,6 @@ where
     }
     Ok(output)
 }
-
-// Plugin API fixture types
 
 /// Test specification for plugin API fixtures
 #[allow(dead_code)]
@@ -371,7 +367,6 @@ pub fn load_fixtures(fixtures_dir: &Utf8Path) -> Result<Vec<Fixture>> {
         let contents = std::fs::read_to_string(&path).with_context(|| format!("Failed to read fixture {}", path))?;
         let mut fixture: Fixture = serde_json::from_str(&contents).with_context(|| format!("Parsing {path}"))?;
 
-        // Validate that fixture has either document or plugin API fields
         if !fixture.is_document_extraction() && !fixture.is_plugin_api() {
             bail!(
                 "Fixture {} must have either 'document' (document extraction) or 'api_category' (plugin API) field",
@@ -383,7 +378,6 @@ pub fn load_fixtures(fixtures_dir: &Utf8Path) -> Result<Vec<Fixture>> {
             bail!("Fixture {} cannot have both 'document' and 'api_category' fields", path);
         }
 
-        // Set category from directory name if not specified
         if fixture.category.is_none() {
             let category = path.parent().and_then(Utf8Path::file_name).map(|name| name.to_string());
             fixture.category = category;

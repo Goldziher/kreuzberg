@@ -108,7 +108,6 @@ RSpec/DescribeClass:
 RSpec/PredicateMatcher:
   Enabled: false
 
-# New cops from RuboCop 1.65+
 Gemspec/AddRuntimeDependency:
   Enabled: true
 
@@ -529,7 +528,6 @@ Style/SwapValues:
 Style/YAMLFileRead:
   Enabled: true
 
-# Adjust RSpec metrics for test blocks
 RSpec/ExampleLength:
   Max: 35
 

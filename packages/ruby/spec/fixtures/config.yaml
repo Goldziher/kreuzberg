@@ -1,4 +1,3 @@
-# Test configuration file for Kreuzberg Ruby bindings
 
 use_cache: false
 enable_quality_processing: true

@@ -24,7 +24,6 @@ async fn test_pandoc_baseline_yaml_fields() {
         .await
         .expect("Should extract markdown with frontmatter");
 
-    // Verify standard fields
     assert_eq!(
         result.metadata.additional.get("title").and_then(|v| v.as_str()),
         Some("Test Document")
@@ -35,7 +34,6 @@ async fn test_pandoc_baseline_yaml_fields() {
     );
     assert_eq!(result.metadata.date, Some("2024-01-15".to_string()));
 
-    // Check that keywords are extracted as comma-separated string
     assert!(result.metadata.additional.contains_key("keywords"));
     let keywords = result
         .metadata
@@ -47,22 +45,18 @@ async fn test_pandoc_baseline_yaml_fields() {
     assert!(keywords.contains("testing"));
     assert!(keywords.contains("rust"));
 
-    // NEW FIELD: abstract should be extracted
     assert_eq!(
         result.metadata.additional.get("abstract").and_then(|v| v.as_str()),
         Some("This is an abstract")
     );
 
-    // NEW FIELD: subject should be extracted (explicit field takes precedence)
     assert_eq!(result.metadata.subject, Some("Testing Subject".to_string()));
 
-    // NEW FIELD: category should be extracted
     assert_eq!(
         result.metadata.additional.get("category").and_then(|v| v.as_str()),
         Some("Documentation")
     );
 
-    // NEW FIELD: tags should be extracted as comma-separated string
     assert!(result.metadata.additional.contains_key("tags"));
     let tags = result
         .metadata
@@ -73,13 +67,11 @@ async fn test_pandoc_baseline_yaml_fields() {
     assert!(tags.contains("important"));
     assert!(tags.contains("draft"));
 
-    // NEW FIELD: language should be extracted
     assert_eq!(
         result.metadata.additional.get("language").and_then(|v| v.as_str()),
         Some("en")
     );
 
-    // NEW FIELD: version should be extracted
     assert_eq!(
         result.metadata.additional.get("version").and_then(|v| v.as_str()),
         Some("1.0.0")
@@ -100,20 +92,16 @@ async fn test_extract_simple_pipe_tables() {
     assert!(!result.tables.is_empty(), "Should extract at least one table");
     let table = &result.tables[0];
 
-    // Verify table structure
     assert_eq!(table.cells.len(), 3, "Should have 3 rows (header + 2 data rows)");
     assert_eq!(table.cells[0].len(), 3, "Should have 3 columns");
 
-    // Verify header row
     assert_eq!(table.cells[0][0], "Header 1");
     assert_eq!(table.cells[0][1], "Header 2");
     assert_eq!(table.cells[0][2], "Header 3");
 
-    // Verify data rows
     assert_eq!(table.cells[1][0], "Row1Col1");
     assert_eq!(table.cells[2][0], "Row2Col1");
 
-    // Verify markdown representation
     assert!(table.markdown.contains("Header 1"));
     assert!(table.markdown.contains("Row1Col1"));
     assert!(table.markdown.contains("---"));
@@ -130,8 +118,6 @@ async fn test_extract_grid_tables() {
         .await
         .expect("Should extract grid tables");
 
-    // Grid tables should be extracted if pulldown-cmark supports them
-    // This validates that our extractor doesn't crash on complex table formats
     let _ = result.tables;
 }
 
@@ -161,14 +147,12 @@ async fn test_pandoc_style_multiline_table() {
         .await
         .expect("Should extract pandoc-style tables");
 
-    // Verify content is extracted
     assert!(result.content.contains("12") || result.content.contains("Demonstration"));
 }
 
 /// Test YAML frontmatter with author as list (Pandoc style)
 #[tokio::test]
 async fn test_pandoc_author_list() {
-    // Pandoc comprehensive.md has author as a list using `%` syntax
     let markdown = b"% Title\n% Author One; Author Two; Author Three\n\n# Content\n\nBody text.";
 
     let extractor = MarkdownExtractor::new();
@@ -177,8 +161,6 @@ async fn test_pandoc_author_list() {
         .await
         .expect("Should extract markdown");
 
-    // Note: The % style frontmatter is extracted as content, not YAML
-    // Pandoc recognizes this, but our YAML extractor only handles --- style
     assert!(!result.content.is_empty());
 }
 
@@ -234,7 +216,6 @@ async fn test_raw_content_extraction() {
         .await
         .expect("Should extract raw content");
 
-    // Raw content should be preserved in extraction
     assert!(!result.content.is_empty());
 }
 
@@ -251,20 +232,13 @@ async fn test_comprehensive_md_extraction() {
         .await
         .expect("Should extract comprehensive.md");
 
-    // Verify basic extraction
     assert!(!result.content.is_empty());
 
-    // Pandoc extracts title and author from this file
-    // The file uses % syntax which is Pandoc-specific
-    // Our YAML extractor may not parse this format
     let _has_title_or_author =
         result.metadata.additional.contains_key("title") || result.metadata.additional.contains_key("author");
 
-    // Content should always be extracted
     assert!(result.content.contains("Additional markdown reader tests") || result.content.contains("markdown"));
 
-    // Table extraction should work
-    // This file has many grid tables
     let _ = result.tables;
 }
 
@@ -282,8 +256,6 @@ async fn test_tables_markdown_extraction() {
 
     assert!(!result.content.is_empty());
 
-    // This file contains multiline table examples
-    // Content should include table data
     assert!(result.content.contains("Right") || result.content.contains("Left") || result.content.contains("table"));
 }
 
@@ -313,7 +285,6 @@ async fn test_malformed_frontmatter_graceful_fallback() {
         .await
         .expect("Should handle malformed YAML gracefully");
 
-    // Content should still be extracted despite bad YAML
     assert!(!result.content.is_empty());
 }
 
@@ -329,7 +300,6 @@ async fn test_standard_yaml_metadata_fields() {
         .await
         .expect("Should extract standard fields");
 
-    // Verify standard fields
     assert_eq!(
         result.metadata.additional.get("title").and_then(|v| v.as_str()),
         Some("Standard Fields Test")
@@ -421,7 +391,6 @@ async fn test_keywords_list_comma_separation() {
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    // Keywords should be comma-separated
     assert!(keywords.contains(","));
     assert!(keywords.contains("first"));
     assert!(keywords.contains("second"));
@@ -442,7 +411,6 @@ async fn test_no_frontmatter_extraction() {
     assert!(result.content.contains("Document Title"));
     assert!(result.content.contains("document") || result.content.contains("Section"));
 
-    // Should extract title from first H1
     let title = result.metadata.additional.get("title").and_then(|v| v.as_str());
     assert_eq!(title, Some("Document Title"));
 }
@@ -491,13 +459,8 @@ async fn test_nested_yaml_awareness() {
         .await
         .expect("Should extract document");
 
-    // Nested structures are currently not extracted
-    // This test documents that feature as not yet implemented
     let title = result.metadata.additional.get("title").and_then(|v| v.as_str());
     assert_eq!(title, Some("Test"));
-
-    // Nested fields would require additional parsing
-    // Not currently extracted by our implementation
 }
 
 /// Test extraction with special characters in metadata
@@ -515,43 +478,3 @@ async fn test_special_characters_in_metadata() {
     assert!(title.is_some());
     assert!(title.unwrap().contains("&") || title.unwrap().contains("Part"));
 }
-
-// ============================================================================
-// REPORT: YAML Fields Extraction Status vs Pandoc
-// ============================================================================
-//
-// FIELDS PANDOC RECOGNIZES (COMPLETE LIST):
-// ✓ title - EXTRACTED (to additional metadata)
-// ✓ author - EXTRACTED (to additional metadata)
-// ? author (list) - PARTIALLY SUPPORTED (array converted to string)
-// ✓ date - EXTRACTED (to metadata.date field)
-// ✓ keywords - EXTRACTED (array converted to comma-separated string)
-// ✓ description - EXTRACTED (mapped to metadata.subject)
-// ✓ abstract - EXTRACTED (to additional metadata) [NEW IN v4.0]
-// ✓ subject - EXTRACTED (to metadata.subject field) [NEW IN v4.0]
-// ✓ category - EXTRACTED (to additional metadata) [NEW IN v4.0]
-// ✓ tags - EXTRACTED (array converted to comma-separated string) [NEW IN v4.0]
-// ✓ language - EXTRACTED (to additional metadata) [NEW IN v4.0]
-// ✓ version - EXTRACTED (to additional metadata) [NEW IN v4.0]
-//
-// FIELDS NOT YET SUPPORTED:
-// ✗ custom fields - NOT EXTRACTED (would require dynamic field mapping)
-// ✗ nested structures - NOT EXTRACTED (organization.name, contact.email, etc.)
-//
-// EXTRACTION SUMMARY (11 of 11 core Pandoc fields supported):
-// Extracted to additional metadata (8):
-//   - title, author, keywords, abstract, category, tags, language, version
-// Extracted to standard metadata fields (2):
-//   - date (to metadata.date)
-//   - subject (to metadata.subject, with description as fallback)
-//
-// CURRENT SCOPE (Working):
-// - YAML frontmatter detection and parsing (--- markers)
-// - Complete standard field extraction (all Pandoc-recognized fields)
-// - Array field handling (keywords, tags) with comma-separated conversion
-// - description -> subject mapping (explicit subject takes precedence)
-// - Graceful fallback for malformed YAML
-// - Title extraction from first H1 when not in frontmatter
-// - Table extraction (pipe format with pulldown-cmark)
-// - Content text extraction with formatting preservation
-// - Unicode support for all fields

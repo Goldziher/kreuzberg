@@ -428,12 +428,10 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     write_pom(&java_root)?;
     clean_test_files(&src_test)?;
 
-    // Separate document extraction and plugin API fixtures
     let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
 
     let api_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
 
-    // Generate document extraction tests
     let mut grouped = doc_fixtures
         .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
@@ -449,7 +447,6 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
     }
 
-    // Generate plugin API tests
     if !api_fixtures.is_empty() {
         generate_plugin_api_tests(&api_fixtures, &src_test)?;
     }
@@ -715,7 +712,6 @@ fn render_java_map(value: &Value) -> String {
                 .join(", ");
             format!("Map.of({})", pairs)
         }
-        // For non-object metadata values, wrap in "eq" expectation
         _ => {
             let value_expr = render_java_value(value);
             format!("Map.of(\"eq\", {})", value_expr)
@@ -760,13 +756,10 @@ fn to_java_class_name(input: &str) -> String {
 
     if output.is_empty() {
         "Fixture".to_string()
+    } else if output.chars().next().unwrap().is_ascii_digit() {
+        format!("Test{}", output)
     } else {
-        // SAFETY: We just checked that output is not empty, so next() will return Some
-        if output.chars().next().unwrap().is_ascii_digit() {
-            format!("Test{}", output)
-        } else {
-            output
-        }
+        output
     }
 }
 
@@ -791,13 +784,10 @@ fn to_java_method_name(input: &str) -> String {
 
     if output.is_empty() {
         "testFixture".to_string()
+    } else if output.chars().next().unwrap().is_ascii_digit() {
+        format!("test{}", output)
     } else {
-        // SAFETY: We just checked that output is not empty, so next() will return Some
-        if output.chars().next().unwrap().is_ascii_digit() {
-            format!("test{}", output)
-        } else {
-            output
-        }
+        output
     }
 }
 
@@ -812,14 +802,11 @@ fn collect_requirements(fixture: &Fixture) -> Vec<String> {
         .collect()
 }
 
-// Plugin API test generation
-
 fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Result<()> {
     let test_file = output_dir.join("PluginAPIsTest.java");
 
     let mut content = String::new();
 
-    // Package and imports
     writeln!(content, "// Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
     writeln!(content, "package com.kreuzberg.e2e;")?;
     writeln!(content)?;
@@ -837,7 +824,6 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
     writeln!(content, "import org.junit.jupiter.api.io.TempDir;")?;
     writeln!(content)?;
 
-    // Class Javadoc
     writeln!(content, "/**")?;
     writeln!(content, " * E2E tests for plugin/config/utility APIs.")?;
     writeln!(content, " *")?;
@@ -853,7 +839,6 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], output_dir: &Utf8Path) -> Re
     writeln!(content, "class PluginAPIsTest {{")?;
     writeln!(content)?;
 
-    // Generate test methods grouped by API category
     let grouped = group_by_category(fixtures)?;
 
     for (category, fixtures) in grouped {
@@ -907,7 +892,6 @@ fn generate_java_test_method(fixture: &Fixture, buf: &mut String) -> Result<()> 
         .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let test_name = to_java_method_name(&fixture.id);
 
-    // Skip config_discover for Java - System.setProperty("user.dir") doesn't affect Rust FFI process
     if test_spec.pattern == "config_discover" {
         writeln!(
             buf,
@@ -916,13 +900,10 @@ fn generate_java_test_method(fixture: &Fixture, buf: &mut String) -> Result<()> 
         return Ok(());
     }
 
-    // @Test annotation
     writeln!(buf, "    @Test")?;
 
-    // @DisplayName annotation
     writeln!(buf, "    @DisplayName(\"{}\")", fixture.description)?;
 
-    // Method signature
     match test_spec.pattern.as_str() {
         "config_from_file" | "mime_from_path" => {
             writeln!(
@@ -936,7 +917,6 @@ fn generate_java_test_method(fixture: &Fixture, buf: &mut String) -> Result<()> 
         }
     }
 
-    // Generate test body based on pattern
     match test_spec.pattern.as_str() {
         "simple_list" => generate_simple_list_test_java(test_spec, buf)?,
         "clear_registry" => generate_clear_registry_test_java(test_spec, buf)?,
@@ -957,10 +937,8 @@ fn generate_simple_list_test_java(test_spec: &PluginTestSpec, buf: &mut String) 
     let func_name = snake_to_camel(&test_spec.function_call.name);
     let assertions = &test_spec.assertions;
 
-    // Call the function
     writeln!(buf, "        List<String> result = Kreuzberg.{}();", func_name)?;
 
-    // Generate assertions
     writeln!(buf, "        assertNotNull(result);")?;
 
     if let Some(item_type) = &assertions.list_item_type
@@ -982,10 +960,8 @@ fn generate_simple_list_test_java(test_spec: &PluginTestSpec, buf: &mut String) 
 fn generate_clear_registry_test_java(test_spec: &PluginTestSpec, buf: &mut String) -> Result<()> {
     let clear_func = snake_to_camel(&test_spec.function_call.name);
 
-    // Call clear function
     writeln!(buf, "        Kreuzberg.{}();", clear_func)?;
 
-    // Verify cleanup by calling list function
     let list_func = clear_func.replace("clear", "list");
     writeln!(buf, "        List<String> result = Kreuzberg.{}();", list_func)?;
     writeln!(buf, "        assertEquals(0, result.size());")?;
@@ -1004,7 +980,6 @@ fn generate_graceful_unregister_test_java(test_spec: &PluginTestSpec, buf: &mut 
         .as_str()
         .with_context(|| format!("Function '{}' argument is not a string", test_spec.function_call.name))?;
 
-    // Should not throw
     writeln!(
         buf,
         "        assertDoesNotThrow(() -> Kreuzberg.{}(\"{}\"));",
@@ -1028,19 +1003,16 @@ fn generate_config_from_file_test_java(test_spec: &PluginTestSpec, buf: &mut Str
         .as_ref()
         .with_context(|| "Setup missing temp_file_name")?;
 
-    // Create temp file
     writeln!(buf, "        Path configPath = tempDir.resolve(\"{}\");", file_name)?;
     writeln!(buf, "        Files.writeString(configPath, \"\"\"")?;
     writeln!(buf, "{}\"\"\");", file_content)?;
     writeln!(buf)?;
 
-    // Load config
     writeln!(
         buf,
         "        ExtractionConfig config = ExtractionConfig.fromFile(configPath.toString());"
     )?;
 
-    // Generate assertions
     generate_object_property_assertions_java(&test_spec.assertions, buf)?;
 
     Ok(())
@@ -1054,12 +1026,10 @@ fn generate_mime_from_bytes_test_java(test_spec: &PluginTestSpec, buf: &mut Stri
     let test_data = setup.test_data.as_ref().with_context(|| "Setup missing test_data")?;
     let func_name = snake_to_camel(&test_spec.function_call.name);
 
-    // Convert test data to bytes
     let bytes_literal = test_data.clone();
     writeln!(buf, "        byte[] testBytes = \"{}\".getBytes();", bytes_literal)?;
     writeln!(buf, "        String result = Kreuzberg.{}(testBytes);", func_name)?;
 
-    // Generate assertions
     if let Some(contains) = &test_spec.assertions.string_contains {
         writeln!(
             buf,
@@ -1086,19 +1056,16 @@ fn generate_mime_from_path_test_java(test_spec: &PluginTestSpec, buf: &mut Strin
         .with_context(|| "Setup missing temp_file_content")?;
     let func_name = snake_to_camel(&test_spec.function_call.name);
 
-    // Create temp file
     writeln!(buf, "        Path testFile = tempDir.resolve(\"{}\");", file_name)?;
     writeln!(buf, "        Files.writeString(testFile, \"{}\");", file_content)?;
     writeln!(buf)?;
 
-    // Detect MIME
     writeln!(
         buf,
         "        String result = Kreuzberg.{}(testFile.toString());",
         func_name
     )?;
 
-    // Generate assertions
     if let Some(contains) = &test_spec.assertions.string_contains {
         writeln!(
             buf,
@@ -1139,7 +1106,6 @@ fn generate_object_property_assertions_java(assertions: &PluginAssertions, buf: 
     for prop in &assertions.object_properties {
         let parts: Vec<&str> = prop.path.split('.').collect();
 
-        // Determine if final property is boolean based on value
         let is_bool_property = prop.value.as_ref().map(|v| v.is_boolean()).unwrap_or(false);
 
         if let Some(exists) = prop.exists
@@ -1195,7 +1161,6 @@ fn generate_object_property_assertions_java(assertions: &PluginAssertions, buf: 
 }
 
 fn snake_to_camel(input: &str) -> String {
-    // Handle special cases for acronyms
     if input == "ocr_backends" {
         return "oCRBackends".to_string();
     }
@@ -1229,7 +1194,6 @@ fn snake_to_camel(input: &str) -> String {
 }
 
 fn property_to_getter(property: &str) -> String {
-    // Convert snake_case property to PascalCase for getter
     let mut result = String::new();
     let mut capitalize_next = true;
 
@@ -1248,7 +1212,6 @@ fn property_to_getter(property: &str) -> String {
 }
 
 fn property_to_is_getter(property: &str) -> String {
-    // Convert snake_case property to PascalCase for boolean getter (is prefix)
     let mut result = String::new();
     let mut capitalize_next = true;
 

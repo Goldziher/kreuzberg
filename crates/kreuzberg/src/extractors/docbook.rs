@@ -95,7 +95,7 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
     let mut title_extracted = false;
     let mut current_table: Vec<Vec<String>> = Vec::new();
     let mut current_row: Vec<String> = Vec::new();
-    let mut list_type = ""; // "ordered" or "itemized"
+    let mut list_type = "";
 
     loop {
         match reader.read_event() {
@@ -104,7 +104,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                 let tag = strip_namespace(&tag);
 
                 match tag {
-                    // Metadata extraction
                     "info" | "articleinfo" | "bookinfo" | "chapterinfo" => {
                         state.in_info = true;
                     }
@@ -134,7 +133,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                         }
                     }
 
-                    // Paragraph content
                     "para" => {
                         let para_text = extract_element_text(&mut reader)?;
                         if !para_text.is_empty() {
@@ -143,7 +141,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                         }
                     }
 
-                    // Code blocks
                     "programlisting" | "screen" => {
                         let code_text = extract_element_text(&mut reader)?;
                         if !code_text.is_empty() {
@@ -153,7 +150,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                         }
                     }
 
-                    // Lists
                     "itemizedlist" => {
                         state.in_list = true;
                         list_type = "itemized";
@@ -174,7 +170,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                         state.in_list_item = false;
                     }
 
-                    // Blockquotes
                     "blockquote" => {
                         output.push_str("> ");
                         let quote_text = extract_element_text(&mut reader)?;
@@ -184,7 +179,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                         output.push_str("\n\n");
                     }
 
-                    // Figures
                     "figure" => {
                         let figure_text = extract_element_text(&mut reader)?;
                         if !figure_text.is_empty() {
@@ -194,7 +188,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                         }
                     }
 
-                    // Footnotes
                     "footnote" => {
                         output.push('[');
                         let footnote_text = extract_element_text(&mut reader)?;
@@ -204,7 +197,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
                         output.push(']');
                     }
 
-                    // Tables - single-pass table extraction
                     "table" | "informaltable" => {
                         state.in_table = true;
                         current_table.clear();
@@ -285,7 +277,6 @@ fn parse_docbook_single_pass(content: &str) -> Result<DocBookParseResult> {
         }
     }
 
-    // Prepend title to output
     let mut final_output = output;
     if !title.is_empty() {
         final_output = format!("{}\n\n{}", title, final_output);
@@ -384,10 +375,8 @@ impl DocumentExtractor for DocbookExtractor {
             .map(|s| s.to_string())
             .unwrap_or_else(|_| String::from_utf8_lossy(content).to_string());
 
-        // Single-pass extraction: metadata, content, and tables in one traversal
         let (extracted_content, title, author, date, tables) = parse_docbook_single_pass(&docbook_content)?;
 
-        // Build metadata
         let mut metadata = Metadata::default();
         let mut subject_parts = Vec::new();
 

@@ -147,31 +147,25 @@ fn extract_tables_from_document(
 
     let mut all_tables = Vec::new();
 
-    // Process each page
     for (page_index, page) in document.pages().iter().enumerate() {
-        // Extract words with positions from the page
-        let words = extract_words_from_page(&page, 0.0)?; // Use 0.0 confidence for PDF (always high quality)
+        let words = extract_words_from_page(&page, 0.0)?;
 
         if words.is_empty() {
             continue;
         }
 
-        // Use existing table reconstruction logic
-        // These thresholds match the defaults from TesseractConfig
         let column_threshold = 50;
         let row_threshold_ratio = 0.5;
 
-        // Reconstruct table from positioned words
         let table_cells = reconstruct_table(&words, column_threshold, row_threshold_ratio, true);
 
         if !table_cells.is_empty() {
-            // Generate markdown representation
             let markdown = table_to_markdown(&table_cells);
 
             all_tables.push(Table {
                 cells: table_cells,
                 markdown,
-                page_number: page_index + 1, // 1-indexed
+                page_number: page_index + 1,
             });
         }
     }
@@ -302,7 +296,6 @@ impl DocumentExtractor for PdfExtractor {
     ) -> Result<ExtractionResult> {
         #[cfg(feature = "pdf")]
         let (pdf_metadata, native_text, tables) = if crate::core::batch_mode::is_batch_mode() {
-            // Batch mode: Move PDF extraction to blocking thread pool to enable parallelism
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
@@ -325,7 +318,6 @@ impl DocumentExtractor for PdfExtractor {
                 let metadata = crate::pdf::metadata::extract_metadata_from_document(&document)?;
                 let native_text = crate::pdf::text::extract_text_from_pdf_document(&document)?;
 
-                // Extract tables from native PDF text (when not using OCR)
                 let tables = extract_tables_from_document(&document, &metadata)?;
 
                 Ok::<_, crate::error::KreuzbergError>((metadata, native_text, tables))
@@ -333,7 +325,6 @@ impl DocumentExtractor for PdfExtractor {
             .await
             .map_err(|e| crate::error::KreuzbergError::Other(format!("PDF extraction task failed: {}", e)))??
         } else {
-            // Single-file mode: Direct extraction (no spawn overhead)
             let bindings = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
                 .or_else(|_| Pdfium::bind_to_system_library())
                 .map_err(|e| PdfError::MetadataExtractionFailed(format!("Failed to initialize Pdfium: {}", e)))?;
@@ -352,7 +343,6 @@ impl DocumentExtractor for PdfExtractor {
             let metadata = crate::pdf::metadata::extract_metadata_from_document(&document)?;
             let native_text = crate::pdf::text::extract_text_from_pdf_document(&document)?;
 
-            // Extract tables from native PDF text (when not using OCR)
             let tables = extract_tables_from_document(&document, &metadata)?;
 
             (metadata, native_text, tables)
@@ -424,9 +414,6 @@ impl DocumentExtractor for PdfExtractor {
         } else {
             None
         };
-
-        // Tables were extracted during metadata/text extraction phase
-        // (see extract_tables_from_document function below)
 
         Ok(ExtractionResult {
             content: text,

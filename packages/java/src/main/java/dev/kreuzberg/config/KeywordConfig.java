@@ -107,7 +107,6 @@ public final class KeywordConfig {
     private RakeParams rakeParams;
 
     private Builder() {
-      // defaults
     }
 
     public Builder algorithm(String algorithm) {

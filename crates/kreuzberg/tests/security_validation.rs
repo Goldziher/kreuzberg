@@ -12,6 +12,17 @@ use kreuzberg::core::extractor::{extract_bytes_sync, extract_file_sync};
 use std::io::Write;
 use tempfile::NamedTempFile;
 
+fn trim_trailing_newlines(value: &str) -> &str {
+    value.trim_end_matches(|c| c == '\n' || c == '\r')
+}
+
+fn assert_text_content(actual: &str, expected: &str) {
+    assert_eq!(
+        trim_trailing_newlines(actual),
+        expected,
+        "Content mismatch after trimming trailing newlines"
+    );
+}
 #[test]
 fn test_archive_zip_bomb_detection() {
     let mut cursor = std::io::Cursor::new(Vec::new());
@@ -266,7 +277,7 @@ fn test_resource_single_byte_file() {
 
     assert!(result.is_ok());
     if let Ok(extracted) = result {
-        assert_eq!(extracted.content, "a");
+        assert_text_content(&extracted.content, "a");
     }
 }
 

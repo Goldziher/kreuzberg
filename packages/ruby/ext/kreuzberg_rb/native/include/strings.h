@@ -15,6 +15,6 @@
 #ifndef bzero
 #define bzero(ptr, size) memset((ptr), 0, (size))
 #endif
-#endif  // _MSC_VER
+#endif
 
-#endif  // KREUZBERG_RUBY_STRINGS_H
+#endif

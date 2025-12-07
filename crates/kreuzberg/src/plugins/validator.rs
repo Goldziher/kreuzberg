@@ -275,8 +275,6 @@ pub trait Validator: Plugin {
     }
 }
 
-// Public registration APIs
-
 /// Register a validator with the global registry.
 ///
 /// The validator will be registered with its default priority and will be called
@@ -812,8 +810,6 @@ mod tests {
         assert!(validator.validate(&result, &config).await.is_ok());
     }
 
-    // Tests for public registration APIs
-
     #[test]
     #[serial_test::serial]
     fn test_register_validator() {
@@ -853,7 +849,6 @@ mod tests {
         super::clear_validators().unwrap();
 
         let validator1 = Arc::new(MockValidator { should_fail: false });
-        // Both validators have the same name, so only one will be registered
         let validator2 = Arc::new(MockValidator { should_fail: false });
 
         let list_before = super::list_validators().unwrap();
@@ -863,7 +858,6 @@ mod tests {
         super::register_validator(validator2).unwrap();
 
         let list = super::list_validators().unwrap();
-        // Only 1 validator registered since they have the same name
         assert_eq!(list.len(), 1);
         assert!(list.contains(&"mock-validator".to_string()));
 
@@ -883,7 +877,6 @@ mod tests {
         super::register_validator(validator1).unwrap();
         super::register_validator(validator2).unwrap();
 
-        // Verify at least one validator is registered
         let list_before = super::list_validators().unwrap();
         assert!(!list_before.is_empty());
 

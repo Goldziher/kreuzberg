@@ -361,8 +361,6 @@ pub trait DocumentExtractor: Plugin {
     }
 }
 
-// Public registration APIs
-
 /// Register a document extractor with the global registry.
 ///
 /// The extractor will be registered for all MIME types it supports and will be
@@ -831,8 +829,6 @@ mod tests {
         assert_eq!(result.mime_type, "application/json");
     }
 
-    // Tests for public registration APIs
-
     #[test]
     #[serial]
     fn test_register_extractor() {
@@ -893,7 +889,6 @@ mod tests {
         super::register_extractor(extractor2).unwrap();
 
         let list = super::list_extractors().unwrap();
-        // Both extractors have the same name, so only one will be registered
         assert_eq!(list.len(), 1);
         assert!(list.contains(&"mock-extractor".to_string()));
 

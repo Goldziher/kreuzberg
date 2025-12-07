@@ -21,11 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class BatchOperationsTest {
 
-    // ==================== Basic Batch Operations ====================
 
     @Test
     void testBatchExtractMultipleFiles(@TempDir Path tempDir) throws IOException, KreuzbergException {
-        // Create multiple test files
         List<Path> files = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             Path file = tempDir.resolve("file_" + i + ".txt");
@@ -33,7 +31,6 @@ class BatchOperationsTest {
             files.add(file);
         }
 
-        // Extract as string paths
         List<String> paths = new ArrayList<>();
         for (Path file : files) {
             paths.add(file.toString());
@@ -53,7 +50,6 @@ class BatchOperationsTest {
     void testBatchExtractWithDifferentFileTypes(@TempDir Path tempDir) throws IOException, KreuzbergException {
         List<String> paths = new ArrayList<>();
 
-        // Create different file types
         Path textFile = tempDir.resolve("document.txt");
         Files.writeString(textFile, "Text content");
         paths.add(textFile.toString());
@@ -79,7 +75,6 @@ class BatchOperationsTest {
     void testBatchExtractLargeNumber(@TempDir Path tempDir) throws IOException, KreuzbergException {
         List<String> paths = new ArrayList<>();
 
-        // Create 20 files
         for (int i = 0; i < 20; i++) {
             Path file = tempDir.resolve("large_batch_" + i + ".txt");
             Files.writeString(file, "File " + i + " content");
@@ -98,7 +93,6 @@ class BatchOperationsTest {
         assertTrue(successCount > 15, "Most files should extract successfully");
     }
 
-    // ==================== Batch Byte Operations ====================
 
     @Test
     void testBatchExtractBytes() throws KreuzbergException {
@@ -149,31 +143,25 @@ class BatchOperationsTest {
         assertTrue(results.isEmpty(), "Should return empty list for empty input");
     }
 
-    // ==================== Partial Failure Handling ====================
 
     @Test
     void testBatchExtractWithSomeMissingFiles(@TempDir Path tempDir) throws IOException, KreuzbergException {
         List<String> paths = new ArrayList<>();
 
-        // Add some valid files
         for (int i = 0; i < 2; i++) {
             Path file = tempDir.resolve("exists_" + i + ".txt");
             Files.writeString(file, "Existing file " + i);
             paths.add(file.toString());
         }
 
-        // Add some non-existent files
         paths.add("/nonexistent/file1.txt");
         paths.add("/nonexistent/file2.txt");
 
-        // Batch extraction should handle mixed valid/invalid
         List<ExtractionResult> results = Kreuzberg.batchExtractFiles(paths, null);
 
-        // Some results may be failures, but list should have entries
         assertNotNull(results, "Results should be returned");
         assertEquals(4, results.size(), "Should have results for all paths");
 
-        // At least some should succeed
         boolean hasSuccess = results.stream().anyMatch(ExtractionResult::isSuccess);
         assertTrue(hasSuccess, "At least some files should extract successfully");
     }
@@ -189,12 +177,10 @@ class BatchOperationsTest {
 
         List<ExtractionResult> results = Kreuzberg.batchExtractFiles(paths, null);
 
-        // Results should be independent
         assertNotEquals(results.get(0).getContent(), results.get(1).getContent(),
                 "Different files should have different content");
     }
 
-    // ==================== Progress Tracking Simulation ====================
 
     @Test
     void testBatchExtractProgressTracking(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -209,7 +195,6 @@ class BatchOperationsTest {
 
         List<ExtractionResult> results = Kreuzberg.batchExtractFiles(paths, null);
 
-        // Simulate progress tracking
         int processedCount = 0;
         for (ExtractionResult result : results) {
             processedCount++;
@@ -235,11 +220,9 @@ class BatchOperationsTest {
 
         List<ExtractionResult> results = Kreuzberg.batchExtractFiles(paths, null);
 
-        // Verify we can match results to input order
         assertEquals(paths.size(), results.size(), "Should have same number of results as inputs");
     }
 
-    // ==================== Batch Configuration ====================
 
     @Test
     void testBatchExtractWithConfiguration(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -308,7 +291,6 @@ class BatchOperationsTest {
         assertNotNull(results, "Should handle batch with OCR config");
     }
 
-    // ==================== Batch Consistency ====================
 
     @Test
     void testBatchExtractConsistency(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -319,11 +301,9 @@ class BatchOperationsTest {
             paths.add(file.toString());
         }
 
-        // Extract batch twice
         List<ExtractionResult> results1 = Kreuzberg.batchExtractFiles(paths, null);
         List<ExtractionResult> results2 = Kreuzberg.batchExtractFiles(paths, null);
 
-        // Results should be consistent
         assertEquals(results1.size(), results2.size(), "Batch size should be consistent");
         for (int i = 0; i < results1.size(); i++) {
             assertEquals(results1.get(i).getMimeType(), results2.get(i).getMimeType(),
@@ -331,11 +311,9 @@ class BatchOperationsTest {
         }
     }
 
-    // ==================== Mixed Batch Operations ====================
 
     @Test
     void testAlternatingBatchAndSingleExtractions(@TempDir Path tempDir) throws IOException, KreuzbergException {
-        // Create test files
         Path file1 = tempDir.resolve("mixed1.txt");
         Path file2 = tempDir.resolve("mixed2.txt");
         Path file3 = tempDir.resolve("mixed3.txt");
@@ -344,16 +322,13 @@ class BatchOperationsTest {
         Files.writeString(file2, "Second");
         Files.writeString(file3, "Third");
 
-        // Single extraction
         ExtractionResult single = Kreuzberg.extractFile(file1);
         assertNotNull(single.getContent(), "Single extraction should work");
 
-        // Batch extraction
         List<ExtractionResult> batch = Kreuzberg.batchExtractFiles(
                 List.of(file2.toString(), file3.toString()), null);
         assertEquals(2, batch.size(), "Batch should have 2 results");
 
-        // Another single extraction
         ExtractionResult single2 = Kreuzberg.extractFile(file1);
         assertNotNull(single2.getContent(), "Second single extraction should work");
     }
@@ -363,12 +338,10 @@ class BatchOperationsTest {
         Path file1 = tempDir.resolve("before_async.txt");
         Files.writeString(file1, "Before async");
 
-        // Batch extraction
         List<ExtractionResult> batch = Kreuzberg.batchExtractFiles(
                 List.of(file1.toString()), null);
         assertEquals(1, batch.size(), "Batch should succeed");
 
-        // Async extraction
         var asyncFuture = Kreuzberg.extractFileAsync(file1, null);
         try {
             ExtractionResult asyncResult = asyncFuture.get();
@@ -378,13 +351,11 @@ class BatchOperationsTest {
         }
     }
 
-    // ==================== Edge Cases ====================
 
     @Test
     void testBatchExtractVeryLargeFiles(@TempDir Path tempDir) throws IOException, KreuzbergException {
         List<String> paths = new ArrayList<>();
 
-        // Create 2 large files
         for (int i = 0; i < 2; i++) {
             Path file = tempDir.resolve("large_" + i + ".txt");
             StringBuilder content = new StringBuilder();
@@ -427,18 +398,15 @@ class BatchOperationsTest {
 
         List<ExtractionResult> results = Kreuzberg.batchExtractFiles(paths, null);
 
-        // Modifying one result shouldn't affect others (immutability)
         if (results.size() > 0) {
             var firstContent = results.get(0).getContent();
 
-            // Try to modify metadata (should be immutable)
             assertThrows(UnsupportedOperationException.class, () -> {
                 results.get(0).getMetadata().put("key", "value");
             }, "Result metadata should be immutable");
         }
     }
 
-    // ==================== Batch Error States ====================
 
     @Test
     void testBatchExtractHandlesNullResults(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -476,7 +444,6 @@ class BatchOperationsTest {
 
         assertEquals(3, results.size(), "Should extract all different types");
 
-        // MIME types should be different
         String mime1 = results.get(0).getMimeType();
         String mime2 = results.get(1).getMimeType();
         String mime3 = results.get(2).getMimeType();
@@ -486,7 +453,6 @@ class BatchOperationsTest {
         assertNotNull(mime3, "Third MIME type should be detected");
     }
 
-    // ==================== Async Batch Operations ====================
 
     @Test
     void testAsyncBatchExtractFiles(@TempDir Path tempDir) throws IOException {
@@ -523,7 +489,6 @@ class BatchOperationsTest {
         }
     }
 
-    // ==================== Batch Statistics ====================
 
     @Test
     void testBatchExtractStatistics(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -536,7 +501,6 @@ class BatchOperationsTest {
 
         List<ExtractionResult> results = Kreuzberg.batchExtractFiles(paths, null);
 
-        // Calculate statistics
         long totalSize = 0;
         int successCount = 0;
         for (ExtractionResult result : results) {

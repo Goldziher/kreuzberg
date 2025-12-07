@@ -11,9 +11,6 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-// ============================================================================
-// ============================================================================
-
 /// Main extraction configuration.
 ///
 /// Controls all aspects of document extraction including OCR, PDF rendering,

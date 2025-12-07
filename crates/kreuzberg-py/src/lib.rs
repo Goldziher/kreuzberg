@@ -217,9 +217,6 @@ fn list_embedding_presets() -> Vec<String> {
 fn get_embedding_preset(name: String) -> Option<EmbeddingPreset> {
     let preset = kreuzberg::embeddings::get_preset(&name)?;
 
-    // Note: When embeddings feature is enabled in kreuzberg, the model field is EmbeddingModel
-    // When not enabled, it's model_name: &'static str. Since kreuzberg-py typically builds
-    // with all features, we use the model field and format it.
     let model_name = format!("{:?}", preset.model);
 
     Some(EmbeddingPreset {

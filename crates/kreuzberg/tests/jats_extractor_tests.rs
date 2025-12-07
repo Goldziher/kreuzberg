@@ -78,19 +78,15 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Validate content extraction
         assert!(extraction.content.contains("Effects of Caffeine"));
         assert!(extraction.content.contains("Introduction"));
 
-        // Validate metadata
         assert!(extraction.metadata.subject.is_some());
         let subject = extraction.metadata.subject.unwrap();
         assert!(subject.contains("Effects of Caffeine"));
 
-        // Validate DOI is in subject
         assert!(subject.contains("10.1371"));
 
-        // Validate keywords are in subject
         assert!(subject.contains("caffeine") || subject.contains("Keywords"));
     }
 
@@ -143,7 +139,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify metadata contains author and affiliation info
         let subject = extraction.metadata.subject.unwrap();
         assert!(subject.contains("Alpha"));
         assert!(subject.contains("Beta"));
@@ -201,7 +196,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Validate all sections are present
         assert!(extraction.content.contains("Introduction"));
         assert!(extraction.content.contains("Methods"));
         assert!(extraction.content.contains("Results"));
@@ -274,15 +268,12 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Validate tables were extracted
         assert_eq!(extraction.tables.len(), 1);
         let table = &extraction.tables[0];
 
-        // Check table structure
-        assert!(table.cells.len() >= 3); // header + at least 2 data rows
-        assert_eq!(table.cells[0].len(), 4); // 4 columns
+        assert!(table.cells.len() >= 3);
+        assert_eq!(table.cells[0].len(), 4);
 
-        // Verify table content
         assert!(table.cells[0][0].contains("Parameter"));
         assert!(table.cells[1][0].contains("Age"));
         assert!(table.cells[2][0].contains("Sex"));
@@ -331,10 +322,9 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify both tables extracted
         assert_eq!(extraction.tables.len(), 2);
-        assert_eq!(extraction.tables[0].cells[0].len(), 2); // First table: 2 columns
-        assert_eq!(extraction.tables[1].cells[0].len(), 3); // Second table: 3 columns
+        assert_eq!(extraction.tables[0].cells[0].len(), 2);
+        assert_eq!(extraction.tables[1].cells[0].len(), 3);
     }
 
     /// Test citation extraction in text with xref elements
@@ -395,7 +385,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify citation references are in content
         assert!(extraction.content.contains("Previous research"));
         assert!(extraction.content.contains("Other studies"));
     }
@@ -435,7 +424,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify abstract was extracted in subject
         let subject = extraction.metadata.subject.unwrap();
         assert!(subject.contains("background") || subject.contains("Background") || subject.contains("Abstract"));
     }
@@ -464,8 +452,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify corresponding author info was extracted
-        // The subject should contain title or author info
         assert!(extraction.metadata.subject.is_some());
     }
 
@@ -495,7 +481,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify publication date was extracted
         assert!(extraction.metadata.date.is_some());
     }
 
@@ -518,7 +503,6 @@ mod jats_extractor_tests {
             .extract_bytes(jats_content.as_bytes(), "application/x-jats+xml", &config)
             .await;
 
-        // Should not fail on empty article
         assert!(result.is_ok());
         let extraction = result.unwrap();
         assert!(extraction.content.is_empty() || extraction.content.trim().is_empty());
@@ -589,7 +573,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify both text and table were extracted
         assert!(extraction.content.contains("First paragraph"));
         assert!(extraction.content.contains("Second paragraph"));
         assert_eq!(extraction.tables.len(), 1);
@@ -623,7 +606,6 @@ mod jats_extractor_tests {
         assert!(result.is_ok());
         let extraction = result.unwrap();
 
-        // Verify keywords were extracted in subject
         let subject = extraction.metadata.subject.unwrap();
         assert!(subject.contains("keyword") || subject.contains("Keyword"));
     }
@@ -634,7 +616,6 @@ mod jats_extractor_tests {
         let extractor = JatsExtractor::new();
         let config = ExtractionConfig::default();
 
-        // Check if test file exists
         let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jats/sample_article.jats";
         if std::path::Path::new(test_file).exists() {
             let result = extractor
@@ -644,7 +625,6 @@ mod jats_extractor_tests {
             assert!(result.is_ok());
             let extraction = result.unwrap();
 
-            // Verify key content was extracted
             assert!(!extraction.content.is_empty());
             assert!(extraction.metadata.subject.is_some());
         }

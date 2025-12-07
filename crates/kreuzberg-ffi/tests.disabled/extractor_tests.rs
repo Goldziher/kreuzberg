@@ -2,7 +2,6 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr;
 
-// Import the FFI functions
 unsafe extern "C" {
     fn kreuzberg_register_document_extractor(
         name: *const c_char,

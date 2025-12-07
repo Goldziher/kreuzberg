@@ -124,7 +124,6 @@ ocr:
 fn test_from_file_nonexistent_path_fails() {
     let result = ExtractionConfig::from_file("/nonexistent/path/config.toml");
     assert!(result.is_err(), "Should fail for nonexistent path: {:?}", result);
-    // Error can be Io or other types depending on the implementation
 }
 
 /// Test from_file with malformed TOML fails.
@@ -142,7 +141,6 @@ enabled = true
 
     let result = ExtractionConfig::from_file(&config_path);
     assert!(result.is_err(), "Should fail for malformed TOML: {:?}", result);
-    // Error handling varies - just ensure it failed
 }
 
 /// Test from_file with malformed JSON fails.
@@ -164,7 +162,6 @@ fn test_from_file_malformed_json_fails() {
 
     let result = ExtractionConfig::from_file(&config_path);
     assert!(result.is_err(), "Should fail for malformed JSON: {:?}", result);
-    // Error handling varies - just ensure it failed
 }
 
 /// Test from_file with malformed YAML fails.
@@ -183,7 +180,6 @@ ocr:
 
     let result = ExtractionConfig::from_file(&config_path);
     assert!(result.is_err(), "Should fail for malformed YAML: {:?}", result);
-    // Error handling varies - just ensure it failed
 }
 
 /// Test from_file with empty file uses defaults.
@@ -198,7 +194,6 @@ fn test_from_file_empty_file_uses_defaults() {
     assert!(config.is_ok(), "Should load empty file successfully");
 
     let config = config.unwrap();
-    // Should have default values
     assert!(config.ocr.is_none(), "Default config should have no OCR");
     assert!(config.chunking.is_none(), "Default config should have no chunking");
 }
@@ -222,9 +217,7 @@ fn test_from_file_unsupported_extension_fails() {
                 message
             );
         }
-        _ => {
-            // Some other error is also acceptable
-        }
+        _ => {}
     }
 }
 
@@ -242,13 +235,11 @@ enabled = true
 
     fs::write(&config_path, toml_content).unwrap();
 
-    // Change to temp directory
     let original_dir = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     let result = ExtractionConfig::discover();
 
-    // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
 
     assert!(result.is_ok(), "Discover should succeed");
@@ -271,17 +262,14 @@ enabled = true
 
     fs::write(&config_path, toml_content).unwrap();
 
-    // Create subdirectory
     let sub_dir = temp_dir.path().join("subdir");
     fs::create_dir(&sub_dir).unwrap();
 
-    // Change to subdirectory
     let original_dir = std::env::current_dir().unwrap();
     std::env::set_current_dir(&sub_dir).unwrap();
 
     let result = ExtractionConfig::discover();
 
-    // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
 
     assert!(result.is_ok(), "Discover should succeed");
@@ -298,19 +286,15 @@ fn test_discover_returns_none_when_not_found() {
     let sub_dir = temp_dir.path().join("subdir");
     fs::create_dir(&sub_dir).unwrap();
 
-    // Change to subdirectory (no config files)
     let original_dir = std::env::current_dir().unwrap();
     std::env::set_current_dir(&sub_dir).unwrap();
 
     let result = ExtractionConfig::discover();
 
-    // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
 
     assert!(result.is_ok(), "Discover should succeed even when no config found");
     let _config = result.unwrap();
-    // May return None or may find a config in parent directories (e.g., repository root)
-    // Just verify it doesn't error - the specific behavior depends on the directory structure
 }
 
 /// Test discover() prefers certain file names.
@@ -319,19 +303,16 @@ fn test_discover_returns_none_when_not_found() {
 fn test_discover_file_name_preference() {
     let temp_dir = TempDir::new().unwrap();
 
-    // Create multiple config files
     fs::write(temp_dir.path().join("kreuzberg.toml"), "[ocr]\nenabled = true").unwrap();
     fs::write(temp_dir.path().join(".kreuzberg.toml"), "[ocr]\nenabled = false").unwrap();
 
     let original_dir = std::env::current_dir().unwrap();
     if std::env::set_current_dir(temp_dir.path()).is_err() {
-        // Skip this test if we can't change directory
         return;
     }
 
     let result = ExtractionConfig::discover();
 
-    // Always restore directory even if test fails
     let _ = std::env::set_current_dir(original_dir);
 
     assert!(result.is_ok(), "Discover should succeed");
@@ -353,22 +334,18 @@ enabled = true
 
     fs::write(&config_path, toml_content).unwrap();
 
-    // Create nested subdirectories
     let level1 = temp_dir.path().join("level1");
     let level2 = level1.join("level2");
     let level3 = level2.join("level3");
     fs::create_dir_all(&level3).unwrap();
 
-    // Change to deepest directory
     let original_dir = std::env::current_dir().unwrap();
     if std::env::set_current_dir(&level3).is_err() {
-        // Skip this test if we can't change directory
         return;
     }
 
     let result = ExtractionConfig::discover();
 
-    // Always restore directory even if test fails
     let _ = std::env::set_current_dir(&original_dir);
 
     assert!(result.is_ok(), "Discover should succeed");
@@ -424,7 +401,6 @@ fn test_from_file_with_invalid_values() {
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("config.toml");
 
-    // Negative values should be rejected during deserialization or validation
     let toml_content = r#"
 [chunking]
 max_chars = -1000
@@ -434,9 +410,7 @@ max_overlap = -100
     fs::write(&config_path, toml_content).unwrap();
 
     let result = ExtractionConfig::from_file(&config_path);
-    // Should either fail parsing or have clamped values
     if let Ok(config) = result {
-        // If it succeeds, values should be reasonable
         if let Some(chunking) = config.chunking {
             assert!(chunking.max_chars > 0, "max_chars should be positive");
         }

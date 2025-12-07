@@ -56,7 +56,6 @@ public final class PdfConfig {
     private boolean extractMetadata = true;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder extractImages(boolean extractImages) {

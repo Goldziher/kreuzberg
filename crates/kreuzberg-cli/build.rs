@@ -3,7 +3,6 @@ fn main() {
 
     let target = std::env::var("TARGET").unwrap();
 
-    // Set rpath so the binary can find libpdfium.dylib in the same directory
     if target.contains("darwin") {
         println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path");
         println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path/.");

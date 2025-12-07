@@ -50,7 +50,6 @@ impl Drop for GcGuardedValue {
 }
 
 unsafe extern "C" {
-    // SAFETY: FFI functions are thread-safe and provided by kreuzberg-ffi C library
     fn kreuzberg_last_error_code() -> i32;
     fn kreuzberg_last_panic_context() -> *const std::ffi::c_char;
     fn kreuzberg_free_string(s: *mut std::ffi::c_char);
@@ -2025,9 +2024,6 @@ fn register_post_processor(args: &[Value]) -> Result<(), Error> {
             let processor = self.processor.value();
             let result_clone = result.clone();
 
-            // Use block_in_place to avoid GVL deadlocks (same pattern as Python PostProcessor)
-            // See crates/kreuzberg-py/README.md:151-158 for explanation
-            // CRITICAL: spawn_blocking causes GVL deadlocks, must use block_in_place
             let updated_result = tokio::task::block_in_place(|| {
                 let ruby = Ruby::get().expect("Ruby not initialized");
                 let result_hash = extraction_result_to_ruby(&ruby, result_clone.clone()).map_err(|e| {
@@ -2234,9 +2230,6 @@ fn register_validator(args: &[Value]) -> Result<(), Error> {
             let validator = self.validator.value();
             let result_clone = result.clone();
 
-            // Use block_in_place to avoid GVL deadlocks (same pattern as Python Validator)
-            // See crates/kreuzberg-py/README.md:151-158 for explanation
-            // CRITICAL: spawn_blocking causes GVL deadlocks, must use block_in_place
             tokio::task::block_in_place(|| {
                 let ruby = Ruby::get().expect("Ruby not initialized");
                 let result_hash =
@@ -2708,8 +2701,6 @@ fn get_embedding_preset(ruby: &Ruby, name: String) -> Result<Value, Error> {
             set_hash_entry(ruby, &hash, "chunk_size", preset.chunk_size.into_value_with(ruby))?;
             set_hash_entry(ruby, &hash, "overlap", preset.overlap.into_value_with(ruby))?;
 
-            // Note: When embeddings feature is enabled in kreuzberg, the model field is EmbeddingModel
-            // Since Ruby bindings typically build with all features, we use the model field and format it.
             let model_name = format!("{:?}", preset.model);
 
             set_hash_entry(ruby, &hash, "model_name", ruby.str_new(&model_name).as_value())?;

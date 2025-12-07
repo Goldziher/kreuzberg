@@ -590,6 +590,10 @@ mod tests {
     use std::io::Write;
     use tempfile::tempdir;
 
+    fn assert_text_content(actual: &str, expected: &str) {
+        assert_eq!(actual.trim_end_matches('\n'), expected);
+    }
+
     #[tokio::test]
     async fn test_extract_file_basic() {
         let dir = tempdir().unwrap();
@@ -602,7 +606,7 @@ mod tests {
 
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert_eq!(result.content, "Hello, world!");
+        assert_text_content(&result.content, "Hello, world!");
         assert_eq!(result.mime_type, "text/plain");
     }
 
@@ -635,7 +639,7 @@ mod tests {
 
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert_eq!(result.content, "test content");
+        assert_text_content(&result.content, "test content");
         assert_eq!(result.mime_type, "text/plain");
     }
 
@@ -663,8 +667,8 @@ mod tests {
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 2);
-        assert_eq!(results[0].content, "content 1");
-        assert_eq!(results[1].content, "content 2");
+        assert_text_content(&results[0].content, "content 1");
+        assert_text_content(&results[1].content, "content 2");
     }
 
     #[tokio::test]
@@ -689,8 +693,8 @@ mod tests {
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 2);
-        assert_eq!(results[0].content, "content 1");
-        assert_eq!(results[1].content, "content 2");
+        assert_text_content(&results[0].content, "content 1");
+        assert_text_content(&results[1].content, "content 2");
     }
 
     #[test]
@@ -703,7 +707,8 @@ mod tests {
 
         let result = extract_file_sync(&file_path, None, &config);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().content, "sync test");
+        let result = result.unwrap();
+        assert_text_content(&result.content, "sync test");
 
         let result = extract_bytes_sync(b"test", "text/plain", &config);
         assert!(result.is_ok());
@@ -715,12 +720,14 @@ mod tests {
 
         let result1 = extract_bytes(b"test 1", "text/plain", &config).await;
         assert!(result1.is_ok());
+        let result1 = result1.unwrap();
 
         let result2 = extract_bytes(b"test 2", "text/plain", &config).await;
         assert!(result2.is_ok());
+        let result2 = result2.unwrap();
 
-        assert_eq!(result1.unwrap().content, "test 1");
-        assert_eq!(result2.unwrap().content, "test 2");
+        assert_text_content(&result1.content, "test 1");
+        assert_text_content(&result2.content, "test 2");
 
         let result3 = extract_bytes(b"# test 3", "text/markdown", &config).await;
         assert!(result3.is_ok());
@@ -786,7 +793,8 @@ mod tests {
         let result = extract_file(&file_path, None, &config).await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().content, "content");
+        let result = result.unwrap();
+        assert_text_content(&result.content, "content");
     }
 
     #[tokio::test]
@@ -826,7 +834,7 @@ mod tests {
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 2);
-        assert_eq!(results[0].content, "valid content");
+        assert_text_content(&results[0].content, "valid content");
         assert!(results[1].metadata.error.is_some());
     }
 
@@ -843,9 +851,9 @@ mod tests {
         assert!(results.is_ok());
         let results = results.unwrap();
         assert_eq!(results.len(), 3);
-        assert_eq!(results[0].content, "valid 1");
+        assert_text_content(&results[0].content, "valid 1");
         assert!(results[1].metadata.error.is_some());
-        assert_eq!(results[2].content, "valid 2");
+        assert_text_content(&results[2].content, "valid 2");
     }
 
     #[tokio::test]
@@ -872,7 +880,8 @@ mod tests {
 
         assert!(result.is_ok());
         let result = result.unwrap();
-        assert_eq!(result.content.len(), 10_000_000);
+        let trimmed_len = result.content.trim_end_matches('\n').len();
+        assert_eq!(trimmed_len, 10_000_000);
     }
 
     #[tokio::test]
@@ -897,7 +906,7 @@ mod tests {
         assert_eq!(results.len(), 100);
 
         for (i, result) in results.iter().enumerate() {
-            assert_eq!(result.content, format!("content {}", i));
+            assert_text_content(&result.content, &format!("content {}", i));
         }
     }
 

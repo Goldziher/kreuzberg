@@ -1,4 +1,3 @@
-# Test configuration file for YAML format
 use_cache: true
 enable_quality_processing: false
 force_ocr: false

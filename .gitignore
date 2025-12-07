@@ -1,13 +1,19 @@
 !benchmarks/baselines/
-tests/benchmarks/results/
-[Tt][Oo][Dd][Oo]*
+!packages/go/kreuzberg/.kreuzberg/
+!packages/go/kreuzberg/.kreuzberg/sample.pdf
+!vendor/rb-sys/build/
+!vendor/rb-sys/build/**
 *$py.class
+**/bin/
+**/obj/
 *.Cache
+*.cobertura.xml
 *.cscfg
 *.dll
 *.dylib
 *.egg-info/
 *.log
+*.node
 *.pdb
 *.py[cod]
 *.rs.bk
@@ -16,10 +22,10 @@ tests/benchmarks/results/
 *.tar.gz
 *.temp
 *.tmp
+*.tsbuildinfo
 *.user
 *.whl
-**/bin/
-**/obj/
+*/.fastembed_cache/
 *temp/
 .benchmarks/
 .cache/
@@ -31,13 +37,16 @@ tests/benchmarks/results/
 .dist/
 .DS_store
 .env
+.fastembed_cache/
+.gemini/
+.gemini/settings.json
 .idea/
 .kreuzberg/
-# Exception: Allow Go test fixtures (needed for go:embed directive)
-!packages/go/kreuzberg/.kreuzberg/
-!packages/go/kreuzberg/.kreuzberg/sample.pdf
+.mcp.json
 .mypy_cache/
 .nox/
+.playwright-mcp/
+.pnpm-store/
 .pytest_cache/
 .python-version
 .ropeproject
@@ -50,7 +59,8 @@ tests/benchmarks/results/
 .venv/
 .vscode/
 .windsurfrules
-.playwright-mcp/
+/tmp/kreuzberg-docker-test-results.json
+[Tt][Oo][Dd][Oo]*
 __pycache__/
 AGENTS.md
 AGENTS.md
@@ -58,41 +68,49 @@ aggregated-results/
 benchmark_results.json
 benchmarks/results/
 build/
-!vendor/rb-sys/build/
-!vendor/rb-sys/build/**
 CLAUDE.md
-
-# Coverage
-coverage/
-coverage.lcov
-coverage.xml
-rust-coverage.lcov
 coverage.info
-# TypeScript / Build artifacts
+coverage.json
+coverage.lcov
+coverage.out
+coverage.xml
+coverage/
+crates/kreuzberg-node/index.d.ts
+crates/kreuzberg-node/index.js
 dist/
-*.tsbuildinfo
-*.node
-temp-test-*
-
 docker-compose.yaml
+docker-logs/
 docs/_build/
 docs/build/
+e2e/java/src/test/java/com/kreuzberg/e2e/package-info.java
+examples.txt
 GEMINI.md
 htmlcov/
-# Node.js / pnpm
 node_modules/
 npm-debug.log*
-pnpm-debug.log*
-.pnpm-store/
 output.txt
+packages/*/.coverage
+packages/*/coverage.json
+packages/*/coverage.out
+packages/*/htmlcov/
+packages/*/test-results/
+packages/*/TestResults/
+packages/ruby/.bundle/
+packages/ruby/vendor/
+pnpm-debug.log*
 prompt_template.egg-info/
 reports/
 requirements.txt
 results/
+results/
+rust-coverage.lcov
 share/python-wheels/
 site/
 target/
+temp-test-*
 test_report.json
+TestResults/
+tests/benchmarks/results/
 tests/benchmarks/results/*.csv
 tests/benchmarks/results/*.html
 tests/benchmarks/results/*.json
@@ -103,51 +121,3 @@ visualizations/
 wheels/
 yarn-debug.log*
 yarn-error.log*
-
-# NAPI-RS generated files (should not be committed)
-crates/kreuzberg-node/index.js
-crates/kreuzberg-node/index.d.ts
-
-# Bundler artifacts
-packages/ruby/vendor/
-packages/ruby/.bundle/
-
-# Embedding model caches (default is .kreuzberg/embeddings, but tests may create these)
-.fastembed_cache/
-*/.fastembed_cache/
-results/
-
-# Docker test artifacts
-/tmp/kreuzberg-docker-test-results.json
-docker-logs/
-
-# AI Rules generated files
-.mcp.json
-
-# AI Rules generated files
-.gemini/settings.json
-
-# Auto-generated E2E test files
-e2e/java/src/test/java/com/kreuzberg/e2e/package-info.java
-
-# Test result and coverage files
-# Go coverage
-coverage.out
-# Python coverage
-coverage.json
-# C# coverage
-*.cobertura.xml
-# C# test results
-TestResults/
-# Ruby rspec examples
-examples.txt
-
-# Coverage files in packages subdirectories
-packages/*/coverage.out
-packages/*/coverage.json
-packages/*/.coverage
-packages/*/htmlcov/
-
-# Test results in packages subdirectories
-packages/*/TestResults/
-packages/*/test-results/

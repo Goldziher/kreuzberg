@@ -44,11 +44,9 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("========================\n");
 
-        // Check that all header content is preserved
         assert!(markdown.contains("Name"), "Should contain header 'Name'");
         assert!(markdown.contains("Age"), "Should contain header 'Age'");
 
-        // Check that all data cell content is preserved
         assert!(markdown.contains("Alice"), "Should contain cell 'Alice'");
         assert!(markdown.contains("Bob"), "Should contain cell 'Bob'");
         assert!(markdown.contains("30"), "Should contain cell '30'");
@@ -88,7 +86,6 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("==========================\n");
 
-        // Check for markdown table format (pipes or dashes)
         if markdown.contains("|") {
             println!("✓ Table uses pipe (|) separators (standard markdown table format)");
             assert!(
@@ -96,7 +93,6 @@ mod html_table_tests {
                 "Headers should be present in pipe-separated format"
             );
         } else {
-            // Alternative: tables might be rendered as plain text or special format
             println!("✓ Table content preserved but in alternative format");
             assert!(
                 markdown.contains("Column 1") && markdown.contains("Column 2"),
@@ -154,16 +150,13 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("===========================\n");
 
-        // Verify all static text is preserved
         assert!(markdown.contains("Feature"), "Should preserve 'Feature' header");
         assert!(markdown.contains("Status"), "Should preserve 'Status' header");
         assert!(markdown.contains("Link"), "Should preserve 'Link' header");
 
-        // Verify table data rows
         assert!(markdown.contains("Headers"), "Should preserve 'Headers' cell");
         assert!(markdown.contains("Data cells"), "Should preserve 'Data cells' cell");
 
-        // Verify formatted content is preserved (text might be stripped of HTML tags)
         assert!(
             markdown.contains("Working"),
             "Should preserve 'Working' (from strong tag)"
@@ -173,7 +166,6 @@ mod html_table_tests {
             "Should preserve 'Implemented' (from em tag)"
         );
 
-        // Verify links are handled (URL and text should be present)
         assert!(
             markdown.contains("docs") || markdown.contains("example.com"),
             "Should preserve link content or URL"
@@ -209,7 +201,6 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("==========================\n");
 
-        // Most important: content should be preserved
         assert!(
             markdown.contains("Merged Header"),
             "Should preserve merged header content"
@@ -264,7 +255,6 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("==============================\n");
 
-        // Verify both tables' content is present
         assert!(markdown.contains("First Table"), "Should preserve first table heading");
         assert!(
             markdown.contains("Second Table"),
@@ -320,7 +310,6 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("=================================\n");
 
-        // Verify all content is preserved
         assert!(markdown.contains("Row Header"), "Should preserve first row header");
         assert!(markdown.contains("Row Header 2"), "Should preserve second row header");
         assert!(
@@ -367,7 +356,6 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("=================================\n");
 
-        // Caption and all data should be preserved
         if markdown.contains("Sales Report 2024") {
             println!("✓ Caption is preserved in output");
         } else {
@@ -404,7 +392,6 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("==============================\n");
 
-        // All cells must be present
         assert!(
             markdown.contains("A") && markdown.contains("B") && markdown.contains("C") && markdown.contains("D"),
             "Should preserve all cells in flat table"
@@ -441,7 +428,6 @@ mod html_table_tests {
         println!("\nOutput Markdown:\n{}", markdown);
         println!("========================\n");
 
-        // Non-empty content should still be present
         assert!(markdown.contains("Data"), "Should preserve non-empty cell");
         assert!(markdown.contains("More Data"), "Should preserve other non-empty cell");
 

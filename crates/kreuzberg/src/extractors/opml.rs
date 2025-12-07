@@ -57,9 +57,7 @@ impl OpmlExtractor {
         let mut extracted_content = String::new();
         let mut metadata = HashMap::new();
 
-        // Find the root opml element
         if let Some(opml) = doc.root().children().find(|n| n.tag_name().name() == "opml") {
-            // Extract head metadata
             if let Some(head) = opml.children().find(|n| n.tag_name().name() == "head") {
                 for child in head.children().filter(|n| n.is_element()) {
                     let tag = child.tag_name().name();
@@ -96,16 +94,13 @@ impl OpmlExtractor {
                 }
             }
 
-            // Extract body outlines
             if let Some(body) = opml.children().find(|n| n.tag_name().name() == "body") {
-                // Add title to content if present
                 if let Some(title) = metadata.get("title").and_then(|v| v.as_str()) {
                     extracted_content.push_str(title);
                     extracted_content.push('\n');
                     extracted_content.push('\n');
                 }
 
-                // Process outlines recursively
                 for outline in body.children().filter(|n| n.tag_name().name() == "outline") {
                     Self::process_outline(outline, 0, &mut extracted_content);
                 }
@@ -121,10 +116,8 @@ impl OpmlExtractor {
     /// through indentation. URL attributes are excluded from the main content.
     #[cfg(feature = "office")]
     fn process_outline(node: Node, depth: usize, output: &mut String) {
-        // Get text attribute
         let text = node.attribute("text").unwrap_or("").trim();
 
-        // Add indentation and text
         if !text.is_empty() {
             let indent = "  ".repeat(depth);
             output.push_str(&indent);
@@ -132,7 +125,6 @@ impl OpmlExtractor {
             output.push('\n');
         }
 
-        // Process child outlines
         for child in node.children().filter(|n| n.tag_name().name() == "outline") {
             Self::process_outline(child, depth + 1, output);
         }
@@ -286,7 +278,6 @@ mod tests {
         assert!(content.contains("Category"), "Should contain top level");
         assert!(content.contains("Subcategory"), "Should contain nested level");
         assert!(content.contains("Item"), "Should contain deep item");
-        // Check for indentation
         assert!(content.contains("  "), "Should have indentation for nested items");
     }
 
@@ -371,7 +362,6 @@ mod tests {
             content.contains("Business") && content.contains("Startups"),
             "Should decode HTML entities"
         );
-        // Title metadata should be extracted
         let title = metadata.get("title").and_then(|v| v.as_str()).unwrap_or("");
         assert!(!title.is_empty(), "Should extract title");
     }
@@ -418,13 +408,8 @@ mod tests {
         );
     }
 
-    // ============================================================================
-    // EDGE CASE TESTS FOR MALFORMED XML AND BOUNDARY CONDITIONS
-    // ============================================================================
-
     #[test]
     fn test_opml_malformed_missing_closing_tag() {
-        // Missing closing </outline> tag - should fail gracefully
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -436,13 +421,11 @@ mod tests {
 </opml>"#;
 
         let result = OpmlExtractor::extract_content_and_metadata(opml);
-        // Should fail to parse - XML is malformed
         assert!(result.is_err(), "Should fail to parse OPML with missing closing tags");
     }
 
     #[test]
     fn test_opml_malformed_invalid_nesting() {
-        // Invalid nesting: closing head before outline
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -453,13 +436,11 @@ mod tests {
 </opml>"#;
 
         let result = OpmlExtractor::extract_content_and_metadata(opml);
-        // Should fail to parse - XML structure is invalid
         assert!(result.is_err(), "Should fail to parse OPML with invalid nesting");
     }
 
     #[test]
     fn test_opml_empty_outline_elements() {
-        // Outline elements with empty text attributes
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -478,20 +459,16 @@ mod tests {
         let (content, metadata) =
             OpmlExtractor::extract_content_and_metadata(opml).expect("Should handle empty outline elements");
 
-        // Should extract only non-empty text content
         assert!(content.contains("Valid Item"), "Should extract valid items");
         assert!(content.contains("Another Valid"), "Should extract nested valid items");
-        // Empty outlines should be skipped
         let empty_count = content.matches("\n\n").count();
         assert!(empty_count < 3, "Should skip empty outline elements");
 
-        // Metadata should still be extracted
         assert_eq!(metadata.get("title").and_then(|v| v.as_str()), Some("Empty Outlines"));
     }
 
     #[test]
     fn test_opml_deeply_nested_empty_nodes() {
-        // Deep nesting with many empty nodes
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -521,7 +498,6 @@ mod tests {
 
     #[test]
     fn test_opml_outline_with_missing_text_attribute() {
-        // Outline elements missing text attribute
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -537,11 +513,9 @@ mod tests {
         let (content, metadata) = OpmlExtractor::extract_content_and_metadata(opml)
             .expect("Should handle outline with missing text attribute");
 
-        // Only the outline with text attribute should appear
         assert!(content.contains("Valid Item"), "Should extract item with text");
         assert!(!content.contains("https://"), "Should not extract URLs");
 
-        // Metadata should still be available
         assert_eq!(
             metadata.get("title").and_then(|v| v.as_str()),
             Some("Missing Attributes")
@@ -550,7 +524,6 @@ mod tests {
 
     #[test]
     fn test_opml_whitespace_only_text_attribute() {
-        // Outline with whitespace-only text attribute
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -567,12 +540,10 @@ mod tests {
         let (content, _) =
             OpmlExtractor::extract_content_and_metadata(opml).expect("Should handle whitespace-only text");
 
-        // Only content with non-whitespace should appear
         assert!(
             content.contains("Real Content"),
             "Should extract non-whitespace content"
         );
-        // The content should contain the title and real content but skip empty outlines
         let trimmed = content.trim();
         assert!(trimmed.contains("Whitespace Test"), "Should have title");
         assert!(trimmed.contains("Real Content"), "Should have real content");
@@ -580,7 +551,6 @@ mod tests {
 
     #[test]
     fn test_opml_html_entity_in_nested_structure() {
-        // HTML entities in nested outline structure
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -604,7 +574,6 @@ mod tests {
         assert!(content.contains("Tech"), "Should handle &lt; entity");
         assert!(content.contains("Science"), "Should decode entity properly");
 
-        // Title should also be decoded
         let title = metadata.get("title").and_then(|v| v.as_str()).unwrap_or("");
         assert!(
             title.contains("&") && title.contains("Nesting"),
@@ -614,7 +583,6 @@ mod tests {
 
     #[test]
     fn test_opml_single_outline_no_children() {
-        // Simple case: single outline with no children
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -634,7 +602,6 @@ mod tests {
 
     #[test]
     fn test_opml_head_without_body() {
-        // OPML with head but no body element
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <head>
@@ -645,15 +612,12 @@ mod tests {
         let (content, metadata) =
             OpmlExtractor::extract_content_and_metadata(opml).expect("Should handle OPML without body");
 
-        // Should extract metadata but have minimal content
         assert_eq!(metadata.get("title").and_then(|v| v.as_str()), Some("No Body"));
-        // Content should be just the title (or empty)
         assert!(content.is_empty() || content.trim() == "No Body");
     }
 
     #[test]
     fn test_opml_body_without_head() {
-        // OPML with body but no head element
         let opml = br#"<?xml version="1.0"?>
 <opml version="2.0">
   <body>
@@ -665,7 +629,6 @@ mod tests {
             OpmlExtractor::extract_content_and_metadata(opml).expect("Should handle OPML without head");
 
         assert!(content.contains("Item"), "Should extract body content");
-        // No metadata should be extracted
         assert!(metadata.is_empty(), "Should have no metadata without head");
     }
 }

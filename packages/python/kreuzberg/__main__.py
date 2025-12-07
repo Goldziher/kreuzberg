@@ -50,8 +50,6 @@ def _binary_supports_subcommand(binary: Path, subcommand: str) -> bool:
         stderr = probe.stderr.lower()
         return subcommand not in stderr or "unrecognized subcommand" not in stderr
     except subprocess.TimeoutExpired:
-        # If the help command times out, assume the binary doesn't support
-        # this subcommand or is too slow. Return False to skip it.
         return False
 
 
@@ -100,16 +98,12 @@ def _find_packaged_cli_binary() -> str | None:
     for name in ("kreuzberg-cli", "kreuzberg"):
         candidate = script_dir / name
         if candidate.exists():
-            # Ensure this is not a Python script entry point by checking if it's
-            # a text file (entry point scripts start with #!)
             try:
                 with candidate.open("rb") as f:
                     header = f.read(2)
-                    # Skip if it's a Python script entry point
                     if header == b"#!":
                         continue
             except OSError:
-                # If we can't read it, skip
                 continue
             return str(candidate)
     return None

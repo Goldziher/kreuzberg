@@ -49,9 +49,7 @@ impl JupyterExtractor {
         let mut extracted_content = String::new();
         let mut metadata = HashMap::new();
 
-        // Extract notebook-level metadata
         if let Some(notebook_metadata) = notebook.get("metadata").and_then(|m| m.as_object()) {
-            // Extract kernelspec
             if let Some(kernelspec) = notebook_metadata.get("kernelspec")
                 && let Some(name) = kernelspec.get("name").and_then(|n| n.as_str())
             {
@@ -59,7 +57,6 @@ impl JupyterExtractor {
                 metadata.insert("kernelspec".to_string(), kernelspec.clone());
             }
 
-            // Extract language_info
             if let Some(language_info) = notebook_metadata.get("language_info")
                 && let Some(name) = language_info.get("name").and_then(|n| n.as_str())
             {
@@ -68,7 +65,6 @@ impl JupyterExtractor {
             }
         }
 
-        // Extract nbformat version
         if let Some(nbformat) = notebook.get("nbformat") {
             extracted_content.push_str(&format!("NBFormat: {}\n", nbformat));
             metadata.insert("nbformat".to_string(), nbformat.clone());
@@ -76,7 +72,6 @@ impl JupyterExtractor {
 
         extracted_content.push('\n');
 
-        // Extract cells
         if let Some(cells) = notebook.get("cells").and_then(|c| c.as_array()) {
             for (cell_idx, cell) in cells.iter().enumerate() {
                 Self::extract_cell(cell, cell_idx, &mut extracted_content, &mut metadata)?;
@@ -95,27 +90,23 @@ impl JupyterExtractor {
     ) -> Result<()> {
         let cell_type = cell.get("cell_type").and_then(|t| t.as_str()).unwrap_or("unknown");
 
-        // Get cell ID if available
         let cell_id = cell.get("id").and_then(|id| id.as_str());
 
-        // Format cell header
         if let Some(id) = cell_id {
             content.push_str(&format!(":::: {{#{} .cell .{}}}\n", id, cell_type));
         } else {
             content.push_str(&format!(":::: {{#cell_{} .cell .{}}}\n", cell_idx, cell_type));
         }
 
-        // Extract cell metadata
-        if let Some(cell_metadata) = cell.get("metadata").and_then(|m| m.as_object()) {
-            // Extract tags if present
-            if let Some(tags) = cell_metadata.get("tags").and_then(|t| t.as_array()) {
-                let tag_strs: Vec<String> = tags
-                    .iter()
-                    .filter_map(|tag| tag.as_str().map(|s| s.to_string()))
-                    .collect();
-                if !tag_strs.is_empty() {
-                    content.push_str(&format!(" tags=[{}]", tag_strs.join(", ")));
-                }
+        if let Some(cell_metadata) = cell.get("metadata").and_then(|m| m.as_object())
+            && let Some(tags) = cell_metadata.get("tags").and_then(|t| t.as_array())
+        {
+            let tag_strs: Vec<String> = tags
+                .iter()
+                .filter_map(|tag| tag.as_str().map(|s| s.to_string()))
+                .collect();
+            if !tag_strs.is_empty() {
+                content.push_str(&format!(" tags=[{}]", tag_strs.join(", ")));
             }
         }
         content.push('\n');
@@ -144,14 +135,12 @@ impl JupyterExtractor {
 
     /// Extract code cell content and outputs.
     fn extract_code_cell(cell: &Value, content: &mut String) -> Result<()> {
-        // Add execution count if present
         if let Some(exec_count) = cell.get("execution_count")
             && !exec_count.is_null()
         {
             content.push_str(&format!("::: {{execution_count={}}}\n", exec_count));
         }
 
-        // Add source code
         if let Some(source) = cell.get("source") {
             let cell_text = Self::extract_source(source);
             content.push_str("```python\n");
@@ -159,7 +148,6 @@ impl JupyterExtractor {
             content.push_str("```\n");
         }
 
-        // Add outputs
         if let Some(outputs) = cell.get("outputs").and_then(|o| o.as_array()) {
             for output in outputs {
                 Self::extract_output(output, content)?;
@@ -195,7 +183,6 @@ impl JupyterExtractor {
 
         content.push_str(&format!("::: {{.output .{}", output_type));
 
-        // Add execution count if present
         if let Some(exec_count) = output.get("execution_count")
             && !exec_count.is_null()
         {
@@ -233,9 +220,7 @@ impl JupyterExtractor {
 
     /// Extract data output (execute_result or display_data).
     fn extract_data_output(output: &Value, content: &mut String) -> Result<()> {
-        // Handle both 'data' (execute_result, display_data) and direct key-based formats
         if let Some(data) = output.get("data").and_then(|d| d.as_object()) {
-            // Process MIME types in priority order
             let mime_types = vec![
                 "text/markdown",
                 "text/html",

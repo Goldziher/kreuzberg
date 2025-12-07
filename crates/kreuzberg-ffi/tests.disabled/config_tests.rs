@@ -4,7 +4,6 @@ use std::os::raw::c_char;
 use std::ptr;
 use tempfile::TempDir;
 
-// Import the FFI functions
 unsafe extern "C" {
     fn kreuzberg_config_from_file(path: *const c_char) -> *mut std::ffi::c_void;
 

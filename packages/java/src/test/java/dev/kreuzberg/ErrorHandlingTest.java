@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ErrorHandlingTest {
 
-    // ==================== File Not Found Errors ====================
 
     @Test
     void testExtractNonexistentFile() {
@@ -52,7 +51,6 @@ class ErrorHandlingTest {
         }, "Should throw NullPointerException for null string path");
     }
 
-    // ==================== Directory Instead of File ====================
 
     @Test
     void testExtractFromDirectory(@TempDir Path tempDir) {
@@ -72,11 +70,9 @@ class ErrorHandlingTest {
                 Kreuzberg.extractFile(link);
             }, "Should throw IOException for symlink to directory");
         } catch (UnsupportedOperationException e) {
-            // Symlinks may not be supported on all platforms
         }
     }
 
-    // ==================== Permission Errors ====================
 
     @Test
     void testExtractUnreadableFile(@TempDir Path tempDir) throws IOException {
@@ -84,19 +80,16 @@ class ErrorHandlingTest {
         Files.writeString(testFile, "content");
 
         try {
-            // Try to remove read permissions
             testFile.toFile().setReadable(false);
 
             assertThrows(IOException.class, () -> {
                 Kreuzberg.extractFile(testFile);
             }, "Should throw IOException for unreadable file");
         } finally {
-            // Restore permissions for cleanup
             testFile.toFile().setReadable(true);
         }
     }
 
-    // ==================== Invalid MIME Types ====================
 
     @Test
     void testExtractBytesWithNullMimeType() {
@@ -139,7 +132,6 @@ class ErrorHandlingTest {
         }, "Should throw KreuzbergException for empty MIME type");
     }
 
-    // ==================== Empty Data ====================
 
     @Test
     void testExtractEmptyByteArray() {
@@ -157,7 +149,6 @@ class ErrorHandlingTest {
         }, "Should throw NullPointerException for null byte array");
     }
 
-    // ==================== Batch Operation Errors ====================
 
     @Test
     void testBatchExtractNullPaths() {
@@ -189,23 +180,19 @@ class ErrorHandlingTest {
         assertTrue(results.isEmpty(), "Should return empty list for empty input");
     }
 
-    // ==================== Configuration Validation ====================
 
     @Test
     void testExtractionWithInvalidConfiguration(@TempDir Path tempDir) throws IOException {
         Path testFile = tempDir.resolve("test.txt");
         Files.writeString(testFile, "content");
 
-        // Create a valid config - the API should not throw for valid configs
         ExtractionConfig config = ExtractionConfig.builder()
-                .maxConcurrentExtractions(-1) // Negative value
+                .maxConcurrentExtractions(-1)
                 .build();
 
-        // Should either succeed or throw, but not crash
         try {
             Kreuzberg.extractFile(testFile, config);
         } catch (KreuzbergException e) {
-            // Expected for invalid config
             assertNotNull(e.getMessage(), "Exception should have message");
         }
     }
@@ -238,7 +225,6 @@ class ErrorHandlingTest {
         assertEquals(-50, config.getMaxOverlap(), "Config should accept negative overlap");
     }
 
-    // ==================== MIME Type Detection Errors ====================
 
     @Test
     void testDetectMimeTypeWithNullPath() {
@@ -284,7 +270,6 @@ class ErrorHandlingTest {
         }, "Should throw KreuzbergException for blank MIME type");
     }
 
-    // ==================== Plugin Management Errors ====================
 
     @Test
     void testRegisterValidatorWithNullName() {
@@ -352,20 +337,16 @@ class ErrorHandlingTest {
         }, "Should throw NullPointerException for null backend");
     }
 
-    // ==================== Corruption and Invalid Data ====================
 
     @Test
     void testExtractCorruptedFile(@TempDir Path tempDir) throws IOException {
         Path testFile = tempDir.resolve("corrupted.bin");
-        // Write binary garbage
         Files.write(testFile, new byte[]{(byte) 0xFF, (byte) 0xFE, (byte) 0xFD, (byte) 0xFC});
 
-        // Should not crash, might succeed or fail gracefully
         try {
             ExtractionResult result = Kreuzberg.extractFile(testFile);
             assertNotNull(result, "Should return a result even for corrupted data");
         } catch (KreuzbergException e) {
-            // Acceptable to throw for corrupted data
             assertNotNull(e.getMessage(), "Exception should have a message");
         }
     }
@@ -373,19 +354,15 @@ class ErrorHandlingTest {
     @Test
     void testExtractFileWithInvalidEncoding(@TempDir Path tempDir) throws IOException {
         Path testFile = tempDir.resolve("invalid_encoding.txt");
-        // Write bytes that don't form valid UTF-8
         Files.write(testFile, new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x82});
 
-        // Should handle gracefully
         try {
             ExtractionResult result = Kreuzberg.extractFile(testFile);
             assertNotNull(result, "Should return result for invalid encoding");
         } catch (KreuzbergException e) {
-            // Acceptable
         }
     }
 
-    // ==================== Configuration File Errors ====================
 
     @Test
     void testLoadConfigFromNonexistentFile() {
@@ -413,18 +390,14 @@ class ErrorHandlingTest {
         }, "Should throw KreuzbergException for invalid config syntax");
     }
 
-    // ==================== Discovery Errors ====================
 
     @Test
     void testDiscoverConfigWhenNotFound() throws KreuzbergException {
-        // Discovery should return null or empty, not throw
         ExtractionConfig config = ExtractionConfig.discover();
 
-        // config may be null or a default config
         assertTrue(config == null || config != null, "Discovery should handle missing config");
     }
 
-    // ==================== Async Operation Errors ====================
 
     @Test
     void testAsyncExtractNonexistentFile() {
@@ -433,7 +406,7 @@ class ErrorHandlingTest {
         var future = Kreuzberg.extractFileAsync(nonexistent, null);
 
         assertThrows(Exception.class, () -> {
-            future.get(); // Should throw wrapped IOException
+            future.get();
         }, "Async extraction should propagate errors");
     }
 
@@ -442,11 +415,10 @@ class ErrorHandlingTest {
         var future = Kreuzberg.batchExtractFilesAsync(null, null);
 
         assertThrows(Exception.class, () -> {
-            future.get(); // Should throw wrapped NullPointerException
+            future.get();
         }, "Async batch extraction should propagate errors");
     }
 
-    // ==================== Validator and PostProcessor Errors ====================
 
     @Test
     void testValidatorThrowsException() throws KreuzbergException {
@@ -482,7 +454,6 @@ class ErrorHandlingTest {
         }
     }
 
-    // ==================== Edge Cases ====================
 
     @Test
     void testExtractVeryLongFilePath(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -515,11 +486,9 @@ class ErrorHandlingTest {
         Path file1 = tempDir.resolve("test.txt");
         Files.writeString(file1, "content");
 
-        // Multiple valid extractions should work fine
         ExtractionResult result1 = Kreuzberg.extractFile(file1);
         assertNotNull(result1.getContent(), "First extraction should succeed");
 
-        // Second extraction of same file should also work
         ExtractionResult result2 = Kreuzberg.extractFile(file1);
         assertNotNull(result2.getContent(), "Second extraction should succeed");
     }

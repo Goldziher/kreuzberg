@@ -23,7 +23,6 @@ thiserror = { workspace = true }
 [dev-dependencies]
 image = "0.25.9"
 imageproc = "0.25.0"
-criterion = { version = "0.8.0", features = ["html_reports"] }
 
 [build-dependencies]
 cc = { version = "1.2.49", optional = true }
@@ -47,7 +46,3 @@ rustdoc-args = ["--cfg", "docsrs"]
 [lib]
 name = "kreuzberg_tesseract"
 crate-type = ["lib"]
-
-[[bench]]
-name = "ocr_benchmark"
-harness = false

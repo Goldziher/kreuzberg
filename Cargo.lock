@@ -3000,7 +3000,6 @@ version = "4.0.0-rc.5"
 dependencies = [
  "cc",
  "cmake",
- "criterion",
  "image",
  "imageproc",
  "libc",

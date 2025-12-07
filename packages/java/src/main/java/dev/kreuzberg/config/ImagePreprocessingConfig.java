@@ -81,7 +81,6 @@ public final class ImagePreprocessingConfig {
     private boolean invertColors = false;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder targetDpi(int targetDpi) {

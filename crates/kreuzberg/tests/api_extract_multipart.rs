@@ -48,5 +48,5 @@ Hello world\r\n\
         .and_then(Value::as_str)
         .expect("Response should include extracted content");
 
-    assert_eq!(content, "Hello world");
+    assert_eq!(content.trim_end_matches('\n'), "Hello world");
 }

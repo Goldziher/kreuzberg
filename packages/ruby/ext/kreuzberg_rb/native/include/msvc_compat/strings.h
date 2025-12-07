@@ -11,4 +11,4 @@
 #define strncasecmp _strnicmp
 #endif
 
-#endif /* KREUZBERG_RB_MSVC_COMPAT_STRINGS_H */
+#endif

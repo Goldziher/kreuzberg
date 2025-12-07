@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ConfigurationTest {
 
-    // ==================== ExtractionConfig Builder ====================
 
     @Test
     void testExtractionConfigBuilderDefaults() {
@@ -76,7 +75,6 @@ class ConfigurationTest {
         assertTrue(config.isForceOcr(), "Force OCR should be applied");
     }
 
-    // ==================== OCR Configuration ====================
 
     @Test
     void testOcrConfigBuilder() {
@@ -125,7 +123,6 @@ class ConfigurationTest {
         assertEquals("tesseract", config.getOcr().getBackend(), "OCR backend should be preserved");
     }
 
-    // ==================== PDF Configuration ====================
 
     @Test
     void testPdfConfigBuilder() {
@@ -150,7 +147,6 @@ class ConfigurationTest {
         assertNotNull(config.getPdfOptions(), "PDF options should be integrated");
     }
 
-    // ==================== Language Detection Configuration ====================
 
     @Test
     void testLanguageDetectionConfigBuilder() {
@@ -168,7 +164,6 @@ class ConfigurationTest {
         assertNotNull(config.getLanguageDetection(), "Language detection config should be integrated");
     }
 
-    // ==================== Chunking Configuration ====================
 
     @Test
     void testChunkingConfigBuilder() {
@@ -241,7 +236,6 @@ class ConfigurationTest {
         assertTrue(config.getEnabled(), "Enabled should be set");
     }
 
-    // ==================== Configuration Serialization ====================
 
     @Test
     void testConfigToMap() {
@@ -271,7 +265,6 @@ class ConfigurationTest {
         assertTrue(map.containsKey("chunking"), "Chunking config should be in map");
     }
 
-    // ==================== Max Concurrent Extractions ====================
 
     @Test
     void testMaxConcurrentExtractionsSetting() {
@@ -293,7 +286,6 @@ class ConfigurationTest {
         assertFalse(config.isUseCache(), "Other settings should be preserved");
     }
 
-    // ==================== Configuration with File Operations ====================
 
     @Test
     void testExtractionWithConfiguration(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -349,7 +341,6 @@ class ConfigurationTest {
         assertNotNull(result, "Result should not be null with chunking config");
     }
 
-    // ==================== Configuration Immutability ====================
 
     @Test
     void testConfigBuilderImmutability() {
@@ -357,12 +348,10 @@ class ConfigurationTest {
         ExtractionConfig config1 = builder.useCache(true).build();
         ExtractionConfig config2 = builder.useCache(false).build();
 
-        // Both configs should reflect their respective builds
         assertTrue(config1.isUseCache(), "First config should have cache enabled");
         assertFalse(config2.isUseCache(), "Second config should have cache disabled");
     }
 
-    // ==================== Configuration Defaults ====================
 
     @Test
     void testAllDefaults() {
@@ -387,7 +376,6 @@ class ConfigurationTest {
         assertNull(config.getLanguageDetection(), "Language detection should be null when not set");
     }
 
-    // ==================== Byte Extraction with Configuration ====================
 
     @Test
     void testBytesExtractionWithConfiguration() throws KreuzbergException {
@@ -417,7 +405,6 @@ class ConfigurationTest {
         assertNotNull(result, "Result with OCR config should not be null");
     }
 
-    // ==================== Configuration Chaining ====================
 
     @Test
     void testComplexConfigurationChaining() {
@@ -461,7 +448,6 @@ class ConfigurationTest {
         assertFalse(config2.isUseCache(), "Config2 should have cache disabled");
     }
 
-    // ==================== Map Conversion Completeness ====================
 
     @Test
     void testMapConversionIncludesAllSettings() {

@@ -60,11 +60,9 @@ async def run_benchmarks() -> None:
     async_backend = AsyncOcrBackend()
     into_future_latency = await benchmark_pattern(async_backend, num_iterations, "into_future + async")
 
-    # Calculate speedup metrics
     speedup = spawn_blocking_latency / into_future_latency
     time_savings_ms = spawn_blocking_latency - into_future_latency
 
-    # Display single-call performance metrics
     print("\n" + "=" * 70)
     print("ASYNC CALLBACK PERFORMANCE BENCHMARK")
     print("=" * 70)
@@ -76,7 +74,6 @@ async def run_benchmarks() -> None:
     print(f"  Speedup ratio: {speedup:.1f}x")
     print(f"  Time savings per call: {time_savings_ms:.3f} ms")
 
-    # Calculate batch processing impact
     batch_size = 1000
     current_time = (spawn_blocking_latency / 1000) * batch_size
     optimized_time = (into_future_latency / 1000) * batch_size
@@ -87,7 +84,6 @@ async def run_benchmarks() -> None:
     print(f"  Optimized approach: {optimized_time:.2f} seconds")
     print(f"  Total time savings: {batch_time_savings:.2f} seconds")
 
-    # Validate speedup meets expectations
     print(f"\nValidation:")
     if speedup >= 20:
         print(f"  ✓ PASS: Speedup {speedup:.1f}x exceeds expected minimum of 20x")

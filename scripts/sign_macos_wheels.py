@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Codesign native binaries inside macOS wheels."""
 
 from __future__ import annotations
@@ -62,7 +61,6 @@ def sign_wheel(wheel_path: Path, identity: str) -> None:
             repack_wheel(unpacked_dir, wheel_dir, wheel_path)
             backup.unlink()
         except Exception:
-            # Restore original wheel so the caller can inspect the failure.
             if wheel_path.exists():
                 wheel_path.unlink()
             shutil.move(str(backup), str(wheel_path))

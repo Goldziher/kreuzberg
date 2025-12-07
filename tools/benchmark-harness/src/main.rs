@@ -174,7 +174,6 @@ async fn main() -> Result<()> {
 
             let mut registry = AdapterRegistry::new();
 
-            // Register native Rust adapter
             registry.register(Arc::new(NativeAdapter::with_config(extraction_config)))?;
             eprintln!("[adapter] ✓ kreuzberg-native (registered)");
 
@@ -185,8 +184,7 @@ async fn main() -> Result<()> {
                 create_ruby_sync_adapter,
             };
 
-            // Register Kreuzberg language bindings
-            let mut kreuzberg_count = 1; // native already registered
+            let mut kreuzberg_count = 1;
 
             if let Ok(adapter) = create_python_sync_adapter() {
                 if let Ok(()) = registry.register(Arc::new(adapter)) {
@@ -316,7 +314,6 @@ async fn main() -> Result<()> {
                 create_tika_batch_adapter, create_tika_sync_adapter, create_unstructured_adapter,
             };
 
-            // Register open source extraction framework adapters
             let mut external_count = 0;
 
             if let Ok(adapter) = create_docling_adapter() {

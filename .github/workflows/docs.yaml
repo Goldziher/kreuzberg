@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-#    paths:
-#      - docs/**
-#      - mkdocs.yaml
-#      - .github/workflows/docs.yaml
   workflow_dispatch:
 
 permissions:
@@ -74,7 +70,7 @@ jobs:
           rm -f mkdocs-v3.yaml
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: site
 

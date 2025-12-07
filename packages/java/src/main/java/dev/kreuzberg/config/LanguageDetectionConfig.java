@@ -49,7 +49,6 @@ public final class LanguageDetectionConfig {
     private boolean detectMultiple = false;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder enabled(boolean enabled) {

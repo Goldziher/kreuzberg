@@ -277,8 +277,6 @@ impl BenchmarkRunner {
             }
         }
 
-        // For batch extraction, each iteration returns a single result for the entire batch
-        // If only one iteration, return that batch result directly with cold_start_duration
         if config.benchmark_iterations == 1 && !all_batch_results.is_empty() {
             let mut result = all_batch_results.into_iter().next().unwrap();
             for r in &mut result {
@@ -287,11 +285,7 @@ impl BenchmarkRunner {
             return Ok(result);
         }
 
-        // For multiple iterations, aggregate the batch results
-        let batch_iterations: Vec<&BenchmarkResult> = all_batch_results
-            .iter()
-            .map(|batch| &batch[0]) // Each batch has only one result now
-            .collect();
+        let batch_iterations: Vec<&BenchmarkResult> = all_batch_results.iter().map(|batch| &batch[0]).collect();
 
         let iterations: Vec<IterationResult> = batch_iterations
             .iter()
@@ -370,8 +364,6 @@ impl BenchmarkRunner {
             adapter.setup().await?;
         }
 
-        // Warm up frameworks and record cold start duration
-        // Pick the first fixture as a warmup file
         if let Some((fixture_path, fixture)) = self.fixtures.fixtures().first() {
             let fixture_dir = fixture_path.parent().unwrap_or_else(|| std::path::Path::new("."));
             let warmup_file = fixture.resolve_document_path(fixture_dir);

@@ -74,10 +74,8 @@ impl DocumentExtractor for BibtexExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Convert bytes to string
         let bibtex_str = String::from_utf8_lossy(content);
 
-        // Parse the bibliography
         let mut entries_vec = Vec::new();
         let mut authors_set = HashSet::new();
         let mut years_set = HashSet::new();
@@ -90,16 +88,13 @@ impl DocumentExtractor for BibtexExtractor {
                     let key = entry.key.clone();
                     let entry_type = entry.entry_type.clone();
 
-                    // Format entry for output
                     formatted_entries.push_str(&format!("@{} {{\n", entry_type));
                     formatted_entries.push_str(&format!("  key = {},\n", key));
 
-                    // Extract and format all fields
                     for (field_name, field_chunks) in &entry.fields {
                         let field_text = field_chunks.format_verbatim();
                         formatted_entries.push_str(&format!("  {} = {},\n", field_name, field_text));
 
-                        // Extract author information
                         if field_name.to_lowercase() == "author" {
                             let authors_text = field_chunks.format_verbatim();
                             for author in authors_text.split(" and ") {
@@ -110,7 +105,6 @@ impl DocumentExtractor for BibtexExtractor {
                             }
                         }
 
-                        // Extract year information
                         if field_name.to_lowercase() == "year" {
                             let year_str = field_chunks.format_verbatim();
                             if let Ok(year) = year_str.parse::<u32>() {
@@ -121,7 +115,6 @@ impl DocumentExtractor for BibtexExtractor {
 
                     formatted_entries.push_str("}\n\n");
 
-                    // Count entry types
                     *entry_types_map
                         .entry(entry_type.to_string().to_lowercase())
                         .or_insert(0) += 1;
@@ -136,18 +129,14 @@ impl DocumentExtractor for BibtexExtractor {
             }
         }
 
-        // Build metadata
         let mut additional = HashMap::new();
 
-        // Add entry count
         additional.insert("entry_count".to_string(), serde_json::json!(entries_vec.len()));
 
-        // Add unique authors
         let mut authors_list: Vec<String> = authors_set.into_iter().collect();
         authors_list.sort();
         additional.insert("authors".to_string(), serde_json::json!(authors_list));
 
-        // Add year range
         if !years_set.is_empty() {
             let min_year = years_set.iter().min().copied().unwrap_or(0);
             let max_year = years_set.iter().max().copied().unwrap_or(0);
@@ -161,7 +150,6 @@ impl DocumentExtractor for BibtexExtractor {
             );
         }
 
-        // Add entry types distribution
         if !entry_types_map.is_empty() {
             let mut entry_types_json = serde_json::json!({});
             for (entry_type, count) in entry_types_map {
@@ -170,7 +158,6 @@ impl DocumentExtractor for BibtexExtractor {
             additional.insert("entry_types".to_string(), entry_types_json);
         }
 
-        // Add citation keys
         additional.insert("citation_keys".to_string(), serde_json::json!(entries_vec));
 
         Ok(ExtractionResult {
@@ -227,12 +214,10 @@ mod tests {
         assert!(result.is_ok());
         let result = result.expect("Should extract valid BibTeX entry");
 
-        // Check content contains formatted entry
         assert!(result.content.contains("@article"));
         assert!(result.content.contains("key2023"));
         assert!(result.content.contains("Sample Title"));
 
-        // Check metadata
         let metadata = &result.metadata;
         assert_eq!(metadata.additional.get("entry_count"), Some(&serde_json::json!(1)));
     }
@@ -268,20 +253,16 @@ mod tests {
         assert!(result.is_ok());
         let result = result.expect("Should extract valid BibTeX entries");
 
-        // Check metadata
         let metadata = &result.metadata;
 
-        // Check entry count
         assert_eq!(metadata.additional.get("entry_count"), Some(&serde_json::json!(3)));
 
-        // Check citation keys
         if let Some(keys) = metadata.additional.get("citation_keys") {
             if let Some(keys_array) = keys.as_array() {
                 assert_eq!(keys_array.len(), 3);
             }
         }
 
-        // Check entry types
         if let Some(types) = metadata.additional.get("entry_types") {
             assert!(types.get("article").is_some());
             assert!(types.get("book").is_some());
@@ -309,13 +290,11 @@ mod tests {
         assert!(result.is_ok());
         let result = result.expect("Should extract valid article entry");
 
-        // Check content
         assert!(result.content.contains("@article"));
         assert!(result.content.contains("einstein1905"));
         assert!(result.content.contains("On the Electrodynamics of Moving Bodies"));
         assert!(result.content.contains("Annalen der Physik"));
 
-        // Check authors extracted
         let metadata = &result.metadata;
         if let Some(authors) = metadata.additional.get("authors") {
             if let Some(authors_array) = authors.as_array() {
@@ -343,16 +322,13 @@ mod tests {
         assert!(result.is_ok());
         let result = result.expect("Should extract valid book entry");
 
-        // Check content
         assert!(result.content.contains("@book"));
         assert!(result.content.contains("knuth1984"));
         assert!(result.content.contains("The TeXbook"));
 
-        // Check metadata
         let metadata = &result.metadata;
         assert_eq!(metadata.additional.get("entry_count"), Some(&serde_json::json!(1)));
 
-        // Check year range
         if let Some(year_range) = metadata.additional.get("year_range") {
             assert_eq!(year_range.get("min"), Some(&serde_json::json!(1984)));
             assert_eq!(year_range.get("max"), Some(&serde_json::json!(1984)));
@@ -389,24 +365,19 @@ mod tests {
         let result = result.expect("Should extract valid metadata");
         let metadata = &result.metadata;
 
-        // Check entry count
         assert_eq!(metadata.additional.get("entry_count"), Some(&serde_json::json!(3)));
 
-        // Check authors
         if let Some(authors) = metadata.additional.get("authors") {
             if let Some(authors_array) = authors.as_array() {
-                // Should have multiple unique authors
                 assert!(authors_array.len() >= 4);
             }
         }
 
-        // Check year range
         if let Some(year_range) = metadata.additional.get("year_range") {
             assert_eq!(year_range.get("min"), Some(&serde_json::json!(2019)));
             assert_eq!(year_range.get("max"), Some(&serde_json::json!(2021)));
         }
 
-        // Check entry types
         if let Some(types) = metadata.additional.get("entry_types") {
             assert_eq!(types.get("article"), Some(&serde_json::json!(2)));
             assert_eq!(types.get("book"), Some(&serde_json::json!(1)));
@@ -427,7 +398,6 @@ mod tests {
         let result = result.expect("Should extract empty bibliography");
         let metadata = &result.metadata;
 
-        // Empty bibliography should have 0 entries
         assert_eq!(metadata.additional.get("entry_count"), Some(&serde_json::json!(0)));
     }
 
@@ -444,11 +414,9 @@ Some random text that's not valid BibTeX"#;
             .extract_bytes(bibtex_content, "application/x-bibtex", &config)
             .await;
 
-        // Should not fail, but return partial results
         assert!(result.is_ok());
         let result = result.expect("Should extract malformed entry as raw content");
 
-        // Should still have content (the raw input if parsing failed)
         assert!(!result.content.is_empty());
     }
 
@@ -470,10 +438,8 @@ Some random text that's not valid BibTeX"#;
         let result = result.expect("Should extract multiple authors");
         let metadata = &result.metadata;
 
-        // Check that all authors are extracted
         if let Some(authors) = metadata.additional.get("authors") {
             if let Some(authors_array) = authors.as_array() {
-                // Should have at least the three authors (possibly more if they're split)
                 assert!(authors_array.len() >= 3);
             }
         }

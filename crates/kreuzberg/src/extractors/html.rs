@@ -8,7 +8,6 @@ use async_trait::async_trait;
 use std::path::Path;
 
 // NOTE: scraper dependency has been removed in favor of html-to-markdown-rs
-// which handles table parsing natively. See: crates/kreuzberg/tests/html_table_test.rs
 
 /// HTML document extractor using html-to-markdown.
 pub struct HtmlExtractor;
@@ -34,10 +33,8 @@ impl HtmlExtractor {
 /// This approach eliminates the need for the `scraper` dependency as
 /// html-to-markdown-rs already handles all table parsing.
 fn extract_html_tables(html: &str) -> Result<Vec<Table>> {
-    // Convert HTML to markdown - html-to-markdown-rs handles table parsing
     let markdown = crate::extraction::html::convert_html_to_markdown(html, None)?;
 
-    // Parse markdown tables from the output
     let tables = parse_markdown_tables(&markdown);
 
     Ok(tables)
@@ -54,7 +51,6 @@ fn parse_markdown_tables(markdown: &str) -> Vec<Table> {
     let mut i = 0;
 
     while i < lines.len() {
-        // Look for markdown table header (starts with |)
         if lines[i].trim_start().starts_with('|')
             && let Some((cells, end_idx)) = extract_markdown_table(&lines, i)
             && !cells.is_empty()
@@ -81,7 +77,6 @@ fn parse_markdown_tables(markdown: &str) -> Vec<Table> {
 fn extract_markdown_table(lines: &[&str], start_idx: usize) -> Option<(Vec<Vec<String>>, usize)> {
     let header_line = lines.get(start_idx)?;
 
-    // Skip lines that don't contain table data
     if !header_line.trim_start().starts_with('|') {
         return None;
     }
@@ -89,7 +84,6 @@ fn extract_markdown_table(lines: &[&str], start_idx: usize) -> Option<(Vec<Vec<S
     let mut cells = Vec::new();
     let mut i = start_idx;
 
-    // Process header row
     if let Some(header_cells) = parse_markdown_table_row(header_line) {
         cells.push(header_cells);
         i += 1;
@@ -97,7 +91,6 @@ fn extract_markdown_table(lines: &[&str], start_idx: usize) -> Option<(Vec<Vec<S
         return None;
     }
 
-    // Skip separator row (contains dashes and pipes)
     if i < lines.len() {
         let sep_line = lines[i];
         if is_markdown_table_separator(sep_line) {
@@ -105,14 +98,12 @@ fn extract_markdown_table(lines: &[&str], start_idx: usize) -> Option<(Vec<Vec<S
         }
     }
 
-    // Process data rows
     while i < lines.len() {
         let line = lines[i];
         if let Some(row_cells) = parse_markdown_table_row(line) {
             cells.push(row_cells);
             i += 1;
         } else if !line.trim_start().starts_with('|') {
-            // End of table
             break;
         } else {
             i += 1;
@@ -130,12 +121,11 @@ fn parse_markdown_table_row(line: &str) -> Option<Vec<String>> {
         return None;
     }
 
-    // Split by pipe and clean up cell content
     let cells: Vec<String> = trimmed
         .split('|')
-        .skip(1) // skip leading empty due to leading |
+        .skip(1)
         .map(|cell| cell.trim().to_string())
-        .filter(|cell| !cell.is_empty()) // skip trailing empty due to trailing |
+        .filter(|cell| !cell.is_empty())
         .collect();
 
     if cells.is_empty() { None } else { Some(cells) }
@@ -148,7 +138,6 @@ fn is_markdown_table_separator(line: &str) -> bool {
         return false;
     }
 
-    // Separator contains pipes and dashes/colons only
     trimmed
         .split('|')
         .all(|cell| cell.trim().chars().all(|c| c == '-' || c == ':' || c.is_whitespace()))
@@ -174,7 +163,6 @@ fn reconstruct_markdown_table(cells: &[Vec<String>]) -> String {
         }
         markdown.push('\n');
 
-        // Add separator after header row (first row)
         if row_idx == 0 {
             markdown.push('|');
             for _ in row {
@@ -224,7 +212,6 @@ impl DocumentExtractor for HtmlExtractor {
             .map(|s| s.to_string())
             .unwrap_or_else(|_| String::from_utf8_lossy(content).to_string());
 
-        // Extract tables from HTML
         let tables = extract_html_tables(&html)?;
 
         let markdown = crate::extraction::html::convert_html_to_markdown(&html, config.html_options.clone())?;
@@ -306,7 +293,6 @@ mod tests {
         assert_eq!(table.cells[2], vec!["Row2Col1", "Row2Col2"]);
         assert_eq!(table.page_number, 1);
 
-        // Check markdown format
         assert!(table.markdown.contains("| Header1 | Header2 |"));
         assert!(table.markdown.contains("|------|------|"));
         assert!(table.markdown.contains("| Row1Col1 | Row1Col2 |"));
@@ -370,8 +356,6 @@ mod tests {
         assert_eq!(tables.len(), 1);
 
         let table = &tables[0];
-        // Note: New implementation preserves markdown formatting (e.g., **Bold**, *emphasis*)
-        // This is better for structured content preservation
         assert_eq!(table.cells[0][0], "Header **Bold**");
         assert_eq!(table.cells[1][0], "Data with *emphasis*");
     }

@@ -68,7 +68,6 @@ impl Plugin for OdtExtractor {
 /// # Returns
 /// * `Option<String>` - The extracted formula text
 fn extract_mathml_text(math_node: roxmltree::Node) -> Option<String> {
-    // Try to find annotation with StarMath encoding first
     for node in math_node.descendants() {
         if node.tag_name().name() == "annotation"
             && let Some(encoding) = node.attribute("encoding")
@@ -79,7 +78,6 @@ fn extract_mathml_text(math_node: roxmltree::Node) -> Option<String> {
         }
     }
 
-    // Fallback: try to extract text from MathML elements
     let mut formula_parts = Vec::new();
     for node in math_node.descendants() {
         match node.tag_name().name() {
@@ -110,34 +108,29 @@ fn extract_embedded_formulas(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> 
     use std::io::Read;
     let mut formula_parts = Vec::new();
 
-    // Try to find embedded objects (e.g., "Object 1/content.xml")
     let file_names: Vec<String> = archive.file_names().map(|s| s.to_string()).collect();
 
     for file_name in file_names {
-        // Look for embedded object content.xml files
         if file_name.contains("Object")
             && file_name.ends_with("content.xml")
             && let Ok(mut file) = archive.by_name(&file_name)
         {
             let mut xml_content = String::new();
-            if file.read_to_string(&mut xml_content).is_ok() {
-                // Parse and look for math elements
-                if let Ok(doc) = Document::parse(&xml_content) {
-                    let root = doc.root_element();
+            if file.read_to_string(&mut xml_content).is_ok()
+                && let Ok(doc) = Document::parse(&xml_content)
+            {
+                let root = doc.root_element();
 
-                    // Look for math elements in the embedded object
-                    if root.tag_name().name() == "math" {
-                        if let Some(formula_text) = extract_mathml_text(root) {
+                if root.tag_name().name() == "math" {
+                    if let Some(formula_text) = extract_mathml_text(root) {
+                        formula_parts.push(formula_text);
+                    }
+                } else {
+                    for node in root.descendants() {
+                        if node.tag_name().name() == "math"
+                            && let Some(formula_text) = extract_mathml_text(node)
+                        {
                             formula_parts.push(formula_text);
-                        }
-                    } else {
-                        // Search for math elements within the document
-                        for node in root.descendants() {
-                            if node.tag_name().name() == "math"
-                                && let Some(formula_text) = extract_mathml_text(node)
-                            {
-                                formula_parts.push(formula_text);
-                            }
                         }
                     }
                 }
@@ -174,13 +167,10 @@ fn extract_content_text(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> crate
 
     let root = doc.root_element();
 
-    // Extract text content from the document body
     let mut text_parts: Vec<String> = Vec::new();
 
-    // Process all relevant elements
     for node in root.descendants() {
         match node.tag_name().name() {
-            // Headings
             "h" => {
                 if let Some(text) = extract_node_text(node)
                     && !text.trim().is_empty()
@@ -189,7 +179,6 @@ fn extract_content_text(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> crate
                     text_parts.push(String::new());
                 }
             }
-            // Paragraphs
             "p" => {
                 if let Some(text) = extract_node_text(node)
                     && !text.trim().is_empty()
@@ -198,7 +187,6 @@ fn extract_content_text(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> crate
                     text_parts.push(String::new());
                 }
             }
-            // Tables
             "table" => {
                 if let Some(table_text) = extract_table_text(node) {
                     text_parts.push(table_text);
@@ -225,7 +213,6 @@ fn extract_node_text(node: roxmltree::Node) -> Option<String> {
     for child in node.children() {
         match child.tag_name().name() {
             "span" => {
-                // Extract text from span (preserves formatting info)
                 if let Some(text) = child.text() {
                     text_parts.push(text.to_string());
                 }
@@ -237,7 +224,6 @@ fn extract_node_text(node: roxmltree::Node) -> Option<String> {
                 text_parts.push("\n".to_string());
             }
             _ => {
-                // For other elements, try to get their text content
                 if let Some(text) = child.text() {
                     text_parts.push(text.to_string());
                 }
@@ -246,7 +232,6 @@ fn extract_node_text(node: roxmltree::Node) -> Option<String> {
     }
 
     if text_parts.is_empty() {
-        // If no children, try to get text directly from the node
         node.text().map(|s| s.to_string())
     } else {
         Some(text_parts.join(""))
@@ -264,12 +249,10 @@ fn extract_table_text(table_node: roxmltree::Node) -> Option<String> {
     let mut rows = Vec::new();
     let mut max_cols = 0;
 
-    // Extract all rows from the table
     for row_node in table_node.children() {
         if row_node.tag_name().name() == "table-row" {
             let mut row_cells = Vec::new();
 
-            // Extract all cells from the row
             for cell_node in row_node.children() {
                 if cell_node.tag_name().name() == "table-cell" {
                     let cell_text = extract_node_text(cell_node).unwrap_or_default();
@@ -288,17 +271,14 @@ fn extract_table_text(table_node: roxmltree::Node) -> Option<String> {
         return None;
     }
 
-    // Pad rows with empty cells to make them equal length
     for row in &mut rows {
         while row.len() < max_cols {
             row.push(String::new());
         }
     }
 
-    // Generate markdown table
     let mut markdown = String::new();
 
-    // Header row
     if !rows.is_empty() {
         markdown.push('|');
         for cell in &rows[0] {
@@ -308,14 +288,12 @@ fn extract_table_text(table_node: roxmltree::Node) -> Option<String> {
         }
         markdown.push('\n');
 
-        // Separator row
         markdown.push('|');
         for _ in 0..rows[0].len() {
             markdown.push_str(" --- |");
         }
         markdown.push('\n');
 
-        // Data rows
         for row in rows.iter().skip(1) {
             markdown.push('|');
             for cell in row {
@@ -358,7 +336,6 @@ fn extract_tables(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> crate::erro
     let mut tables = Vec::new();
     let mut table_index = 0;
 
-    // Find all table elements
     for node in root.descendants() {
         if node.tag_name().name() == "table"
             && let Some(table) = parse_odt_table(node, table_index)
@@ -382,12 +359,10 @@ fn extract_tables(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> crate::erro
 fn parse_odt_table(table_node: roxmltree::Node, table_index: usize) -> Option<Table> {
     let mut cells: Vec<Vec<String>> = Vec::new();
 
-    // Extract all rows from the table
     for row_node in table_node.children() {
         if row_node.tag_name().name() == "table-row" {
             let mut row_cells = Vec::new();
 
-            // Extract all cells from the row
             for cell_node in row_node.children() {
                 if cell_node.tag_name().name() == "table-cell" {
                     let cell_text = extract_node_text(cell_node).unwrap_or_default();
@@ -405,13 +380,12 @@ fn parse_odt_table(table_node: roxmltree::Node, table_index: usize) -> Option<Ta
         return None;
     }
 
-    // Generate markdown representation
     let markdown = cells_to_markdown(&cells);
 
     Some(Table {
         cells,
         markdown,
-        page_number: table_index + 1, // 1-indexed
+        page_number: table_index + 1,
     })
 }
 
@@ -433,12 +407,9 @@ impl DocumentExtractor for OdtExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Create a copy of content for use in both threads if needed
         let content_owned = content.to_vec();
 
-        // Parse the ODT document to extract both text and tables
         let (text, tables) = if crate::core::batch_mode::is_batch_mode() {
-            // Batch mode: Use spawn_blocking for parallelism
             let content_for_task = content_owned.clone();
             let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || -> crate::error::Result<(String, Vec<Table>)> {
@@ -452,7 +423,6 @@ impl DocumentExtractor for OdtExtractor {
                 let tables = extract_tables(&mut archive)?;
                 let embedded_formulas = extract_embedded_formulas(&mut archive)?;
 
-                // Combine text and formulas
                 let combined_text = if !embedded_formulas.is_empty() {
                     if !text.is_empty() {
                         format!("{}\n{}", text, embedded_formulas)
@@ -468,7 +438,6 @@ impl DocumentExtractor for OdtExtractor {
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("ODT extraction task failed: {}", e)))??
         } else {
-            // Single-file mode: Direct extraction (no spawn overhead)
             let cursor = Cursor::new(content_owned.clone());
             let mut archive = zip::ZipArchive::new(cursor)
                 .map_err(|e| crate::error::KreuzbergError::parsing(format!("Failed to open ZIP archive: {}", e)))?;
@@ -477,7 +446,6 @@ impl DocumentExtractor for OdtExtractor {
             let tables = extract_tables(&mut archive)?;
             let embedded_formulas = extract_embedded_formulas(&mut archive)?;
 
-            // Combine text and formulas
             let combined_text = if !embedded_formulas.is_empty() {
                 if !text.is_empty() {
                     format!("{}\n{}", text, embedded_formulas)
@@ -491,16 +459,13 @@ impl DocumentExtractor for OdtExtractor {
             (combined_text, tables)
         };
 
-        // Extract metadata from meta.xml
         let mut metadata_map = std::collections::HashMap::new();
 
-        // Try to extract core properties (for ODT, this may be in meta.xml)
         let cursor = Cursor::new(content_owned.clone());
         let mut archive = zip::ZipArchive::new(cursor).map_err(|e| {
             crate::error::KreuzbergError::parsing(format!("Failed to open ZIP archive for metadata: {}", e))
         })?;
 
-        // Extract core properties if available
         if let Ok(core) = office_metadata::extract_core_properties(&mut archive) {
             if let Some(title) = core.title {
                 metadata_map.insert("title".to_string(), serde_json::Value::String(title));
@@ -611,7 +576,6 @@ mod tests {
 
         let result = extract_node_text(node);
         assert!(result.is_some());
-        // The text should be extracted
         assert!(!result.unwrap().is_empty());
     }
 }

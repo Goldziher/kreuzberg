@@ -44,4 +44,4 @@ typedef long ssize_t;
 #include_next <unistd.h>
 #endif
 
-#endif  // KREUZBERG_RUBY_UNISTD_H
+#endif

@@ -285,16 +285,13 @@ impl StableApiDefinition for Definition {
     unsafe fn rtypeddata_p(&self, obj: VALUE) -> bool {
         debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_p called on non-T_DATA object");
 
-        // Access the RTypedData struct
         let rdata = obj as *const RTypedData;
         let typed_flag = (*rdata).typed_flag;
-        // Valid typed_flag value for Ruby 3.1 and earlier is only 1
         typed_flag == 1
     }
 
     #[inline]
     unsafe fn rtypeddata_embedded_p(&self, _obj: VALUE) -> bool {
-        // Ruby 3.1 and lower don't support embedded data
         false
     }
 
@@ -310,7 +307,6 @@ impl StableApiDefinition for Definition {
     unsafe fn rtypeddata_get_data(&self, obj: VALUE) -> *mut c_void {
         debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_get_data called on non-T_DATA object");
 
-        // For Ruby 3.1 and lower, simply return the data field
         let rdata = obj as *const RTypedData;
         (*rdata).data
     }

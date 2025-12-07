@@ -850,7 +850,6 @@ async fn test_pipeline_multiple_processor_errors() {
 
     let result = run_pipeline(result, &config).await;
     assert!(result.is_err(), "Expected pipeline to return error");
-    // First failing processor (fail1 in Early stage) will cause pipeline to fail
     match result {
         Err(KreuzbergError::Plugin { message, plugin_name }) => {
             assert_eq!(message, "fail1 error");

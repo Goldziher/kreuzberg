@@ -67,7 +67,6 @@ public final class HtmlPreprocessingOptions {
     private Boolean removeForms;
 
     private Builder() {
-      // defaults
     }
 
     public Builder enabled(Boolean enabled) {

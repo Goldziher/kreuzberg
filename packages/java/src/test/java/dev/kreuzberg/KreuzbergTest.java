@@ -23,15 +23,12 @@ class KreuzbergTest {
 
     @Test
     void testExtractTextFile(@TempDir Path tempDir) throws IOException, KreuzbergException {
-        // Create a test file
         Path testFile = tempDir.resolve("test.txt");
         String content = "Hello, Kreuzberg!";
         Files.writeString(testFile, content);
 
-        // Extract
         ExtractionResult result = Kreuzberg.extractFile(testFile);
 
-        // Verify
         assertNotNull(result, "Result should not be null");
         assertNotNull(result.getContent(), "Content should not be null");
         assertTrue(result.getContent().contains("Hello"), "Content should contain test text");

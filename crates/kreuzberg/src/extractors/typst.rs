@@ -141,42 +141,34 @@ impl TypstParser {
     }
 
     fn parse(&mut self) -> String {
-        // Extract metadata from document settings
         self.extract_metadata();
 
-        // Process content and extract text
         self.extract_content()
     }
 
     fn extract_metadata(&mut self) {
-        // Extract title from #set document(title: "...")
         if let Some(title) = self.extract_quoted_value("title") {
             self.metadata.additional.insert("title".to_string(), title.into());
         }
 
-        // Extract author
         if let Some(author) = self.extract_quoted_value("author") {
             self.metadata.additional.insert("author".to_string(), author.into());
         }
 
-        // Extract date
         if let Some(date) = self.extract_quoted_value("date") {
             self.metadata.date = Some(date);
         }
 
-        // Extract subject
         if let Some(subject) = self.extract_quoted_value("subject") {
             self.metadata.additional.insert("subject".to_string(), subject.into());
         }
 
-        // Extract keywords (handles both quoted string and array)
         if let Some(keywords) = self.extract_keywords() {
             self.metadata.additional.insert("keywords".to_string(), keywords.into());
         }
     }
 
     fn extract_quoted_value(&self, field: &str) -> Option<String> {
-        // Pattern: field: "value" or field: "value",
         let pattern = format!(r#"{}:\s*"([^"]*)""#, regex::escape(field));
         if let Ok(re) = Regex::new(&pattern)
             && let Some(caps) = re.captures(&self.content)
@@ -187,16 +179,13 @@ impl TypstParser {
     }
 
     fn extract_keywords(&self) -> Option<String> {
-        // Try to match keywords: (...) where ... can be a string or array
         let pattern = r#"keywords:\s*(?:"([^"]*)"|(\([^)]*\)))"#;
         if let Ok(re) = Regex::new(pattern)
             && let Some(caps) = re.captures(&self.content)
         {
-            // Try string format first
             if let Some(m) = caps.get(1) {
                 return Some(m.as_str().to_string());
             }
-            // Try array format - extract all quoted strings
             if let Some(m) = caps.get(2) {
                 let array_str = m.as_str();
                 let mut keywords = Vec::new();
@@ -225,10 +214,8 @@ impl TypstParser {
         while let Some(line) = lines.next() {
             let trimmed = line.trim();
 
-            // Handle code blocks with triple backticks
             if trimmed.starts_with("```") {
                 if in_code_block {
-                    // Check if this is the closing fence (just triple backticks)
                     if trimmed == "```" {
                         in_code_block = false;
                         code_block_fence.clear();
@@ -236,11 +223,9 @@ impl TypstParser {
                         continue;
                     }
                 } else {
-                    // Start of code block
                     in_code_block = true;
                     code_block_fence = "```".to_string();
                     output.push_str("```");
-                    // Extract language specifier if present
                     if let Some(lang) = trimmed.strip_prefix("```") {
                         let lang = lang.trim();
                         if !lang.is_empty() {
@@ -252,24 +237,20 @@ impl TypstParser {
                 }
             }
 
-            // Inside code block - preserve as-is
             if in_code_block {
                 output.push_str(line);
                 output.push('\n');
                 continue;
             }
 
-            // Skip document settings
             if trimmed.starts_with("#set ") || trimmed.starts_with("#let ") {
                 continue;
             }
 
-            // Skip imports and includes
             if trimmed.starts_with("#import ") || trimmed.starts_with("#include ") {
                 continue;
             }
 
-            // Handle table function calls
             if trimmed.starts_with("#table(") {
                 output.push_str("TABLE:\n");
                 let table_content = self.extract_table_content(trimmed, &mut lines);
@@ -278,15 +259,12 @@ impl TypstParser {
                 continue;
             }
 
-            // Handle headings - preserve the heading markers and content
             if trimmed.starts_with('=') {
-                // Ensure it's a heading, not something else
                 let next_char_pos = trimmed.find(|c: char| c != '=');
                 if next_char_pos.is_some() {
                     let heading_level = trimmed.chars().take_while(|&c| c == '=').count();
                     let heading_text = trimmed[heading_level..].trim();
 
-                    // Add heading to output with markers
                     for _ in 0..heading_level {
                         output.push('=');
                     }
@@ -297,7 +275,6 @@ impl TypstParser {
                 }
             }
 
-            // Handle list items (both + and -)
             if (trimmed.starts_with('+') || trimmed.starts_with('-'))
                 && trimmed.len() > 1
                 && trimmed.chars().nth(1).is_some_and(|c| !c.is_alphanumeric())
@@ -308,30 +285,26 @@ impl TypstParser {
                 continue;
             }
 
-            // Handle function calls and other content with brackets
             if trimmed.starts_with('#')
                 && !trimmed.starts_with("#set")
                 && !trimmed.starts_with("#let")
                 && !trimmed.starts_with("#import")
                 && !trimmed.starts_with("#include")
             {
-                // Skip other directives but try to preserve content in brackets
-                if trimmed.contains('[') && trimmed.contains(']') {
-                    // Could be something like #align(center, [...])
-                    if let Some(content) = self.extract_text_from_brackets(trimmed) {
-                        let processed = self.process_line(&content);
-                        if !processed.is_empty() {
-                            output.push_str(&processed);
-                            output.push('\n');
-                        }
+                if trimmed.contains('[')
+                    && trimmed.contains(']')
+                    && let Some(content) = self.extract_text_from_brackets(trimmed)
+                {
+                    let processed = self.process_line(&content);
+                    if !processed.is_empty() {
+                        output.push_str(&processed);
+                        output.push('\n');
                     }
                 }
                 continue;
             }
 
-            // Handle regular text and empty lines
             if !trimmed.is_empty() {
-                // Process inline formatting and special syntax
                 let processed = self.process_line(trimmed);
                 if !processed.is_empty() {
                     output.push_str(&processed);
@@ -355,7 +328,6 @@ impl TypstParser {
         let mut bracket_depth = 0;
         let mut paren_depth = if first_line.contains('(') { 1 } else { 0 };
 
-        // Count opening parentheses in first line
         for ch in first_line.chars() {
             match ch {
                 '(' => paren_depth += 1,
@@ -366,7 +338,6 @@ impl TypstParser {
             }
         }
 
-        // Continue reading lines until table closes
         while paren_depth > 0 || bracket_depth > 0 {
             if let Some(next_line) = lines.next() {
                 content.push('\n');
@@ -385,7 +356,6 @@ impl TypstParser {
             }
         }
 
-        // Extract all bracketed content as table cells
         let mut in_bracket = false;
         let mut cell = String::new();
         for ch in content.chars() {
@@ -412,7 +382,6 @@ impl TypstParser {
             }
         }
 
-        // Clean up trailing separator
         if table_content.ends_with(" | ") {
             table_content.truncate(table_content.len() - 3);
         }
@@ -426,10 +395,8 @@ impl TypstParser {
 
         while let Some(ch) = chars.next() {
             match ch {
-                // Handle inline code
                 '`' => {
                     result.push('`');
-                    // Collect code content until closing backtick
                     for c in chars.by_ref() {
                         result.push(c);
                         if c == '`' {
@@ -437,10 +404,8 @@ impl TypstParser {
                         }
                     }
                 }
-                // Handle inline math
                 '$' => {
                     result.push('$');
-                    // Collect math content until closing $
                     for c in chars.by_ref() {
                         result.push(c);
                         if c == '$' {
@@ -448,10 +413,8 @@ impl TypstParser {
                         }
                     }
                 }
-                // Handle bold
                 '*' => {
                     result.push('*');
-                    // Collect content until closing *
                     for c in chars.by_ref() {
                         result.push(c);
                         if c == '*' {
@@ -459,10 +422,8 @@ impl TypstParser {
                         }
                     }
                 }
-                // Handle italic
                 '_' => {
                     result.push('_');
-                    // Collect content until closing _
                     for c in chars.by_ref() {
                         result.push(c);
                         if c == '_' {
@@ -470,9 +431,7 @@ impl TypstParser {
                         }
                     }
                 }
-                // Handle links
                 '#' if chars.peek() == Some(&'l') => {
-                    // Might be a link, skip the # and let the rest be processed
                     result.push(ch);
                 }
                 _ => {
@@ -481,12 +440,10 @@ impl TypstParser {
             }
         }
 
-        // Extract text from brackets and links
         self.extract_link_text(&result)
     }
 
     fn extract_link_text(&self, line: &str) -> String {
-        // Pattern: #link("url")[text]
         let pattern = r#"link\("([^"]*)"\)\[([^\]]*)\]"#;
         if let Ok(re) = Regex::new(pattern) {
             return re
@@ -583,7 +540,6 @@ Done."#;
 
         let (output, _) = TypstExtractor::extract_from_typst(content);
 
-        // Should contain either URL or link text or markdown format
         assert!(
             output.contains("example.com")
                 || output.contains("example site")
@@ -618,7 +574,6 @@ Done."#;
 
         let (output, _) = TypstExtractor::extract_from_typst(content);
 
-        // Should contain table marker and content
         assert!(output.contains("TABLE:") || output.contains("Name") || output.contains("Alice"));
     }
 
@@ -648,7 +603,6 @@ $ a^2 + b^2 = c^2 $"#;
 
         let (_, metadata) = TypstExtractor::extract_from_typst(content);
 
-        // Verify that metadata fields are extracted
         assert!(metadata.additional.get("title").is_some(), "Title should be extracted");
         assert!(
             metadata.additional.get("author").is_some(),
@@ -680,12 +634,10 @@ Actual content"#;
 
         let (output, _) = TypstExtractor::extract_from_typst(content);
 
-        // Directives should not appear in output
         assert!(!output.contains("#set"));
         assert!(!output.contains("#let"));
         assert!(!output.contains("#import"));
         assert!(!output.contains("#include"));
-        // But actual content should
         assert!(output.contains("Heading"));
         assert!(output.contains("content"));
     }
@@ -696,7 +648,6 @@ Actual content"#;
 
         let (output, _) = TypstExtractor::extract_from_typst(content);
 
-        // Should preserve some formatting markers or text
         assert!(output.contains("*") || output.contains("_") || (output.contains("bold") && output.contains("italic")));
     }
 }

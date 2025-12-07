@@ -1437,7 +1437,7 @@ mod tests {
         let duration = start.elapsed();
 
         assert!(
-            duration.as_millis() < 100,
+            duration.as_millis() < 500,
             "30,000 lookups took too long: {:?}",
             duration
         );

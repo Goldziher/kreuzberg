@@ -15,10 +15,6 @@ use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_bytes;
 use std::fs;
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
 /// Load a test document from the test_documents/typst directory
 fn load_test_document(filename: &str) -> Vec<u8> {
     let path = format!(
@@ -137,9 +133,7 @@ fn content_parity_check(extracted: &str, baseline: &str, tolerance_percent: f64)
     ratio >= acceptable_min && ratio <= acceptable_max
 }
 
-// ============================================================================
 // CRITICAL BUG TESTS - These expose the 45+ issues
-// ============================================================================
 
 /// TEST 1: CRITICAL - 62% heading loss bug
 ///
@@ -162,7 +156,6 @@ async fn test_typst_all_heading_levels_not_lost() {
 
     let extracted_all_headings = extract_all_headings(&result.content);
 
-    // CRITICAL: Should have extracted all 6 heading levels
     assert!(
         extracted_all_headings.len() >= 6,
         "CRITICAL BUG: Only extracted {} headings, should have extracted 6+ heading levels. \
@@ -170,7 +163,6 @@ async fn test_typst_all_heading_levels_not_lost() {
         extracted_all_headings.len()
     );
 
-    // Count each level specifically
     for level in 1..=6 {
         let count = count_heading_level(&result.content, level);
         assert_eq!(
@@ -200,13 +192,10 @@ async fn test_typst_display_math_preserved() {
         .await
         .expect("Extraction failed");
 
-    // Check if display math is in baseline
-    let has_display_math_in_baseline = baseline.contains("²") // Pandoc converts to unicode
-        || baseline.contains("Display math")
-        || baseline.contains("x^2");
+    let has_display_math_in_baseline =
+        baseline.contains("²") || baseline.contains("Display math") || baseline.contains("x^2");
 
     if has_display_math_in_baseline {
-        // If Pandoc extracts display math, our extractor should too
         let our_has_math = result.content.contains("$")
             || result.content.contains("Display")
             || result.content.contains("²")
@@ -219,7 +208,6 @@ async fn test_typst_display_math_preserved() {
         );
     }
 
-    // Specific check: "x^2 + y^2 = r^2" should appear in some form
     let has_pythagorean = result.content.contains("^2")
         || result.content.contains("²")
         || result.content.contains("x") && result.content.contains("y") && result.content.contains("r");
@@ -257,10 +245,8 @@ async fn test_typst_no_empty_headings_output() {
         empty_headings
     );
 
-    // Verify all headings have text after the marker
     for heading in extract_all_headings(&result.content) {
         let trimmed = heading.trim_start();
-        // After stripping heading markers, should have text
         let after_marker = trimmed.trim_start_matches('=').trim();
         assert!(
             !after_marker.is_empty(),
@@ -289,7 +275,6 @@ async fn test_typst_metadata_extraction_completeness() {
         .await
         .expect("Extraction failed");
 
-    // Check for critical metadata fields
     let has_title = result
         .metadata
         .additional
@@ -346,11 +331,9 @@ async fn test_typst_tables_with_nested_brackets_not_corrupted() {
         .await
         .expect("Extraction failed");
 
-    // Check if baseline contains table content
     let has_table_in_baseline = baseline.contains("Name") && baseline.contains("Alice");
 
     if has_table_in_baseline {
-        // Verify table content is present in extraction
         let table_content_extracted =
             result.content.contains("Name") && result.content.contains("Alice") && result.content.contains("Age");
 
@@ -360,7 +343,6 @@ async fn test_typst_tables_with_nested_brackets_not_corrupted() {
              and table cells are malformed."
         );
 
-        // Additional check: no corrupted bracket sequences
         let corrupted_brackets = result.content.matches("[[").count();
         assert_eq!(
             corrupted_brackets, 0,
@@ -395,7 +377,6 @@ async fn test_typst_content_volume_parity_with_pandoc() {
         let baseline_size = baseline.len();
         let extracted_size = result.content.len();
 
-        // Allow specified tolerance for extraction differences
         let is_within_tolerance = content_parity_check(&result.content, &baseline, tolerance);
 
         assert!(
@@ -418,7 +399,6 @@ async fn test_typst_content_volume_parity_with_pandoc() {
 /// WILL FAIL: Exposing missing blockquote support
 #[tokio::test]
 async fn test_typst_blockquote_handling() {
-    // This test documents the missing blockquote feature
     let test_content = b"#quote[
         This is a blockquote.
         It should be extracted.
@@ -429,7 +409,6 @@ async fn test_typst_blockquote_handling() {
         .await
         .expect("Extraction failed");
 
-    // Blockquotes should be extracted somehow
     let has_blockquote_content =
         result.content.contains("blockquote") || result.content.contains("This is a blockquote");
 
@@ -458,7 +437,6 @@ async fn test_typst_inline_code_preserved() {
         .await
         .expect("Extraction failed");
 
-    // Advanced.typ has inline code: `code`
     let has_inline_code =
         result.content.contains("`") || (result.content.contains("code") && baseline.contains("`code`"));
 
@@ -485,7 +463,6 @@ async fn test_typst_inline_math_preserved() {
         .await
         .expect("Extraction failed");
 
-    // advanced.typ has: $x = (-b plus.minus sqrt(b^2 - 4a c)) / (2a)$
     let has_inline_math =
         result.content.contains("$") || result.content.contains("sqrt") || result.content.contains("equation");
 
@@ -506,7 +483,6 @@ async fn test_typst_inline_math_preserved() {
 /// Current behavior: May be unimplemented
 #[tokio::test]
 async fn test_typst_figures_and_captions() {
-    // This documents the capability to extract figures
     let test_content = b"#figure(
         image(\"example.png\"),
         caption: [This is a figure caption]
@@ -517,10 +493,8 @@ async fn test_typst_figures_and_captions() {
         .await
         .expect("Extraction failed");
 
-    // Should extract caption text at minimum
     let _has_caption = result.content.contains("caption") || result.content.contains("figure");
 
-    // This test primarily documents the feature
     println!(
         "Figure extraction result (feature may be unimplemented): {:?}",
         result.content
@@ -546,12 +520,10 @@ async fn test_typst_citations_preserved() {
         .await
         .expect("Extraction failed");
 
-    // Should at least extract the citation reference
     let _has_citation = result.content.contains("@smith2020")
         || result.content.contains("smith")
         || result.content.contains("References");
 
-    // Document what happens with citations
     println!("Citation handling (may be limited): {:?}", result.content);
 }
 
@@ -571,7 +543,6 @@ async fn test_typst_link_extraction() {
         .await
         .expect("Extraction failed");
 
-    // advanced.typ has: #link("https://example.com")[link to example]
     let has_link_content =
         result.content.contains("example") || result.content.contains("link") || result.content.contains("https");
 
@@ -597,7 +568,6 @@ async fn test_typst_list_extraction() {
         .await
         .expect("Extraction failed");
 
-    // Should have list items
     let has_list_markers = result.content.contains("-") || result.content.contains("+");
     let has_list_content =
         result.content.contains("First") || result.content.contains("Second") || result.content.contains("item");
@@ -624,7 +594,6 @@ async fn test_typst_code_block_extraction() {
         .await
         .expect("Extraction failed");
 
-    // Should have code block content
     let has_code = result.content.contains("```")
         || result.content.contains("def")
         || result.content.contains("fibonacci")
@@ -648,7 +617,6 @@ async fn test_typst_emphasis_formatting() {
         .await
         .expect("Extraction failed");
 
-    // Should preserve formatting markers
     let has_emphasis = result.content.contains("*") && result.content.contains("_");
 
     assert!(has_emphasis, "Bold and italic formatting markers should be preserved.");
@@ -669,7 +637,6 @@ async fn test_typst_nested_formatting() {
         .await
         .expect("Extraction failed");
 
-    // Should preserve or flatten the formatting
     let has_formatting = result.content.contains("*")
         || result.content.contains("_")
         || (result.content.contains("bold") && result.content.contains("italic"));
@@ -696,7 +663,6 @@ async fn test_typst_multiple_paragraphs() {
         .await
         .expect("Extraction failed");
 
-    // Should have multiple non-empty lines (paragraphs)
     let non_empty_lines: Vec<_> = result.content.lines().filter(|l| !l.trim().is_empty()).collect();
 
     assert!(
@@ -723,10 +689,8 @@ async fn test_typst_heading_content_association() {
 
     let blocks = extract_content_blocks(&result.content);
 
-    // Should have reasonable number of content blocks
     assert!(blocks.len() > 0, "Content blocks should be associated with headings.");
 
-    // Each block should have some content
     for block in &blocks {
         assert!(block.len() > 0, "Content blocks should not be empty.");
     }
@@ -747,7 +711,6 @@ async fn test_typst_whitespace_handling() {
         .await
         .expect("Extraction failed");
 
-    // Check for excessive blank lines
     let blank_line_runs: Vec<_> = result.content.split("\n\n\n").collect();
 
     assert!(
@@ -779,7 +742,6 @@ async fn test_typst_minimal_document() {
         "Even minimal documents should extract some content."
     );
 
-    // Should have at least as much content as empty
     assert!(
         result.content.len() > 0,
         "Minimal document should produce non-empty output."
@@ -826,7 +788,6 @@ async fn test_typst_metadata_field_completeness() {
         .await
         .expect("Extraction failed");
 
-    // advanced.typ has all metadata fields
     let has_title = result.metadata.additional.get("title").is_some();
     let has_author = result.metadata.additional.get("author").is_some();
     let has_date = result.metadata.date.is_some();
@@ -856,7 +817,6 @@ async fn test_typst_special_character_preservation() {
         .await
         .expect("Extraction failed");
 
-    // Should preserve the special characters
     let has_special_chars =
         result.content.contains("Café") || result.content.contains("naïve") || result.content.contains("français");
 
@@ -881,7 +841,6 @@ async fn test_typst_long_heading_handling() {
         .await
         .expect("Extraction failed");
 
-    // Should contain most of the heading text
     let has_heading_start = result.content.contains("very long heading");
 
     assert!(has_heading_start, "Long headings should not be truncated.");
@@ -900,24 +859,16 @@ async fn test_typst_empty_heading_edge_case() {
     let config = ExtractionConfig::default();
     let result = extract_bytes(test_content, "application/x-typst", &config).await;
 
-    // Should handle gracefully (either succeed with content or fail cleanly)
     match result {
         Ok(extraction) => {
-            // Should extract at least the content
             assert!(
                 extraction.content.contains("Content"),
                 "Should extract regular content even if some headings are empty."
             );
         }
-        Err(_) => {
-            // Failing cleanly is acceptable
-        }
+        Err(_) => {}
     }
 }
-
-// ============================================================================
-// REGRESSION TESTS - Ensure critical features continue working
-// ============================================================================
 
 /// TEST 26: Regression - Basic heading extraction
 #[tokio::test]
@@ -1085,16 +1036,11 @@ async fn test_typst_table_regression() {
         .await
         .expect("Extraction failed");
 
-    // Should extract table content in some form
     assert!(
         result.content.contains("A") || result.content.contains("TABLE"),
         "Table content should be extracted."
     );
 }
-
-// ============================================================================
-// STRESS TESTS - Ensure robustness under edge cases
-// ============================================================================
 
 /// TEST 36: Large document handling
 #[tokio::test]
@@ -1111,7 +1057,6 @@ async fn test_typst_large_document_stress() {
         .await
         .expect("Extraction failed");
 
-    // Should extract all headings
     let heading_count = extract_all_headings(&result.content).len();
     assert!(
         heading_count >= 40,
@@ -1135,7 +1080,6 @@ async fn test_typst_deep_nesting_stress() {
         .await
         .expect("Extraction failed");
 
-    // Should preserve all levels
     for level in 1..=6 {
         let count = count_heading_level(&result.content, level);
         assert!(
@@ -1156,7 +1100,6 @@ async fn test_typst_mixed_formatting_stress() {
         .await
         .expect("Extraction failed");
 
-    // Should preserve markers or text
     let has_formatting = (result.content.contains("*") || result.content.contains("bold"))
         && (result.content.contains("_") || result.content.contains("italic"))
         && (result.content.contains("`") || result.content.contains("code"))
@@ -1175,7 +1118,6 @@ async fn test_typst_unicode_stress() {
         .await
         .expect("Extraction failed");
 
-    // Should preserve unicode
     assert!(
         result.content.contains("Unicode"),
         "Unicode content should be preserved."
@@ -1192,16 +1134,11 @@ async fn test_typst_pathological_whitespace() {
         .await
         .expect("Extraction failed");
 
-    // Should extract content despite bad whitespace
     assert!(
         result.content.contains("Heading") && result.content.contains("Content"),
         "Should extract content even with excessive whitespace."
     );
 }
-
-// ============================================================================
-// INTEGRATION TESTS - Real document combinations
-// ============================================================================
 
 /// TEST 41: Full document comparison - simple.typ
 #[tokio::test]
@@ -1214,13 +1151,11 @@ async fn test_typst_full_simple_document_comparison() {
         .await
         .expect("Extraction failed");
 
-    // Should have reasonable content volume
     assert!(
         result.content.len() > 50,
         "simple.typ should extract substantial content"
     );
 
-    // Should have multiple sections
     let heading_count = extract_all_headings(&result.content).len();
     assert!(heading_count > 2, "simple.typ should have multiple sections");
 }
@@ -1236,13 +1171,11 @@ async fn test_typst_full_advanced_document_comparison() {
         .await
         .expect("Extraction failed");
 
-    // Advanced document should extract with good coverage
     assert!(
         result.content.len() > 100,
         "advanced.typ should extract comprehensive content"
     );
 
-    // Should preserve document structure
     let heading_count = extract_all_headings(&result.content).len();
     assert!(heading_count >= 5, "advanced.typ should preserve heading structure");
 }
@@ -1256,7 +1189,6 @@ async fn test_typst_mime_type_consistency() {
     let content = load_test_document("simple.typ");
     let config = ExtractionConfig::default();
 
-    // Primary MIME type should work
     let result_primary = extract_bytes(&content, "application/x-typst", &config)
         .await
         .expect("Primary MIME type should work");
@@ -1266,8 +1198,6 @@ async fn test_typst_mime_type_consistency() {
         "Primary MIME type should extract content"
     );
 
-    // Note: text/x-typst may not be supported yet
-    // This is a known limitation that could be added
     match extract_bytes(&content, "text/x-typst", &config).await {
         Ok(result) => {
             assert!(
@@ -1276,7 +1206,6 @@ async fn test_typst_mime_type_consistency() {
             );
         }
         Err(_e) => {
-            // It's acceptable if the alternative MIME type is not supported
             println!("Note: text/x-typst is not currently supported (may be added in future)");
         }
     }
@@ -1292,10 +1221,8 @@ async fn test_typst_config_parameter_handling() {
         .await
         .expect("Extraction failed");
 
-    // Should work with default config
     assert!(!result.content.is_empty(), "Extraction with default config should work");
 
-    // Verify MIME type is preserved
     assert_eq!(result.mime_type, "application/x-typst", "MIME type should be preserved");
 }
 
@@ -1313,7 +1240,6 @@ async fn test_typst_heading_loss_bug_analysis() {
         .await
         .expect("Extraction failed");
 
-    // Analyze heading loss by level
     println!("\n===== HEADING EXTRACTION ANALYSIS =====");
     println!("Baseline content:");
     println!("{}", baseline);
@@ -1326,7 +1252,6 @@ async fn test_typst_heading_loss_bug_analysis() {
         println!("  {}: {}", i + 1, h);
     }
 
-    // CRITICAL ASSERTION
     assert!(
         extracted_headings.len() >= 6,
         "BUG CONFIRMED: Heading loss detected. \

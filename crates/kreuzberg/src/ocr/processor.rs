@@ -241,7 +241,6 @@ impl OcrProcessor {
         });
 
         // Validate language before initializing to prevent segfault ~keep
-        // tesseract-rs can crash on empty language or missing language files
         if config.language.trim().is_empty() {
             return Err(OcrError::TesseractInitializationFailed(
                 "Language cannot be empty. Please specify a valid language code (e.g., 'eng')".to_string(),
@@ -249,7 +248,6 @@ impl OcrProcessor {
         }
 
         // Validate language file exists before initializing to prevent segfault ~keep
-        // tesseract-rs can crash if language file is missing instead of returning error
         if !tessdata_path.is_empty() {
             let languages: Vec<&str> = config.language.split('+').collect();
             for lang in languages {
@@ -375,9 +373,6 @@ impl OcrProcessor {
             )
         });
 
-        // Explicitly call recognize() to trigger OCR processing
-        // This ensures that subsequent calls to get_utf8_text(), get_hocr_text(), etc.
-        // have valid recognized text available
         api.recognize()
             .map_err(|e| OcrError::ProcessingFailed(format!("Failed to recognize text: {}", e)))?;
 

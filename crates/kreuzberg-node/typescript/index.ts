@@ -159,11 +159,8 @@ export function __resetBindingForTests(): void {
 	bindingInitialized = false;
 }
 
-// Helper to load native binding with ESM/CJS compatibility
 // biome-ignore lint/suspicious/noExplicitAny: NAPI binding type is dynamically loaded
 function loadNativeBinding(): any {
-	// In ESM, plain `require` is unavailable; fall back to createRequire for the CJS native loader.
-	// This keeps both CJS and ESM consumers working while the native .node binary stays CJS-only.
 	const localRequire =
 		typeof require !== "undefined"
 			? // biome-ignore lint/suspicious/noExplicitAny: Node typings are available at runtime
@@ -673,7 +670,6 @@ export async function extractBytes(
 	const validated = assertUint8Array(data, "data");
 	// biome-ignore lint/complexity/useLiteralKeys: required for strict TypeScript noUncheckedIndexedAccess
 	if (process.env["KREUZBERG_DEBUG_GUTEN"] === "1") {
-		// Helpful when debugging OCR pipelines that bridge through Rust/Node.
 		console.log("[TypeScript] Debug input header:", Array.from(validated.slice(0, 8)));
 	}
 	const normalizedConfig = normalizeExtractionConfig(config);

@@ -165,7 +165,6 @@ static EXTRACTORS_INITIALIZED: Lazy<Result<()>> = Lazy::new(register_default_ext
 /// It's safe to call multiple times - registration only happens once,
 /// unless the registry was cleared, in which case extractors are re-registered.
 pub fn ensure_initialized() -> Result<()> {
-    // First, try the lazy initialization
     EXTRACTORS_INITIALIZED
         .as_ref()
         .map(|_| ())
@@ -174,15 +173,12 @@ pub fn ensure_initialized() -> Result<()> {
             plugin_name: "built-in-extractors".to_string(),
         })?;
 
-    // Check if registry is empty (e.g., after clear_document_extractors)
-    // If so, re-register the default extractors
     let registry = get_document_extractor_registry();
     let registry_guard = registry
         .read()
         .map_err(|e| crate::KreuzbergError::Other(format!("Document extractor registry lock poisoned: {}", e)))?;
 
     if registry_guard.list().is_empty() {
-        // Drop read lock before acquiring write lock
         drop(registry_guard);
         register_default_extractors()?;
     }
@@ -317,7 +313,6 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            // Office adds 13 unique extractors (EnhancedMarkdownExtractor has same name as core, so it replaces it)
             expected_count += 13;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));

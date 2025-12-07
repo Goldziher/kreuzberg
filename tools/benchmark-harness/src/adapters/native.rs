@@ -172,14 +172,12 @@ impl FrameworkAdapter for NativeAdapter {
         let samples = monitor.stop().await;
         let resource_stats = ResourceMonitor::calculate_stats(&samples);
 
-        // Calculate total file size for throughput
         let total_file_size: u64 = file_paths
             .iter()
             .filter_map(|path| std::fs::metadata(path).ok())
             .map(|m| m.len())
             .sum();
 
-        // On error, return single batch result representing failure
         if let Err(e) = batch_result {
             return Ok(vec![BenchmarkResult {
                 framework: self.name().to_string(),
@@ -198,7 +196,6 @@ impl FrameworkAdapter for NativeAdapter {
             }]);
         }
 
-        // Return single batch result with total duration
         let throughput = if total_duration.as_secs_f64() > 0.0 {
             total_file_size as f64 / total_duration.as_secs_f64()
         } else {

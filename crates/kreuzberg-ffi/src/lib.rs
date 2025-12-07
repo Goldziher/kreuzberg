@@ -26,14 +26,12 @@ use kreuzberg::{KreuzbergError, Result};
 #[cfg(feature = "embeddings")]
 use serde::Serialize;
 
-// Thread-local storage for the last error C string (for kreuzberg_last_error FFI function)
 thread_local! {
     static LAST_ERROR_C_STRING: RefCell<Option<CString>> = const { RefCell::new(None) };
 }
 
 /// Set the last error message (convenience wrapper for backward compatibility)
 fn set_last_error(err: String) {
-    // Store as C string for FFI compatibility
     if let Ok(c_str) = CString::new(err.clone()) {
         LAST_ERROR_C_STRING.with(|last| *last.borrow_mut() = Some(c_str));
     }
@@ -432,7 +430,7 @@ impl CStringGuard {
     /// Transfer ownership of the raw pointer to the caller, preventing cleanup
     fn into_raw(mut self) -> *mut c_char {
         let ptr = self.ptr;
-        self.ptr = ptr::null_mut(); // Mark as transferred so Drop won't free it
+        self.ptr = ptr::null_mut();
         ptr
     }
 }
@@ -440,7 +438,6 @@ impl CStringGuard {
 impl Drop for CStringGuard {
     fn drop(&mut self) {
         if !self.ptr.is_null() {
-            // SAFETY: We own this pointer and it was created from CString::into_raw
             unsafe { drop(CString::from_raw(self.ptr)) };
         }
     }
@@ -489,7 +486,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         images,
     } = result;
 
-    // Convert required fields to C strings with RAII guards
     let content_guard =
         CStringGuard::new(CString::new(content).map_err(|e| format!("Failed to convert content to C string: {}", e))?);
 
@@ -497,7 +493,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         CString::new(mime_type).map_err(|e| format!("Failed to convert MIME type to C string: {}", e))?,
     );
 
-    // Convert optional metadata fields to C strings with RAII guards
     let language_guard = match &metadata.language {
         Some(lang) => Some(CStringGuard::new(
             CString::new(lang.as_str()).map_err(|e| format!("Failed to convert language to C string: {}", e))?,
@@ -519,7 +514,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         None => None,
     };
 
-    // Serialize tables to JSON with RAII guard
     let tables_json_guard = if !tables.is_empty() {
         let json = serde_json::to_string(&tables).map_err(|e| format!("Failed to serialize tables to JSON: {}", e))?;
         Some(CStringGuard::new(CString::new(json).map_err(|e| {
@@ -529,7 +523,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         None
     };
 
-    // Serialize detected languages to JSON with RAII guard
     let detected_languages_json_guard = match detected_languages {
         Some(langs) if !langs.is_empty() => {
             let json = serde_json::to_string(&langs)
@@ -541,7 +534,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         _ => None,
     };
 
-    // Serialize metadata to JSON with RAII guard
     let metadata_json_guard = {
         let json =
             serde_json::to_string(&metadata).map_err(|e| format!("Failed to serialize metadata to JSON: {}", e))?;
@@ -550,7 +542,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         })?))
     };
 
-    // Serialize chunks to JSON with RAII guard
     let chunks_json_guard = match chunks {
         Some(chunks) if !chunks.is_empty() => {
             let json =
@@ -562,7 +553,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         _ => None,
     };
 
-    // Serialize images to JSON with RAII guard
     let images_json_guard = match images {
         Some(images) if !images.is_empty() => {
             let json =
@@ -574,9 +564,6 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         _ => None,
     };
 
-    // All allocations succeeded - transfer ownership to the result structure
-    // by calling into_raw() on each guard. This prevents the Drop implementation
-    // from freeing the strings, as they are now owned by the CExtractionResult.
     Ok(Box::into_raw(Box::new(CExtractionResult {
         content: content_guard.into_raw(),
         mime_type: mime_type_guard.into_raw(),
@@ -624,7 +611,6 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync(file_path: *const c_char) -
             return ptr::null_mut();
         }
 
-        // SAFETY: Caller must ensure file_path is a valid null-terminated C string
         let path_str = match unsafe { CStr::from_ptr(file_path) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -867,7 +853,6 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync_with_config(
             return ptr::null_mut();
         }
 
-        // SAFETY: Caller must ensure file_path is a valid null-terminated C string
         let path_str = match unsafe { CStr::from_ptr(file_path) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -878,11 +863,9 @@ pub unsafe extern "C" fn kreuzberg_extract_file_sync_with_config(
 
         let path = Path::new(path_str);
 
-        // Parse config from JSON if provided, otherwise use default
         let config = if config_json.is_null() {
             ExtractionConfig::default()
         } else {
-            // SAFETY: Caller must ensure config_json is a valid null-terminated C string
             let config_str = match unsafe { CStr::from_ptr(config_json) }.to_str() {
                 Ok(s) => s,
                 Err(e) => {
@@ -959,10 +942,8 @@ pub unsafe extern "C" fn kreuzberg_extract_bytes_sync(
             return ptr::null_mut();
         }
 
-        // SAFETY: Caller must ensure data points to a valid byte array of length data_len
         let bytes = unsafe { std::slice::from_raw_parts(data, data_len) };
 
-        // SAFETY: Caller must ensure mime_type is a valid null-terminated C string
         let mime_str = match unsafe { CStr::from_ptr(mime_type) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -1032,10 +1013,8 @@ pub unsafe extern "C" fn kreuzberg_extract_bytes_sync_with_config(
             return ptr::null_mut();
         }
 
-        // SAFETY: Caller must ensure data points to a valid byte array of length data_len
         let bytes = unsafe { std::slice::from_raw_parts(data, data_len) };
 
-        // SAFETY: Caller must ensure mime_type is a valid null-terminated C string
         let mime_str = match unsafe { CStr::from_ptr(mime_type) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -1044,11 +1023,9 @@ pub unsafe extern "C" fn kreuzberg_extract_bytes_sync_with_config(
             }
         };
 
-        // Parse config from JSON if provided, otherwise use default
         let config = if config_json.is_null() {
             ExtractionConfig::default()
         } else {
-            // SAFETY: Caller must ensure config_json is a valid null-terminated C string
             let config_str = match unsafe { CStr::from_ptr(config_json) }.to_str() {
                 Ok(s) => s,
                 Err(e) => {
@@ -1127,7 +1104,6 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
             return ptr::null_mut();
         }
 
-        // Parse config from JSON if provided, otherwise use default
         let config = if config_json.is_null() {
             ExtractionConfig::default()
         } else {
@@ -1148,7 +1124,6 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
             }
         };
 
-        // Convert C strings to Rust paths
         let mut paths = Vec::with_capacity(count);
         for i in 0..count {
             let path_ptr = unsafe { *file_paths.add(i) };
@@ -1170,13 +1145,11 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
 
         match kreuzberg::batch_extract_file_sync(paths, &config) {
             Ok(results) => {
-                // Convert results to C structures
                 let mut c_results = Vec::with_capacity(results.len());
                 for result in results {
                     match to_c_extraction_result(result) {
                         Ok(ptr) => c_results.push(ptr),
                         Err(e) => {
-                            // Clean up already converted results
                             for c_res in c_results {
                                 unsafe { kreuzberg_free_result(c_res) };
                             }
@@ -1186,7 +1159,6 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
                     }
                 }
 
-                // Allocate array for result pointers
                 let results_array = c_results.into_boxed_slice();
                 let results_ptr = Box::into_raw(results_array) as *mut *mut CExtractionResult;
 
@@ -1227,7 +1199,6 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
             return ptr::null_mut();
         }
 
-        // Parse config from JSON if provided, otherwise use default
         let config = if config_json.is_null() {
             ExtractionConfig::default()
         } else {
@@ -1248,7 +1219,6 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
             }
         };
 
-        // Convert C structures to Rust tuples
         let mut contents = Vec::with_capacity(count);
         for i in 0..count {
             let item = unsafe { &*items.add(i) };
@@ -1278,13 +1248,11 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
 
         match kreuzberg::batch_extract_bytes_sync(contents, &config) {
             Ok(results) => {
-                // Convert results to C structures
                 let mut c_results = Vec::with_capacity(results.len());
                 for result in results {
                     match to_c_extraction_result(result) {
                         Ok(ptr) => c_results.push(ptr),
                         Err(e) => {
-                            // Clean up already converted results
                             for c_res in c_results {
                                 unsafe { kreuzberg_free_result(c_res) };
                             }
@@ -1294,7 +1262,6 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
                     }
                 }
 
-                // Allocate array for result pointers
                 let results_array = c_results.into_boxed_slice();
                 let results_ptr = Box::into_raw(results_array) as *mut *mut CExtractionResult;
 
@@ -1373,7 +1340,6 @@ pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchRe
         let batch = unsafe { Box::from_raw(batch_result) };
 
         if !batch.results.is_null() {
-            // Free each individual result
             let results_slice = unsafe { std::slice::from_raw_parts_mut(batch.results, batch.count) };
 
             for result_ptr in results_slice {
@@ -1382,7 +1348,6 @@ pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchRe
                 }
             }
 
-            // Free the array itself
             unsafe {
                 #[allow(clippy::cast_slice_from_raw_parts)]
                 let slice = std::slice::from_raw_parts_mut(batch.results, batch.count);
@@ -1410,7 +1375,6 @@ pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchRe
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn kreuzberg_free_string(s: *mut c_char) {
     if !s.is_null() {
-        // SAFETY: Caller must ensure s was returned by a Kreuzberg function
         unsafe { drop(CString::from_raw(s)) };
     }
 }
@@ -1470,10 +1434,8 @@ pub unsafe extern "C" fn kreuzberg_clone_string(s: *const c_char) -> *mut c_char
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn kreuzberg_free_result(result: *mut CExtractionResult) {
     if !result.is_null() {
-        // SAFETY: Caller must ensure result was returned by kreuzberg_extract_file_sync
         let result_box = unsafe { Box::from_raw(result) };
 
-        // Free all string fields
         if !result_box.content.is_null() {
             unsafe { drop(CString::from_raw(result_box.content)) };
         }
@@ -1504,8 +1466,6 @@ pub unsafe extern "C" fn kreuzberg_free_result(result: *mut CExtractionResult) {
         if !result_box.images_json.is_null() {
             unsafe { drop(CString::from_raw(result_box.images_json)) };
         }
-
-        // Box drop will free the result struct itself
     }
 }
 
@@ -1609,7 +1569,6 @@ pub unsafe extern "C" fn kreuzberg_last_panic_context() -> *mut c_char {
                     .map(|d| d.as_secs())
                     .unwrap_or(0);
 
-                // Use serde_json for proper escaping to prevent JSON injection
                 let json_value = serde_json::json!({
                     "file": ctx.file,
                     "line": ctx.line,
@@ -1745,26 +1704,21 @@ impl Plugin for FfiOcrBackend {
 #[async_trait]
 impl OcrBackend for FfiOcrBackend {
     async fn process_image(&self, image_bytes: &[u8], config: &OcrConfig) -> Result<ExtractionResult> {
-        // Serialize config to JSON
         let config_json = serde_json::to_string(config).map_err(|e| KreuzbergError::Validation {
             message: format!("Failed to serialize OCR config: {}", e),
             source: Some(Box::new(e)),
         })?;
 
-        // Call the FFI callback (blocking operation, so spawn blocking)
         let callback = self.callback;
         let image_data = image_bytes.to_vec();
         let config_json_owned = config_json.clone();
 
         let result_text = tokio::task::spawn_blocking(move || {
-            // Create C string inside the closure to ensure it's Send-safe
             let config_cstring = CString::new(config_json_owned).map_err(|e| KreuzbergError::Validation {
                 message: format!("Failed to create C string from config JSON: {}", e),
                 source: Some(Box::new(e)),
             })?;
 
-            // SAFETY: We're passing valid pointers to the callback
-            // The callback contract requires it to not store these pointers
             let result_ptr = unsafe { callback(image_data.as_ptr(), image_data.len(), config_cstring.as_ptr()) };
 
             if result_ptr.is_null() {
@@ -1774,7 +1728,6 @@ impl OcrBackend for FfiOcrBackend {
                 });
             }
 
-            // SAFETY: The callback contract requires returning a valid null-terminated string
             let result_cstr = unsafe { CStr::from_ptr(result_ptr) };
             let text = result_cstr
                 .to_str()
@@ -1784,7 +1737,6 @@ impl OcrBackend for FfiOcrBackend {
                 })?
                 .to_string();
 
-            // Free the string returned by the callback
             unsafe { kreuzberg_free_string(result_ptr) };
 
             Ok(text)
@@ -1854,7 +1806,6 @@ pub unsafe extern "C" fn kreuzberg_register_ocr_backend(name: *const c_char, cal
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -1880,8 +1831,6 @@ pub unsafe extern "C" fn kreuzberg_register_ocr_backend(name: *const c_char, cal
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -1917,7 +1866,6 @@ pub unsafe extern "C" fn kreuzberg_register_ocr_backend_with_languages(
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -1951,8 +1899,6 @@ pub unsafe extern "C" fn kreuzberg_register_ocr_backend_with_languages(
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -1967,10 +1913,6 @@ pub unsafe extern "C" fn kreuzberg_register_ocr_backend_with_languages(
         }
     })
 }
-
-// ============================================================================
-// PostProcessor FFI
-// ============================================================================
 
 /// Type alias for the PostProcessor callback function.
 ///
@@ -2029,26 +1971,21 @@ impl Plugin for FfiPostProcessor {
 #[async_trait]
 impl kreuzberg::plugins::PostProcessor for FfiPostProcessor {
     async fn process(&self, result: &mut ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
-        // Serialize the current result to JSON
         let result_json = serde_json::to_string(&*result).map_err(|e| KreuzbergError::Validation {
             message: format!("Failed to serialize ExtractionResult: {}", e),
             source: Some(Box::new(e)),
         })?;
 
-        // Call the FFI callback (blocking operation, so use spawn_blocking)
         let callback = self.callback;
         let processor_name = self.name.clone();
         let result_json_owned = result_json.clone();
 
         let processed_json = tokio::task::spawn_blocking(move || {
-            // Create C string inside the closure to ensure it's Send-safe
             let result_cstring = CString::new(result_json_owned).map_err(|e| KreuzbergError::Validation {
                 message: format!("Failed to create C string from result JSON: {}", e),
                 source: Some(Box::new(e)),
             })?;
 
-            // SAFETY: We're passing a valid pointer to the callback
-            // The callback contract requires it to not store this pointer
             let processed_ptr = unsafe { callback(result_cstring.as_ptr()) };
 
             if processed_ptr.is_null() {
@@ -2058,7 +1995,6 @@ impl kreuzberg::plugins::PostProcessor for FfiPostProcessor {
                 });
             }
 
-            // SAFETY: The callback contract requires returning a valid null-terminated string
             let processed_cstr = unsafe { CStr::from_ptr(processed_ptr) };
             let json = processed_cstr
                 .to_str()
@@ -2068,7 +2004,6 @@ impl kreuzberg::plugins::PostProcessor for FfiPostProcessor {
                 })?
                 .to_string();
 
-            // Free the string returned by the callback
             unsafe { kreuzberg_free_string(processed_ptr) };
 
             Ok(json)
@@ -2079,14 +2014,12 @@ impl kreuzberg::plugins::PostProcessor for FfiPostProcessor {
             plugin_name: self.name.clone(),
         })??;
 
-        // Deserialize the processed result
         let processed_result: ExtractionResult =
             serde_json::from_str(&processed_json).map_err(|e| KreuzbergError::Plugin {
                 message: format!("Failed to deserialize processed result: {}", e),
                 plugin_name: self.name.clone(),
             })?;
 
-        // Update the result with the processed data
         *result = processed_result;
 
         Ok(())
@@ -2152,7 +2085,6 @@ pub unsafe extern "C" fn kreuzberg_register_post_processor(
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -2182,8 +2114,6 @@ pub unsafe extern "C" fn kreuzberg_register_post_processor(
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -2226,7 +2156,6 @@ pub unsafe extern "C" fn kreuzberg_register_post_processor_with_stage(
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -2272,8 +2201,6 @@ pub unsafe extern "C" fn kreuzberg_register_post_processor_with_stage(
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -2315,7 +2242,6 @@ pub unsafe extern "C" fn kreuzberg_unregister_post_processor(name: *const c_char
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -2329,8 +2255,6 @@ pub unsafe extern "C" fn kreuzberg_unregister_post_processor(name: *const c_char
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -2362,8 +2286,6 @@ pub unsafe extern "C" fn kreuzberg_clear_post_processors() -> bool {
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -2390,8 +2312,6 @@ pub unsafe extern "C" fn kreuzberg_list_post_processors() -> *mut c_char {
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry read lock: {}", e));
                 return ptr::null_mut();
             }
@@ -2412,10 +2332,6 @@ pub unsafe extern "C" fn kreuzberg_list_post_processors() -> *mut c_char {
         }
     })
 }
-
-// ============================================================================
-// DocumentExtractor FFI
-// ============================================================================
 
 /// Type alias for the DocumentExtractor callback function.
 ///
@@ -2699,8 +2615,6 @@ pub unsafe extern "C" fn kreuzberg_register_document_extractor(
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -2755,8 +2669,6 @@ pub unsafe extern "C" fn kreuzberg_unregister_document_extractor(name: *const c_
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -2788,8 +2700,6 @@ pub unsafe extern "C" fn kreuzberg_list_document_extractors() -> *mut c_char {
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry read lock: {}", e));
                 return ptr::null_mut();
             }
@@ -2810,10 +2720,6 @@ pub unsafe extern "C" fn kreuzberg_list_document_extractors() -> *mut c_char {
         }
     })
 }
-
-// ============================================================================
-// Validator FFI
-// ============================================================================
 
 /// Type alias for the Validator callback function.
 ///
@@ -2881,34 +2787,27 @@ impl kreuzberg::plugins::Validator for FfiValidator {
     }
 
     async fn validate(&self, result: &ExtractionResult, _config: &ExtractionConfig) -> Result<()> {
-        // Serialize the result to JSON
         let result_json = serde_json::to_string(result).map_err(|e| KreuzbergError::Validation {
             message: format!("Failed to serialize ExtractionResult: {}", e),
             source: Some(Box::new(e)),
         })?;
 
-        // Call the FFI callback (blocking operation, so use spawn_blocking)
         let callback = self.callback;
         let validator_name = self.name.clone();
         let result_json_owned = result_json.clone();
 
         let error_msg = tokio::task::spawn_blocking(move || {
-            // Create C string inside the closure to ensure it's Send-safe
             let result_cstring = CString::new(result_json_owned).map_err(|e| KreuzbergError::Validation {
                 message: format!("Failed to create C string from result JSON: {}", e),
                 source: Some(Box::new(e)),
             })?;
 
-            // SAFETY: We're passing a valid pointer to the callback
-            // The callback contract requires it to not store this pointer
             let error_ptr = unsafe { callback(result_cstring.as_ptr()) };
 
             if error_ptr.is_null() {
-                // Validation passed
                 return Ok::<Option<String>, KreuzbergError>(None);
             }
 
-            // SAFETY: The callback contract requires returning a valid null-terminated string
             let error_cstr = unsafe { CStr::from_ptr(error_ptr) };
             let error_msg = error_cstr
                 .to_str()
@@ -2918,7 +2817,6 @@ impl kreuzberg::plugins::Validator for FfiValidator {
                 })?
                 .to_string();
 
-            // Free the string returned by the callback
             unsafe { kreuzberg_free_string(error_ptr) };
 
             Ok(Some(error_msg))
@@ -2929,7 +2827,6 @@ impl kreuzberg::plugins::Validator for FfiValidator {
             plugin_name: self.name.clone(),
         })??;
 
-        // If there's an error message, validation failed
         if let Some(msg) = error_msg {
             return Err(KreuzbergError::Validation {
                 message: msg,
@@ -2986,7 +2883,6 @@ pub unsafe extern "C" fn kreuzberg_register_validator(
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -3012,8 +2908,6 @@ pub unsafe extern "C" fn kreuzberg_register_validator(
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -3055,7 +2949,6 @@ pub unsafe extern "C" fn kreuzberg_unregister_validator(name: *const c_char) -> 
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -3069,8 +2962,6 @@ pub unsafe extern "C" fn kreuzberg_unregister_validator(name: *const c_char) -> 
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -3102,8 +2993,6 @@ pub unsafe extern "C" fn kreuzberg_clear_validators() -> bool {
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -3130,8 +3019,6 @@ pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry read lock: {}", e));
                 return ptr::null_mut();
             }
@@ -3152,10 +3039,6 @@ pub unsafe extern "C" fn kreuzberg_list_validators() -> *mut c_char {
         }
     })
 }
-
-// ============================================================================
-// OCR Backend Plugin Registration FFI
-// ============================================================================
 
 /// Unregister an OCR backend by name.
 ///
@@ -3183,7 +3066,6 @@ pub unsafe extern "C" fn kreuzberg_unregister_ocr_backend(name: *const c_char) -
             return false;
         }
 
-        // SAFETY: Caller must ensure name is a valid null-terminated C string
         let name_str = match unsafe { CStr::from_ptr(name) }.to_str() {
             Ok(s) => s,
             Err(e) => {
@@ -3315,8 +3197,6 @@ pub unsafe extern "C" fn kreuzberg_clear_document_extractors() -> bool {
             Ok(guard) => guard,
             Err(e) => {
                 // ~keep: Lock poisoning indicates a panic in another thread holding the lock.
-                // This is a critical runtime error (similar to OOM) that should bubble up
-                // as it indicates the registry is in an inconsistent state.
                 set_last_error(format!("Failed to acquire registry write lock: {}", e));
                 return false;
             }
@@ -3425,7 +3305,6 @@ pub unsafe extern "C" fn kreuzberg_detect_mime_type_from_path(file_path: *const 
             },
             Err(e) => {
                 // ~keep: IO errors from file operations should bubble up as they indicate
-                // system-level issues (permissions, file not found, etc.).
                 set_last_error(e.to_string());
                 ptr::null_mut()
             }
@@ -3493,10 +3372,6 @@ pub unsafe extern "C" fn kreuzberg_get_extensions_for_mime(mime_type: *const c_c
     })
 }
 
-// ============================================================================
-// Config Loading FFI
-// ============================================================================
-
 /// Load an ExtractionConfig from a file.
 ///
 /// Automatically detects the file format based on extension:
@@ -3550,8 +3425,6 @@ pub unsafe extern "C" fn kreuzberg_config_from_file(path: *const c_char) -> *mut
             Ok(config) => Box::into_raw(Box::new(config)),
             Err(e) => {
                 // ~keep: IO errors from file operations should bubble up as they indicate
-                // system-level issues (permissions, disk full, file not found, etc.).
-                // Only set error if it's not an IO error that should terminate.
                 match &e {
                     KreuzbergError::Io(io_err) => {
                         set_last_error(format!("IO error loading config: {}", io_err));
@@ -3617,13 +3490,9 @@ pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut c_char {
                     ptr::null_mut()
                 }
             },
-            Ok(None) => {
-                // Not an error - just no config found
-                ptr::null_mut()
-            }
+            Ok(None) => ptr::null_mut(),
             Err(e) => {
                 // ~keep: IO errors from directory traversal should bubble up as they indicate
-                // system-level issues (permissions, disk errors, etc.).
                 match &e {
                     KreuzbergError::Io(io_err) => {
                         set_last_error(format!("IO error discovering config: {}", io_err));

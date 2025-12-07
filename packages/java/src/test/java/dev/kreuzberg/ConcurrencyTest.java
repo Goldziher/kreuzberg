@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ConcurrencyTest {
 
-    // ==================== Concurrent Extraction ====================
 
     @Test
     void testConcurrentExtractSameFile(@TempDir Path tempDir)
@@ -40,18 +39,15 @@ class ConcurrencyTest {
         List<Future<ExtractionResult>> futures = new ArrayList<>();
 
         try {
-            // Submit 10 extraction tasks for the same file
             for (int i = 0; i < 10; i++) {
                 futures.add(executor.submit(() -> Kreuzberg.extractFile(testFile)));
             }
 
-            // Wait for all tasks to complete
             List<ExtractionResult> results = new ArrayList<>();
             for (Future<ExtractionResult> future : futures) {
                 results.add(future.get());
             }
 
-            // Verify all extractions succeeded
             assertEquals(10, results.size(), "All extraction tasks should complete");
             for (ExtractionResult result : results) {
                 assertNotNull(result.getContent(), "Each extraction should produce content");
@@ -65,7 +61,6 @@ class ConcurrencyTest {
     @Test
     void testConcurrentExtractDifferentFiles(@TempDir Path tempDir)
             throws IOException, InterruptedException, ExecutionException {
-        // Create multiple test files
         List<Path> files = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             Path file = tempDir.resolve("file_" + i + ".txt");
@@ -77,12 +72,10 @@ class ConcurrencyTest {
         List<Future<ExtractionResult>> futures = new ArrayList<>();
 
         try {
-            // Submit extraction tasks for different files
             for (Path file : files) {
                 futures.add(executor.submit(() -> Kreuzberg.extractFile(file)));
             }
 
-            // Wait for all tasks
             List<ExtractionResult> results = new ArrayList<>();
             for (Future<ExtractionResult> future : futures) {
                 results.add(future.get());
@@ -107,12 +100,10 @@ class ConcurrencyTest {
         List<Future<ExtractionResult>> futures = new ArrayList<>();
 
         try {
-            // Submit 50 concurrent tasks
             for (int i = 0; i < 50; i++) {
                 futures.add(executor.submit(() -> Kreuzberg.extractFile(testFile)));
             }
 
-            // Collect results
             int successCount = 0;
             for (Future<ExtractionResult> future : futures) {
                 try {
@@ -121,7 +112,6 @@ class ConcurrencyTest {
                         successCount++;
                     }
                 } catch (Exception e) {
-                    // Some may fail under high load, but not all should
                 }
             }
 
@@ -131,7 +121,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Async Operations ====================
 
     @Test
     void testAsyncExtractMultipleFiles(@TempDir Path tempDir) throws IOException, InterruptedException {
@@ -147,7 +136,6 @@ class ConcurrencyTest {
             futures.add(Kreuzberg.extractFileAsync(file, null));
         }
 
-        // Wait for all to complete
         int completed = 0;
         for (CompletableFuture<ExtractionResult> future : futures) {
             try {
@@ -156,7 +144,6 @@ class ConcurrencyTest {
                     completed++;
                 }
             } catch (Exception e) {
-                // Acceptable
             }
         }
 
@@ -183,7 +170,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Concurrent Byte Extraction ====================
 
     @Test
     void testConcurrentByteExtraction() throws InterruptedException {
@@ -193,12 +179,10 @@ class ConcurrencyTest {
         List<Future<ExtractionResult>> futures = new ArrayList<>();
 
         try {
-            // Submit multiple byte extraction tasks
             for (int i = 0; i < 10; i++) {
                 futures.add(executor.submit(() -> Kreuzberg.extractBytes(data, "text/plain", null)));
             }
 
-            // Wait for completion
             int successCount = 0;
             for (Future<ExtractionResult> future : futures) {
                 try {
@@ -207,7 +191,6 @@ class ConcurrencyTest {
                         successCount++;
                     }
                 } catch (Exception e) {
-                    // Some failures acceptable
                 }
             }
 
@@ -217,7 +200,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Thread Safety ====================
 
     @Test
     void testThreadSafetyWithSharedResult(@TempDir Path tempDir)
@@ -231,7 +213,6 @@ class ConcurrencyTest {
         AtomicInteger readCount = new AtomicInteger(0);
 
         try {
-            // Multiple threads reading the same result
             for (int i = 0; i < 10; i++) {
                 executor.submit(() -> {
                     String content = result.getContent();
@@ -264,7 +245,6 @@ class ConcurrencyTest {
         AtomicInteger accessCount = new AtomicInteger(0);
 
         try {
-            // Multiple threads accessing metadata
             for (int i = 0; i < 8; i++) {
                 executor.submit(() -> {
                     var metadata = result.getMetadata();
@@ -285,7 +265,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Race Condition Detection ====================
 
     @Test
     void testNoRaceConditionInMimeDetection() throws InterruptedException {
@@ -295,7 +274,6 @@ class ConcurrencyTest {
         List<Future<String>> futures = new ArrayList<>();
 
         try {
-            // Submit concurrent MIME type detection requests
             for (int i = 0; i < 10; i++) {
                 futures.add(executor.submit(() -> {
                     try {
@@ -306,12 +284,10 @@ class ConcurrencyTest {
                 }));
             }
 
-            // Results might vary but should not crash
             for (Future<String> future : futures) {
                 try {
                     future.get();
                 } catch (Exception e) {
-                    // Acceptable
                 }
             }
         } finally {
@@ -327,7 +303,6 @@ class ConcurrencyTest {
         String validator2Name = "race-validator-2-" + System.nanoTime();
 
         try {
-            // Register validators concurrently
             var future1 = executor.submit(() -> {
                 try {
                     Kreuzberg.registerValidator(validator1Name, result -> { });
@@ -351,16 +326,13 @@ class ConcurrencyTest {
 
             assertTrue(result1 || result2, "At least one validator registration should succeed");
 
-            // Cleanup
             try {
                 Kreuzberg.unregisterValidator(validator1Name);
             } catch (Exception ignored) {
-                // Ignore
             }
             try {
                 Kreuzberg.unregisterValidator(validator2Name);
             } catch (Exception ignored) {
-                // Ignore
             }
 
         } finally {
@@ -368,7 +340,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Parallel Batch Operations ====================
 
     @Test
     void testParallelBatchExtractions(@TempDir Path tempDir) throws IOException, InterruptedException {
@@ -384,7 +355,6 @@ class ConcurrencyTest {
             paths.add(file.toString());
         }
 
-        // Run batch extraction multiple times in parallel
         ExecutorService executor = Executors.newFixedThreadPool(2);
         List<Future<List<ExtractionResult>>> futures = new ArrayList<>();
 
@@ -401,7 +371,6 @@ class ConcurrencyTest {
                         successCount++;
                     }
                 } catch (Exception e) {
-                    // Some failures acceptable
                 }
             }
 
@@ -411,7 +380,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Stress Testing ====================
 
     @Test
     void testStressConcurrentExtractions(@TempDir Path tempDir) throws IOException, InterruptedException {
@@ -428,7 +396,6 @@ class ConcurrencyTest {
         AtomicInteger errorCount = new AtomicInteger(0);
 
         try {
-            // Submit 100 concurrent extraction tasks
             for (int i = 0; i < 100; i++) {
                 futures.add(executor.submit(() -> {
                     try {
@@ -444,12 +411,10 @@ class ConcurrencyTest {
                 }));
             }
 
-            // Await all tasks
             for (Future<ExtractionResult> future : futures) {
                 try {
                     future.get();
                 } catch (Exception ignored) {
-                    // Ignore
                 }
             }
 
@@ -463,7 +428,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Latch-Based Synchronization Tests ====================
 
     @Test
     void testSynchronizedConcurrentExecution(@TempDir Path tempDir) throws IOException, InterruptedException {
@@ -478,27 +442,23 @@ class ConcurrencyTest {
         List<ExtractionResult> results = Collections.synchronizedList(new ArrayList<>());
 
         try {
-            // Submit tasks that wait for signal
             for (int i = 0; i < threadCount; i++) {
                 executor.submit(() -> {
                     try {
-                        startLatch.await(); // Wait for signal
+                        startLatch.await();
                         ExtractionResult result = Kreuzberg.extractFile(testFile);
                         results.add(result);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     } catch (IOException | KreuzbergException e) {
-                        // Acceptable
                     } finally {
                         endLatch.countDown();
                     }
                 });
             }
 
-            // Signal all threads to start at roughly same time
             startLatch.countDown();
 
-            // Wait for all to complete
             assertTrue(endLatch.await(10, java.util.concurrent.TimeUnit.SECONDS),
                     "All threads should complete");
 
@@ -508,7 +468,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Configuration Thread Safety ====================
 
     @Test
     void testConfigBuilderThreadSafety() throws InterruptedException, ExecutionException {
@@ -516,7 +475,6 @@ class ConcurrencyTest {
         List<Future<ExtractionConfig>> futures = new ArrayList<>();
 
         try {
-            // Create configs concurrently
             for (int i = 0; i < 10; i++) {
                 futures.add(executor.submit(() ->
                     ExtractionConfig.builder()
@@ -527,7 +485,6 @@ class ConcurrencyTest {
                 ));
             }
 
-            // Verify all created successfully
             for (Future<ExtractionConfig> future : futures) {
                 ExtractionConfig config = future.get();
                 assertNotNull(config, "Config should be created");
@@ -537,7 +494,6 @@ class ConcurrencyTest {
         }
     }
 
-    // ==================== Cancellation Support ====================
 
     @Test
     void testCancellableAsyncExtraction(@TempDir Path tempDir) throws IOException {
@@ -546,23 +502,19 @@ class ConcurrencyTest {
 
         var future = Kreuzberg.extractFileAsync(testFile, null);
 
-        // Try to cancel before it completes
         boolean cancelled = future.cancel(true);
 
         if (cancelled) {
             assertTrue(future.isCancelled(), "Future should be marked as cancelled");
         } else {
-            // If not cancelled, should complete normally
             try {
                 ExtractionResult result = future.get();
                 assertNotNull(result, "Extraction should complete");
             } catch (Exception e) {
-                // Acceptable if already completed
             }
         }
     }
 
-    // ==================== Sequential vs Concurrent Equivalence ====================
 
     @Test
     void testSequentialVsConcurrentResults(@TempDir Path tempDir)
@@ -571,10 +523,8 @@ class ConcurrencyTest {
         Path testFile = tempDir.resolve("equivalence.txt");
         Files.writeString(testFile, "Equivalence test content");
 
-        // Sequential extraction
         ExtractionResult sequential = Kreuzberg.extractFile(testFile);
 
-        // Concurrent extractions
         ExecutorService executor = Executors.newFixedThreadPool(2);
         List<Future<ExtractionResult>> futures = new ArrayList<>();
 
@@ -586,7 +536,6 @@ class ConcurrencyTest {
             for (Future<ExtractionResult> future : futures) {
                 ExtractionResult concurrent = future.get();
 
-                // Results should be consistent
                 assertEquals(sequential.getMimeType(), concurrent.getMimeType(),
                         "MIME types should be identical");
                 assertTrue(sequential.isSuccess() == concurrent.isSuccess(),

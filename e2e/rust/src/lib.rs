@@ -186,7 +186,6 @@ pub mod assertions {
                     );
                 }
                 _ if value.is_array() && contains.is_string() => {
-                    // Array contains a string value
                     let actual_values = value
                         .as_array()
                         .expect("value is array by branch")

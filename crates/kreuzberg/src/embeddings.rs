@@ -126,13 +126,10 @@ impl LeakedModel {
     /// 2. The pointer is valid (guaranteed by Box::into_raw and never deallocating)
     #[allow(unsafe_code, clippy::mut_from_ref)]
     unsafe fn get_mut(&self) -> &mut TextEmbedding {
-        // SAFETY: Caller guarantees exclusive access via Mutex, pointer is valid for program lifetime
         unsafe { &mut *self.ptr }
     }
 }
 
-// SAFETY: The pointer is valid for the entire program lifetime (leaked via Box::into_raw)
-// and access is synchronized through Mutex in MODEL_CACHE
 #[cfg(feature = "embeddings")]
 #[allow(unsafe_code)]
 unsafe impl Send for LeakedModel {}
@@ -167,7 +164,6 @@ pub fn get_or_init_model(
 
     let model_key = format!("{:?}_{}", model, cache_directory.display());
 
-    // Attempt read lock with poisoning recovery
     {
         match MODEL_CACHE.read() {
             Ok(cache) => {
@@ -176,7 +172,6 @@ pub fn get_or_init_model(
                 }
             }
             Err(poison_error) => {
-                // Recover from poisoned read lock by taking a reference to the poisoned data
                 let cache = poison_error.get_ref();
                 if let Some(cached_model) = cache.get(&model_key) {
                     return Ok(Arc::clone(cached_model));
@@ -185,14 +180,10 @@ pub fn get_or_init_model(
         }
     }
 
-    // Attempt write lock with poisoning recovery
     {
         let mut cache = match MODEL_CACHE.write() {
             Ok(guard) => guard,
-            Err(poison_error) => {
-                // Recover from poisoned write lock by taking a mutable reference to the poisoned data
-                poison_error.into_inner()
-            }
+            Err(poison_error) => poison_error.into_inner(),
         };
 
         if let Some(cached_model) = cache.get(&model_key) {
@@ -207,7 +198,6 @@ pub fn get_or_init_model(
             plugin_name: "embeddings".to_string(),
         })?;
 
-        // Leak the model to prevent Drop during process shutdown (workaround for ort #441)
         let leaked_model = LeakedModel::new(embedding_model);
         let arc_model = Arc::new(Mutex::new(leaked_model));
         cache.insert(model_key, Arc::clone(&arc_model));
@@ -365,10 +355,6 @@ pub fn generate_embeddings_for_chunks(
             plugin_name: "embeddings".to_string(),
         })?;
 
-        // SAFETY: get_mut() is safe here because:
-        // 1. We have exclusive access through the Mutex lock
-        // 2. The pointer is valid for the entire program lifetime (leaked via Box::into_raw)
-        // 3. No other code can access this pointer concurrently
         #[allow(unsafe_code)]
         let model_mut = unsafe { locked_model.get_mut() };
 
@@ -442,20 +428,5 @@ mod tests {
 
     #[cfg(feature = "embeddings")]
     #[test]
-    fn test_lock_poisoning_recovery_semantics() {
-        // Test the lock poisoning recovery mechanism in get_or_init_model.
-        // The recovery logic allows graceful handling of poisoned locks
-        // by recovering the poisoned data without panicking.
-        //
-        // Note: We don't test actual poisoning (which requires a thread panic
-        // while holding the lock) as that's too dangerous in a test environment.
-        // Instead, we verify the code structure handles both Ok and Err cases
-        // for read/write locks correctly.
-        //
-        // The implementation uses:
-        // 1. match MODEL_CACHE.read() to handle read lock poisoning via get_ref()
-        // 2. match MODEL_CACHE.write() to handle write lock poisoning via into_inner()
-        // This ensures that even if a thread panics holding the lock,
-        // subsequent operations won't fail due to poison checking.
-    }
+    fn test_lock_poisoning_recovery_semantics() {}
 }

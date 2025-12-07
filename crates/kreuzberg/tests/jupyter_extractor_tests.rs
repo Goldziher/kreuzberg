@@ -39,7 +39,6 @@ mod helpers;
 async fn test_jupyter_simple_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    // Read the simple.ipynb notebook file
     let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/simple.ipynb";
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
@@ -49,7 +48,6 @@ async fn test_jupyter_simple_notebook_extraction() {
         }
     };
 
-    // Extract the notebook using Pandoc
     let result = extract_bytes(&notebook_content, "application/x-ipynb+json", &config).await;
 
     if result.is_err() {
@@ -59,16 +57,13 @@ async fn test_jupyter_simple_notebook_extraction() {
 
     let extraction = result.unwrap();
 
-    // Verify MIME type is preserved
     assert_eq!(
         extraction.mime_type, "application/x-ipynb+json",
         "MIME type should be preserved"
     );
 
-    // Verify content exists
     assert!(!extraction.content.is_empty(), "Extracted content should not be empty");
 
-    // Test 1: Markdown cell content extraction
     assert!(
         extraction.content.contains("Lorem ipsum"),
         "Should extract markdown cell 'Lorem ipsum'"
@@ -78,32 +73,26 @@ async fn test_jupyter_simple_notebook_extraction() {
         "Should extract **bold** formatted text"
     );
 
-    // Test 2: Code cell execution count preservation
     assert!(
         extraction.content.contains("execution_count"),
         "Should preserve execution_count from code cells"
     );
 
-    // Test 3: HTML output content extraction
     assert!(
         extraction.content.contains("HTML") || extraction.content.contains("html"),
         "Should extract HTML output content from code cells"
     );
 
-    // Test 4: Markdown section headers
     assert!(
         extraction.content.contains("Pyout") || extraction.content.contains("pyout"),
         "Should extract markdown section headers"
     );
 
-    // Test 5: Image reference extraction
     assert!(
         extraction.content.contains("Image") || extraction.content.contains("image"),
         "Should extract image cell content"
     );
 
-    // Test 6: Cell tags in metadata
-    // The notebook has tags: ["foo", "bar"] on one cell
     assert!(
         extraction.content.contains("foo") || extraction.content.contains("bar") || extraction.content.contains("tags"),
         "Should preserve or reference cell metadata tags"
@@ -145,7 +134,6 @@ async fn test_jupyter_simple_notebook_extraction() {
 async fn test_jupyter_mime_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    // Read the mime.ipynb notebook file
     let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/mime.ipynb";
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
@@ -155,7 +143,6 @@ async fn test_jupyter_mime_notebook_extraction() {
         }
     };
 
-    // Extract the notebook using Pandoc
     let result = extract_bytes(&notebook_content, "application/x-ipynb+json", &config).await;
 
     if result.is_err() {
@@ -165,22 +152,18 @@ async fn test_jupyter_mime_notebook_extraction() {
 
     let extraction = result.unwrap();
 
-    // Verify MIME type is preserved
     assert_eq!(
         extraction.mime_type, "application/x-ipynb+json",
         "MIME type should be preserved"
     );
 
-    // Verify content exists
     assert!(!extraction.content.is_empty(), "Extracted content should not be empty");
 
-    // Test 1: Code cell imports extraction
     assert!(
         extraction.content.contains("dataclass") || extraction.content.contains("dataclasses"),
         "Should extract code cell with imports"
     );
 
-    // Test 2: Stream stdout output extraction
     assert!(
         extraction.content.contains(".stream")
             || extraction.content.contains("stdout")
@@ -188,7 +171,6 @@ async fn test_jupyter_mime_notebook_extraction() {
         "Should preserve stream output type information"
     );
 
-    // Test 3: MIME type list extraction
     let mime_types = vec![
         "text/plain",
         "text/html",
@@ -212,19 +194,16 @@ async fn test_jupyter_mime_notebook_extraction() {
         mime_count
     );
 
-    // Test 4: Math expression output
     assert!(
         extraction.content.contains("mc") && extraction.content.contains("E"),
         "Should extract code cell variable expression content"
     );
 
-    // Test 5: Class definition extraction
     assert!(
         extraction.content.contains("class Mime") || extraction.content.contains("Mime:"),
         "Should extract Mime class definition"
     );
 
-    // Test 6: Execution count preservation
     assert!(
         extraction.content.contains("execution_count"),
         "Should preserve execution_count metadata from code outputs"
@@ -260,7 +239,6 @@ async fn test_jupyter_mime_notebook_extraction() {
 async fn test_jupyter_mime_out_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    // Read the mime.out.ipynb notebook file
     let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/mime.out.ipynb";
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
@@ -270,7 +248,6 @@ async fn test_jupyter_mime_out_notebook_extraction() {
         }
     };
 
-    // Extract the notebook using Pandoc
     let result = extract_bytes(&notebook_content, "application/x-ipynb+json", &config).await;
 
     if result.is_err() {
@@ -280,28 +257,23 @@ async fn test_jupyter_mime_out_notebook_extraction() {
 
     let extraction = result.unwrap();
 
-    // Verify MIME type is preserved
     assert_eq!(
         extraction.mime_type, "application/x-ipynb+json",
         "MIME type should be preserved"
     );
 
-    // Verify content exists
     assert!(!extraction.content.is_empty(), "Extracted content should not be empty");
 
-    // Test 1: Code cell content present
     assert!(
         extraction.content.contains("class") || extraction.content.contains("def"),
         "Should extract Python code cells"
     );
 
-    // Test 2: Output type markers
     assert!(
         extraction.content.contains("output") || extraction.content.contains("execute"),
         "Should preserve output type information"
     );
 
-    // Test 3: MIME type handling
     assert!(
         extraction.content.contains("text")
             || extraction.content.contains("html")
@@ -309,7 +281,6 @@ async fn test_jupyter_mime_out_notebook_extraction() {
         "Should preserve MIME type information"
     );
 
-    // Test 4: Markdown content
     assert!(
         extraction.content.contains("Supported")
             || extraction.content.contains("formatters")
@@ -317,7 +288,6 @@ async fn test_jupyter_mime_out_notebook_extraction() {
         "Should extract markdown cell content"
     );
 
-    // Test 5: Mathematical/scientific content
     assert!(
         extraction.content.contains("math")
             || extraction.content.contains("dataclass")
@@ -359,7 +329,6 @@ async fn test_jupyter_mime_out_notebook_extraction() {
 async fn test_jupyter_rank_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    // Read the rank.ipynb notebook file
     let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/rank.ipynb";
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
@@ -369,7 +338,6 @@ async fn test_jupyter_rank_notebook_extraction() {
         }
     };
 
-    // Extract the notebook using Pandoc
     let result = extract_bytes(&notebook_content, "application/x-ipynb+json", &config).await;
 
     if result.is_err() {
@@ -379,16 +347,13 @@ async fn test_jupyter_rank_notebook_extraction() {
 
     let extraction = result.unwrap();
 
-    // Verify MIME type is preserved
     assert_eq!(
         extraction.mime_type, "application/x-ipynb+json",
         "MIME type should be preserved"
     );
 
-    // Verify content exists
     assert!(!extraction.content.is_empty(), "Extracted content should not be empty");
 
-    // Test 1: Matplotlib import extraction
     assert!(
         extraction.content.contains("matplotlib")
             || extraction.content.contains("pyplot")
@@ -396,7 +361,6 @@ async fn test_jupyter_rank_notebook_extraction() {
         "Should extract matplotlib import code"
     );
 
-    // Test 2: Image output reference
     assert!(
         extraction.content.contains("image")
             || extraction.content.contains("Figure")
@@ -405,13 +369,11 @@ async fn test_jupyter_rank_notebook_extraction() {
         "Should preserve image output information"
     );
 
-    // Test 3: Display data output type
     assert!(
         extraction.content.contains("display") || extraction.content.contains("output"),
         "Should preserve output type markers"
     );
 
-    // Test 4: Figure creation code
     assert!(
         extraction.content.contains("subplots")
             || extraction.content.contains("imshow")
@@ -419,7 +381,6 @@ async fn test_jupyter_rank_notebook_extraction() {
         "Should extract figure creation code"
     );
 
-    // Test 5: HTML fallback content
     assert!(
         extraction.content.contains("html")
             || extraction.content.contains("text")
@@ -427,8 +388,6 @@ async fn test_jupyter_rank_notebook_extraction() {
         "Should extract alternative text representation"
     );
 
-    // Test 6: Notebook metadata - kernelspec and language_info
-    // These should be present in the notebook JSON and potentially in extraction
     assert!(
         extraction.content.contains("ipykernel")
             || extraction.content.contains("python")
@@ -486,21 +445,18 @@ async fn test_jupyter_metadata_aggregation() {
 
         let extraction = result.unwrap();
 
-        // All notebooks should have non-empty content
         assert!(
             !extraction.content.is_empty(),
             "{}: Should have extracted content",
             name
         );
 
-        // Verify metadata structure
         assert!(
             extraction.metadata.additional.is_empty() || !extraction.metadata.additional.is_empty(),
             "{}: Metadata structure should be consistent",
             name
         );
 
-        // Verify MIME type consistency
         assert_eq!(
             extraction.mime_type, "application/x-ipynb+json",
             "{}: MIME type should be preserved",
@@ -522,7 +478,6 @@ async fn test_jupyter_metadata_aggregation() {
 async fn test_jupyter_cell_content_aggregation() {
     let config = ExtractionConfig::default();
 
-    // Use the mime.ipynb notebook which has clear cell structure
     let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/mime.ipynb";
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
@@ -541,7 +496,6 @@ async fn test_jupyter_cell_content_aggregation() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Code cells present
     let code_indicators = vec!["class", "def", "import", "from", "python"];
     let code_count = code_indicators
         .iter()
@@ -553,7 +507,6 @@ async fn test_jupyter_cell_content_aggregation() {
         code_count
     );
 
-    // Test 2: Markdown cells present
     let markdown_indicators = vec!["Supported", "IPython", "formatters"];
     let markdown_count = markdown_indicators
         .iter()
@@ -565,7 +518,6 @@ async fn test_jupyter_cell_content_aggregation() {
         markdown_count
     );
 
-    // Test 3: Output cells present
     assert!(
         extraction.content.contains("output")
             || extraction.content.contains("execute")
@@ -573,7 +525,6 @@ async fn test_jupyter_cell_content_aggregation() {
         "Should extract output cells"
     );
 
-    // Test 4: Cell structure markers
     assert!(
         extraction.content.contains("cell")
             || extraction.content.contains("output")
@@ -617,7 +568,6 @@ async fn test_jupyter_mime_output_handling() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Image MIME type handling
     assert!(
         extraction.content.contains("image")
             || extraction.content.contains("png")
@@ -625,20 +575,17 @@ async fn test_jupyter_mime_output_handling() {
         "Should handle image MIME types"
     );
 
-    // Test 2: HTML MIME type handling
     assert!(
         extraction.content.contains("html") || extraction.content.contains("text"),
         "Should preserve HTML and text representations"
     );
 
-    // Test 3: Display data vs execute result distinction
     let output_type_markers = vec!["display_data", "execute_result", "stream", "output"];
     let has_output_types = output_type_markers
         .iter()
         .any(|&marker| extraction.content.contains(marker));
     assert!(has_output_types, "Should preserve output type classifications");
 
-    // Test 4: Figure description (text/plain representation of image)
     assert!(
         extraction.content.contains("Figure")
             || extraction.content.contains("Axes")
@@ -678,7 +625,6 @@ async fn test_jupyter_notebook_structure_preservation() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Cell IDs preservation
     let cell_id_patterns = vec!["uid1", "uid2", "uid3", "uid4", "uid6"];
     let id_count = cell_id_patterns
         .iter()
@@ -686,13 +632,11 @@ async fn test_jupyter_notebook_structure_preservation() {
         .count();
     assert!(id_count >= 1, "Should preserve cell IDs (found {} IDs)", id_count);
 
-    // Test 2: Cell references and ordering
     assert!(
         extraction.content.contains("uid") || extraction.content.contains("cell"),
         "Should contain cell identity markers"
     );
 
-    // Test 3: Execution count preservation
     assert!(
         extraction.content.contains("execution_count") || extraction.content.contains("count"),
         "Should preserve execution count metadata"
@@ -709,7 +653,6 @@ async fn test_jupyter_notebook_structure_preservation() {
 async fn test_jupyter_pandoc_baseline_alignment() {
     let config = ExtractionConfig::default();
 
-    // Read all four test notebooks
     let notebooks = vec!["simple.ipynb", "mime.ipynb", "mime.out.ipynb", "rank.ipynb"];
 
     for notebook_name in notebooks {
@@ -737,7 +680,6 @@ async fn test_jupyter_pandoc_baseline_alignment() {
 
         let extraction = result.unwrap();
 
-        // Baseline expectations: extracted content should contain cell/output markers
         assert!(
             extraction.content.contains("cell")
                 || extraction.content.contains("code")
@@ -747,14 +689,12 @@ async fn test_jupyter_pandoc_baseline_alignment() {
             notebook_name
         );
 
-        // Content should not be empty
         assert!(
             !extraction.content.is_empty(),
             "{}: Should extract meaningful content",
             notebook_name
         );
 
-        // MIME type should be correct
         assert_eq!(
             extraction.mime_type, "application/x-ipynb+json",
             "{}: MIME type should match",

@@ -318,7 +318,6 @@ public final class ExtractionConfig {
     private Map<String, Object> rawConfigOverride;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder useCache(boolean useCache) {

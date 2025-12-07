@@ -155,7 +155,6 @@ export class KreuzbergError extends Error {
 		super(message);
 		this.name = "KreuzbergError";
 		this.panicContext = panicContext ?? null;
-		// Ensure proper prototype chain for instanceof checks
 		Object.setPrototypeOf(this, KreuzbergError.prototype);
 	}
 

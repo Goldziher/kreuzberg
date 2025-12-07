@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ExtractionTest {
 
-    // ==================== Basic Text Extraction ====================
 
     @Test
     void testExtractSimpleTextFile(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -75,7 +74,6 @@ class ExtractionTest {
         assertTrue(result.isSuccess(), "Large file extraction should succeed");
     }
 
-    // ==================== MIME Type Detection ====================
 
     @Test
     void testDetectMimeTypeFromPath(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -134,7 +132,6 @@ class ExtractionTest {
         assertFalse(result.getMimeType().isEmpty(), "MIME type should not be empty");
     }
 
-    // ==================== Encoding Detection ====================
 
     @Test
     void testExtractUTF8EncodedFile(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -160,7 +157,6 @@ class ExtractionTest {
         assertTrue(result.isSuccess(), "ASCII extraction should succeed");
     }
 
-    // ==================== Content Extraction from Various Formats ====================
 
     @Test
     void testExtractCSVContent(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -210,7 +206,6 @@ class ExtractionTest {
         assertTrue(result.isSuccess(), "HTML extraction should succeed");
     }
 
-    // ==================== Metadata Extraction ====================
 
     @Test
     void testMetadataPresenceInResult(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -247,7 +242,6 @@ class ExtractionTest {
                 "Detected languages list should be valid");
     }
 
-    // ==================== Table and Structured Data Extraction ====================
 
     @Test
     void testTablesListAvailable(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -276,7 +270,6 @@ class ExtractionTest {
         }
     }
 
-    // ==================== Chunking Extraction ====================
 
     @Test
     void testChunksExtraction(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -311,7 +304,6 @@ class ExtractionTest {
         }
     }
 
-    // ==================== Image Extraction ====================
 
     @Test
     void testImagesListAvailable(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -337,7 +329,6 @@ class ExtractionTest {
         }
     }
 
-    // ==================== Byte Extraction ====================
 
     @Test
     void testExtractBytesWithValidMimeType() throws KreuzbergException {
@@ -388,7 +379,6 @@ class ExtractionTest {
         }, "Null MIME type should throw KreuzbergException");
     }
 
-    // ==================== Content Preservation ====================
 
     @Test
     void testContentPreservationInExtraction(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -426,7 +416,6 @@ class ExtractionTest {
         assertTrue(result.isSuccess(), "Whitespace preservation extraction should succeed");
     }
 
-    // ==================== File Extensions Lookup ====================
 
     @Test
     void testGetExtensionsForMimeType() throws KreuzbergException {
@@ -446,7 +435,6 @@ class ExtractionTest {
         }
     }
 
-    // ==================== Success Flag ====================
 
     @Test
     void testSuccessFlagIsSet(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -472,7 +460,6 @@ class ExtractionTest {
         }
     }
 
-    // ==================== Result Completeness ====================
 
     @Test
     void testResultHasAllFields(@TempDir Path tempDir) throws IOException, KreuzbergException {
@@ -510,7 +497,6 @@ class ExtractionTest {
         }, "Chunks list should be immutable");
     }
 
-    // ==================== Edge Cases ====================
 
     @Test
     void testExtractionWithVeryLongFileName(@TempDir Path tempDir) throws IOException, KreuzbergException {

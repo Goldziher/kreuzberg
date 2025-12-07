@@ -276,10 +276,8 @@ impl StableApiDefinition for Definition {
     unsafe fn rtypeddata_p(&self, obj: VALUE) -> bool {
         debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_p called on non-T_DATA object");
 
-        // Access the RTypedData struct
         let rdata = obj as *const RTypedData;
         let typed_flag = (*rdata).typed_flag;
-        // Valid typed_flag values are 1, 2, or 3
         typed_flag != 0 && typed_flag <= 3
     }
 
@@ -310,16 +308,11 @@ impl StableApiDefinition for Definition {
         debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_get_data called on non-T_DATA object");
 
         if self.rtypeddata_embedded_p(obj) {
-            // For embedded data, calculate pointer based on struct layout
-            // The formula matches Ruby's implementation:
-            // embedded_typed_data_size = sizeof(RTypedData) - sizeof(void *)
             const EMBEDDED_TYPED_DATA_SIZE: usize =
                 std::mem::size_of::<RTypedData>() - std::mem::size_of::<*mut c_void>();
 
-            // Return address after the header as the data pointer
             (obj as *mut u8).add(EMBEDDED_TYPED_DATA_SIZE) as *mut c_void
         } else {
-            // For non-embedded data, return the data field directly
             let rdata = obj as *const RTypedData;
             (*rdata).data
         }

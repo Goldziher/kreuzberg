@@ -59,9 +59,7 @@ impl OrgModeExtractor {
         let mut metadata = Metadata::default();
         let mut additional = HashMap::new();
 
-        // Parse directives from the raw content (single pass through first ~100 lines)
         for line in org_text.lines().take(100) {
-            // Only check first ~100 lines for directives (they typically come early)
             let trimmed = line.trim();
 
             if let Some(rest) = trimmed.strip_prefix("#+TITLE:") {
@@ -79,21 +77,19 @@ impl OrgModeExtractor {
                 let value = rest.trim();
                 let keywords: Vec<&str> = value.split(',').map(|s| s.trim()).collect();
                 additional.insert("keywords".to_string(), serde_json::json!(keywords));
-            } else if let Some(rest) = trimmed.strip_prefix("#+") {
-                // Generic directive extraction
-                if let Some((key, val)) = rest.split_once(':') {
-                    let key_lower = key.trim().to_lowercase();
-                    let value = val.trim();
-                    if !key_lower.is_empty() && !value.is_empty() {
-                        additional.insert(format!("directive_{}", key_lower), serde_json::json!(value));
-                    }
+            } else if let Some(rest) = trimmed.strip_prefix("#+")
+                && let Some((key, val)) = rest.split_once(':')
+            {
+                let key_lower = key.trim().to_lowercase();
+                let value = val.trim();
+                if !key_lower.is_empty() && !value.is_empty() {
+                    additional.insert(format!("directive_{}", key_lower), serde_json::json!(value));
                 }
             }
         }
 
         metadata.additional = additional;
 
-        // Extract content in parallel with metadata extraction
         let content = Self::extract_content(org);
 
         (metadata, content)
@@ -121,17 +117,13 @@ impl OrgModeExtractor {
     /// - Content lines from `org.content_as_ref()`
     /// - Subtrees from `org.subtrees_as_ref()`
     fn extract_org_tree(org: &Org, content: &mut String) {
-        // Extract heading if present
         let heading = org.heading();
         if !heading.is_empty() {
-            // Get the level (depth) from the number of subtrees and parent context
-            // For now, we'll infer from content structure
             content.push_str("# ");
             content.push_str(heading);
             content.push('\n');
         }
 
-        // Extract content lines
         let lines = org.content_as_ref();
         if !lines.is_empty() {
             for line in lines {
@@ -144,7 +136,6 @@ impl OrgModeExtractor {
             content.push('\n');
         }
 
-        // Recursively process subtrees
         let subtrees = org.subtrees_as_ref();
         for subtree in subtrees {
             Self::extract_org_tree(subtree, content);
@@ -163,7 +154,6 @@ impl OrgModeExtractor {
 
     /// Recursively extract tables from an Org tree node and its subtrees.
     fn extract_tables_from_tree(org: &Org, tables: &mut Vec<Table>) {
-        // Extract content lines and look for table patterns
         let lines = org.content_as_ref();
         if !lines.is_empty() {
             let mut in_table = false;
@@ -172,22 +162,19 @@ impl OrgModeExtractor {
             for line in lines {
                 let trimmed = line.trim();
 
-                // Check if this line is a table row (starts and ends with |)
                 if trimmed.starts_with('|') && trimmed.ends_with('|') {
                     in_table = true;
 
-                    // Split by pipe and extract cells
                     let cells: Vec<String> = trimmed
                         .split('|')
                         .map(|cell| cell.trim().to_string())
-                        .filter(|cell| !cell.is_empty()) // Remove empty strings from leading/trailing |
+                        .filter(|cell| !cell.is_empty())
                         .collect();
 
                     if !cells.is_empty() {
                         current_table.push(cells);
                     }
                 } else if in_table {
-                    // End of table
                     if !current_table.is_empty() {
                         let markdown = Self::cells_to_markdown(&current_table);
                         tables.push(Table {
@@ -201,7 +188,6 @@ impl OrgModeExtractor {
                 }
             }
 
-            // Handle table at end of content
             if !current_table.is_empty() {
                 let markdown = Self::cells_to_markdown(&current_table);
                 tables.push(Table {
@@ -212,7 +198,6 @@ impl OrgModeExtractor {
             }
         }
 
-        // Recursively process subtrees
         let subtrees = org.subtrees_as_ref();
         for subtree in subtrees {
             Self::extract_tables_from_tree(subtree, tables);
@@ -236,7 +221,6 @@ impl OrgModeExtractor {
             }
             md.push('\n');
 
-            // Add separator after header (first row)
             if row_idx == 0 && cells.len() > 1 {
                 md.push('|');
                 for _ in row {
@@ -303,17 +287,13 @@ impl DocumentExtractor for OrgModeExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Convert bytes to string
         let org_text = String::from_utf8_lossy(content).into_owned();
 
-        // Parse Org document using tree-based API
         let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
         let org = Org::from_vec(&lines)?;
 
-        // Extract metadata and content in a single combined pass
         let (metadata, extracted_content) = Self::extract_metadata_and_content(&org_text, &org);
 
-        // Extract tables
         let tables = Self::extract_tables(&org);
 
         Ok(ExtractionResult {
@@ -478,10 +458,7 @@ mod tests {
         let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
-        // Link description should be extracted, not the URL
         assert!(content.contains("AT&T"), "Should contain link description 'AT&T'");
-        // The URL should still be present in the extracted content, but wrapped in brackets
-        // The actual format depends on how org structures the link
     }
 
     #[test]
@@ -494,7 +471,6 @@ mod tests {
         let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
-        // Link path should be used when no description is provided
         assert!(
             content.contains("example.com"),
             "Should contain link path when no description provided"
@@ -511,7 +487,6 @@ mod tests {
         let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
-        // Description with ampersand should be preserved
         assert!(
             content.contains("AT&T"),
             "Should preserve ampersand in link description"
@@ -532,25 +507,19 @@ mod tests {
         let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
-        // First link with description
         assert!(content.contains("Example Link"));
-        // Second link without description
         assert!(content.contains("example.org"));
-        // Third link with description
         assert!(content.contains("Contact"));
     }
 
     #[test]
     fn test_link_description_priority_over_url() {
-        // This is the CRITICAL test - ensures description is used over path
         let org_text = r#"[[http://att.com/][AT&T]]"#;
         let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
         let org = Org::from_vec(&lines).expect("Failed to parse org");
         let content = OrgModeExtractor::extract_content(&org);
 
-        // The description "AT&T" should be in the output
         assert!(content.contains("AT&T"), "Description should be prioritized over URL");
-        // The extracted content should contain the description wrapped in brackets: [AT&T]
         assert!(
             content.contains("[AT&T]"),
             "Link should be formatted as [description] when description exists"

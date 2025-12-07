@@ -90,7 +90,6 @@ fn parse_rtf_control_word(chars: &mut std::iter::Peekable<std::str::Chars>) -> (
     let mut num_str = String::new();
     let mut is_negative = false;
 
-    // Read the control word
     while let Some(&c) = chars.peek() {
         if c.is_alphabetic() {
             word.push(c);
@@ -100,7 +99,6 @@ fn parse_rtf_control_word(chars: &mut std::iter::Peekable<std::str::Chars>) -> (
         }
     }
 
-    // Read optional numeric parameter
     if let Some(&c) = chars.peek()
         && c == '-'
     {
@@ -142,65 +140,59 @@ fn extract_text_from_rtf(content: &str) -> String {
     while let Some(ch) = chars.next() {
         match ch {
             '\\' => {
-                // Handle RTF control sequences
                 if let Some(&next_ch) = chars.peek() {
                     match next_ch {
                         '\\' | '{' | '}' => {
-                            // Escaped character
                             chars.next();
                             result.push(next_ch);
                         }
                         '\'' => {
-                            // Hex-encoded character like \'e9
-                            chars.next(); // consume '
+                            chars.next();
                             let hex1 = chars.next();
                             let hex2 = chars.next();
                             if let (Some(h1), Some(h2)) = (hex1, hex2)
                                 && let Some(byte) = parse_hex_byte(h1, h2)
                             {
-                                // Use Windows-1252 decoding for bytes 0x80-0x9F
-                                // For other bytes, treat as direct character mapping
                                 let decoded = match byte {
-                                    0x80 => '\u{20AC}', // Euro sign
-                                    0x81 => '?',        // Undefined
-                                    0x82 => '\u{201A}', // Single low quote
-                                    0x83 => '\u{0192}', // Florin
-                                    0x84 => '\u{201E}', // Double low quote
-                                    0x85 => '\u{2026}', // Ellipsis
-                                    0x86 => '\u{2020}', // Dagger
-                                    0x87 => '\u{2021}', // Double dagger
-                                    0x88 => '\u{02C6}', // Caret
-                                    0x89 => '\u{2030}', // Per mille
-                                    0x8A => '\u{0160}', // S caron
-                                    0x8B => '\u{2039}', // Single angle quote left
-                                    0x8C => '\u{0152}', // OE ligature
-                                    0x8D => '?',        // Undefined
-                                    0x8E => '\u{017D}', // Z caron
-                                    0x8F => '?',        // Undefined
-                                    0x90 => '?',        // Undefined
-                                    0x91 => '\u{2018}', // Left single quote
-                                    0x92 => '\u{2019}', // Right single quote
-                                    0x93 => '\u{201C}', // Left double quote
-                                    0x94 => '\u{201D}', // Right double quote
-                                    0x95 => '\u{2022}', // Bullet
-                                    0x96 => '\u{2013}', // En dash
-                                    0x97 => '\u{2014}', // Em dash
-                                    0x98 => '\u{02DC}', // Tilde
-                                    0x99 => '\u{2122}', // Trademark
-                                    0x9A => '\u{0161}', // s caron
-                                    0x9B => '\u{203A}', // Single angle quote right
-                                    0x9C => '\u{0153}', // oe ligature
-                                    0x9D => '?',        // Undefined
-                                    0x9E => '\u{017E}', // z caron
-                                    0x9F => '\u{0178}', // Y diaeresis
-                                    _ => byte as char,  // Latin-1 for 0x00-0x7F and 0xA0-0xFF
+                                    0x80 => '\u{20AC}',
+                                    0x81 => '?',
+                                    0x82 => '\u{201A}',
+                                    0x83 => '\u{0192}',
+                                    0x84 => '\u{201E}',
+                                    0x85 => '\u{2026}',
+                                    0x86 => '\u{2020}',
+                                    0x87 => '\u{2021}',
+                                    0x88 => '\u{02C6}',
+                                    0x89 => '\u{2030}',
+                                    0x8A => '\u{0160}',
+                                    0x8B => '\u{2039}',
+                                    0x8C => '\u{0152}',
+                                    0x8D => '?',
+                                    0x8E => '\u{017D}',
+                                    0x8F => '?',
+                                    0x90 => '?',
+                                    0x91 => '\u{2018}',
+                                    0x92 => '\u{2019}',
+                                    0x93 => '\u{201C}',
+                                    0x94 => '\u{201D}',
+                                    0x95 => '\u{2022}',
+                                    0x96 => '\u{2013}',
+                                    0x97 => '\u{2014}',
+                                    0x98 => '\u{02DC}',
+                                    0x99 => '\u{2122}',
+                                    0x9A => '\u{0161}',
+                                    0x9B => '\u{203A}',
+                                    0x9C => '\u{0153}',
+                                    0x9D => '?',
+                                    0x9E => '\u{017E}',
+                                    0x9F => '\u{0178}',
+                                    _ => byte as char,
                                 };
                                 result.push(decoded);
                             }
                         }
                         'u' => {
-                            // Unicode escape like \uXXXX
-                            chars.next(); // consume 'u'
+                            chars.next();
                             let mut num_str = String::new();
                             while let Some(&c) = chars.peek() {
                                 if c.is_ascii_digit() || c == '-' {
@@ -222,12 +214,10 @@ fn extract_text_from_rtf(content: &str) -> String {
                             }
                         }
                         _ => {
-                            // Regular control word - parse and check special control words
                             let (control_word, _) = parse_rtf_control_word(&mut chars);
 
                             match control_word.as_str() {
                                 "pict" => {
-                                    // Found an image! Extract image metadata
                                     let image_metadata = extract_image_metadata(&mut chars);
                                     if !image_metadata.is_empty() {
                                         result.push('!');
@@ -241,72 +231,57 @@ fn extract_text_from_rtf(content: &str) -> String {
                                     }
                                 }
                                 "par" => {
-                                    // Paragraph break
                                     if !result.is_empty() && !result.ends_with('\n') {
                                         result.push('\n');
                                         result.push('\n');
                                     }
                                 }
                                 "tab" => {
-                                    // Tab character
                                     result.push('\t');
                                 }
                                 "bullet" => {
-                                    // Bullet character
                                     result.push('•');
                                 }
                                 "lquote" => {
-                                    // Left single quote
                                     result.push('\u{2018}');
                                 }
                                 "rquote" => {
-                                    // Right single quote
                                     result.push('\u{2019}');
                                 }
                                 "ldblquote" => {
-                                    // Left double quote
                                     result.push('\u{201C}');
                                 }
                                 "rdblquote" => {
-                                    // Right double quote
                                     result.push('\u{201D}');
                                 }
                                 "endash" => {
-                                    // En dash
                                     result.push('\u{2013}');
                                 }
                                 "emdash" => {
-                                    // Em dash
                                     result.push('\u{2014}');
                                 }
-                                _ => {
-                                    // Unknown control word - skip it
-                                }
+                                _ => {}
                             }
                         }
                     }
                 }
             }
             '{' | '}' => {
-                // Group delimiters - just add space
                 if !result.is_empty() && !result.ends_with(' ') {
                     result.push(' ');
                 }
             }
             ' ' | '\t' | '\n' | '\r' => {
-                // Whitespace
                 if !result.is_empty() && !result.ends_with(' ') {
                     result.push(' ');
                 }
             }
             _ => {
-                // Regular character
                 result.push(ch);
             }
         }
     }
 
-    // Clean up whitespace using single-pass algorithm
     normalize_whitespace(&result)
 }
 
@@ -343,7 +318,6 @@ fn extract_image_metadata(chars: &mut std::iter::Peekable<std::str::Chars>) -> S
     let mut height_goal: Option<i32> = None;
     let mut depth = 0;
 
-    // Scan for image metadata control words
     while let Some(&ch) = chars.peek() {
         match ch {
             '{' => {
@@ -358,10 +332,9 @@ fn extract_image_metadata(chars: &mut std::iter::Peekable<std::str::Chars>) -> S
                 chars.next();
             }
             '\\' => {
-                chars.next(); // consume backslash
+                chars.next();
                 let (control_word, value) = parse_rtf_control_word(chars);
 
-                // Check for image type
                 match control_word.as_str() {
                     "jpegblip" => image_type = Some("jpg"),
                     "pngblip" => image_type = Some("png"),
@@ -369,7 +342,7 @@ fn extract_image_metadata(chars: &mut std::iter::Peekable<std::str::Chars>) -> S
                     "dibitmap" => image_type = Some("bmp"),
                     "picwgoal" => width_goal = value,
                     "pichgoal" => height_goal = value,
-                    "bin" => break, // End of control words, rest is binary data
+                    "bin" => break,
                     _ => {}
                 }
             }
@@ -377,20 +350,16 @@ fn extract_image_metadata(chars: &mut std::iter::Peekable<std::str::Chars>) -> S
                 chars.next();
             }
             _ => {
-                // Skip other characters (like binary data)
                 chars.next();
             }
         }
     }
 
-    // Build metadata string
     if let Some(itype) = image_type {
         metadata.push_str("image.");
         metadata.push_str(itype);
     }
 
-    // Add dimensions if available
-    // Goal dimensions are in twips, 1 inch = 1440 twips
     if let Some(width) = width_goal {
         let width_inches = f64::from(width) / 1440.0;
         metadata.push_str(&format!(" width=\"{:.1}in\"", width_inches));
@@ -401,7 +370,6 @@ fn extract_image_metadata(chars: &mut std::iter::Peekable<std::str::Chars>) -> S
         metadata.push_str(&format!(" height=\"{:.1}in\"", height_inches));
     }
 
-    // If no metadata found, just return a generic image reference
     if metadata.is_empty() {
         metadata.push_str("image.jpg");
     }
@@ -424,10 +392,8 @@ impl DocumentExtractor for RtfExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Convert bytes to string for RTF processing
         let rtf_content = String::from_utf8_lossy(content);
 
-        // Extract text from RTF
         let extracted_text = extract_text_from_rtf(&rtf_content);
 
         Ok(ExtractionResult {

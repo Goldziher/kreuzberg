@@ -381,10 +381,8 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     clean_tests(&csharp_root)?;
     write_helpers(&csharp_root)?;
 
-    // Separate document extraction and plugin API fixtures
     let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
 
-    // Generate document extraction tests
     let mut grouped = doc_fixtures
         .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
@@ -665,6 +663,5 @@ fn escape_csharp_string(value: &str) -> String {
 }
 
 fn escape_csharp_verbatim_string(value: &str) -> String {
-    // In C# verbatim strings (@"..."), quotes are escaped by doubling them
     value.replace('"', "\"\"")
 }

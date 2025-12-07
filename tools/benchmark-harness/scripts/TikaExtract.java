@@ -1,7 +1,3 @@
-/*
- * CHECKSTYLE:OFF
- * Single-file benchmark helper executed via `java <file>`.
- */
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.sax.BodyContentHandler;
 import org.apache.tika.metadata.Metadata;
@@ -124,7 +120,6 @@ public final class TikaExtract {
                 } else {
                     System.err.printf("Error processing %s: %s%n", filePath, e.getMessage());
                 }
-                // Continue with next file in batch mode
             }
         }
 
@@ -134,7 +129,6 @@ public final class TikaExtract {
             return;
         }
 
-        // Output results, one per line
         for (String json : jsonResults) {
             System.out.println(json);
         }
@@ -146,7 +140,7 @@ public final class TikaExtract {
         }
 
         AutoDetectParser parser = new AutoDetectParser();
-        BodyContentHandler handler = new BodyContentHandler(-1); // No limit on content length
+        BodyContentHandler handler = new BodyContentHandler(-1);
         Metadata metadata = new Metadata();
 
         try (InputStream stream = new FileInputStream(file)) {
@@ -211,4 +205,3 @@ public final class TikaExtract {
         }
     }
 }
-/* CHECKSTYLE:ON */

@@ -16,7 +16,6 @@
 /// when FFI layer integration is available.
 pub fn get_last_error_code() -> i32 {
     // TODO: Link to kreuzberg-ffi when available in py bindings
-    // For now, return Success code (0)
     0
 }
 

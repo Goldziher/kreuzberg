@@ -81,7 +81,6 @@ extern "C" {
     #[link_name = "impl_thread_sleep"]
     fn impl_thread_sleep(interval: timeval);
 
-    // RTypedData functions
     #[link_name = "impl_rtypeddata_p"]
     fn impl_rtypeddata_p(obj: VALUE) -> bool;
 

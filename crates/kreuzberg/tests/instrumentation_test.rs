@@ -42,10 +42,8 @@ async fn test_cache_instrumentation() {
     )
     .unwrap();
 
-    // Test set operation
     cache.set("test_key", b"test data".to_vec(), None).unwrap();
 
-    // Test get operation
     let _ = cache.get("test_key", None).unwrap();
 
     let span_names = spans.lock().unwrap();
@@ -69,7 +67,6 @@ async fn test_ocr_instrumentation() {
     let temp_dir = tempdir().unwrap();
     let processor = OcrProcessor::new(Some(temp_dir.path().to_path_buf())).unwrap();
 
-    // Create a simple test image (1x1 white pixel PNG)
     let mut test_image = Vec::new();
     let img = image::ImageBuffer::from_fn(1, 1, |_, _| image::Rgb([255u8, 255u8, 255u8]));
     img.write_to(&mut std::io::Cursor::new(&mut test_image), image::ImageFormat::Png)
@@ -81,7 +78,6 @@ async fn test_ocr_instrumentation() {
         ..TesseractConfig::default()
     };
 
-    // This may fail if Tesseract is not installed, but we're testing for span creation
     let _ = processor.process_image(&test_image, &config);
 
     let span_names = spans.lock().unwrap();
@@ -103,7 +99,6 @@ async fn test_registry_instrumentation() {
 
     let registry = DocumentExtractorRegistry::new();
 
-    // Try to get an extractor (will fail but should create a span)
     let _ = registry.get("application/pdf");
 
     let span_names = spans.lock().unwrap();
@@ -125,14 +120,12 @@ async fn test_span_hierarchy() {
     let subscriber = tracing_subscriber::registry().with(collector);
     let _guard = tracing::subscriber::set_default(subscriber);
 
-    // Create a simple text file to extract
     let test_content = b"Hello, World!";
     let config = ExtractionConfig::default();
 
     let _ = extract_bytes(test_content, "text/plain", &config).await;
 
     let span_names = spans.lock().unwrap();
-    // Should have extract_bytes span
     assert!(
         span_names.contains(&"extract_bytes".to_string()),
         "Expected 'extract_bytes' span"
@@ -143,5 +136,4 @@ async fn test_span_hierarchy() {
 fn test_span_collector_creation() {
     let spans = Arc::new(Mutex::new(Vec::new()));
     let _collector = SpanCollector { spans };
-    // Just verify we can create the collector
 }

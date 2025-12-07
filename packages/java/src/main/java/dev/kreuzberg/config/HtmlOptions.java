@@ -46,7 +46,6 @@ public final class HtmlOptions {
     private final Map<String, Object> options = new LinkedHashMap<>();
 
     private Builder() {
-      // defaults
     }
 
     public Builder put(String key, Object value) {

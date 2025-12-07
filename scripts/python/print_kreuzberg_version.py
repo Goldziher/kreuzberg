@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Print the installed kreuzberg Python package version."""
 
 from __future__ import annotations

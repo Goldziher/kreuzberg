@@ -1,7 +1,5 @@
 package com.kreuzberg.e2e;
 
-// CHECKSTYLE.OFF: UnusedImports - generated code
-// CHECKSTYLE.OFF: LineLength - generated code
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -10,8 +8,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-// CHECKSTYLE.ON: UnusedImports
-// CHECKSTYLE.ON: LineLength
 
 /** Auto-generated tests for image fixtures. */
 public class ImageTest {

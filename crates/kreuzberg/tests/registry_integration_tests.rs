@@ -15,8 +15,6 @@ use kreuzberg::{KreuzbergError, Result};
 use std::path::Path;
 use std::sync::Arc;
 
-// ===== Mock Validators =====
-
 struct MockValidator {
     name: String,
     should_fail: bool,
@@ -87,8 +85,6 @@ impl Validator for FailingInitValidator {
     }
 }
 
-// ===== Mock Extractors =====
-
 struct MockExtractor {
     name: String,
     mime_types: Vec<&'static str>,
@@ -145,8 +141,6 @@ impl DocumentExtractor for MockExtractor {
         self.priority
     }
 }
-
-// ===== Validator Registry Tests =====
 
 /// Test validator registration and listing.
 #[test]
@@ -280,13 +274,10 @@ fn test_validator_registration_with_failed_init_fails() {
     assert!(result.is_err(), "Registration with failed init should fail");
 
     match result {
-        Err(KreuzbergError::Plugin { .. }) => {
-            // Expected error type
-        }
+        Err(KreuzbergError::Plugin { .. }) => {}
         _ => panic!("Expected Plugin error"),
     }
 
-    // Validator should not be in the list
     assert_eq!(registry.list().len(), 0, "Failed validator should not be registered");
 }
 
@@ -295,7 +286,6 @@ fn test_validator_registration_with_failed_init_fails() {
 fn test_clear_validators_succeeds() {
     let mut registry = ValidatorRegistry::new();
 
-    // Register multiple validators
     let v1 = Arc::new(MockValidator {
         name: "validator-1".to_string(),
         should_fail: false,
@@ -309,7 +299,6 @@ fn test_clear_validators_succeeds() {
     registry.register(v2).unwrap();
     assert_eq!(registry.list().len(), 2);
 
-    // Clear all
     let result = registry.shutdown_all();
     assert!(result.is_ok(), "Clear should succeed");
     assert_eq!(registry.list().len(), 0, "Registry should be empty after clear");
@@ -370,13 +359,10 @@ fn test_get_all_validators_respects_priority() {
     let all = registry.get_all();
     assert_eq!(all.len(), 3, "Should have three validators");
 
-    // Should be in descending priority order
     assert_eq!(all[0].name(), "high-priority");
     assert_eq!(all[1].name(), "medium-priority");
     assert_eq!(all[2].name(), "low-priority");
 }
-
-// ===== Extractor Registry Tests =====
 
 /// Test extractor registration and retrieval.
 #[test]
@@ -451,7 +437,6 @@ fn test_extractor_priority_selection() {
     registry.register(low_priority).unwrap();
     registry.register(high_priority).unwrap();
 
-    // Should get the high priority extractor
     let result = registry.get("text/plain").unwrap();
     assert_eq!(
         result.name(),
@@ -473,17 +458,14 @@ fn test_extractor_wildcard_mime_matching() {
 
     registry.register(extractor).unwrap();
 
-    // Should match text/plain
     let result = registry.get("text/plain");
     assert!(result.is_ok(), "Should match text/plain with text/*");
     assert_eq!(result.unwrap().name(), "text-extractor");
 
-    // Should match text/html
     let result = registry.get("text/html");
     assert!(result.is_ok(), "Should match text/html with text/*");
     assert_eq!(result.unwrap().name(), "text-extractor");
 
-    // Should not match application/pdf
     let result = registry.get("application/pdf");
     assert!(result.is_err(), "Should not match application/pdf with text/*");
 }
@@ -506,7 +488,6 @@ fn test_extractor_unregistration_succeeds() {
     assert!(result.is_ok(), "Unregistration should succeed");
     assert_eq!(registry.list().len(), 0, "Registry should be empty after removal");
 
-    // Should no longer find extractor for MIME type
     let lookup_result = registry.get("text/plain");
     assert!(lookup_result.is_err(), "Should not find extractor after removal");
 }
@@ -524,12 +505,10 @@ fn test_extractor_multiple_mime_types() {
 
     registry.register(extractor).unwrap();
 
-    // Should find for all MIME types
     assert!(registry.get("application/pdf").is_ok());
     assert!(registry.get("application/vnd.ms-excel").is_ok());
     assert!(registry.get("text/csv").is_ok());
 
-    // All should return the same extractor
     assert_eq!(
         registry.get("application/pdf").unwrap().name(),
         "multi-format-extractor"

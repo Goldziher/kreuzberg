@@ -60,7 +60,6 @@ public final class PostProcessorConfig {
     private List<String> disabledProcessors;
 
     private Builder() {
-      // Use defaults
     }
 
     public Builder enabled(boolean enabled) {

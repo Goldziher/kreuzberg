@@ -66,7 +66,6 @@ impl DocumentExtractor for PlainTextExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        // Extract plain text directly with minimal processing
         let text = String::from_utf8_lossy(content).into_owned();
         let line_count = text.lines().count();
         let word_count = text.split_whitespace().count();

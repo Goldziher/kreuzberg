@@ -433,7 +433,6 @@ fn test_postprocessor_error_handling() {
     let result = extract_file_sync(test_file, None, &config);
 
     // NOTE: Plugin errors now bubble up and fail the extraction (design change)
-    // Other error types (non-IO, non-Plugin) are caught and recorded in metadata
     assert!(
         result.is_err(),
         "Extraction should fail when postprocessor returns Plugin error"

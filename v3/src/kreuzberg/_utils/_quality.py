@@ -31,7 +31,6 @@ _PUNCTUATION_DETECT = re.compile(r"[.!?]")
 _SCRIPT_PATTERNS = {
     "js_functions": re.compile(r"function\s+\w+\s*\([^)]*\)\s*\{[^}]*\}", re.IGNORECASE),
     "css_rules": re.compile(r"\.[a-zA-Z][\w-]*\s*\{[^}]*\}", re.IGNORECASE),
-    # Tempered dot to avoid catastrophic backtracking and over-greedy matches
     "script_tags": re.compile(r"<script\b[^>]*>(?:(?!</script>).)*</script>", re.DOTALL | re.IGNORECASE),
     "style_tags": re.compile(r"<style\b[^>]*>(?:(?!</style>).)*</style>", re.DOTALL | re.IGNORECASE),
 }

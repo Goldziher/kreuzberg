@@ -1,4 +1,0 @@
-#endif /* NO_PROTOS */
-
-
-#endif /* LEPTONICA_ALLHEADERS_H */

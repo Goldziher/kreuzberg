@@ -12,6 +12,18 @@ use std::path::PathBuf;
 mod helpers;
 use helpers::{get_test_documents_dir, get_test_file_path, skip_if_missing, test_documents_available};
 
+fn trim_trailing_newlines(value: &str) -> &str {
+    value.trim_end_matches(|c| c == '\n' || c == '\r')
+}
+
+fn assert_text_content(actual: &str, expected: &str) {
+    assert_eq!(
+        trim_trailing_newlines(actual),
+        expected,
+        "Content mismatch after trimming trailing newlines"
+    );
+}
+
 /// Test batch extraction with multiple file formats (PDF, DOCX, TXT).
 #[tokio::test]
 async fn test_batch_extract_file_multiple_formats() {
@@ -122,7 +134,7 @@ async fn test_batch_extract_bytes_multiple() {
 
     assert_eq!(results.len(), 3);
 
-    assert_eq!(results[0].content, "This is plain text content");
+    assert_text_content(&results[0].content, "This is plain text content");
     assert_eq!(results[0].mime_type, "text/plain");
 
     assert!(results[1].content.contains("Markdown Header"));
@@ -298,7 +310,7 @@ fn test_batch_extract_bytes_sync_variant() {
     let results = results.unwrap();
 
     assert_eq!(results.len(), 3);
-    assert_eq!(results[0].content, "content 1");
-    assert_eq!(results[1].content, "content 2");
+    assert_text_content(&results[0].content, "content 1");
+    assert_text_content(&results[1].content, "content 2");
     assert!(results[2].content.contains("content 3"));
 }

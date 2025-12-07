@@ -44,19 +44,15 @@ const MIN_WORD_LENGTH: usize = 1;
 /// # }
 /// ```
 pub fn extract_words_from_page(page: &PdfPage, min_confidence: f64) -> Result<Vec<HocrWord>> {
-    // Get page dimensions for coordinate system
     let page_width = page.width().value as i32;
     let page_height = page.height().value as i32;
 
-    // Get all text from page
     let page_text = page
         .text()
         .map_err(|e| PdfError::TextExtractionFailed(format!("Failed to get page text: {}", e)))?;
 
-    // Extract character-level information
     let chars = page_text.chars();
 
-    // Group characters into words based on spacing
     let words = group_chars_into_words(chars, page_width, page_height, min_confidence)?;
 
     Ok(words)
@@ -94,26 +90,22 @@ fn group_chars_into_words(
     let mut current_word_chars: Vec<CharInfo> = Vec::new();
 
     for pdf_char in chars.iter() {
-        // Get character bounds (use loose_bounds for table detection)
         let bounds = pdf_char
             .loose_bounds()
             .map_err(|e| PdfError::TextExtractionFailed(format!("Failed to get char bounds: {}", e)))?;
 
-        // Get unicode character (skip if invalid)
         let Some(ch) = pdf_char.unicode_char() else {
             continue;
         };
 
-        // Extract character information
         let char_info = CharInfo {
             text: ch,
             x: bounds.left().value,
-            y: bounds.bottom().value, // PDF coordinates: bottom-left origin
+            y: bounds.bottom().value,
             width: bounds.width().value,
             height: bounds.height().value,
         };
 
-        // Skip whitespace characters (they're used for word boundaries)
         if char_info.text.is_whitespace() {
             if !current_word_chars.is_empty() {
                 if let Some(word) = finalize_word(&current_word_chars, page_height, min_confidence) {
@@ -124,7 +116,6 @@ fn group_chars_into_words(
             continue;
         }
 
-        // Check if this character should start a new word
         if should_start_new_word(&current_word_chars, &char_info) && !current_word_chars.is_empty() {
             if let Some(word) = finalize_word(&current_word_chars, page_height, min_confidence) {
                 words.push(word);
@@ -135,7 +126,6 @@ fn group_chars_into_words(
         current_word_chars.push(char_info);
     }
 
-    // Finalize last word
     if !current_word_chars.is_empty()
         && let Some(word) = finalize_word(&current_word_chars, page_height, min_confidence)
     {
@@ -156,13 +146,11 @@ fn should_start_new_word(current_word_chars: &[CharInfo], new_char: &CharInfo) -
 
     let last_char = &current_word_chars[current_word_chars.len() - 1];
 
-    // Check vertical distance (different lines)
     let vertical_distance = (new_char.y - last_char.y).abs();
     if vertical_distance > last_char.height * 0.5 {
         return true;
     }
 
-    // Check horizontal distance (word spacing)
     let horizontal_gap = new_char.x - (last_char.x + last_char.width);
     horizontal_gap > WORD_SPACING_THRESHOLD
 }
@@ -176,14 +164,12 @@ fn finalize_word(chars: &[CharInfo], page_height: i32, min_confidence: f64) -> O
         return None;
     }
 
-    // Build word text
     let text: String = chars.iter().map(|c| c.text).collect();
 
     if text.len() < MIN_WORD_LENGTH {
         return None;
     }
 
-    // Calculate bounding box (encompassing all characters)
     let left = chars
         .iter()
         .map(|c| c.x)
@@ -208,14 +194,10 @@ fn finalize_word(chars: &[CharInfo], page_height: i32, min_confidence: f64) -> O
     let width = (right - left).round() as i32;
     let height = (top - bottom).round() as i32;
 
-    // Convert PDF coordinates (bottom-left origin) to image coordinates (top-left origin)
-    // HocrWord expects top-left origin like images/OCR output
     let top_in_image_coords = (page_height as f32 - top).round() as i32;
 
-    // PDF text has high confidence (no OCR uncertainty)
     let confidence = 95.0;
 
-    // Apply confidence threshold
     if confidence < min_confidence {
         return None;
     }
@@ -273,20 +255,18 @@ mod tests {
             height: 12.0,
         }];
 
-        // Close character - same word
         let close_char = CharInfo {
             text: 'B',
-            x: 111.0, // 1 unit gap
+            x: 111.0,
             y: 50.0,
             width: 10.0,
             height: 12.0,
         };
         assert!(!should_start_new_word(&chars, &close_char));
 
-        // Far character - new word
         let far_char = CharInfo {
             text: 'C',
-            x: 120.0, // 10 unit gap (> WORD_SPACING_THRESHOLD)
+            x: 120.0,
             y: 50.0,
             width: 10.0,
             height: 12.0,
@@ -304,11 +284,10 @@ mod tests {
             height: 12.0,
         }];
 
-        // Character on different line
         let new_line_char = CharInfo {
             text: 'B',
             x: 100.0,
-            y: 70.0, // Different y
+            y: 70.0,
             width: 10.0,
             height: 12.0,
         };
@@ -339,7 +318,7 @@ mod tests {
 
         assert_eq!(word.text, "Hi");
         assert_eq!(word.left, 100);
-        assert_eq!(word.width, 18); // 110 + 8 - 100
+        assert_eq!(word.width, 18);
         assert_eq!(word.height, 12);
         assert_eq!(word.confidence, 95.0);
     }
@@ -361,22 +340,19 @@ mod tests {
             height: 12.0,
         }];
 
-        // Low threshold - should pass
         let word = finalize_word(&chars, 800, 90.0);
         assert!(word.is_some());
 
-        // High threshold - should fail
         let word = finalize_word(&chars, 800, 96.0);
         assert!(word.is_none());
     }
 
     #[test]
     fn test_coordinate_conversion() {
-        // Test PDF coordinate (bottom-left origin) to image coordinate (top-left origin)
         let chars = vec![CharInfo {
             text: 'A',
             x: 100.0,
-            y: 700.0, // PDF coordinates: bottom-left origin
+            y: 700.0,
             width: 10.0,
             height: 12.0,
         }];
@@ -384,13 +360,11 @@ mod tests {
         let page_height = 800;
         let word = finalize_word(&chars, page_height, 0.0).unwrap();
 
-        // top_in_image_coords = page_height - (y + height) = 800 - (700 + 12) = 88
         assert_eq!(word.top, 88);
     }
 
     #[test]
     fn test_word_bounding_box() {
-        // Test that bounding box encompasses all characters
         let chars = vec![
             CharInfo {
                 text: 'A',
@@ -402,22 +376,18 @@ mod tests {
             CharInfo {
                 text: 'B',
                 x: 110.0,
-                y: 51.0, // Slightly different y
+                y: 51.0,
                 width: 10.0,
-                height: 13.0, // Slightly different height
+                height: 13.0,
             },
         ];
 
         let word = finalize_word(&chars, 800, 0.0).unwrap();
 
-        // Left should be minimum x
         assert_eq!(word.left, 100);
 
-        // Width should span from leftmost to rightmost character
-        assert_eq!(word.width, 20); // 120 - 100
+        assert_eq!(word.width, 20);
 
-        // Height should encompass both characters
-        // max(y+height) - min(y) = max(51+13, 50+12) - 50 = 64 - 50 = 14
         assert_eq!(word.height, 14);
     }
 }

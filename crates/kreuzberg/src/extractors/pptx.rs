@@ -117,9 +117,7 @@ impl DocumentExtractor for PptxExtractor {
     ) -> Result<ExtractionResult> {
         let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
-        // Extract PPTX content
         let pptx_result = if crate::core::batch_mode::is_batch_mode() {
-            // Batch mode: Use spawn_blocking for parallelism
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
@@ -129,7 +127,6 @@ impl DocumentExtractor for PptxExtractor {
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("PPTX extraction task failed: {}", e)))??
         } else {
-            // Single-file mode: Direct extraction (no spawn overhead)
             crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images)?
         };
 

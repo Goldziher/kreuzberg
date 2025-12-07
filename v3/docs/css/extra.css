@@ -58,6 +58,21 @@
 	--md-shadow-z1: none;
 }
 
+/* Inline code styling */
+[data-md-color-scheme="slate"] code {
+	background-color: #3c3a4a;
+	color: #58fbda;
+	padding: 0.2em 0.4em;
+	border-radius: 4px;
+}
+
+[data-md-color-scheme="default"] code {
+	background-color: #f2f2f4;
+	color: #da2ae0;
+	padding: 0.2em 0.4em;
+	border-radius: 4px;
+}
+
 /* Code Block Styling - Dark Mode Code Card Style */
 [data-md-color-scheme="slate"] .highlight {
 	background-color: #323040;
@@ -98,21 +113,6 @@
 [data-md-color-scheme="default"] .highlight code {
 	background-color: transparent;
 	color: #323040;
-}
-
-/* Inline code styling */
-[data-md-color-scheme="slate"] code {
-	background-color: #3c3a4a;
-	color: #58fbda;
-	padding: 0.2em 0.4em;
-	border-radius: 4px;
-}
-
-[data-md-color-scheme="default"] code {
-	background-color: #f2f2f4;
-	color: #da2ae0;
-	padding: 0.2em 0.4em;
-	border-radius: 4px;
 }
 
 /* Syntax highlighting adjustments for dark mode */

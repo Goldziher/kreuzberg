@@ -364,12 +364,10 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     clean_ts_files(&ts_impl_dir)?;
     write_helpers(&ts_impl_dir)?;
 
-    // Separate document extraction and plugin API fixtures
     let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
 
     let plugin_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
 
-    // Generate document extraction tests
     let mut grouped = doc_fixtures
         .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
@@ -385,7 +383,6 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
     }
 
-    // Generate plugin API tests
     if !plugin_fixtures.is_empty() {
         generate_plugin_api_tests(&plugin_fixtures, &ts_impl_dir)?;
     }
@@ -407,7 +404,6 @@ fn clean_ts_files(dir: &Utf8Path) -> Result<()> {
             .to_string_lossy()
             .to_string();
 
-        // Skip implementation files, only remove test files
         if file_name == "helpers.ts"
             || file_name == "index.ts"
             || file_name == "types.ts"
@@ -417,7 +413,6 @@ fn clean_ts_files(dir: &Utf8Path) -> Result<()> {
             continue;
         }
 
-        // Remove test files (.spec.ts)
         if file_name.ends_with(".spec.ts") {
             fs::remove_file(entry.path())?;
         }
@@ -660,7 +655,6 @@ fn render_json_literal(value: &Value) -> String {
 fn generate_plugin_api_tests(fixtures: &[&Fixture], src_dir: &Utf8Path) -> Result<()> {
     let mut buffer = String::new();
 
-    // File header
     writeln!(buffer, "// Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
     writeln!(buffer, "/**")?;
     writeln!(buffer, " * E2E tests for plugin/config/utility APIs.")?;
@@ -679,7 +673,6 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], src_dir: &Utf8Path) -> Resul
     writeln!(buffer, "import * as kreuzberg from \"@kreuzberg/node\";")?;
     writeln!(buffer)?;
 
-    // Group fixtures by api_category
     let mut grouped = fixtures
         .iter()
         .into_group_map_by(|fixture| {
@@ -693,7 +686,6 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], src_dir: &Utf8Path) -> Resul
         .collect::<Vec<_>>();
     grouped.sort_by(|a, b| a.0.cmp(&b.0));
 
-    // Generate tests grouped by category
     for (category, mut fixtures) in grouped {
         fixtures.sort_by(|a, b| a.id.cmp(&b.id));
         let category_title = to_title_case(&category);
@@ -720,11 +712,9 @@ fn render_plugin_test(fixture: &Fixture) -> Result<String> {
         .as_ref()
         .expect("test_spec required for plugin API fixtures");
 
-    // Generate test name from description
     let test_name = &fixture.description;
     writeln!(buffer, "    it(\"{}\", () => {{", escape_ts_string(test_name))?;
 
-    // Render based on pattern
     match test_spec.pattern.as_str() {
         "simple_list" => render_simple_list_test(&mut buffer, fixture)?,
         "clear_registry" => render_clear_registry_test(&mut buffer, fixture)?,
@@ -776,7 +766,6 @@ fn render_clear_registry_test(buffer: &mut String, fixture: &Fixture) -> Result<
     let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
     let clear_fn = to_camel_case(&test_spec.function_call.name);
 
-    // Derive list function name from clear function (e.g., clearValidators -> listValidators)
     let list_fn = clear_fn.replace("clear", "list");
 
     writeln!(buffer, "        kreuzberg.{clear_fn}();")?;
@@ -793,7 +782,6 @@ fn render_graceful_unregister_test(buffer: &mut String, fixture: &Fixture) -> Re
     let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
     let function_name = to_camel_case(&test_spec.function_call.name);
 
-    // Get the first argument (should be the nonexistent name)
     let arg = if let Some(Value::String(s)) = test_spec.function_call.args.first() {
         s
     } else {
@@ -813,7 +801,6 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
     let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
     let setup = test_spec.setup.as_ref().expect("setup required for config_from_file");
 
-    // Create temp file
     let temp_file_name = setup.temp_file_name.as_ref().expect("temp_file_name required");
     let temp_file_content = setup.temp_file_content.as_ref().expect("temp_file_content required");
 
@@ -833,7 +820,6 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
     )?;
     writeln!(buffer)?;
 
-    // Call ExtractionConfig.fromFile
     let class_name = test_spec
         .function_call
         .class_name
@@ -848,12 +834,10 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
     )?;
     writeln!(buffer)?;
 
-    // Assertions
     for prop in &test_spec.assertions.object_properties {
         render_object_property_assertion(buffer, "config", prop)?;
     }
 
-    // Cleanup
     writeln!(buffer, "        fs.rmSync(tmpDir, {{ recursive: true, force: true }});")?;
 
     Ok(())
@@ -863,7 +847,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
     let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
     let setup = test_spec.setup.as_ref().expect("setup required for config_discover");
 
-    // Create temp directory structure
     writeln!(
         buffer,
         "        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), \"kreuzberg-test-\"));"
@@ -884,7 +867,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
     )?;
     writeln!(buffer)?;
 
-    // Create subdirectory if needed
     if setup.create_subdirectory {
         let subdir_name = setup.subdirectory_name.as_ref().expect("subdirectory_name required");
         writeln!(
@@ -896,7 +878,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
         writeln!(buffer)?;
     }
 
-    // Change directory if needed
     if setup.change_directory {
         writeln!(buffer, "        const originalCwd = process.cwd();")?;
         writeln!(buffer, "        try {{")?;
@@ -904,7 +885,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
         writeln!(buffer)?;
     }
 
-    // Call ExtractionConfig.discover
     let class_name = test_spec
         .function_call
         .class_name
@@ -920,19 +900,16 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
     )?;
     writeln!(buffer, "        {indent}")?;
 
-    // Assertions
     for prop in &test_spec.assertions.object_properties {
         render_object_property_assertion_with_indent(buffer, "config", prop, indent)?;
     }
 
-    // Restore directory if needed
     if setup.change_directory {
         writeln!(buffer, "        }} finally {{")?;
         writeln!(buffer, "            process.chdir(originalCwd);")?;
         writeln!(buffer, "        }}")?;
     }
 
-    // Cleanup
     writeln!(buffer, "        fs.rmSync(tmpDir, {{ recursive: true, force: true }});")?;
 
     Ok(())
@@ -945,7 +922,6 @@ fn render_mime_from_bytes_test(buffer: &mut String, fixture: &Fixture) -> Result
     let test_data = setup.test_data.as_ref().expect("test_data required");
     let function_name = to_camel_case(&test_spec.function_call.name);
 
-    // Convert test data to Buffer
     writeln!(
         buffer,
         "        const testData = Buffer.from(\"{}\");",
@@ -953,7 +929,6 @@ fn render_mime_from_bytes_test(buffer: &mut String, fixture: &Fixture) -> Result
     )?;
     writeln!(buffer, "        const result = kreuzberg.{function_name}(testData);")?;
 
-    // Assertions
     if let Some(contains) = &test_spec.assertions.string_contains {
         writeln!(
             buffer,
@@ -973,7 +948,6 @@ fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<
     let temp_file_content = setup.temp_file_content.as_ref().expect("temp_file_content required");
     let function_name = to_camel_case(&test_spec.function_call.name);
 
-    // Create temp file
     writeln!(
         buffer,
         "        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), \"kreuzberg-test-\"));"
@@ -992,7 +966,6 @@ fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<
 
     writeln!(buffer, "        const result = kreuzberg.{function_name}(filePath);")?;
 
-    // Assertions
     if let Some(contains) = &test_spec.assertions.string_contains {
         writeln!(
             buffer,
@@ -1001,7 +974,6 @@ fn render_mime_from_path_test(buffer: &mut String, fixture: &Fixture) -> Result<
         )?;
     }
 
-    // Cleanup
     writeln!(buffer, "        fs.rmSync(tmpDir, {{ recursive: true, force: true }});")?;
 
     Ok(())
@@ -1011,7 +983,6 @@ fn render_mime_extension_lookup_test(buffer: &mut String, fixture: &Fixture) -> 
     let test_spec = fixture.test_spec.as_ref().expect("test_spec required");
     let function_name = to_camel_case(&test_spec.function_call.name);
 
-    // Get the first argument (should be the MIME type)
     let mime_type = if let Some(Value::String(s)) = test_spec.function_call.args.first() {
         s
     } else {
@@ -1057,7 +1028,6 @@ fn render_object_property_assertion_with_indent(
         .collect::<Vec<_>>()
         .join("?.");
 
-    // Check existence if specified
     if let Some(exists) = prop.exists {
         if exists {
             writeln!(buffer, "        {indent}expect({var_name}.{ts_path}).toBeDefined();")?;
@@ -1066,7 +1036,6 @@ fn render_object_property_assertion_with_indent(
         }
     }
 
-    // Check value if specified
     if let Some(value) = &prop.value {
         match value {
             Value::Number(n) => {

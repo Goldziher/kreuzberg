@@ -102,7 +102,6 @@ fn find_java() -> Result<PathBuf> {
 
 /// Helper to locate Tika JAR (auto-detect from libs/ or env var)
 fn get_tika_jar_path() -> Result<PathBuf> {
-    // Check CARGO_MANIFEST_DIR/libs/tika-app-*.jar
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
         let lib_dir = PathBuf::from(manifest_dir).join("libs");
         if let Ok(entries) = std::fs::read_dir(&lib_dir) {
@@ -118,7 +117,6 @@ fn get_tika_jar_path() -> Result<PathBuf> {
         }
     }
 
-    // Fallback: Check from workspace root
     let fallback_lib_dir = PathBuf::from("tools/benchmark-harness/libs");
     if let Ok(entries) = std::fs::read_dir(&fallback_lib_dir) {
         for entry in entries.flatten() {
@@ -132,7 +130,6 @@ fn get_tika_jar_path() -> Result<PathBuf> {
         }
     }
 
-    // Check TIKA_JAR env var
     if let Ok(jar_path) = env::var("TIKA_JAR") {
         let path = PathBuf::from(jar_path);
         if path.exists() {

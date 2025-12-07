@@ -82,7 +82,6 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: ${{ matrix.os == 'windows-latest' && 'go-windows-gnu' || format('go-{0}', matrix.os) }}
-          # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
           use-sccache: ${{ matrix.os != 'windows-latest' }}
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
           toolchain: ${{ matrix.os == 'windows-latest' && 'stable-x86_64-pc-windows-gnu' || '' }}
@@ -196,7 +195,6 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
-          # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
           use-sccache: ${{ matrix.os != 'windows-latest' }}
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
           toolchain: ${{ matrix.os == 'windows-latest' && 'stable-x86_64-pc-windows-gnu' || '' }}
@@ -256,7 +254,7 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Download FFI library
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: go-ffi-lib-${{ matrix.os }}
           path: target/release/

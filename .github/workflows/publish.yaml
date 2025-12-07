@@ -262,14 +262,6 @@ jobs:
             needs_qemu: false
             extra_args: ""
           # TODO: Re-enable linux-aarch64 once build issues are resolved
-          # - label: linux-aarch64
-          #   os: ubuntu-latest
-          #   artifact: python-wheels-linux-aarch64
-          #   rust_target: aarch64-unknown-linux-gnu
-          #   manylinux: 2_28
-          #   python: "3.10"
-          #   needs_qemu: true
-          #   extra_args: ""
           - label: macos-arm64
             os: macos-14
             artifact: python-wheels-macos
@@ -523,17 +515,6 @@ jobs:
             use_cross: false
             use_napi_cross: false
           # TODO: Re-enable additional Linux targets once cross-compilation pipeline matches test-build
-          # - os: ubuntu-latest
-          #   target: aarch64-unknown-linux-gnu
-          #   rust_target: aarch64-unknown-linux-gnu
-          #   use_cross: false
-          #   use_napi_cross: true
-          #   use_napi_cross: false
-          # - os: ubuntu-latest
-          #   target: armv7-unknown-linux-gnueabihf
-          #   rust_target: armv7-unknown-linux-gnueabihf
-          #   use_cross: false
-          #   use_napi_cross: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_target: ""
@@ -719,13 +700,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             use_cross: false
           # TODO: Re-enable x86_64-unknown-linux-musl once build issues are resolved
-          # - os: ubuntu-latest
-          #   target: x86_64-unknown-linux-musl
-          #   use_cross: false
           # TODO: Add aarch64-unknown-linux-gnu once test-build parity is restored
-          # - os: ubuntu-latest
-          #   target: aarch64-unknown-linux-gnu
-          #   use_cross: false
           - os: macos-14
             target: aarch64-apple-darwin
             use_cross: false
@@ -1196,8 +1171,6 @@ jobs:
   cargo-packages:
     name: Package Rust crates
     needs: prepare
-    # DISABLED: crates.io packaging disabled due to git dependencies (fastembed-rs, ort)
-    # cargo package validates crates.io compatibility even without publishing
     if: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -1411,7 +1384,7 @@ jobs:
         run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download CLI artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: cli-*
           path: dist/cli
@@ -1446,7 +1419,7 @@ jobs:
         run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download C# artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: csharp-nuget
           path: dist/csharp
@@ -1624,14 +1597,14 @@ jobs:
       id-token: write
     steps:
       - name: Download wheel artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: python-wheels-*
           path: dist
           merge-multiple: true
 
       - name: Download sdist artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: python-sdist
           path: dist
@@ -1668,7 +1641,7 @@ jobs:
       id-token: write
     steps:
       - name: Download Ruby gem artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: rubygems-*
           path: dist
@@ -1801,14 +1774,14 @@ jobs:
           package_json_file: package.json
 
       - name: Download Node artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: node-bindings-*
           path: node-artifacts
           merge-multiple: true
 
       - name: Download TypeScript definitions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: node-typescript-defs
           path: typescript-defs
@@ -2065,7 +2038,7 @@ jobs:
       contents: read
     steps:
       - name: Download NuGet artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: csharp-nuget
           path: dist

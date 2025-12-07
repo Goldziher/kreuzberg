@@ -50,7 +50,6 @@ impl RstExtractor {
         let mut metadata = Metadata::default();
         let mut additional = HashMap::new();
 
-        // Extract text using fallback parser (optimized for comprehensive extraction)
         let text = Self::extract_text_from_rst(content, &mut additional);
 
         metadata.additional = additional;
@@ -69,7 +68,6 @@ impl RstExtractor {
         while i < lines.len() {
             let line = lines[i];
 
-            // Field list metadata extraction (:Author:, :Date:, etc.)
             if line.trim().starts_with(':')
                 && line.contains(':')
                 && let Some((key, value)) = Self::parse_field_list_line(line)
@@ -81,18 +79,16 @@ impl RstExtractor {
                 continue;
             }
 
-            // Check for section titles (lines followed by underlines)
             if i + 1 < lines.len() {
                 let next_line = lines[i + 1];
                 if Self::is_section_underline(next_line) && !line.trim().is_empty() {
                     output.push_str(line.trim());
                     output.push('\n');
-                    i += 2; // Skip the underline
+                    i += 2;
                     continue;
                 }
             }
 
-            // Code block directives
             if line.trim().starts_with(".. code-block::") {
                 let lang = line.trim_start_matches(".. code-block::").trim().to_string();
                 if !lang.is_empty() {
@@ -100,7 +96,6 @@ impl RstExtractor {
                     output.push_str(&lang);
                     output.push('\n');
                 }
-                // Extract indented code lines
                 i += 1;
                 while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
                     if !lines[i].is_empty() {
@@ -112,7 +107,6 @@ impl RstExtractor {
                 continue;
             }
 
-            // Highlight directives
             if line.trim().starts_with(".. highlight::") {
                 let lang = line.trim_start_matches(".. highlight::").trim().to_string();
                 if !lang.is_empty() {
@@ -124,7 +118,6 @@ impl RstExtractor {
                 continue;
             }
 
-            // Literal blocks (:: indicator)
             if line.trim().ends_with("::") {
                 if let Some(display_text) = line.strip_suffix("::")
                     && !display_text.trim().is_empty()
@@ -133,7 +126,6 @@ impl RstExtractor {
                     output.push('\n');
                 }
                 i += 1;
-                // Extract indented literal block lines
                 while i < lines.len() && (lines[i].starts_with("    ") || lines[i].is_empty()) {
                     if !lines[i].is_empty() {
                         output.push_str(lines[i].trim_start());
@@ -144,7 +136,6 @@ impl RstExtractor {
                 continue;
             }
 
-            // List items
             if Self::is_list_item(line) {
                 output.push_str(line.trim());
                 output.push('\n');
@@ -152,17 +143,10 @@ impl RstExtractor {
                 continue;
             }
 
-            // Skip directives (.. name::) or comments (.. or ..comment) but extract their content
             if line.trim().starts_with(".. ") || line.trim() == ".." {
                 let trimmed = line.trim();
-                let directive = if trimmed == ".." {
-                    // This is a comment block, skip it entirely
-                    ""
-                } else {
-                    &trimmed[3..]
-                };
+                let directive = if trimmed == ".." { "" } else { &trimmed[3..] };
 
-                // Image directive
                 if directive.starts_with("image::") {
                     let uri = directive.strip_prefix("image::").unwrap_or("").trim();
                     output.push_str("image: ");
@@ -172,7 +156,6 @@ impl RstExtractor {
                     continue;
                 }
 
-                // Note/warning/etc. directives
                 if directive.starts_with("note::")
                     || directive.starts_with("warning::")
                     || directive.starts_with("important::")
@@ -181,7 +164,6 @@ impl RstExtractor {
                     || directive.starts_with("tip::")
                 {
                     i += 1;
-                    // Extract indented content
                     while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
                         if !lines[i].is_empty() {
                             output.push_str(lines[i].trim());
@@ -192,7 +174,6 @@ impl RstExtractor {
                     continue;
                 }
 
-                // Math directive
                 if directive.starts_with("math::") {
                     let math = directive.strip_prefix("math::").unwrap_or("").trim();
                     if !math.is_empty() {
@@ -211,7 +192,6 @@ impl RstExtractor {
                     continue;
                 }
 
-                // Other directives - skip content
                 i += 1;
                 while i < lines.len() && (lines[i].starts_with("   ") || lines[i].is_empty()) {
                     i += 1;
@@ -219,13 +199,9 @@ impl RstExtractor {
                 continue;
             }
 
-            // Regular paragraphs and content
-            if !line.trim().is_empty() {
-                // Skip if it's just markup characters
-                if !Self::is_markup_line(line) {
-                    output.push_str(line);
-                    output.push('\n');
-                }
+            if !line.trim().is_empty() && !Self::is_markup_line(line) {
+                output.push_str(line);
+                output.push('\n');
             }
 
             i += 1;
@@ -284,18 +260,15 @@ impl RstExtractor {
         }
         let chars: Vec<char> = trimmed.chars().collect();
         let first = chars[0];
-        // Valid underline characters
         matches!(first, '=' | '-' | '~' | '+' | '^' | '"' | '`' | '#' | '*') && chars.iter().all(|c| *c == first)
     }
 
     /// Check if a line is a list item.
     fn is_list_item(line: &str) -> bool {
         let trimmed = line.trim_start();
-        // Bullet list
         if trimmed.starts_with("* ") || trimmed.starts_with("+ ") || trimmed.starts_with("- ") {
             return true;
         }
-        // Numbered list
         if let Some(space_pos) = trimmed.find(' ')
             && space_pos > 0
             && space_pos < 4
@@ -330,7 +303,6 @@ impl RstExtractor {
         while i < lines.len() {
             let line = lines[i];
 
-            // Check for grid table markers (|)
             if line.contains("|")
                 && (line.contains("=") || line.contains("-"))
                 && let Some(table) = Self::parse_grid_table(&lines, &mut i)
@@ -350,7 +322,6 @@ impl RstExtractor {
         let mut cells = Vec::new();
         let mut row = Vec::new();
 
-        // Collect cells until we hit a line that doesn't have |
         while *i < lines.len() && lines[*i].contains("|") {
             let line = lines[*i].trim_matches(|c| c == '|');
             if !line.is_empty() {
@@ -385,7 +356,6 @@ impl RstExtractor {
 
         let mut md = String::new();
 
-        // Header row
         if !cells.is_empty() {
             md.push('|');
             for cell in &cells[0] {
@@ -395,14 +365,12 @@ impl RstExtractor {
             }
             md.push('\n');
 
-            // Separator row
             md.push('|');
             for _ in &cells[0] {
                 md.push_str(" --- |");
             }
             md.push('\n');
 
-            // Data rows
             for row in &cells[1..] {
                 md.push('|');
                 for cell in row {
@@ -473,10 +441,8 @@ impl DocumentExtractor for RstExtractor {
     ) -> Result<ExtractionResult> {
         let text = String::from_utf8_lossy(content).into_owned();
 
-        // Extract text and metadata
         let (extracted_text, metadata) = Self::extract_text_and_metadata(&text);
 
-        // Extract tables
         let tables = Self::extract_tables(&text);
 
         Ok(ExtractionResult {

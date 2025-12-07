@@ -30,6 +30,18 @@ use tokio::time::timeout;
 
 mod helpers;
 
+fn trim_trailing_newlines(value: &str) -> &str {
+    value.trim_end_matches(|c| c == '\n' || c == '\r')
+}
+
+fn assert_text_content(actual: &str, expected: &str) {
+    assert_eq!(
+        trim_trailing_newlines(actual),
+        expected,
+        "Content mismatch after trimming trailing newlines"
+    );
+}
+
 /// Test many concurrent extractions of different MIME types.
 ///
 /// Validates that:
@@ -144,7 +156,7 @@ async fn test_concurrent_extractions_with_cache() {
         let result = handle.await.expect("Task should not panic");
         assert!(result.is_ok(), "Cache read should succeed");
         let extraction = result.unwrap();
-        assert_eq!(extraction.content, expected_content);
+        assert_text_content(&extraction.content, expected_content);
     }
 }
 
@@ -160,7 +172,6 @@ async fn test_concurrent_ocr_processing() {
     use helpers::{get_test_file_path, skip_if_missing};
 
     if cfg!(windows) {
-        // Tesseract on Windows CI is significantly slower; skip to avoid false timeouts.
         return;
     }
 

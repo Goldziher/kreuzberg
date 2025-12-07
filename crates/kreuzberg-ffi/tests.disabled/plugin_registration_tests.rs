@@ -6,7 +6,6 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr;
 
-// External FFI functions for validators
 unsafe extern "C" {
     fn kreuzberg_register_validator(name: *const c_char, callback: ValidatorCallback, priority: i32) -> bool;
     fn kreuzberg_unregister_validator(name: *const c_char) -> bool;
@@ -16,13 +15,11 @@ unsafe extern "C" {
     fn kreuzberg_last_error() -> *const c_char;
 }
 
-// External FFI functions for OCR backends
 unsafe extern "C" {
     fn kreuzberg_unregister_ocr_backend(name: *const c_char) -> bool;
     fn kreuzberg_list_ocr_backends() -> *mut c_char;
 }
 
-// Callback types
 type ValidatorCallback = unsafe extern "C" fn(
     content: *const c_char,
     mime_type: *const c_char,
@@ -52,7 +49,7 @@ unsafe extern "C" fn passing_validator_callback(
     _metadata_json: *const c_char,
     _config_json: *const c_char,
 ) -> *mut c_char {
-    ptr::null_mut() // null means validation passed
+    ptr::null_mut()
 }
 
 /// Mock validator callback that always fails
@@ -77,7 +74,6 @@ fn test_register_validator_succeeds() {
 
         assert!(result, "Validator registration should succeed");
 
-        // Verify it's in the list
         let list_ptr = kreuzberg_list_validators();
         assert!(!list_ptr.is_null(), "List should not be null");
 
@@ -89,7 +85,6 @@ fn test_register_validator_succeeds() {
             "List should contain registered validator"
         );
 
-        // Cleanup
         kreuzberg_clear_validators();
     }
 }
@@ -117,7 +112,6 @@ fn test_register_multiple_validators_succeeds() {
             "Third validator registration should succeed"
         );
 
-        // Verify all are in the list
         let list_ptr = kreuzberg_list_validators();
         let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
         kreuzberg_free_string(list_ptr);
@@ -126,7 +120,6 @@ fn test_register_multiple_validators_succeeds() {
         assert!(list_json.contains("validator-2"), "Should contain validator-2");
         assert!(list_json.contains("validator-3"), "Should contain validator-3");
 
-        // Cleanup
         kreuzberg_clear_validators();
     }
 }
@@ -140,11 +133,9 @@ fn test_unregister_validator_succeeds() {
         let name = CString::new("temp-validator").unwrap();
         kreuzberg_register_validator(name.as_ptr(), passing_validator_callback, 50);
 
-        // Unregister
         let result = kreuzberg_unregister_validator(name.as_ptr());
         assert!(result, "Unregistration should succeed");
 
-        // Verify it's not in the list
         let list_ptr = kreuzberg_list_validators();
         let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
         kreuzberg_free_string(list_ptr);
@@ -154,7 +145,6 @@ fn test_unregister_validator_succeeds() {
             "List should not contain unregistered validator"
         );
 
-        // Cleanup
         kreuzberg_clear_validators();
     }
 }
@@ -168,10 +158,8 @@ fn test_unregister_nonexistent_validator_fails_gracefully() {
         let name = CString::new("nonexistent-validator").unwrap();
         let result = kreuzberg_unregister_validator(name.as_ptr());
 
-        // Should return true (no-op for non-existent)
         assert!(result, "Unregistering non-existent validator should succeed (no-op)");
 
-        // Cleanup
         kreuzberg_clear_validators();
     }
 }
@@ -239,14 +227,12 @@ fn test_register_validator_with_whitespace_in_name_fails_gracefully() {
 #[test]
 fn test_register_validator_with_invalid_utf8_fails_gracefully() {
     unsafe {
-        // Create invalid UTF-8 bytes manually (0xFF, 0xFE are not valid UTF-8)
         let invalid_bytes = vec![
             b'v', b'a', b'l', b'i', b'd', b'a', b't', b'o', b'r', b'-', 0xFF, 0xFE, 0x00,
         ];
         let name_ptr = invalid_bytes.as_ptr() as *const i8;
         let result = kreuzberg_register_validator(name_ptr, passing_validator_callback, 50);
 
-        // Should fail gracefully with UTF-8 error
         assert!(!result, "Should fail with invalid UTF-8");
         let error = get_last_error();
         assert!(error.is_some(), "Should have error message on failure");
@@ -255,7 +241,6 @@ fn test_register_validator_with_invalid_utf8_fails_gracefully() {
             "Error should mention UTF-8 issue"
         );
 
-        // Cleanup regardless
         kreuzberg_clear_validators();
     }
 }
@@ -266,17 +251,14 @@ fn test_clear_validators_succeeds() {
     unsafe {
         kreuzberg_clear_validators();
 
-        // Register multiple validators
         let v1 = CString::new("validator-1").unwrap();
         let v2 = CString::new("validator-2").unwrap();
         kreuzberg_register_validator(v1.as_ptr(), passing_validator_callback, 50);
         kreuzberg_register_validator(v2.as_ptr(), passing_validator_callback, 50);
 
-        // Clear all
         let result = kreuzberg_clear_validators();
         assert!(result, "Clear should succeed");
 
-        // Verify list is empty
         let list_ptr = kreuzberg_list_validators();
         let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
         kreuzberg_free_string(list_ptr);
@@ -301,14 +283,12 @@ fn test_list_validators_returns_valid_json() {
         let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
         kreuzberg_free_string(list_ptr);
 
-        // Parse as JSON array
         let validators: Vec<String> = serde_json::from_str(&list_json).expect("Should be valid JSON array");
         assert!(
             validators.contains(&"test-validator".to_string()),
             "Should contain registered validator"
         );
 
-        // Cleanup
         kreuzberg_clear_validators();
     }
 }
@@ -338,15 +318,12 @@ fn test_register_duplicate_validator_replaces_previous() {
 
         let name = CString::new("duplicate-validator").unwrap();
 
-        // Register first time
         kreuzberg_register_validator(name.as_ptr(), passing_validator_callback, 50);
 
-        // Register again with different priority
         let result = kreuzberg_register_validator(name.as_ptr(), failing_validator_callback, 100);
 
         assert!(result, "Duplicate registration should succeed (replace)");
 
-        // List should still contain only one entry
         let list_ptr = kreuzberg_list_validators();
         let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
         kreuzberg_free_string(list_ptr);
@@ -355,7 +332,6 @@ fn test_register_duplicate_validator_replaces_previous() {
         let duplicate_count = validators.iter().filter(|v| *v == "duplicate-validator").count();
         assert_eq!(duplicate_count, 1, "Should only have one instance of the validator");
 
-        // Cleanup
         kreuzberg_clear_validators();
     }
 }
@@ -369,11 +345,9 @@ fn test_validator_priorities_are_registered() {
         let low_priority = CString::new("low-priority-validator").unwrap();
         let high_priority = CString::new("high-priority-validator").unwrap();
 
-        // Register with different priorities
         kreuzberg_register_validator(low_priority.as_ptr(), passing_validator_callback, 10);
         kreuzberg_register_validator(high_priority.as_ptr(), passing_validator_callback, 100);
 
-        // Both should be registered
         let list_ptr = kreuzberg_list_validators();
         let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
         kreuzberg_free_string(list_ptr);
@@ -387,14 +361,9 @@ fn test_validator_priorities_are_registered() {
             "Should contain high priority validator"
         );
 
-        // Cleanup
         kreuzberg_clear_validators();
     }
 }
-
-// ============================================================================
-// OCR Backend Plugin Tests
-// ============================================================================
 
 /// Test listing OCR backends returns valid JSON.
 #[test]
@@ -406,10 +375,8 @@ fn test_list_ocr_backends_returns_valid_json() {
         let list_json = c_str_to_string(list_ptr).expect("Should have valid JSON");
         kreuzberg_free_string(list_ptr);
 
-        // Parse as JSON array
         let backends: Vec<String> = serde_json::from_str(&list_json).expect("Should be valid JSON array");
 
-        // May be empty or contain default backends
         assert!(backends.is_empty() || !backends.is_empty(), "Should be a valid array");
     }
 }
@@ -421,7 +388,6 @@ fn test_unregister_nonexistent_ocr_backend_succeeds_gracefully() {
         let name = CString::new("nonexistent-ocr-backend").unwrap();
         let result = kreuzberg_unregister_ocr_backend(name.as_ptr());
 
-        // Should return true (no-op for non-existent)
         assert!(result, "Unregistering non-existent OCR backend should succeed (no-op)");
     }
 }
@@ -489,12 +455,10 @@ fn test_unregister_ocr_backend_with_whitespace_in_name_fails_gracefully() {
 #[test]
 fn test_unregister_ocr_backend_with_invalid_utf8_fails_gracefully() {
     unsafe {
-        // Create invalid UTF-8 bytes manually
         let invalid_bytes = [b'o', b'c', b'r', b'-', 0xFF, 0xFE, 0x00];
         let name_ptr = invalid_bytes.as_ptr() as *const i8;
         let result = kreuzberg_unregister_ocr_backend(name_ptr);
 
-        // Should fail gracefully with UTF-8 error
         assert!(!result, "Should fail with invalid UTF-8");
         let error = get_last_error();
         assert!(error.is_some(), "Should have error message on failure");

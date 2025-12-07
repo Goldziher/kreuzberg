@@ -129,17 +129,15 @@ impl<'a> LatexParser<'a> {
         let mut skip_until_end = None::<String>;
         let mut i = 0;
 
-        // Check if this is plain TeX (contains \bye) or LaTeX (contains \begin{document})
         let is_plain_tex = self.source.contains("\\bye") && !self.source.contains("\\begin{document}");
         if is_plain_tex {
-            in_document = true; // For plain TeX, treat everything as document content
+            in_document = true;
         }
 
         while i < lines.len() {
             let line = lines[i];
             let trimmed = line.trim();
 
-            // Handle end of skipped environment
             if let Some(ref env) = skip_until_end {
                 if trimmed.contains(&format!("\\end{{{}}}", env)) {
                     skip_until_end = None;
@@ -148,23 +146,18 @@ impl<'a> LatexParser<'a> {
                 continue;
             }
 
-            // Plain TeX: stop at \bye
             if is_plain_tex && trimmed.contains("\\bye") {
                 break;
             }
 
-            // Extract metadata from preamble (LaTeX only)
             if !in_document && !is_plain_tex {
                 self.extract_metadata_from_line(trimmed);
             }
 
-            // Check for document start (LaTeX)
             if !is_plain_tex && trimmed.contains("\\begin{document}") {
                 in_document = true;
 
-                // Check if \begin{document} and \end{document} are on the same line
                 if trimmed.contains("\\end{document}") {
-                    // Extract content between them
                     let Some(begin_pos) = trimmed.find("\\begin{document}") else {
                         break;
                     };
@@ -173,7 +166,6 @@ impl<'a> LatexParser<'a> {
                     };
                     let content_between = trimmed[begin_pos + 16..end_pos].trim();
                     if !content_between.is_empty() {
-                        // Handle sections
                         if content_between.starts_with("\\section{") {
                             if let Some(title) = self.extract_braced(content_between, "section") {
                                 self.output.push_str(&format!("\n# {}\n\n", title));
@@ -193,17 +185,13 @@ impl<'a> LatexParser<'a> {
                 continue;
             }
 
-            // Check for document end (LaTeX)
             if !is_plain_tex && trimmed.contains("\\end{document}") {
                 break;
             }
 
-            // Process content inside document
             if in_document {
-                // Handle environments
                 if trimmed.contains("\\begin{") {
                     let Some(env_name) = self.extract_env_name(trimmed) else {
-                        // No environment name found, continue to next section
                         i += 1;
                         continue;
                     };
@@ -227,7 +215,6 @@ impl<'a> LatexParser<'a> {
                             continue;
                         }
                         "equation" | "align" | "gather" | "multline" => {
-                            // Math environments - wrap in $$
                             let (env_content, new_i) = self.collect_environment(&lines, i, &env_name);
                             self.output.push_str("$$\\begin{");
                             self.output.push_str(&env_name);
@@ -240,13 +227,11 @@ impl<'a> LatexParser<'a> {
                             continue;
                         }
                         _ => {
-                            // Skip unknown environments
                             skip_until_end = Some(env_name);
                         }
                     }
                 }
 
-                // Handle sections
                 if trimmed.starts_with("\\section{") {
                     if let Some(title) = self.extract_braced(trimmed, "section") {
                         self.output.push_str(&format!("\n# {}\n\n", title));
@@ -260,7 +245,6 @@ impl<'a> LatexParser<'a> {
                         self.output.push_str(&format!("### {}\n\n", title));
                     }
                 } else if trimmed.starts_with("\\[") {
-                    // Display math - collect until \]
                     let mut math_content = trimmed.to_string();
                     if !trimmed.contains("\\]") {
                         i += 1;
@@ -277,8 +261,6 @@ impl<'a> LatexParser<'a> {
                     self.output.push_str(&math_content);
                     self.output.push('\n');
                 } else if !trimmed.is_empty() && !trimmed.starts_with("%") {
-                    // Skip comments
-                    // Process any line with content (including lines starting with \textbf, etc.)
                     let processed = self.process_line(trimmed);
                     if !processed.is_empty() {
                         self.output.push_str(&processed);
@@ -350,7 +332,6 @@ impl<'a> LatexParser<'a> {
             let line = lines[i];
             let trimmed = line.trim();
 
-            // Handle nested lists
             if trimmed.contains("\\begin{") {
                 let Some(env_name) = self.extract_env_name(trimmed) else {
                     i += 1;
@@ -358,10 +339,8 @@ impl<'a> LatexParser<'a> {
                 };
                 if env_name == "itemize" || env_name == "enumerate" || env_name == "description" {
                     let (nested_content, new_i) = self.collect_environment(&lines, i, &env_name);
-                    // Add indentation for nested list
                     let current_output_len = self.output.len();
                     self.process_list(&nested_content, &env_name);
-                    // Indent the nested list output
                     let nested_output = self.output[current_output_len..].to_string();
                     self.output.truncate(current_output_len);
                     for nested_line in nested_output.lines() {
@@ -381,7 +360,6 @@ impl<'a> LatexParser<'a> {
                 };
                 let after = trimmed[pos + 5..].trim();
 
-                // Handle description list labels [label]
                 if after.starts_with('[') {
                     let Some(bracket_end) = after.find(']') else {
                         i += 1;
@@ -398,7 +376,6 @@ impl<'a> LatexParser<'a> {
                     }
                 }
 
-                // Normal item (no brackets or non-description list)
                 let prefix = if list_type == "enumerate" {
                     format!("{}. ", item_num)
                 } else {
@@ -406,7 +383,6 @@ impl<'a> LatexParser<'a> {
                 };
                 self.output.push_str(&prefix);
 
-                // Process the item text
                 let item_text = self.process_line(after);
                 self.output.push_str(item_text.trim());
                 self.output.push('\n');
@@ -428,7 +404,6 @@ impl<'a> LatexParser<'a> {
                 continue;
             }
 
-            // Split by & and \\ for table cells
             let row_str = trimmed.replace("\\\\", "");
             let cells: Vec<String> = row_str
                 .split('&')
@@ -450,7 +425,6 @@ impl<'a> LatexParser<'a> {
                 }
                 markdown.push('\n');
 
-                // Add header separator after first row
                 if i == 0 && rows.len() > 1 {
                     markdown.push('|');
                     for _ in row {
@@ -472,7 +446,6 @@ impl<'a> LatexParser<'a> {
     }
 
     fn process_table_with_caption(&mut self, content: &str) {
-        // Extract caption if present
         if content.contains("\\caption{") {
             let Some(caption) = self.extract_braced_from_content(content, "caption") else {
                 return;
@@ -481,7 +454,6 @@ impl<'a> LatexParser<'a> {
             self.output.push('\n');
         }
 
-        // Extract tabular if present
         if content.contains("\\begin{tabular}") {
             let Some(start) = content.find("\\begin{tabular}") else {
                 return;
@@ -500,7 +472,6 @@ impl<'a> LatexParser<'a> {
 
         while let Some(ch) = chars.next() {
             if ch == '\\' {
-                // Try to read command
                 let mut cmd = String::new();
                 while let Some(&c) = chars.peek() {
                     if c.is_alphabetic() {
@@ -510,18 +481,15 @@ impl<'a> LatexParser<'a> {
                     }
                 }
 
-                // Handle known formatting commands
                 match cmd.as_str() {
                     "textbf" => {
                         if let Some(content) = self.read_braced_from_chars(&mut chars) {
-                            // Recursively process content to handle nested formatting
                             let processed = self.process_line(&content);
                             result.push_str(&processed);
                         }
                     }
                     "textit" | "emph" => {
                         if let Some(content) = self.read_braced_from_chars(&mut chars) {
-                            // Recursively process content to handle nested formatting
                             let processed = self.process_line(&content);
                             result.push_str(&processed);
                         }
@@ -533,14 +501,11 @@ impl<'a> LatexParser<'a> {
                     }
                     "underline" => {
                         if let Some(content) = self.read_braced_from_chars(&mut chars) {
-                            // Recursively process content to handle nested formatting
                             let processed = self.process_line(&content);
                             result.push_str(&processed);
                         }
                     }
                     "font" => {
-                        // Skip font declarations like \font\r="[lmroman12-regular]"
-                        // Read until end of line or next command
                         while let Some(&c) = chars.peek() {
                             if c == '\\' {
                                 break;
@@ -549,24 +514,17 @@ impl<'a> LatexParser<'a> {
                         }
                     }
                     "usepackage" => {
-                        // Skip package declarations
                         self.read_braced_from_chars(&mut chars);
                     }
                     _ => {
-                        // For unknown commands, try to extract content if braced
                         if let Some(content) = self.read_braced_from_chars(&mut chars) {
                             let processed = self.process_line(&content);
                             result.push_str(&processed);
                         } else if cmd.len() == 1 {
-                            // Single-letter commands like \r - just consume the space and continue
-                            // The text after will be processed normally
-                        } else {
-                            // Unknown command without braces, skip it
                         }
                     }
                 }
             } else if ch == '$' {
-                // Preserve math
                 result.push(ch);
                 while let Some(&c) = chars.peek() {
                     result.push(chars.next().unwrap());
@@ -583,7 +541,6 @@ impl<'a> LatexParser<'a> {
     }
 
     fn read_braced_from_chars(&self, chars: &mut std::iter::Peekable<std::str::Chars>) -> Option<String> {
-        // Skip whitespace
         while let Some(&c) = chars.peek() {
             if c.is_whitespace() {
                 chars.next();
@@ -592,11 +549,10 @@ impl<'a> LatexParser<'a> {
             }
         }
 
-        // Check for opening brace
         if chars.peek() != Some(&'{') {
             return None;
         }
-        chars.next(); // consume {
+        chars.next();
 
         let mut content = String::new();
         let mut depth = 1;

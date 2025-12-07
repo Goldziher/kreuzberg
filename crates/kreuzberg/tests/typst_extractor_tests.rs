@@ -50,25 +50,20 @@ async fn test_simple_typst_document_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: MIME type preservation
     assert_eq!(extraction.mime_type, "text/x-typst", "MIME type should be preserved");
 
-    // Test 2: Content should not be empty
     assert!(!extraction.content.is_empty(), "Extracted content should not be empty");
 
-    // Test 3: Title metadata extraction
     assert!(
         extraction.metadata.additional.get("title").is_some(),
         "Document title should be extracted from #set document()"
     );
 
-    // Test 4: Author metadata extraction
     assert!(
         extraction.metadata.additional.get("author").is_some(),
         "Document author should be extracted"
     );
 
-    // Test 5: Content should contain main headings - CRITICAL: all 8 headings must be present
     assert!(
         extraction.content.contains("Introduction"),
         "Should extract 'Introduction' heading"
@@ -82,8 +77,6 @@ async fn test_simple_typst_document_extraction() {
         "Should extract 'Conclusion' heading"
     );
 
-    // Test 6: Verify all 8 headings from simple.typ are extracted
-    // simple.typ contains: Introduction, Subsection, Features, Lists, Code, Tables, Links, Conclusion
     let intro_count = extraction.content.matches("= Introduction").count();
     let subsection_count = extraction.content.matches("== Subsection").count();
     let features_count = extraction.content.matches("= Features").count();
@@ -102,13 +95,11 @@ async fn test_simple_typst_document_extraction() {
     assert_eq!(links_count, 1, "Should extract 'Links' (level 2)");
     assert_eq!(conclusion_count, 1, "Should extract 'Conclusion' (level 1)");
 
-    // Test 7: Formatting markers should be preserved
     assert!(
         extraction.content.contains("*") || extraction.content.contains("bold"),
         "Should preserve bold formatting or text"
     );
 
-    // Test 8: Lists should be extracted
     assert!(
         extraction.content.contains("-") || extraction.content.contains("First") || extraction.content.contains("item"),
         "Should extract list content"
@@ -148,13 +139,11 @@ async fn test_minimal_typst_document_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Content exists
     assert!(
         !extraction.content.is_empty(),
         "Minimal document should extract content"
     );
 
-    // Test 2: Heading should be extracted
     assert!(
         extraction.content.contains("Hello") || extraction.content.contains("World"),
         "Should extract heading content"
@@ -194,46 +183,38 @@ async fn test_heading_hierarchy_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Content should exist
     assert!(!extraction.content.is_empty(), "Document should extract content");
 
-    // Test 2: Level 1 heading should be present
     assert!(
         extraction.content.contains("= Level 1") || extraction.content.contains("Level 1 Heading"),
         "Should extract level 1 heading"
     );
 
-    // Test 3: Level 2 heading should be present
     assert!(
         extraction.content.contains("== Level 2") || extraction.content.contains("Level 2 Heading"),
         "Should extract level 2 heading"
     );
 
-    // Test 4: Level 3 heading should be present
     assert!(
         extraction.content.contains("=== Level 3") || extraction.content.contains("Level 3 Heading"),
         "Should extract level 3 heading"
     );
 
-    // Test 5: Level 4 heading should be present
     assert!(
         extraction.content.contains("==== Level 4") || extraction.content.contains("Level 4 Heading"),
         "Should extract level 4 heading"
     );
 
-    // Test 6: Level 5 heading should be present
     assert!(
         extraction.content.contains("===== Level 5") || extraction.content.contains("Level 5 Heading"),
         "Should extract level 5 heading"
     );
 
-    // Test 7: Level 6 heading should be present
     assert!(
         extraction.content.contains("====== Level 6") || extraction.content.contains("Level 6 Heading"),
         "Should extract level 6 heading"
     );
 
-    // Test 8: Verify exact counts for level 1, 2, and 3 headings
     let level_1_count = extraction.content.matches("= Level 1").count();
     let level_2_count = extraction.content.matches("== Level 2").count();
     let level_3_count = extraction.content.matches("=== Level 3").count();
@@ -282,7 +263,6 @@ async fn test_metadata_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Title should be extracted
     if let Some(title) = extraction.metadata.additional.get("title") {
         assert!(
             title.to_string().contains("Metadata") || title.to_string().contains("Example"),
@@ -290,7 +270,6 @@ async fn test_metadata_extraction() {
         );
     }
 
-    // Test 2: Author should be extracted
     if let Some(author) = extraction.metadata.additional.get("author") {
         assert!(
             author.to_string().contains("John") || author.to_string().contains("Doe"),
@@ -298,12 +277,10 @@ async fn test_metadata_extraction() {
         );
     }
 
-    // Test 3: Keywords should be extracted
     if let Some(keywords) = extraction.metadata.additional.get("keywords") {
         assert!(keywords.to_string().len() > 0, "Keywords should be present");
     }
 
-    // Test 4: Content should exist
     assert!(!extraction.content.is_empty(), "Document should extract content");
 
     println!(
@@ -347,19 +324,16 @@ async fn test_advanced_typst_document_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Document metadata
     assert!(
         extraction.metadata.additional.get("title").is_some(),
         "Title should be extracted"
     );
 
-    // Test 2: Content exists
     assert!(
         !extraction.content.is_empty(),
         "Advanced document should extract content"
     );
 
-    // Test 3: Mathematical notation
     assert!(
         extraction.content.contains("$")
             || extraction.content.contains("equation")
@@ -367,7 +341,6 @@ async fn test_advanced_typst_document_extraction() {
         "Should extract or preserve mathematical notation"
     );
 
-    // Test 4: Heading content
     assert!(
         extraction.content.contains("Mathematical")
             || extraction.content.contains("Formatting")
@@ -375,7 +348,6 @@ async fn test_advanced_typst_document_extraction() {
         "Should extract section headings"
     );
 
-    // Test 5: Code blocks
     assert!(
         extraction.content.contains("python")
             || extraction.content.contains("def")
@@ -384,11 +356,9 @@ async fn test_advanced_typst_document_extraction() {
         "Should extract code block content"
     );
 
-    // Test 6: Nested headings
     let level_count = extraction.content.matches("=").count();
     assert!(level_count >= 3, "Should preserve nested heading hierarchy");
 
-    // Test 7: Table extraction
     assert!(
         extraction.content.contains("Name")
             || extraction.content.contains("Alice")
@@ -396,7 +366,6 @@ async fn test_advanced_typst_document_extraction() {
         "Should extract table content"
     );
 
-    // Test 8: Links
     assert!(
         extraction.content.contains("example")
             || extraction.content.contains("link")
@@ -436,13 +405,11 @@ async fn test_typst_reader_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Content should be extracted
     assert!(
         !extraction.content.is_empty(),
         "Should extract content from Pandoc test file"
     );
 
-    // Test 2: Should handle heading structures
     assert!(
         extraction.content.contains("=") || extraction.content.contains("Fibonacci"),
         "Should extract heading or content from test file"
@@ -481,18 +448,15 @@ async fn test_undergradmath_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Content should exist
     assert!(
         !extraction.content.is_empty(),
         "Should extract content from complex math document"
     );
 
-    // Test 2: Metadata extraction
     if let Some(title) = extraction.metadata.additional.get("title") {
         assert!(title.to_string().len() > 0, "Title should be extracted");
     }
 
-    // Test 3: Should handle document structure
     assert!(
         extraction.content.contains("=") || extraction.content.contains("Typst") || extraction.content.len() > 100,
         "Should extract document structure or content"
@@ -520,7 +484,6 @@ async fn test_typst_mime_type_variants() {
         }
     };
 
-    // Test with different MIME types
     let mime_types = vec!["application/x-typst", "text/x-typst", "text/plain"];
 
     for mime_type in mime_types {
@@ -566,19 +529,16 @@ async fn test_formatting_preservation() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Bold markers or content
     assert!(
         extraction.content.contains("*") || extraction.content.contains("bold"),
         "Should preserve bold formatting or text"
     );
 
-    // Test 2: Italic markers or content
     assert!(
         extraction.content.contains("_") || extraction.content.contains("italic"),
         "Should preserve italic formatting or text"
     );
 
-    // Test 3: Code markers or content
     assert!(
         extraction.content.contains("`") || extraction.content.contains("code"),
         "Should preserve code formatting or text"
@@ -611,13 +571,11 @@ async fn test_large_document_extraction() {
 
     let extraction = result.unwrap();
 
-    // Test 1: Content extracted
     assert!(
         extraction.content.len() > 0,
         "Should extract content from large document"
     );
 
-    // Test 2: Should extract reasonable amount of text
     println!(
         "✓ Large document: Extracted {} bytes of content from source file",
         extraction.content.len()
@@ -631,13 +589,11 @@ async fn test_large_document_extraction() {
 async fn test_empty_content_handling() {
     let config = ExtractionConfig::default();
 
-    // Test with empty content
     let empty_content = b"";
     let result = extract_bytes(empty_content, "text/x-typst", &config).await;
 
     match result {
         Ok(extraction) => {
-            // Empty content should extract without error
             println!(
                 "✓ Empty content: Handled gracefully, extracted {} bytes",
                 extraction.content.len()

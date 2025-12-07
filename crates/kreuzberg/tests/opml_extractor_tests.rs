@@ -50,10 +50,6 @@ fn assert_not_contains_ci(content: &str, needle: &str, description: &str) {
     );
 }
 
-// ============================================================================
-// SECTION 1: RSS FEEDS EXTRACTION TESTS
-// ============================================================================
-
 /// Test 1: Extract RSS feed subscription list with categories
 ///
 /// Validates:
@@ -75,13 +71,11 @@ async fn test_opml_rss_feeds_extraction() {
         .await
         .expect("Should extract RSS feeds OPML successfully");
 
-    // Validate content extraction
     assert!(
         !result.content.is_empty(),
         "Content should not be empty for RSS feeds OPML"
     );
 
-    // Check for main categories
     assert_contains_ci(&result.content, "Technology", "Should contain Technology category");
     assert_contains_ci(&result.content, "Programming", "Should contain Programming category");
     assert_contains_ci(
@@ -90,12 +84,10 @@ async fn test_opml_rss_feeds_extraction() {
         "Should contain Uncategorized category",
     );
 
-    // Check for specific feeds
     assert_contains_ci(&result.content, "Hacker News", "Should contain Hacker News feed");
     assert_contains_ci(&result.content, "TechCrunch", "Should contain TechCrunch feed");
     assert_contains_ci(&result.content, "Rust Blog", "Should contain Rust Blog feed");
 
-    // Validate metadata extraction
     assert!(
         result.metadata.additional.contains_key("title"),
         "Should extract title metadata"
@@ -106,7 +98,6 @@ async fn test_opml_rss_feeds_extraction() {
         "Should have correct title"
     );
 
-    // Check for owner information
     let has_owner =
         result.metadata.additional.contains_key("ownerName") || result.metadata.additional.contains_key("ownerEmail");
     assert!(has_owner, "Should extract owner information");
@@ -115,10 +106,6 @@ async fn test_opml_rss_feeds_extraction() {
     println!("   Found {} metadata fields", result.metadata.additional.len());
     println!("   Content length: {} bytes", result.content.len());
 }
-
-// ============================================================================
-// SECTION 2: PODCAST DIRECTORY EXTRACTION TESTS
-// ============================================================================
 
 /// Test 2: Extract podcast directory with multiple categories
 ///
@@ -142,13 +129,11 @@ async fn test_opml_podcast_directory_extraction() {
         .await
         .expect("Should extract podcast directory OPML successfully");
 
-    // Validate content extraction
     assert!(
         !result.content.is_empty(),
         "Content should not be empty for podcast OPML"
     );
 
-    // Check for podcast categories (with special character handling)
     assert_contains_ci(
         &result.content,
         "Technology Podcasts",
@@ -157,11 +142,9 @@ async fn test_opml_podcast_directory_extraction() {
     assert_contains_ci(&result.content, "Business", "Should contain Business category");
     assert_contains_ci(&result.content, "Science", "Should contain Science category");
 
-    // Check for specific podcasts
     assert_contains_ci(&result.content, "Syntax", "Should contain Syntax podcast");
     assert_contains_ci(&result.content, "Acquired", "Should contain Acquired podcast");
 
-    // Validate metadata extraction
     assert_eq!(
         result.metadata.additional.get("title").and_then(|v| v.as_str()),
         Some("Podcast Directory"),
@@ -178,10 +161,6 @@ async fn test_opml_podcast_directory_extraction() {
     println!("   Found {} metadata fields", result.metadata.additional.len());
     println!("   Content length: {} bytes", result.content.len());
 }
-
-// ============================================================================
-// SECTION 3: OUTLINE HIERARCHY TESTS
-// ============================================================================
 
 /// Test 3: Extract general outline structure with deep nesting
 ///
@@ -205,22 +184,18 @@ async fn test_opml_outline_hierarchy_extraction() {
         .await
         .expect("Should extract outline OPML successfully");
 
-    // Validate content extraction
     assert!(
         !result.content.is_empty(),
         "Content should not be empty for outline OPML"
     );
 
-    // Check for main project
     assert_contains_ci(&result.content, "Project Alpha", "Should contain main project");
 
-    // Check for all phases
     assert_contains_ci(&result.content, "Phase 1", "Should contain Phase 1");
     assert_contains_ci(&result.content, "Phase 2", "Should contain Phase 2");
     assert_contains_ci(&result.content, "Phase 3", "Should contain Phase 3");
     assert_contains_ci(&result.content, "Phase 4", "Should contain Phase 4");
 
-    // Check for tasks in Phase 1
     assert_contains_ci(
         &result.content,
         "Requirements gathering",
@@ -228,7 +203,6 @@ async fn test_opml_outline_hierarchy_extraction() {
     );
     assert_contains_ci(&result.content, "Resource allocation", "Should contain Phase 1 tasks");
 
-    // Check for Phase 2 tasks
     assert_contains_ci(
         &result.content,
         "Backend implementation",
@@ -240,7 +214,6 @@ async fn test_opml_outline_hierarchy_extraction() {
         "Should contain Phase 2 frontend task",
     );
 
-    // Check for Phase 3 and 4
     assert_contains_ci(&result.content, "Unit testing", "Should contain Phase 3 testing task");
     assert_contains_ci(
         &result.content,
@@ -248,14 +221,12 @@ async fn test_opml_outline_hierarchy_extraction() {
         "Should contain Phase 4 deployment task",
     );
 
-    // Verify metadata
     assert_eq!(
         result.metadata.additional.get("title").and_then(|v| v.as_str()),
         Some("Project Outline"),
         "Should have correct title"
     );
 
-    // Verify indentation is present (check for spaces)
     assert!(
         result.content.contains("  "),
         "Should have indentation for nested items"
@@ -265,10 +236,6 @@ async fn test_opml_outline_hierarchy_extraction() {
     println!("   Content length: {} bytes", result.content.len());
     println!("   Hierarchy levels preserved with indentation");
 }
-
-// ============================================================================
-// SECTION 4: METADATA EXTRACTION TESTS
-// ============================================================================
 
 /// Test 4: Comprehensive metadata extraction from head section
 ///
@@ -293,7 +260,6 @@ async fn test_opml_metadata_extraction_complete() {
 
     let metadata = &result.metadata.additional;
 
-    // Verify all expected metadata fields are present
     assert!(metadata.contains_key("title"), "Should have title metadata");
     assert!(
         metadata.contains_key("dateCreated") || metadata.contains_key("dateModified"),
@@ -304,14 +270,12 @@ async fn test_opml_metadata_extraction_complete() {
         "Should have owner information"
     );
 
-    // Verify specific values
     assert_eq!(
         metadata.get("title").and_then(|v| v.as_str()),
         Some("Tech News Feeds"),
         "Title should match exactly"
     );
 
-    // Verify date format is preserved
     if let Some(date_created) = metadata.get("dateCreated").and_then(|v| v.as_str()) {
         assert!(
             date_created.contains("Nov") || date_created.contains("2023"),
@@ -319,7 +283,6 @@ async fn test_opml_metadata_extraction_complete() {
         );
     }
 
-    // Verify owner information
     assert_eq!(
         metadata.get("ownerName").and_then(|v| v.as_str()),
         Some("John Smith"),
@@ -329,10 +292,6 @@ async fn test_opml_metadata_extraction_complete() {
     println!("✅ Metadata extraction test passed!");
     println!("   Metadata fields: {:?}", metadata.keys().collect::<Vec<_>>());
 }
-
-// ============================================================================
-// SECTION 5: URL AND ATTRIBUTE EXTRACTION TESTS
-// ============================================================================
 
 /// Test 5: Verify RSS feed names are extracted from OPML attributes
 ///
@@ -354,23 +313,17 @@ async fn test_opml_feed_url_extraction() {
         .await
         .expect("Should extract feed names successfully");
 
-    // Check for feed names (from text attribute)
     assert_contains_ci(&result.content, "Hacker News", "Should contain Hacker News feed name");
     assert_contains_ci(&result.content, "TechCrunch", "Should contain TechCrunch feed name");
     assert_contains_ci(&result.content, "Rust Blog", "Should contain Rust Blog feed name");
     assert_contains_ci(&result.content, "Dev.to", "Should contain Dev.to feed name");
 
-    // Verify category structure
     assert_contains_ci(&result.content, "Technology", "Should contain Technology category");
     assert_contains_ci(&result.content, "Programming", "Should contain Programming category");
 
     println!("✅ Feed extraction test passed!");
     println!("   Found {} bytes of content", result.content.len());
 }
-
-// ============================================================================
-// SECTION 6: MIME TYPE AND FORMAT TESTS
-// ============================================================================
 
 /// Test 6: Verify correct MIME type handling and format detection
 ///
@@ -389,14 +342,12 @@ async fn test_opml_mime_type_handling() {
 
     let content = std::fs::read(&test_file).expect("Should read OPML file");
 
-    // Test with different MIME types
     let result = extract_bytes(&content, "text/x-opml", &ExtractionConfig::default())
         .await
         .expect("Should extract with text/x-opml MIME type");
 
     assert_eq!(result.mime_type, "text/x-opml", "MIME type should be preserved");
 
-    // Also test with application/xml+opml
     let result2 = extract_bytes(&content, "application/xml+opml", &ExtractionConfig::default())
         .await
         .expect("Should extract with application/xml+opml MIME type");
@@ -406,7 +357,6 @@ async fn test_opml_mime_type_handling() {
         "Alternative MIME type should work"
     );
 
-    // Content should be identical regardless of MIME type
     assert_eq!(
         result.content, result2.content,
         "Content should be same regardless of MIME type"
@@ -414,10 +364,6 @@ async fn test_opml_mime_type_handling() {
 
     println!("✅ MIME type handling test passed!");
 }
-
-// ============================================================================
-// SECTION 7: EDGE CASES AND SPECIAL CHARACTERS
-// ============================================================================
 
 /// Test 7: Handle special characters and HTML entities in OPML
 ///
@@ -440,23 +386,17 @@ async fn test_opml_special_characters_handling() {
         .await
         .expect("Should extract with special characters");
 
-    // Check that ampersands are properly decoded
     assert_contains_ci(
         &result.content,
         "Business",
         "Should properly decode Business &amp; Startups",
     );
 
-    // Validate UTF-8 integrity
-    let _ = result.content.chars().count(); // Will panic if invalid UTF-8
+    let _ = result.content.chars().count();
 
     println!("✅ Special characters handling test passed!");
     println!("   Verified UTF-8 integrity and entity decoding");
 }
-
-// ============================================================================
-// SECTION 9: OUTLINE-SPECIFIC HIERARCHY TESTS
-// ============================================================================
 
 /// Test 9: Validate deep nesting and hierarchy preservation in outline.opml
 ///
@@ -481,35 +421,27 @@ async fn test_opml_deep_nesting_hierarchy() {
 
     let extracted = &result.content;
 
-    // Verify the hierarchy structure by checking task ordering
     let project_pos = extracted.find("Project Alpha").unwrap_or(0);
     let phase1_pos = extracted.find("Phase 1").unwrap_or(0);
     let phase2_pos = extracted.find("Phase 2").unwrap_or(0);
     let phase3_pos = extracted.find("Phase 3").unwrap_or(0);
     let phase4_pos = extracted.find("Phase 4").unwrap_or(0);
 
-    // Phases should appear in order
     assert!(
         project_pos < phase1_pos && phase1_pos < phase2_pos && phase2_pos < phase3_pos && phase3_pos < phase4_pos,
         "Phases should appear in order in output"
     );
 
-    // Verify all phases are present
     assert_contains_ci(&extracted, "Phase 1", "Phase 1 should be present");
     assert_contains_ci(&extracted, "Phase 2", "Phase 2 should be present");
     assert_contains_ci(&extracted, "Phase 3", "Phase 3 should be present");
     assert_contains_ci(&extracted, "Phase 4", "Phase 4 should be present");
 
-    // Verify Notes section
     assert_contains_ci(&extracted, "Notes & Resources", "Notes section should be present");
 
     println!("✅ Deep nesting hierarchy test passed!");
     println!("   All phases and tasks extracted in correct order");
 }
-
-// ============================================================================
-// SECTION 10: CONTENT QUALITY VALIDATION
-// ============================================================================
 
 /// Test 10: Validate content extraction quality and consistency across all OPML files
 ///
@@ -535,24 +467,20 @@ async fn test_opml_content_quality_all_files() {
             .await
             .expect(&format!("Should extract {}", opml_file));
 
-        // Validate non-empty content
         assert!(
             !result.content.is_empty(),
             "Content should not be empty for {}",
             opml_file
         );
 
-        // Validate UTF-8 validity
-        let _ = result.content.chars().count(); // Will panic if invalid UTF-8
+        let _ = result.content.chars().count();
 
-        // Validate content has meaningful length
         assert!(
             result.content.len() > 20,
             "Content should have meaningful length for {}",
             opml_file
         );
 
-        // Validate no excessive whitespace
         let whitespace_ratio =
             result.content.chars().filter(|c| c.is_whitespace()).count() as f64 / result.content.len() as f64;
         assert!(
@@ -566,10 +494,6 @@ async fn test_opml_content_quality_all_files() {
 
     println!("✅ Content quality validation test passed!");
 }
-
-// ============================================================================
-// SECTION 11: REGISTRATION AND INTEGRATION TESTS
-// ============================================================================
 
 /// Test 11: Verify OPML extractor is properly registered
 ///
@@ -592,19 +516,16 @@ async fn test_opml_extractor_registration() {
 
     println!("Available extractors: {:?}", extractor_names);
 
-    // Verify OPML extractor is registered
     assert!(
         extractor_names.contains(&"opml-extractor".to_string()),
         "OPML extractor should be registered. Available: {:?}",
         extractor_names
     );
 
-    // Verify extractor properties directly
     let opml_extractor = OpmlExtractor::new();
     assert_eq!(opml_extractor.name(), "opml-extractor");
     assert_eq!(opml_extractor.priority(), 55);
 
-    // Verify supported MIME types
     let supported_types = opml_extractor.supported_mime_types();
     assert!(
         supported_types.contains(&"text/x-opml"),
@@ -618,10 +539,6 @@ async fn test_opml_extractor_registration() {
     println!("✅ OPML extractor registration test passed!");
     println!("   OPML extractor properly registered with priority {}", 55);
 }
-
-// ============================================================================
-// SUMMARY STATISTICS
-// ============================================================================
 
 /// Test 12: Extract all OPML files and generate summary statistics
 ///
@@ -648,39 +565,34 @@ async fn test_opml_extraction_statistics() {
         }
 
         match std::fs::read(&test_file) {
-            Ok(content) => {
-                match extract_bytes(&content, "text/x-opml", &ExtractionConfig::default()).await {
-                    Ok(result) => {
-                        total_files += 1;
-                        total_content_bytes += result.content.len();
-                        total_metadata_fields += result.metadata.additional.len();
+            Ok(content) => match extract_bytes(&content, "text/x-opml", &ExtractionConfig::default()).await {
+                Ok(result) => {
+                    total_files += 1;
+                    total_content_bytes += result.content.len();
+                    total_metadata_fields += result.metadata.additional.len();
 
-                        println!("✓ {} ", opml_file);
-                        println!("  Content: {} bytes", result.content.len());
-                        println!("  Metadata fields: {}", result.metadata.additional.len());
+                    println!("✓ {} ", opml_file);
+                    println!("  Content: {} bytes", result.content.len());
+                    println!("  Metadata fields: {}", result.metadata.additional.len());
 
-                        // List metadata keys found
-                        if !result.metadata.additional.is_empty() {
-                            let keys: Vec<String> = result.metadata.additional.keys().map(|k| k.clone()).collect();
-                            println!("  Keys: {}", keys.join(", "));
-                        }
-
-                        // Count outline items (rough estimate by newline count)
-                        let outline_count = result.content.lines().count();
-                        println!("  Outline items: ~{}", outline_count);
-
-                        // Count nested items (by indentation)
-                        let indented_lines = result.content.lines().filter(|l| l.starts_with("  ")).count();
-                        println!("  Nested items: {}", indented_lines);
-
-                        println!();
+                    if !result.metadata.additional.is_empty() {
+                        let keys: Vec<String> = result.metadata.additional.keys().map(|k| k.clone()).collect();
+                        println!("  Keys: {}", keys.join(", "));
                     }
-                    Err(e) => {
-                        println!("✗ {} - Error: {:?}", opml_file, e);
-                        println!();
-                    }
+
+                    let outline_count = result.content.lines().count();
+                    println!("  Outline items: ~{}", outline_count);
+
+                    let indented_lines = result.content.lines().filter(|l| l.starts_with("  ")).count();
+                    println!("  Nested items: {}", indented_lines);
+
+                    println!();
                 }
-            }
+                Err(e) => {
+                    println!("✗ {} - Error: {:?}", opml_file, e);
+                    println!();
+                }
+            },
             Err(e) => {
                 println!("✗ {} - Read Error: {:?}", opml_file, e);
                 println!();

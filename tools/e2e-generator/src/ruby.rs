@@ -236,12 +236,10 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
     write_spec_helper(&spec_dir)?;
     clean_spec_files(&spec_dir)?;
 
-    // Separate document extraction and plugin API fixtures
     let doc_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_document_extraction()).collect();
 
     let plugin_fixtures: Vec<_> = fixtures.iter().filter(|f| f.is_plugin_api()).collect();
 
-    // Generate document extraction tests
     let mut grouped = doc_fixtures
         .into_iter()
         .into_group_map_by(|fixture| fixture.category().to_string())
@@ -257,7 +255,6 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
         fs::write(&path, content).with_context(|| format!("Writing {}", path))?;
     }
 
-    // Generate plugin API tests
     if !plugin_fixtures.is_empty() {
         generate_plugin_api_tests(&plugin_fixtures, &spec_dir)?;
     }
@@ -599,7 +596,6 @@ fn is_symbol_key(key: &str) -> bool {
     }
 
     let mut chars = key.chars();
-    // SAFETY: We just checked that key is not empty, so next() will return Some
     let first = chars.next().unwrap();
     if !first.is_ascii_lowercase() && first != '_' {
         return false;
@@ -618,12 +614,9 @@ fn collect_requirements(fixture: &Fixture) -> Vec<String> {
         .collect()
 }
 
-// Plugin API test generation
-
 fn generate_plugin_api_tests(fixtures: &[&Fixture], spec_dir: &Utf8Path) -> Result<()> {
     let mut buffer = String::new();
 
-    // File header
     writeln!(buffer, "# frozen_string_literal: true")?;
     writeln!(buffer)?;
     writeln!(buffer, "# Auto-generated from fixtures/plugin_api/ - DO NOT EDIT")?;
@@ -643,7 +636,6 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], spec_dir: &Utf8Path) -> Resu
     writeln!(buffer, "require 'fileutils'")?;
     writeln!(buffer)?;
 
-    // Group fixtures by api_category
     let mut grouped_map: std::collections::HashMap<String, Vec<&Fixture>> = std::collections::HashMap::new();
     for fixture in fixtures.iter() {
         let category = fixture
@@ -657,7 +649,6 @@ fn generate_plugin_api_tests(fixtures: &[&Fixture], spec_dir: &Utf8Path) -> Resu
     let mut grouped: Vec<_> = grouped_map.into_iter().collect();
     grouped.sort_by(|a, b| a.0.cmp(&b.0));
 
-    // Generate tests grouped by category
     for (category, mut fixtures) in grouped {
         fixtures.sort_by(|a, b| a.id.cmp(&b.id));
         let category_title = to_title_case(&category);
@@ -689,11 +680,9 @@ fn render_plugin_test(fixture: &Fixture) -> Result<String> {
         .as_ref()
         .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
 
-    // Generate test name from description
     let test_name = &fixture.description;
     writeln!(buffer, "  it '{}' do", escape_ruby_string_content(test_name))?;
 
-    // Render based on pattern
     match test_spec.pattern.as_str() {
         "simple_list" => render_simple_list_test(&mut buffer, fixture)?,
         "clear_registry" => render_clear_registry_test(&mut buffer, fixture)?,
@@ -728,7 +717,7 @@ fn render_simple_list_test(buffer: &mut String, fixture: &Fixture) -> Result<()>
         let ruby_type = match item_type.as_str() {
             "string" => "String",
             "number" => "Numeric",
-            "boolean" => "Object", // Ruby doesn't have a Boolean class
+            "boolean" => "Object",
             _ => "Object",
         };
         writeln!(buffer, "    expect(result).to all(be_a({}))", ruby_type)?;
@@ -752,7 +741,6 @@ fn render_clear_registry_test(buffer: &mut String, fixture: &Fixture) -> Result<
         .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let clear_function = &test_spec.function_call.name;
 
-    // Extract the list function name by replacing 'clear_' with 'list_'
     let list_function = clear_function.replace("clear_", "list_");
 
     writeln!(buffer, "    Kreuzberg.{}", clear_function)?;
@@ -772,7 +760,6 @@ fn render_graceful_unregister_test(buffer: &mut String, fixture: &Fixture) -> Re
         .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let function_name = &test_spec.function_call.name;
 
-    // Get the argument (should be the name of a nonexistent item)
     let arg = test_spec
         .function_call
         .args
@@ -800,7 +787,6 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
         .as_ref()
         .with_context(|| format!("Fixture '{}' missing setup for config_from_file", fixture.id))?;
 
-    // Create temp file
     let temp_file_name = setup
         .temp_file_name
         .as_ref()
@@ -817,14 +803,12 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
         escape_ruby_string_content(temp_file_name)
     )?;
     writeln!(buffer, "      File.write(config_path, <<~TOML)")?;
-    // Indent heredoc content to match the closing delimiter
     for line in temp_file_content.lines() {
         writeln!(buffer, "        {}", line)?;
     }
     writeln!(buffer, "      TOML")?;
     writeln!(buffer)?;
 
-    // Call ExtractionConfig.from_file (note: Ruby uses snake_case class method names)
     let class_name = test_spec
         .function_call
         .class_name
@@ -840,7 +824,6 @@ fn render_config_from_file_test(buffer: &mut String, fixture: &Fixture) -> Resul
     )?;
     writeln!(buffer)?;
 
-    // Assertions
     for prop in &test_spec.assertions.object_properties {
         render_object_property_assertion(buffer, "config", prop, "      ")?;
     }
@@ -879,7 +862,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
         escape_ruby_string_content(temp_file_name)
     )?;
     writeln!(buffer, "      File.write(config_path, <<~TOML)")?;
-    // Indent heredoc content to match the closing delimiter
     for line in temp_file_content.lines() {
         writeln!(buffer, "        {}", line)?;
     }
@@ -893,7 +875,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
     writeln!(buffer, "      FileUtils.mkdir_p(subdir)")?;
     writeln!(buffer)?;
 
-    // Change directory and discover
     let class_name = test_spec
         .function_call
         .class_name
@@ -910,7 +891,6 @@ fn render_config_discover_test(buffer: &mut String, fixture: &Fixture) -> Result
     )?;
     writeln!(buffer)?;
 
-    // Assertions
     for prop in &test_spec.assertions.object_properties {
         render_object_property_assertion(buffer, "config", prop, "        ")?;
     }
@@ -937,7 +917,6 @@ fn render_mime_from_bytes_test(buffer: &mut String, fixture: &Fixture) -> Result
 
     let function_name = &test_spec.function_call.name;
 
-    // Convert test data to Ruby string with proper encoding
     writeln!(
         buffer,
         "    test_bytes = '{}'.dup.force_encoding('ASCII-8BIT')",
@@ -988,7 +967,6 @@ fn render_mime_extension_lookup_test(buffer: &mut String, fixture: &Fixture) -> 
         .with_context(|| format!("Fixture '{}' missing test_spec", fixture.id))?;
     let function_name = &test_spec.function_call.name;
 
-    // Get the MIME type argument
     let mime_type = test_spec
         .function_call
         .args
@@ -1024,7 +1002,6 @@ fn render_object_property_assertion(
     let path_parts: Vec<&str> = prop.path.split('.').collect();
     let ruby_path = path_parts.join(".");
 
-    // Check existence if specified
     if let Some(exists) = prop.exists {
         if exists {
             writeln!(buffer, "{}expect({}.{}).not_to be_nil", indent, var_name, ruby_path)?;
@@ -1033,7 +1010,6 @@ fn render_object_property_assertion(
         }
     }
 
-    // Check value if specified
     if let Some(value) = &prop.value {
         match value {
             Value::Number(n) => {
@@ -1089,7 +1065,6 @@ fn escape_ruby_string_content(s: &str) -> String {
         .replace('\t', "\\t")
 }
 
-// Map fixture class names to Ruby-specific class names
 fn map_ruby_class_name(name: &str) -> &str {
     match name {
         "ExtractionConfig" => "Extraction",

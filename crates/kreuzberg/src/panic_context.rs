@@ -29,7 +29,6 @@ impl PanicContext {
     /// * `function` - Function name
     /// * `panic_info` - The panic payload to extract message from
     pub fn new(file: &'static str, line: u32, function: &'static str, panic_info: &dyn Any) -> Self {
-        // Catch panic from SystemTime::now() to prevent panic-in-panic scenario
         let timestamp = std::panic::catch_unwind(SystemTime::now).unwrap_or(UNIX_EPOCH);
 
         Self {
@@ -76,9 +75,7 @@ pub fn extract_panic_message(panic_info: &dyn Any) -> String {
         "Unknown panic payload".to_string()
     };
 
-    // Truncate to prevent DoS via extremely large panic messages
     if msg.len() > MAX_PANIC_MESSAGE_LEN {
-        // Use floor_char_boundary to avoid panicking on multi-byte UTF-8 character boundaries
         let truncate_at = msg.floor_char_boundary(MAX_PANIC_MESSAGE_LEN);
         format!("{}... [truncated]", &msg[..truncate_at])
     } else {
@@ -127,28 +124,22 @@ mod tests {
     fn test_panic_message_truncation() {
         let long_msg = "x".repeat(5000);
         let msg = extract_panic_message(&long_msg);
-        assert!(msg.len() <= MAX_PANIC_MESSAGE_LEN + 20); // +20 for "... [truncated]"
+        assert!(msg.len() <= MAX_PANIC_MESSAGE_LEN + 20);
         assert!(msg.ends_with("... [truncated]"));
     }
 
     #[test]
     fn test_panic_message_truncation_utf8_boundary() {
-        // Create a message with multi-byte UTF-8 character near 4096 boundary
-        // This tests that truncation doesn't panic on char boundaries
-        let mut msg = "x".repeat(4093); // 4093 bytes
-        msg.push('🦀'); // Rust crab emoji: 4 bytes in UTF-8 (F0 9F A6 80)
-        msg.push_str("yyy"); // 3 more bytes = 4100 total
+        let mut msg = "x".repeat(4093);
+        msg.push('🦀');
+        msg.push_str("yyy");
 
-        // This should NOT panic, even though byte 4096 is mid-character
         let truncated = extract_panic_message(&msg);
 
-        // Should be truncated at valid UTF-8 boundary
         assert!(truncated.ends_with("... [truncated]"));
 
-        // Verify it's valid UTF-8 (would panic on invalid UTF-8)
         assert!(std::str::from_utf8(truncated.as_bytes()).is_ok());
 
-        // The emoji and trailing "yyy" should not be present (they were after the truncation point)
         assert!(!truncated.contains("🦀"));
         assert!(!truncated.contains("yyy"));
     }

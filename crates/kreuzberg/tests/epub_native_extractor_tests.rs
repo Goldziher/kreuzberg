@@ -47,14 +47,12 @@ async fn test_native_epub_wasteland_extraction() {
         .await
         .expect("Should extract wasteland.epub successfully");
 
-    // Verify substantial content extracted (T.S. Eliot's poem is ~10KB)
     assert!(
         result.content.len() > 2000,
         "Should extract substantial content from Wasteland, got {} bytes",
         result.content.len()
     );
 
-    // Verify metadata extraction
     assert!(
         result.metadata.additional.contains_key("title"),
         "Should extract title metadata"
@@ -70,7 +68,6 @@ async fn test_native_epub_wasteland_extraction() {
         "Should extract creator metadata"
     );
 
-    // Verify content contains key phrases from the poem
     assert!(
         result.content.contains("April") || result.content.contains("cruellest"),
         "Should contain key phrases from The Waste Land"
@@ -102,14 +99,12 @@ async fn test_native_epub_images_extraction() {
         .await
         .expect("Should extract img.epub successfully");
 
-    // Should extract text content
     assert!(
         result.content.len() > 50,
         "Should extract text content from EPUB with images, got {} bytes",
         result.content.len()
     );
 
-    // Should have metadata
     assert!(
         result.metadata.additional.contains_key("title"),
         "Should extract title metadata"
@@ -141,7 +136,6 @@ async fn test_native_epub_features_extraction() {
         .await
         .expect("Should extract features.epub successfully");
 
-    // Should extract ALL chapters (not just first) - this tests the bug fix
     assert!(
         result.content.len() > 1000,
         "CRITICAL: Should extract from ALL chapters, got only {} bytes. \
@@ -178,14 +172,12 @@ async fn test_native_epub2_cover_extraction() {
         .await
         .expect("Should extract epub2_cover.epub successfully");
 
-    // Should extract content
     assert!(
         result.content.len() > 50,
         "Should extract content from EPUB2 with cover, got {} bytes",
         result.content.len()
     );
 
-    // Verify metadata
     assert_eq!(
         result.metadata.additional.get("title").and_then(|v| v.as_str()),
         Some("Pandoc EPUB Test"),
@@ -212,7 +204,6 @@ async fn test_native_epub_deterministic_extraction() {
     let extractor = EpubExtractor::new();
     let config = ExtractionConfig::default();
 
-    // Extract twice
     let result1 = extractor
         .extract_bytes(&bytes, "application/epub+zip", &config)
         .await
@@ -223,7 +214,6 @@ async fn test_native_epub_deterministic_extraction() {
         .await
         .expect("Second extraction should succeed");
 
-    // Results should be identical
     assert_eq!(
         result1.content, result2.content,
         "Extraction should be deterministic - same input should produce same output"

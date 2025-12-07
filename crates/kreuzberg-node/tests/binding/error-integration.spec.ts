@@ -11,11 +11,9 @@ describe("Error Integration", () => {
 	describe("Error catching patterns", () => {
 		it("should catch specific error types", async () => {
 			try {
-				// This should throw a file not found error
 				await extractFile("/nonexistent/file.pdf");
 				expect.fail("Should have thrown an error");
 			} catch (error) {
-				// In production, you can catch specific error types
 				if (error instanceof CacheError) {
 					console.log("Cache error - continuing without cache");
 				} else if (error instanceof ImageProcessingError) {
@@ -23,11 +21,9 @@ describe("Error Integration", () => {
 				} else if (error instanceof PluginError) {
 					console.log(`Plugin error in ${error.pluginName}`);
 				} else if (error instanceof KreuzbergError) {
-					// Catch all other Kreuzberg errors
 					console.log("Kreuzberg error:", error.message);
 				}
 
-				// Should be a KreuzbergError (or subclass)
 				expect(error instanceof Error).toBe(true);
 			}
 		});
@@ -40,13 +36,10 @@ describe("Error Integration", () => {
 			];
 
 			for (const error of errors) {
-				// All should be instances of Error
 				expect(error instanceof Error).toBe(true);
 
-				// All should be instances of KreuzbergError
 				expect(error instanceof KreuzbergError).toBe(true);
 
-				// Each should be instance of its specific type
 				if (error instanceof CacheError) {
 					expect(error.name).toBe("CacheError");
 				} else if (error instanceof ImageProcessingError) {
@@ -101,13 +94,11 @@ describe("Error Integration", () => {
 
 	describe("Production error handling patterns", () => {
 		it("should demonstrate graceful degradation for cache errors", async () => {
-			// In production, cache errors should not fail the entire operation
 			const handleExtraction = async (filePath: string) => {
 				try {
 					return await extractFile(filePath);
 				} catch (error) {
 					if (error instanceof CacheError) {
-						// Log warning but continue without cache
 						console.warn("Cache unavailable, continuing without cache");
 						return await extractFile(filePath, null, { useCache: false });
 					}
@@ -115,11 +106,9 @@ describe("Error Integration", () => {
 				}
 			};
 
-			// This should handle the error gracefully
 			try {
 				await handleExtraction("/nonexistent/file.pdf");
 			} catch (error) {
-				// Should get a different error, not a cache error
 				expect(error instanceof CacheError).toBe(false);
 			}
 		});
@@ -135,7 +124,6 @@ describe("Error Integration", () => {
 						return await extractFile(filePath);
 					} catch (error) {
 						if (error instanceof ImageProcessingError && attempts < maxAttempts) {
-							// Retry with different settings
 							console.log(`Image processing failed, retrying (${attempts}/${maxAttempts})`);
 							continue;
 						}
@@ -148,7 +136,6 @@ describe("Error Integration", () => {
 			try {
 				await extractWithRetry("/nonexistent/file.pdf");
 			} catch (_error) {
-				// Should have attempted multiple times
 				expect(attempts).toBeGreaterThan(0);
 			}
 		});

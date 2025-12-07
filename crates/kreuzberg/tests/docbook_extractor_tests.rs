@@ -131,7 +131,6 @@ async fn test_docbook_metadata_extraction() {
     assert!(result.is_ok());
 
     let result = result.unwrap();
-    // DocBook 5 has metadata in <articleinfo>
     assert!(!result.content.is_empty());
 }
 
@@ -143,7 +142,6 @@ async fn test_docbook_section_hierarchy() {
     let result = result.unwrap();
     let content = &result.content;
 
-    // Check for multiple section levels
     assert!(content.contains("Like a Sect1"));
     assert!(content.contains("Like a Sect2"));
     assert!(content.contains("Like a Sect3"));
@@ -271,7 +269,6 @@ async fn test_docbook_link_handling() {
     assert!(result.is_ok());
 
     let result = result.unwrap();
-    // Links should be preserved in some form
     assert!(result.content.contains("example"));
 }
 
@@ -284,11 +281,9 @@ async fn test_docbook_mime_type_detection() {
   <title>Test</title>
 </article>"#;
 
-    // Test with application/docbook+xml
     let result1 = extract_docbook_bytes(docbook.as_bytes(), "application/docbook+xml").await;
     assert!(result1.is_ok());
 
-    // Test with text/docbook
     let result2 = extract_docbook_bytes(docbook.as_bytes(), "text/docbook").await;
     assert!(result2.is_ok());
 }

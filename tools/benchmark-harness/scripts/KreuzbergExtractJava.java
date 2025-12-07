@@ -1,7 +1,3 @@
-/*
- * CHECKSTYLE:OFF
- * Single-file benchmark helper executed via `java <file>`.
- */
 import dev.kreuzberg.ExtractionResult;
 import dev.kreuzberg.Kreuzberg;
 import dev.kreuzberg.KreuzbergException;
@@ -104,4 +100,3 @@ public final class KreuzbergExtractJava {
         System.err.printf("[BENCHMARK_DEBUG] %-30s = %s%n", key, value);
     }
 }
-/* CHECKSTYLE:ON */
