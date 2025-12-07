@@ -189,7 +189,7 @@ runs:
         CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
 
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ inputs.artifact-name != '' && inputs.artifact-name || format('wheels-{0}', runner.os) }}
         path: ./wheelhouse/*.whl
