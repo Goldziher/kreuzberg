@@ -86,6 +86,15 @@ jobs:
           use-sccache: ${{ matrix.os != 'windows-latest' }}
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
 
+      - name: Set GNU as default Rust toolchain (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          rustup default stable-x86_64-pc-windows-gnu
+          Write-Host "=== Rust toolchain configuration ==="
+          rustup show
+          rustc --version --verbose
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -189,6 +198,15 @@ jobs:
           # sccache is disabled on Windows GNU because it does not support MinGW gcc (zstd-sys build fails)
           use-sccache: ${{ matrix.os != 'windows-latest' }}
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
+
+      - name: Set GNU as default Rust toolchain (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          rustup default stable-x86_64-pc-windows-gnu
+          Write-Host "=== Rust toolchain configuration ==="
+          rustup show
+          rustc --version --verbose
 
       - name: Setup MSYS2 MinGW toolchain (Windows only)
         if: matrix.os == 'windows-latest'
