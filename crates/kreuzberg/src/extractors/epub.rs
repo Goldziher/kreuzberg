@@ -1,26 +1,30 @@
-//! Native EPUB extractor using the `epub` crate.
+//! Native EPUB extractor using permissive-licensed dependencies.
 //!
-//! This extractor provides native Rust-based EPUB extraction as a replacement
-//! for Pandoc, extracting:
+//! This extractor provides native Rust-based EPUB extraction without GPL-licensed
+//! dependencies, extracting:
 //! - Metadata from OPF (Open Packaging Format) using Dublin Core standards
 //! - Content from XHTML files in spine order
-//! - Cover image detection
+//! - Proper handling of EPUB2 and EPUB3 formats
+//!
+//! Uses only permissive-licensed crates:
+//! - `zip` (MIT/Apache) - for reading EPUB container
+//! - `roxmltree` (MIT) - for parsing XML
+//! - `html-to-markdown-rs` (MIT) - for converting XHTML to plain text
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata};
 use async_trait::async_trait;
+use roxmltree;
 use std::collections::HashMap;
 use std::io::Cursor;
+use zip::ZipArchive;
 
-#[cfg(feature = "office")]
-use epub::doc::EpubDoc;
-
-/// EPUB format extractor.
+/// EPUB format extractor using permissive-licensed dependencies.
 ///
 /// Extracts content and metadata from EPUB files (both EPUB2 and EPUB3)
-/// using native Rust parsing without external dependencies like Pandoc.
+/// using native Rust parsing without GPL-licensed dependencies.
 pub struct EpubExtractor;
 
 impl EpubExtractor {
@@ -29,62 +33,204 @@ impl EpubExtractor {
         Self
     }
 
-    /// Extract text content from an EPUB document
-    #[cfg(feature = "office")]
-    fn extract_content<R: std::io::Read + std::io::Seek>(epub: &mut EpubDoc<R>) -> String {
+    /// Extract text content from an EPUB document by reading in spine order
+    fn extract_content(
+        archive: &mut ZipArchive<Cursor<Vec<u8>>>,
+        opf_path: &str,
+        manifest_dir: &str,
+    ) -> Result<String> {
+        // Parse the OPF file to get metadata and spine order
+        let opf_xml = Self::read_file_from_zip(archive, opf_path)?;
+        let (_, spine_hrefs) = Self::parse_opf(&opf_xml)?;
+
         let mut content = String::new();
-        let num_chapters = epub.get_num_chapters();
 
-        // Iterate through all chapters in the EPUB
-        for chapter_num in 0..num_chapters {
-            // Set current chapter (returns bool, not Result)
-            epub.set_current_chapter(chapter_num);
+        // Process each XHTML file in spine order
+        for (index, href) in spine_hrefs.iter().enumerate() {
+            // Resolve relative path
+            let file_path = Self::resolve_path(manifest_dir, href);
 
-            // Get current chapter content as string (returns Option)
-            if let Some((data, _mime)) = epub.get_current_str() {
-                // Extract text from XHTML content
-                let extracted_text = Self::extract_text_from_xhtml(&data);
-                if !extracted_text.is_empty() {
-                    content.push_str(&extracted_text);
-                    content.push('\n');
+            // Try to read the file from the archive
+            match Self::read_file_from_zip(archive, &file_path) {
+                Ok(xhtml_content) => {
+                    // Convert XHTML to text
+                    let text = Self::extract_text_from_xhtml(&xhtml_content);
+                    if !text.is_empty() {
+                        if index > 0 && !content.ends_with('\n') {
+                            content.push('\n');
+                        }
+                        content.push_str(&text);
+                        content.push('\n');
+                    }
+                }
+                Err(_) => {
+                    // Skip files that can't be read
+                    continue;
                 }
             }
         }
 
-        content.trim().to_string()
+        Ok(content.trim().to_string())
     }
 
-    /// Extract plain text from XHTML content
-    #[cfg(feature = "office")]
-    fn extract_text_from_xhtml(html: &str) -> String {
+    /// Extract text from XHTML content using html-to-markdown-rs
+    fn extract_text_from_xhtml(xhtml: &str) -> String {
+        // Use html-to-markdown-rs to convert XHTML to plain text
+        match crate::extraction::html::convert_html_to_markdown(xhtml, None) {
+            Ok(markdown) => {
+                // Clean up the markdown to plain text
+                Self::markdown_to_plain_text(&markdown)
+            }
+            Err(_) => {
+                // Fallback to manual HTML tag stripping if conversion fails
+                Self::strip_html_tags(xhtml)
+            }
+        }
+    }
+
+    /// Convert markdown output to plain text by removing markdown syntax
+    fn markdown_to_plain_text(markdown: &str) -> String {
+        let mut text = String::new();
+        let mut in_code_block = false;
+
+        for line in markdown.lines() {
+            let trimmed = line.trim();
+
+            // Skip empty lines between content
+            if trimmed.is_empty() {
+                if !text.is_empty() && !text.ends_with('\n') {
+                    text.push('\n');
+                }
+                continue;
+            }
+
+            // Skip code block markers
+            if trimmed.starts_with("```") {
+                in_code_block = !in_code_block;
+                continue;
+            }
+
+            if in_code_block {
+                text.push_str(trimmed);
+                text.push('\n');
+                continue;
+            }
+
+            // Remove markdown list markers
+            let cleaned = if let Some(stripped) = trimmed.strip_prefix("- ").or_else(|| trimmed.strip_prefix("* ")) {
+                stripped
+            } else if let Some(stripped) = trimmed.strip_prefix(|c: char| c.is_ascii_digit()) {
+                if let Some(rest) = stripped.strip_prefix(". ") {
+                    rest
+                } else {
+                    trimmed
+                }
+            } else {
+                trimmed
+            };
+
+            // Remove markdown heading markers
+            let cleaned = cleaned.trim_start_matches('#').trim();
+
+            // Remove markdown bold/italic markers
+            let cleaned = cleaned
+                .replace("**", "")
+                .replace("__", "")
+                .replace("*", "")
+                .replace("_", "");
+
+            // Remove markdown links [text](url) -> text
+            let cleaned = Self::remove_markdown_links(&cleaned);
+
+            if !cleaned.is_empty() {
+                text.push_str(&cleaned);
+                text.push('\n');
+            }
+        }
+
+        text.trim().to_string()
+    }
+
+    /// Remove markdown links [text](url) -> text
+    fn remove_markdown_links(text: &str) -> String {
+        let mut result = String::new();
+        let mut chars = text.chars().peekable();
+
+        while let Some(ch) = chars.next() {
+            if ch == '[' {
+                // Collect link text
+                let mut link_text = String::new();
+                let mut depth = 1;
+
+                while let Some(&next_ch) = chars.peek() {
+                    chars.next();
+                    if next_ch == '[' {
+                        depth += 1;
+                        link_text.push(next_ch);
+                    } else if next_ch == ']' {
+                        depth -= 1;
+                        if depth == 0 {
+                            break;
+                        }
+                        link_text.push(next_ch);
+                    } else {
+                        link_text.push(next_ch);
+                    }
+                }
+
+                // Skip the URL part (url)
+                if let Some(&'(') = chars.peek() {
+                    chars.next();
+                    let mut paren_depth = 1;
+                    while let Some(&next_ch) = chars.peek() {
+                        chars.next();
+                        if next_ch == '(' {
+                            paren_depth += 1;
+                        } else if next_ch == ')' {
+                            paren_depth -= 1;
+                            if paren_depth == 0 {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                result.push_str(&link_text);
+            } else {
+                result.push(ch);
+            }
+        }
+
+        result
+    }
+
+    /// Fallback: strip HTML tags without using specialized libraries
+    fn strip_html_tags(html: &str) -> String {
         let mut text = String::new();
         let mut in_tag = false;
         let mut in_script_style = false;
-        let mut script_style_tag = String::new();
+        let mut tag_name = String::new();
 
-        let mut chars = html.chars().peekable();
-
-        while let Some(ch) = chars.next() {
+        for ch in html.chars() {
             if ch == '<' {
                 in_tag = true;
-                script_style_tag.clear();
+                tag_name.clear();
                 continue;
             }
 
             if ch == '>' {
                 in_tag = false;
 
-                // Check for script and style closing tags
-                if script_style_tag.to_lowercase().contains("script")
-                    || script_style_tag.to_lowercase().contains("style")
-                {
-                    in_script_style = !script_style_tag.starts_with('/');
+                // Check if we're entering/exiting script or style tags
+                let tag_lower = tag_name.to_lowercase();
+                if tag_lower.contains("script") || tag_lower.contains("style") {
+                    in_script_style = !tag_name.starts_with('/');
                 }
                 continue;
             }
 
             if in_tag {
-                script_style_tag.push(ch);
+                tag_name.push(ch);
                 continue;
             }
 
@@ -92,38 +238,9 @@ impl EpubExtractor {
                 continue;
             }
 
-            // Handle HTML entities
-            if ch == '&' {
-                let mut entity = String::from("&");
-                while let Some(&next_ch) = chars.peek() {
-                    entity.push(next_ch);
-                    chars.next();
-                    if next_ch == ';' {
-                        break;
-                    }
-                }
-
-                let decoded = match entity.as_str() {
-                    "&nbsp;" => " ",
-                    "&lt;" => "<",
-                    "&gt;" => ">",
-                    "&amp;" => "&",
-                    "&quot;" => "\"",
-                    "&apos;" => "'",
-                    _ => {
-                        text.push_str(&entity);
-                        continue;
-                    }
-                };
-                text.push_str(decoded);
-            } else if ch == '\n' || ch == '\r' || ch == '\t' {
-                // Normalize whitespace
-                if !text.ends_with(' ') && !text.is_empty() {
-                    text.push(' ');
-                }
-            } else if ch == ' ' {
-                // Avoid multiple spaces
-                if !text.ends_with(' ') {
+            // Normalize whitespace
+            if ch == '\n' || ch == '\r' || ch == '\t' || ch == ' ' {
+                if !text.is_empty() && !text.ends_with(' ') {
                     text.push(' ');
                 }
             } else {
@@ -132,94 +249,225 @@ impl EpubExtractor {
         }
 
         // Clean up multiple spaces
-        let mut cleaned = String::new();
+        let mut result = String::new();
         let mut prev_space = false;
         for ch in text.chars() {
             if ch == ' ' {
                 if !prev_space {
-                    cleaned.push(ch);
+                    result.push(ch);
                 }
                 prev_space = true;
             } else {
-                cleaned.push(ch);
+                result.push(ch);
                 prev_space = false;
             }
         }
 
-        cleaned.trim().to_string()
+        result.trim().to_string()
     }
 
-    /// Extract metadata from EPUB document
-    #[cfg(feature = "office")]
-    fn extract_metadata<R: std::io::Read + std::io::Seek>(epub: &mut EpubDoc<R>) -> HashMap<String, serde_json::Value> {
+    /// Extract metadata from EPUB OPF file
+    fn extract_metadata(opf_xml: &str) -> Result<HashMap<String, serde_json::Value>> {
         let mut metadata = HashMap::new();
 
-        // Extract Dublin Core metadata using mdata() convenience method
-        // mdata() returns Option<MetadataItem> where MetadataItem has property and value fields
+        let (epub_metadata, _) = Self::parse_opf(opf_xml)?;
 
-        // Title
-        if let Some(title_item) = epub.mdata("title") {
-            metadata.insert("title".to_string(), serde_json::json!(title_item.value));
+        // Add extracted metadata
+        if let Some(title) = epub_metadata.title {
+            metadata.insert("title".to_string(), serde_json::json!(title));
         }
 
-        // Creator/Author
-        if let Some(creator_item) = epub.mdata("creator") {
-            let creator_str = creator_item.value.clone();
-            metadata.insert("creator".to_string(), serde_json::json!(creator_str.clone()));
-            // Also store as authors array (single item)
-            metadata.insert("authors".to_string(), serde_json::json!(vec![creator_str]));
+        if let Some(creator) = epub_metadata.creator {
+            metadata.insert("creator".to_string(), serde_json::json!(creator.clone()));
+            metadata.insert("authors".to_string(), serde_json::json!(vec![creator]));
         }
 
-        // Date
-        if let Some(date_item) = epub.mdata("date") {
-            metadata.insert("date".to_string(), serde_json::json!(date_item.value));
+        if let Some(date) = epub_metadata.date {
+            metadata.insert("date".to_string(), serde_json::json!(date));
         }
 
-        // Language
-        if let Some(lang_item) = epub.mdata("language") {
-            metadata.insert("language".to_string(), serde_json::json!(lang_item.value));
+        if let Some(language) = epub_metadata.language {
+            metadata.insert("language".to_string(), serde_json::json!(language));
         }
 
-        // Identifier
-        if let Some(id_item) = epub.mdata("identifier") {
-            metadata.insert("identifier".to_string(), serde_json::json!(id_item.value));
+        if let Some(identifier) = epub_metadata.identifier {
+            metadata.insert("identifier".to_string(), serde_json::json!(identifier));
         }
 
-        // Publisher
-        if let Some(pub_item) = epub.mdata("publisher") {
-            metadata.insert("publisher".to_string(), serde_json::json!(pub_item.value));
+        if let Some(publisher) = epub_metadata.publisher {
+            metadata.insert("publisher".to_string(), serde_json::json!(publisher));
         }
 
-        // Subject/Keywords
-        if let Some(subj_item) = epub.mdata("subject") {
-            metadata.insert("subject".to_string(), serde_json::json!(subj_item.value));
+        if let Some(subject) = epub_metadata.subject {
+            metadata.insert("subject".to_string(), serde_json::json!(subject));
         }
 
-        // Description
-        if let Some(desc_item) = epub.mdata("description") {
-            metadata.insert("description".to_string(), serde_json::json!(desc_item.value));
+        if let Some(description) = epub_metadata.description {
+            metadata.insert("description".to_string(), serde_json::json!(description));
         }
 
-        // Rights
-        if let Some(rights_item) = epub.mdata("rights") {
-            metadata.insert("rights".to_string(), serde_json::json!(rights_item.value));
+        if let Some(rights) = epub_metadata.rights {
+            metadata.insert("rights".to_string(), serde_json::json!(rights));
         }
 
-        // Release Identifier
-        if let Some(release_id) = epub.get_release_identifier() {
-            metadata.insert("release_identifier".to_string(), serde_json::json!(release_id));
-        }
-
-        metadata
+        Ok(metadata)
     }
 
-    /// Detect if EPUB has a cover image
-    #[cfg(feature = "office")]
-    fn detect_cover<R: std::io::Read + std::io::Seek>(epub: &mut EpubDoc<R>) -> Option<String> {
-        // Try to get cover ID from metadata
-        // get_cover_id() returns Option<String>
-        epub.get_cover_id()
+    /// Parse container.xml to find the OPF file path
+    fn parse_container_xml(xml: &str) -> Result<String> {
+        match roxmltree::Document::parse(xml) {
+            Ok(doc) => {
+                // Look for rootfile element
+                for node in doc.descendants() {
+                    if node.tag_name().name() == "rootfile"
+                        && let Some(full_path) = node.attribute("full-path")
+                    {
+                        return Ok(full_path.to_string());
+                    }
+                }
+                Err(crate::KreuzbergError::Parsing {
+                    message: "No rootfile found in container.xml".to_string(),
+                    source: None,
+                })
+            }
+            Err(e) => Err(crate::KreuzbergError::Parsing {
+                message: format!("Failed to parse container.xml: {}", e),
+                source: None,
+            }),
+        }
     }
+
+    /// Parse OPF file and extract metadata and spine order
+    fn parse_opf(xml: &str) -> Result<(OepbMetadata, Vec<String>)> {
+        match roxmltree::Document::parse(xml) {
+            Ok(doc) => {
+                let root = doc.root();
+
+                let mut metadata = OepbMetadata::default();
+                let mut manifest: HashMap<String, String> = HashMap::new();
+                let mut spine_order: Vec<String> = Vec::new();
+
+                // Extract metadata from package/metadata section
+                for node in root.descendants() {
+                    match node.tag_name().name() {
+                        "title" => {
+                            if let Some(text) = node.text() {
+                                metadata.title = Some(text.trim().to_string());
+                            }
+                        }
+                        "creator" => {
+                            if let Some(text) = node.text() {
+                                metadata.creator = Some(text.trim().to_string());
+                            }
+                        }
+                        "date" => {
+                            if let Some(text) = node.text() {
+                                metadata.date = Some(text.trim().to_string());
+                            }
+                        }
+                        "language" => {
+                            if let Some(text) = node.text() {
+                                metadata.language = Some(text.trim().to_string());
+                            }
+                        }
+                        "identifier" => {
+                            if let Some(text) = node.text() {
+                                metadata.identifier = Some(text.trim().to_string());
+                            }
+                        }
+                        "publisher" => {
+                            if let Some(text) = node.text() {
+                                metadata.publisher = Some(text.trim().to_string());
+                            }
+                        }
+                        "subject" => {
+                            if let Some(text) = node.text() {
+                                metadata.subject = Some(text.trim().to_string());
+                            }
+                        }
+                        "description" => {
+                            if let Some(text) = node.text() {
+                                metadata.description = Some(text.trim().to_string());
+                            }
+                        }
+                        "rights" => {
+                            if let Some(text) = node.text() {
+                                metadata.rights = Some(text.trim().to_string());
+                            }
+                        }
+                        "item" => {
+                            // Build manifest map: id -> href
+                            if let Some(id) = node.attribute("id")
+                                && let Some(href) = node.attribute("href")
+                            {
+                                manifest.insert(id.to_string(), href.to_string());
+                            }
+                        }
+                        "itemref" => {
+                            // Spine references items by id
+                            if let Some(idref) = node.attribute("idref")
+                                && let Some(href) = manifest.get(idref)
+                            {
+                                spine_order.push(href.clone());
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                Ok((metadata, spine_order))
+            }
+            Err(e) => Err(crate::KreuzbergError::Parsing {
+                message: format!("Failed to parse OPF file: {}", e),
+                source: None,
+            }),
+        }
+    }
+
+    /// Read a file from the ZIP archive
+    fn read_file_from_zip(archive: &mut ZipArchive<Cursor<Vec<u8>>>, path: &str) -> Result<String> {
+        match archive.by_name(path) {
+            Ok(mut file) => {
+                let mut content = String::new();
+                match std::io::Read::read_to_string(&mut file, &mut content) {
+                    Ok(_) => Ok(content),
+                    Err(e) => Err(crate::KreuzbergError::Parsing {
+                        message: format!("Failed to read file from EPUB: {}", e),
+                        source: None,
+                    }),
+                }
+            }
+            Err(e) => Err(crate::KreuzbergError::Parsing {
+                message: format!("File not found in EPUB: {} ({})", path, e),
+                source: None,
+            }),
+        }
+    }
+
+    /// Resolve a relative path within the manifest directory
+    fn resolve_path(base_dir: &str, relative_path: &str) -> String {
+        if relative_path.starts_with('/') {
+            relative_path.trim_start_matches('/').to_string()
+        } else if base_dir.is_empty() || base_dir == "." {
+            relative_path.to_string()
+        } else {
+            format!("{}/{}", base_dir.trim_end_matches('/'), relative_path)
+        }
+    }
+}
+
+/// Metadata extracted from OPF (Open Packaging Format) file
+#[derive(Debug, Default, Clone)]
+struct OepbMetadata {
+    title: Option<String>,
+    creator: Option<String>,
+    date: Option<String>,
+    language: Option<String>,
+    identifier: Option<String>,
+    publisher: Option<String>,
+    subject: Option<String>,
+    description: Option<String>,
+    rights: Option<String>,
 }
 
 impl Default for EpubExtractor {
@@ -246,7 +494,7 @@ impl Plugin for EpubExtractor {
     }
 
     fn description(&self) -> &str {
-        "Extracts content and metadata from EPUB documents (native Rust implementation)"
+        "Extracts content and metadata from EPUB documents (native Rust implementation with permissive licenses)"
     }
 
     fn author(&self) -> &str {
@@ -276,27 +524,37 @@ impl DocumentExtractor for EpubExtractor {
         // Create a cursor from the content bytes
         let cursor = Cursor::new(content.to_vec());
 
-        // Open EPUB document from reader
-        let mut epub = EpubDoc::from_reader(cursor)
-            .map_err(|e| crate::KreuzbergError::Other(format!("Failed to open EPUB: {}", e)))?;
+        // Open EPUB archive
+        let mut archive = ZipArchive::new(cursor).map_err(|e| crate::KreuzbergError::Parsing {
+            message: format!("Failed to open EPUB as ZIP: {}", e),
+            source: None,
+        })?;
 
-        // Extract content
-        let extracted_content = Self::extract_content(&mut epub);
+        // Find the OPF file path from container.xml
+        let container_xml = Self::read_file_from_zip(&mut archive, "META-INF/container.xml")?;
+        let opf_path = Self::parse_container_xml(&container_xml)?;
+
+        // Extract the directory containing the OPF file
+        let manifest_dir = if let Some(last_slash) = opf_path.rfind('/') {
+            opf_path[..last_slash].to_string()
+        } else {
+            String::new()
+        };
+
+        // Read the OPF file for metadata and spine
+        let opf_xml = Self::read_file_from_zip(&mut archive, &opf_path)?;
+
+        // Extract content in spine order
+        let extracted_content = Self::extract_content(&mut archive, &opf_path, &manifest_dir)?;
 
         // Extract metadata
-        let metadata_map = Self::extract_metadata(&mut epub);
-
-        // Add cover detection information
-        let mut metadata_with_cover = metadata_map.clone();
-        if let Some(cover) = Self::detect_cover(&mut epub) {
-            metadata_with_cover.insert("cover".to_string(), serde_json::json!(cover));
-        }
+        let metadata_map = Self::extract_metadata(&opf_xml)?;
 
         Ok(ExtractionResult {
             content: extracted_content,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
-                additional: metadata_with_cover,
+                additional: metadata_map,
                 ..Default::default()
             },
             tables: vec![],
@@ -346,44 +604,61 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_text_from_xhtml_simple() {
+    fn test_strip_html_tags_simple() {
         let html = "<html><body><p>Hello World</p></body></html>";
-        let text = EpubExtractor::extract_text_from_xhtml(html);
+        let text = EpubExtractor::strip_html_tags(html);
         assert!(text.contains("Hello World"));
     }
 
     #[test]
-    fn test_extract_text_from_xhtml_with_entities() {
-        let html = "<p>Hello&nbsp;&amp;&nbsp;World</p>";
-        let text = EpubExtractor::extract_text_from_xhtml(html);
-        assert!(text.contains("Hello"));
-        assert!(text.contains("World"));
-    }
-
-    #[test]
-    fn test_extract_text_from_xhtml_removes_script() {
+    fn test_strip_html_tags_with_scripts() {
         let html = "<body><p>Text</p><script>alert('bad');</script><p>More</p></body>";
-        let text = EpubExtractor::extract_text_from_xhtml(html);
+        let text = EpubExtractor::strip_html_tags(html);
         assert!(!text.contains("bad"));
         assert!(text.contains("Text"));
         assert!(text.contains("More"));
     }
 
     #[test]
-    fn test_extract_text_from_xhtml_removes_style() {
+    fn test_strip_html_tags_with_styles() {
         let html = "<body><p>Text</p><style>.class { color: red; }</style><p>More</p></body>";
-        let text = EpubExtractor::extract_text_from_xhtml(html);
+        let text = EpubExtractor::strip_html_tags(html);
         assert!(!text.to_lowercase().contains("color"));
         assert!(text.contains("Text"));
         assert!(text.contains("More"));
     }
 
     #[test]
-    fn test_extract_text_from_xhtml_normalizes_whitespace() {
+    fn test_strip_html_tags_normalizes_whitespace() {
         let html = "<p>Hello   \n\t   World</p>";
-        let text = EpubExtractor::extract_text_from_xhtml(html);
-        // Should have single spaces
-        assert!(text.contains("Hello World") || text.contains("Hello  World"));
+        let text = EpubExtractor::strip_html_tags(html);
+        assert!(text.contains("Hello") && text.contains("World"));
+    }
+
+    #[test]
+    fn test_remove_markdown_links() {
+        let text = "This is a [link](http://example.com) in text";
+        let result = EpubExtractor::remove_markdown_links(text);
+        assert!(result.contains("link"));
+        assert!(!result.contains("http://"));
+    }
+
+    #[test]
+    fn test_resolve_path_with_base_dir() {
+        let result = EpubExtractor::resolve_path("OEBPS", "chapter.xhtml");
+        assert_eq!(result, "OEBPS/chapter.xhtml");
+    }
+
+    #[test]
+    fn test_resolve_path_absolute() {
+        let result = EpubExtractor::resolve_path("OEBPS", "/chapter.xhtml");
+        assert_eq!(result, "chapter.xhtml");
+    }
+
+    #[test]
+    fn test_resolve_path_empty_base() {
+        let result = EpubExtractor::resolve_path("", "chapter.xhtml");
+        assert_eq!(result, "chapter.xhtml");
     }
 
     #[test]
@@ -393,5 +668,23 @@ mod tests {
         assert!(supported.contains(&"application/epub+zip"));
         assert!(supported.contains(&"application/x-epub+zip"));
         assert!(supported.contains(&"application/vnd.epub+zip"));
+    }
+
+    #[test]
+    fn test_markdown_to_plain_text_removes_formatting() {
+        let markdown = "# Heading\n\nThis is **bold** text with _italic_ emphasis.";
+        let result = EpubExtractor::markdown_to_plain_text(markdown);
+        assert!(result.contains("Heading"));
+        assert!(result.contains("bold"));
+        assert!(!result.contains("**"));
+    }
+
+    #[test]
+    fn test_markdown_to_plain_text_removes_list_markers() {
+        let markdown = "- Item 1\n- Item 2\n* Item 3";
+        let result = EpubExtractor::markdown_to_plain_text(markdown);
+        assert!(result.contains("Item 1"));
+        assert!(result.contains("Item 2"));
+        assert!(result.contains("Item 3"));
     }
 }

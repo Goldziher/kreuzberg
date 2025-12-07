@@ -88,6 +88,10 @@ jobs:
       - name: Install Task
         uses: ./.github/actions/install-task
 
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+        shell: bash
+
       - name: Cache Prek
         uses: actions/cache@v4
         with:

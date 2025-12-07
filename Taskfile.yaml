@@ -44,6 +44,7 @@ tasks:
     desc: Run all linters with auto-fix enabled
     cmds:
       - task: rust:lint
+      - task: rust:licenses
       - task: python:lint
       - task: typescript:lint
       - task: ruby:lint
@@ -54,6 +55,7 @@ tasks:
     desc: Run all linters in check-only mode (no modifications)
     cmds:
       - task: rust:lint:check
+      - task: rust:licenses
       - task: python:lint:check
       - task: typescript:lint:check
       - task: ruby:lint:check
@@ -120,6 +122,10 @@ tasks:
     desc: Check Rust code formatting without modifications
     cmds:
       - cargo fmt --all -- --check
+  rust:licenses:
+    desc: Check Rust dependency licenses with cargo-deny
+    cmds:
+      - cargo deny check licenses
   toml:format:
     desc: Format TOML files with taplo
     cmds:
