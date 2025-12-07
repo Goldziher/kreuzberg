@@ -13,6 +13,10 @@ inputs:
     description: Prefix for cache keys
     required: false
     default: rust-build
+  toolchain:
+    description: Specific Rust toolchain triple/channel to install (e.g., stable, stable-x86_64-pc-windows-gnu)
+    required: false
+    default: ''
   cache-cargo-home:
     description: Whether to cache cargo home directory
     required: false
@@ -54,6 +58,7 @@ runs:
     - name: Setup Rust
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
+        toolchain: ${{ inputs.toolchain }}
         components: ${{ inputs.components }}
         target: ${{ inputs.target }}
 
