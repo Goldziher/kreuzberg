@@ -15,7 +15,7 @@
 > **🚀 Version 4.0.0 Release Candidate**
 > This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter. Help us make the stable release better!
 
-## Why Kreuzberg
+## Why use Kreuzberg
 
 - **Truly polyglot** – Native bindings for Rust, Python, TypeScript/Node.js, Ruby, Go, Java, C#
 - **Production-ready** – Battle-tested with comprehensive error handling and validation
@@ -28,116 +28,25 @@
 
 ## Kreuzberg Cloud (Coming Soon)
 
-Don't want to manage Rust infrastructure? **Kreuzberg Cloud** is a managed document extraction API launching soon.
+Don't want to manage Rust infrastructure? **Kreuzberg Cloud** is a managed document extraction API launching at the beginning of 2026.
 
-- REST API with async jobs and webhooks
+- Hosted REST API with async jobs and webhooks
 - Built-in chunking and embeddings for RAG pipelines
 - Premium OCR backends for 95%+ accuracy
 - No infrastructure to maintain
 
 ## Installation
 
-### Python
-
-```bash
-pip install kreuzberg
-```
-
-**[Python Documentation →](packages/python/README.md)**
-
-### Ruby
-
-```bash
-gem install kreuzberg
-```
-
-**[Ruby Documentation →](packages/ruby/README.md)**
-
-### TypeScript/Node.js
-
-```bash
-npm install @kreuzberg/node
-```
-
-**[TypeScript/Node.js Documentation →](crates/kreuzberg-node/README.md)**
-
-### Go
-
-```bash
-go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
-```
-
-Build the FFI crate (`cargo build -p kreuzberg-ffi --release`) and set `LD_LIBRARY_PATH`/`DYLD_FALLBACK_LIBRARY_PATH` to `target/release` so cgo can locate `libkreuzberg_ffi`.
-
-**[Go Documentation →](packages/go/README.md)**
-
-### Java
-
-```xml
-<dependency>
-    <groupId>dev.kreuzberg</groupId>
-    <artifactId>kreuzberg</artifactId>
-    <version>4.0.0-rc.1</version>
-</dependency>
-```
-
-Or with Gradle:
-
-```gradle
-implementation 'dev.kreuzberg:kreuzberg:4.0.0-rc.1'
-```
-
-Requires Java 25+ with Foreign Function & Memory API (Panama). Build the FFI crate (`cargo build -p kreuzberg-ffi --release`) for native library access.
-
-**[Java Documentation →](packages/java/README.md)**
-
-### C#
-
-```bash
-dotnet add package Goldziher.Kreuzberg --version 4.0.0-rc.1
-```
-
-Requires .NET 10.0+. Build the FFI crate (`cargo build -p kreuzberg-ffi --release`) and ensure the native library is accessible.
-
-**[C# Documentation →](packages/csharp/README.md)**
-
-### Rust
-
-```toml
-[dependencies]
-# Use git dependency for full feature support (including embeddings)
-kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", tag = "v4.0.0" }
-
-# Or use a specific branch
-# kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", branch = "main" }
-```
-
-**[Rust Documentation →](crates/kreuzberg/README.md)**
-
-### CLI
-
-```bash
-brew install goldziher/tap/kreuzberg
-```
-
-```bash
-cargo install kreuzberg-cli
-```
-
-**[CLI Documentation →](https://kreuzberg.dev/cli/)**
-
-## Quick Start
-
 Each language binding provides comprehensive documentation with examples and best practices. Choose your platform to get started:
 
-- **[Python Quick Start →](packages/python/README.md)** – Installation, basic usage, async/sync APIs
-- **[Ruby Quick Start →](packages/ruby/README.md)** – Installation, basic usage, configuration
-- **[TypeScript/Node.js Quick Start →](packages/typescript/README.md)** – Installation, types, promises
-- **[Go Quick Start →](packages/go/README.md)** – Installation, native library setup, sync/async extraction + batch APIs
-- **[Java Quick Start →](packages/java/README.md)** – Installation, FFM API usage, Maven/Gradle setup
-- **[C# Quick Start →](packages/csharp/README.md)** – Installation, P/Invoke usage, NuGet package
-- **[Rust Quick Start →](crates/kreuzberg/README.md)** – Crate usage, features, async/sync APIs
-- **[CLI Quick Start →](https://kreuzberg.dev/cli/)** – Command-line usage, batch processing, options
+- **[Python](packages/python/README.md)** – Installation, basic usage, async/sync APIs
+- **[Ruby](packages/ruby/README.md)** – Installation, basic usage, configuration
+- **[TypeScript/Node.js](crates/kreuzberg-node/README.md)** – Installation, types, promises
+- **[Go](packages/go/README.md)** – Installation, native library setup, sync/async extraction + batch APIs
+- **[Java](packages/java/README.md)** – Installation, FFM API usage, Maven/Gradle setup
+- **[C#](packages/csharp/README.md)** – Installation, P/Invoke usage, NuGet package
+- **[Rust](crates/kreuzberg/README.md)** – Crate usage, features, async/sync APIs
+- **[CLI](https://kreuzberg.dev/cli/usage/)** – Command-line usage, batch processing, options
 
 ## Supported Formats
 
@@ -177,7 +86,7 @@ All image formats support OCR: `.jpg`, `.jpeg`, `.png`, `.tiff`, `.tif`, `.bmp`,
 
 LaTeX (`.tex`), BibTeX (`.bib`), Jupyter (`.ipynb`), reStructuredText (`.rst`), Org Mode (`.org`), Markdown (`.md`)
 
-**[Complete Format Documentation](https://kreuzberg.dev/formats/)**
+**[Complete Format Documentation](https://kreuzberg.dev/reference/formats/)**
 
 ## Key Features
 
@@ -185,31 +94,31 @@ LaTeX (`.tex`), BibTeX (`.bib`), Jupyter (`.ipynb`), reStructuredText (`.rst`), 
 
 Multiple OCR backends (Tesseract, EasyOCR, PaddleOCR) with intelligent table detection and reconstruction. Extract structured data from scanned documents and images with configurable accuracy thresholds.
 
-**[OCR Backend Documentation →](https://kreuzberg.dev/user-guide/ocr-backends/)**
+**[OCR Backend Documentation →](https://kreuzberg.dev/guides/ocr/)**
 
 ### Batch Processing
 
 Process multiple documents concurrently with configurable parallelism. Optimize throughput for large-scale document processing workloads with automatic resource management.
 
-**[Batch Processing Guide →](https://kreuzberg.dev/user-guide/batch-processing/)**
+**[Batch Processing Guide →](https://kreuzberg.dev/features/#batch-processing)**
 
 ### Password-Protected PDFs
 
 Handle encrypted PDFs with single or multiple password attempts. Supports both RC4 and AES encryption with automatic fallback strategies.
 
-**[PDF Configuration →](https://kreuzberg.dev/user-guide/pdf-extraction/)**
+**[PDF Configuration →](https://kreuzberg.dev/migration/v3-to-v4/#password-protected-pdfs)**
 
 ### Language Detection
 
 Automatic language detection in extracted text using fast-langdetect. Configure confidence thresholds and access per-language statistics.
 
-**[Language Detection Guide →](https://kreuzberg.dev/user-guide/language-detection/)**
+**[Language Detection Guide →](https://kreuzberg.dev/features/#language-detection)**
 
 ### Metadata Extraction
 
 Extract comprehensive metadata from all supported formats: authors, titles, creation dates, page counts, EXIF data, and format-specific properties.
 
-**[Metadata Guide →](https://kreuzberg.dev/user-guide/metadata/)**
+**[Metadata Guide →](https://kreuzberg.dev/snippets/go/pdf_metadata_extractor/)**
 
 ## Deployment Options
 
@@ -217,13 +126,13 @@ Extract comprehensive metadata from all supported formats: authors, titles, crea
 
 Production-ready API server with OpenAPI documentation, health checks, and telemetry support. Deploy standalone or in containers with automatic format detection and streaming support.
 
-**[API Server Documentation →](https://kreuzberg.dev/user-guide/api-server/)**
+**[API Server Documentation →](https://kreuzberg.dev/guides/api-server/)**
 
 ### MCP Server (AI Integration)
 
 Model Context Protocol server for Claude and other AI assistants. Enables AI agents to extract and process documents directly with full configuration support.
 
-**[MCP Server Documentation →](https://kreuzberg.dev/user-guide/mcp-server/)**
+**[MCP Server Documentation →](https://kreuzberg.dev/guides/api-server/#mcp-server_1)**
 
 ### Docker
 
@@ -278,11 +187,11 @@ Kreuzberg is built with a Rust core for efficient document extraction and proces
 ## Documentation
 
 - **[Installation Guide](https://kreuzberg.dev/getting-started/installation/)** – Setup and dependencies
-- **[User Guide](https://kreuzberg.dev/user-guide/)** – Comprehensive usage guide
-- **[API Reference](https://kreuzberg.dev/api-reference/)** – Complete API documentation
-- **[Format Support](https://kreuzberg.dev/formats/)** – Supported file formats
-- **[OCR Backends](https://kreuzberg.dev/user-guide/ocr-backends/)** – OCR engine setup
-- **[CLI Guide](https://kreuzberg.dev/cli/)** – Command-line usage
+- **[User Guide](https://kreuzberg.dev/guides/extraction/)** – Comprehensive usage guide
+- **[API Reference](https://kreuzberg.dev/reference/api-python/)** – Complete API documentation
+- **[Format Support](https://kreuzberg.dev/reference/formats/)** – Supported file formats
+- **[OCR Backends](https://kreuzberg.dev/guides/ocr/)** – OCR engine setup
+- **[CLI Guide](https://kreuzberg.dev/cli/usage/)** – Command-line usage
 - **[Migration Guide](https://kreuzberg.dev/migration/v3-to-v4/)** – Upgrading from v3
 
 ## Contributing
@@ -291,4 +200,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details. Kreuzberg’s open-source is released under the MIT license, one of the most permissive licenses available ❤️  
+This means you can use it freely in both commercial and closed-source products with no obligations, no viral effects, and no licensing restrictions.
+
+Unlike AGPL-licensed PDF engines like MuPDF (which require you to open-source your entire codebase unless you buy a commercial license), MIT is safe for enterprise adoption and creates zero legal friction.
