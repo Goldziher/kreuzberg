@@ -87,7 +87,7 @@ jobs:
         run: scripts/ci/java/build-java.sh
 
       - name: Upload JAR
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: java-jar-${{ matrix.os }}
           path: packages/java/target/*.jar
@@ -163,7 +163,7 @@ jobs:
 
       - name: Upload Java unit test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: java-unit-reports-${{ matrix.os }}
           path: |
@@ -173,7 +173,7 @@ jobs:
 
       - name: Upload Java E2E test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: java-e2e-reports-${{ matrix.os }}
           path: |

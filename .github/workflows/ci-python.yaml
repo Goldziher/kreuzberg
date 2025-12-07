@@ -121,7 +121,7 @@ jobs:
           manylinux: off
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-${{ matrix.platform }}
           path: target/wheels/*.whl
@@ -159,7 +159,7 @@ jobs:
           uv run maturin sdist --out ../../target/wheels
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python-sdist
           path: target/wheels/*.tar.gz

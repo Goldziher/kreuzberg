@@ -107,7 +107,7 @@ jobs:
           echo "release_csharp=$(echo "$metadata" | jq -r '.release_csharp')" >> "$GITHUB_OUTPUT"
 
       - name: Upload release metadata
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: release-metadata
           path: release-metadata.json
@@ -423,7 +423,7 @@ jobs:
           df -h /
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact }}
           path: target/wheels/*.whl
@@ -486,7 +486,7 @@ jobs:
         run: bash scripts/build_python_sdist.sh dist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python-sdist
           path: dist/*.tar.gz
@@ -672,14 +672,14 @@ jobs:
 
       - name: Upload TypeScript definitions
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: node-typescript-defs
           path: typescript-defs
           retention-days: 14
 
       - name: Upload Node artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: node-bindings-${{ matrix.settings.target }}
           path: node-bindings-${{ matrix.settings.target }}.tar.gz
@@ -802,7 +802,7 @@ jobs:
 
       - name: Upload CLI artifact
         if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.tar.gz
@@ -810,7 +810,7 @@ jobs:
 
       - name: Upload CLI artifact (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.zip
@@ -1006,7 +1006,7 @@ jobs:
           ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle _2.5.12_ exec rake clean && bundle _2.5.12_ exec rake build"
 
       - name: Upload gem artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: rubygems-${{ matrix.label }}
           path: packages/ruby/pkg/*.gem
@@ -1094,7 +1094,7 @@ jobs:
         run: mvn clean package -DskipTests
 
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: maven-packages
           path: packages/java/target/*.jar
@@ -1162,7 +1162,7 @@ jobs:
             -o artifacts/csharp
 
       - name: Upload NuGet artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: csharp-nuget
           path: artifacts/csharp/*.nupkg
@@ -1234,7 +1234,7 @@ jobs:
           fi
 
       - name: Upload crate packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cargo-crates
           path: crate-artifacts/*.crate

@@ -170,7 +170,7 @@ jobs:
         run: scripts/ci/ruby/build-gem.sh
 
       - name: Upload gem
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gem-${{ matrix.platform }}-${{ matrix.ruby-version }}
           path: packages/ruby/pkg/*.gem

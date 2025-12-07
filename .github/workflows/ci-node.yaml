@@ -134,7 +134,7 @@ jobs:
           fi
 
       - name: Upload Node bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: napi-${{ matrix.target }}
           path: |

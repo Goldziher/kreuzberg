@@ -80,7 +80,7 @@ jobs:
           bash scripts/benchmarks/build-native-libs.sh
 
       - name: Upload target artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-target
           path: |
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-native-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -204,7 +204,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-python-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -270,7 +270,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-python-async-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -336,7 +336,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-python-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -409,7 +409,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-node-async-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -482,7 +482,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-node-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -549,7 +549,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-ruby-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -616,7 +616,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-ruby-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -686,7 +686,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-go-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -756,7 +756,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-go-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -822,7 +822,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-java-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -887,7 +887,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-kreuzberg-csharp-sync-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -953,7 +953,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-docling-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -1019,7 +1019,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-docling-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -1085,7 +1085,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-markitdown-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -1151,7 +1151,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-unstructured-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
@@ -1217,7 +1217,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-extractous-python-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
