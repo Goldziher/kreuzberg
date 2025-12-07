@@ -32,11 +32,14 @@ office = [
     # Pandoc replacement - native Rust extractors
     "dep:pulldown-cmark",
     "dep:biblatex",
-    "dep:orgize",
+    "dep:org",
     "dep:rtf-parser",
     "dep:rst_parser",
     "dep:epub",
+    "dep:fb2",
     "dep:typst-syntax",
+    "dep:tree-sitter",
+    "dep:tree-sitter-latex",
 ]
 email = ["dep:mail-parser", "dep:msg_parser"]
 html = ["dep:html-to-markdown-rs", "dep:html-escape", "dep:scraper"]
@@ -134,7 +137,7 @@ msg_parser = { version = "0.1.1", optional = true }
 html-to-markdown-rs = { version = "2.11.1", features = ["inline-images"], optional = true }
 html-escape = { version = "0.2.13", optional = true }
 scraper = { version = "0.24.0", optional = true }
-quick-xml = { version = "0.38.4", optional = true }
+quick-xml = { version = "0.38.4", features = ["serialize"], optional = true }
 tar = { version = "0.4.44", optional = true }
 sevenz-rust = { version = "0.6.1", optional = true }
 docx-lite = { version = "0.2.0", optional = true }
@@ -142,11 +145,16 @@ docx-lite = { version = "0.2.0", optional = true }
 # Pandoc replacement - native Rust format extractors (optional)
 pulldown-cmark = { version = "0.13", optional = true }
 biblatex = { version = "0.11", optional = true }
-orgize = { version = "0.9", optional = true }
+org = { version = "0.3", optional = true }
 rtf-parser = { version = "0.4", optional = true }
 rst_parser = { version = "0.4", optional = true }
 epub = { version = "2.1", optional = true }
+fb2 = { version = "0.4", optional = true }
 typst-syntax = { version = "0.14", optional = true }
+
+# LaTeX parsing with tree-sitter (optional)
+tree-sitter = { version = "0.25", optional = true }
+tree-sitter-latex = { version = "0.1", optional = true }
 
 # Processing features (optional)
 kreuzberg-tesseract = { version = "1.0.0-rc.1", optional = true }
@@ -164,7 +172,7 @@ ndarray = { version = "0.17.1", optional = true }
 kamadak-exif = { version = "0.6.1", optional = true }
 whatlang = { version = "0.18.0", optional = true }
 text-splitter = { version = "0.28.0", features = ["markdown"], optional = true }
-fastembed = { version = "5.3", default-features = false, features = [
+fastembed = { version = "5.4", default-features = false, features = [
     "hf-hub-rustls-tls",
     "ort-download-binaries",
 ], optional = true }
