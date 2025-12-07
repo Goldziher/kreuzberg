@@ -1,0 +1,678 @@
+EPUB 3 Styling Test Document: 0101
+
+Status of this Document
+
+This publication is currently considered [UNDER DEVELOPMENT] by the
+IDPF.
+
+This publication is part of version X.X of the EPUB 3.0 Compliance Test
+Suite released on TBD.
+
+Before using this publication to evaluate reading systems, testers are
+strongly encouraged to verify that they have the latest release by
+checking the current release version and date of the test suite at TBD
+
+This publication is one of several that currently comprise the EPUB 3
+conformance test suite for reflowable content. The complete test suite
+includes all of the following publications:
+
+1.  .
+
+About this Document
+
+This document focuses on human-evaluated binary (pass/fail) tests in a
+reflowable context. Tests for fixed-layout content and other individual
+tests that require a dedicated epub file are available in additional
+sibling documents; refer to the test suite wiki
+(https://github.com/mgylling/epub-testsuite/wiki/Overview) for
+additional information.
+
+Conventions
+
+The following conventions are used throughout the document:
+
+1. Locating a test
+
+    Tests for required Reading System functionality are preceded by the
+    label: [REQUIRED]
+
+    Tests for optional Reading System functionality are preceded by the
+    label: [OPTIONAL]
+
+2. Performing the test
+    Each test includes a description of its purpose followed by the
+    actual test statement, which can always be evaluated to true or
+    false. These statements typically have the form: "If [some
+    condition], the test passes".
+
+3. Scoring in the results form
+    @@@TODO provide info on where to get the results form
+
+EPUB Style Sheets
+
+This section contains tests for styling and layout.
+
+[REQUIRED] style-110 Multi-Column Layouts
+
+Tests whether the CSS Multi-Column Layout properties are supported.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+If the preceding text is rendered in three columns, the test passes.
+
+Lists
+
+The list-style-type property
+
+[REQUIRED] style-009 decimal
+
+Tests whether the list-style-type property set to decimal is supported
+on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has decimal markers in ascending order, the test
+passes.
+
+[REQUIRED] style-010 circle
+
+Tests whether the list-style-type property set to circle is supported on
+a ul element.
+
+- Lorem
+- Ipsum
+- Dolor
+- Sit
+- Amet
+
+If the preceding list has circle markers, the test passes.
+
+[REQUIRED] style-011 square
+
+Tests whether the list-style-type property set to square is supported on
+a ul element.
+
+- Lorem
+- Ipsum
+- Dolor
+- Sit
+- Amet
+
+If the preceding list has square markers, the test passes.
+
+[REQUIRED] style-012 disc
+
+Tests whether the list-style-type property set to disc is supported on a
+ul element.
+
+- Lorem
+- Ipsum
+- Dolor
+- Sit
+- Amet
+
+If the preceding list has disc markers, the test passes.
+
+[REQUIRED] style-013 lower-latin
+
+Tests whether the list-style-type property set to lower-latin is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has lower-latin markers in ascending order, the
+test passes.
+
+[REQUIRED] style-014 lower-roman
+
+Tests whether the list-style-type property set to lower-roman is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has lower-roman markers in ascending order, the
+test passes.
+
+[REQUIRED] style-015 upper-alpha
+
+Tests whether the list-style-type property set to upper-alpha is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has upper-alpha markers in ascending order, the
+test passes.
+
+[REQUIRED] style-016 hiragana
+
+Tests whether the list-style-type property set to hiragana is supported
+on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has hiragana markers in ascending order, the test
+passes.
+
+[REQUIRED] style-017 hiragana-iroha
+
+Tests whether the list-style-type property set to hiragana-iroha is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has hiragana-iroha markers in ascending order, the
+test passes.
+
+[REQUIRED] style-018 katakana
+
+Tests whether the list-style-type property set to katakana is supported
+on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has katakana markers in ascending order, the test
+passes.
+
+[REQUIRED] style-019 katakana-iroha
+
+Tests whether the list-style-type property set to katakana-iroha is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has katakana-iroha markers in ascending order, the
+test passes.
+
+[REQUIRED] style-020 upper-roman
+
+Tests whether the list-style-type property set to upper-roman is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has upper-roman markers in ascending order, the
+test passes.
+
+[REQUIRED] style-021 upper-latin
+
+Tests whether the list-style-type property set to upper-latin is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has upper-latin markers in ascending order, the
+test passes.
+
+[REQUIRED] style-022 lower-alpha
+
+Tests whether the list-style-type property set to lower-alpha is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has lower-alpha markers in ascending order, the
+test passes.
+
+[REQUIRED] style-023 lower-greek
+
+Tests whether the list-style-type property set to lower-greek is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has lower-greek markers in ascending order, the
+test passes.
+
+[REQUIRED] style-024 armenian
+
+Tests whether the list-style-type property set to armenian is supported
+on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has armenian markers in ascending order, the test
+passes.
+
+[REQUIRED] style-025 cjk-ideographic
+
+Tests whether the list-style-type property set to cjk-ideographic is
+supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has cjk-ideographic markers in ascending order,
+the test passes.
+
+[REQUIRED] style-026 decimal-leading-zero
+
+Tests whether the list-style-type property set to decimal-leading-zero
+is supported on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has decimal-leading-zero markers in ascending
+order, the test passes.
+
+[REQUIRED] style-027 georgian
+
+Tests whether the list-style-type property set to georgian is supported
+on a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has georgian markers in ascending order, the test
+passes.
+
+[REQUIRED] style-028 hebrew
+
+Tests whether the list-style-type property set to hebrew is supported on
+a ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has hebrew markers in ascending order, the test
+passes.
+
+[REQUIRED] style-029 none
+
+Tests whether the list-style-type property set to none is supported on a
+ol element.
+
+1.  Lorem
+2.  Ipsum
+3.  Dolor
+4.  Sit
+5.  Amet
+
+If the preceding list has no markers, the test passes.
+
+The list-style property
+
+[REQUIRED] style-030 images
+
+Tests whether the list-style shorthand property is supported using a gif
+on a ul element.
+
+- Lorem
+- Ipsum
+- Dolor
+- Sit
+- Amet
+
+If the preceding list has the purple and aqua square bullet the test
+passes.
+
+The list-style-position property
+
+[REQUIRED] style-040 The list-style-position property: inside
+
+Tests whether the list-style-position property set to inside is
+supported on a ul element.
+
+- Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+  aliquip ex ea commodo consequat.
+- Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+  aliquip ex ea commodo consequat.
+- Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+  aliquip ex ea commodo consequat.
+
+If the preceding list has markers inside the indentation, the test
+passes.
+
+[REQUIRED] style-041 The list-style-position property: outside
+
+Tests whether the list-style-position property set to outside is
+supported on a ul element.
+
+- Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+  aliquip ex ea commodo consequat.
+- Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+  aliquip ex ea commodo consequat.
+- Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+  aliquip ex ea commodo consequat.
+
+If the preceding list has the default setting (marker outside the
+indentation), the test passes.
+
+The HTML start attribute
+
+[REQUIRED] style-050 Without list-style-type set
+
+Tests whether the start attribute is supported on a ol element with no
+list-style-type property.
+
+25. Lorem
+26. Ipsum
+27. Dolor
+28. Sit
+29. Amet
+
+If the preceding list starts at 25, the test passes.
+
+[REQUIRED] style-051 With list-style-type set
+
+Tests whether the start attribute is supported on a ol element with a
+list-style-type property.
+
+50. Lorem
+51. Ipsum
+52. Dolor
+53. Sit
+54. Amet
+
+If the preceding list starts at 'L' (50), the test passes.
+
+@media Rules
+
+[REQUIRED] style-210 all
+
+Tests whether the @media rule set to all is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+[REQUIRED] style-211 screen
+
+Tests whether the @media rule set to screen is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+[REQUIRED] style-212 handheld
+
+Tests whether the @media rule set to handheld is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+[REQUIRED] style-213 tv
+
+Tests whether the @media rule set to tv is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+[REQUIRED] style-220 orientation:landscape
+
+Tests whether the @media rule set to orientation:landscape is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL" when the device is held in
+landscape mode, and the device supports multiple orientations, the test
+fails.
+
+[REQUIRED] style-221 orientation:portrait
+
+Tests whether the @media rule set to orientation:portrait is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL" when the device is held in
+portrait mode, and the device supports multiple orientations, the test
+fails.
+
+[REQUIRED] style-230 min-width
+
+Tests whether the @media rule set to min-width:200px is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+[REQUIRED] style-231 max-width
+
+Tests whether the @media rule set to max-width:2000px is supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+[REQUIRED] style-240 min-device-width
+
+Tests whether the @media rule set to min-device-width:200px is
+supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+[REQUIRED] style-241 max-device-width
+
+Tests whether the @media rule set to max-device-width:2000px is
+supported.
+
+FAIL
+
+If the preceding paragraph reads "FAIL", the test fails.
+
+The text-transform property
+
+[REQUIRED] style-310 uppercase
+
+Tests whether the text-transform property set to uppercase is supported.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+If the preceding paragraph is in upper case, the test passes.
+
+[REQUIRED] style-311 capitalize
+
+Tests whether the text-transform property set to capitalize is
+supported.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+If each first letter of each word in the preceding paragraph is in upper
+case, the test passes.
+
+[REQUIRED] style-312 lowercase
+
+Tests whether the text-transform property set to lowercase is supported.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+mollit anim id est laborum.
+
+If the preceding paragraph is in lower case, the test passes.
+
+The epub-ruby-position property
+
+[REQUIRED] style-410 over
+
+Tests whether the -epub-ruby-position property set to over is supported.
+
+Lorem Ipsum (Lorem Ipsum)
+
+If the Ruby text is positioned on the over side of the ruby base, the
+test passes.
+
+[REQUIRED] style-411 under
+
+Tests whether the -epub-ruby-position property set to under is
+supported.
+
+Lorem Ipsum (Lorem Ipsum)
+
+If the Ruby text is positioned on the under side of the ruby base, the
+test passes.
+
+[REQUIRED] style-412 inter-character
+
+Tests whether the -epub-ruby-position property set to inter-caracter is
+supported.
+
+Lorem Ipsum (Lorem Ipsum)
+
+If the Ruby text is positioned on the right side of the base text, the
+test passes.

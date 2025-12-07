@@ -1,0 +1,15 @@
+Python Code
+
+    def hello():
+        print("Hello, World!")
+
+Bash Code
+
+    echo "Testing bash"
+    ls -la
+
+JavaScript Code
+
+    function greet(name) {
+        return `Hello, ${name}!`;
+    }

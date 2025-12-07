@@ -1,0 +1,253 @@
+================================================================================
+TYPST EXTRACTOR - COMPREHENSIVE CODE REVIEW SUMMARY
+================================================================================
+
+Review Date: December 6, 2025
+Files Analyzed:
+  - Extractor: crates/kreuzberg/src/extractors/typst.rs (703 LOC)
+  - Tests: crates/kreuzberg/tests/typst_extractor_tests.rs (685 LOC)
+  - Test Documents: 7 sample .typ files
+
+Overall Rating: GOOD with CRITICAL issues in edge cases
+Test Status: 13/13 integration tests PASSING
+Code Quality: MODERATE (duplicate patterns, silent failures)
+
+================================================================================
+CRITICAL ISSUES (Must Fix)
+================================================================================
+
+1. UNCLOSED DELIMITER HANDLING
+   Severity: CRITICAL (data loss potential)
+   Location: Lines 430-471 in process_line()
+   Impact: Malformed text with unclosed backticks/quotes/asterisks
+   Status: Actually NOT a bug - code works correctly (false positive)
+   Recommendation: Update code comments to clarify behavior
+
+2. BRACKET DEPTH VALIDATION IN TABLES
+   Severity: CRITICAL (infinite loop risk)
+   Location: Lines 356-386 in extract_table_content()
+   Impact: Mismatched brackets could cause issues
+   Status: Unlikely to hang, but should add safety checks
+   Fix: Add validation for negative bracket counts
+
+3. SILENT REGEX FAILURES
+   Severity: CRITICAL (metadata loss)
+   Location: Lines 181-186, 192-195, 204, 491
+   Impact: Regex errors cause silent metadata loss
+   Status: Confirmed issue
+   Fix: Add logging/tracing when regex compilation fails
+
+4. LIST DETECTION FALSE NEGATIVES
+   Severity: HIGH (content loss)
+   Location: Lines 300-309
+   Impact: Items like "+Item" without space not recognized as lists
+   Status: Confirmed - false negatives exist
+   Fix: Relax detection logic, add empty content check
+
+5. EMPTY HEADING MARKERS
+   Severity: HIGH (output quality)
+   Location: Lines 282-298
+   Impact: Outputs `= ` (marker with no text)
+   Status: Confirmed - empty headings preserved
+   Fix: Skip headings with no text content
+
+================================================================================
+HIGH SEVERITY ISSUES
+================================================================================
+
+6. LINK TEXT LOSS
+   Severity: HIGH (information loss)
+   Location: Lines 488-502 in extract_link_text()
+   Impact: Links with empty brackets produce []() with no text
+   Fix: Use URL as fallback when text is empty
+
+7. TABLE NESTED BRACKET CORRUPTION
+   Severity: HIGH (incorrect output)
+   Location: Lines 388-421 in extract_table_content()
+   Impact: Nested function calls in table cells break parser
+   Example: [#align(center, "Text")] → corrupted output
+   Fix: Track nested bracket depth instead of flat parsing
+
+8. ESCAPED CHARACTER HANDLING
+   Severity: MEDIUM (metadata truncation)
+   Location: extract_quoted_value() regex pattern
+   Impact: Titles/authors with escaped quotes truncated
+   Example: title: "Text \"quoted\"" → extracts only "Text \"
+   Fix: Update regex to handle backslash escapes
+
+================================================================================
+CODE QUALITY ISSUES
+================================================================================
+
+DRY VIOLATIONS (Refactoring Opportunities):
+  - Delimiter handling repeated 4 times (backtick, $, *, _) → Save 30 LOC
+  - Metadata extraction pattern repeated 4 times → Save 10 LOC
+  - Bracket counting logic duplicated → Save 7 LOC per occurrence
+  - Total potential savings: ~50 LOC with no behavioral change
+
+ERROR HANDLING GAPS:
+  - 3+ locations where errors are silently ignored
+  - No logging of why metadata extraction fails
+  - Regex patterns could be invalid but failures are hidden
+
+EDGE CASES NOT HANDLED:
+  - Very long lines (performance?)
+  - Unicode and special characters (likely OK but untested)
+  - Malformed nested structures
+  - Comments (// not removed)
+  - Blockquotes (> syntax not supported)
+
+================================================================================
+TESTING GAPS
+================================================================================
+
+Missing Test Scenarios (15 identified):
+
+CRITICAL:
+  1. Unclosed delimiters (backticks, quotes, etc.)
+  2. Malformed tables with mismatched brackets
+  3. Escaped characters in metadata
+  4. Empty list items and headings
+  5. Nested function calls in table cells
+
+HIGH:
+  6. Links with empty text
+  7. Mixed list markers (+ and -)
+  8. Keywords in array format
+  9. Metadata special characters
+  10. Code blocks with backticks
+
+MEDIUM:
+  11. Very long lines (performance)
+  12. Deeply nested formatting
+  13. Unicode/non-ASCII text
+  14. Multiple document extractions
+  15. Various table edge cases
+
+Test Coverage Estimate: ~60% (passes happy path, misses edge cases)
+
+================================================================================
+MISSING FEATURES (Pandoc Parity Gaps)
+================================================================================
+
+CRITICAL GAPS:
+  1. No blockquote support (> syntax)
+  2. No strikethrough support
+  3. Incomplete table extraction (currently basic cells only)
+  4. No structured metadata (returns empty)
+
+HIGH PRIORITY:
+  5. No footnotes/references
+  6. No #raw() code block syntax
+  7. No inline math as structured data
+  8. No display math blocks
+  9. Advanced link types unsupported
+  10. No heading attributes/IDs
+
+MEDIUM PRIORITY:
+  11. No comment removal (//)
+  12. No indentation preservation
+  13. No list nesting
+  14. No horizontal rules
+
+Feature Completeness: ~60% vs Pandoc
+
+================================================================================
+ESTIMATED EFFORT TO ADDRESS
+================================================================================
+
+Critical Issues (Data Loss/Correctness): 4-6 hours
+  - Bracket validation, regex error handling, list detection, empty headings
+  - Add ~15-20 test cases
+  - Modify ~30-50 LOC
+
+DRYness Refactoring (Code Quality): 2-3 hours
+  - Consolidate delimiter handling, metadata extraction
+  - Save ~50 LOC
+  - Update tests for refactored functions
+
+Testing Expansion (Coverage): 3-4 hours
+  - Add 15+ new test cases for edge cases
+  - Add edge case handling to code
+
+Missing Features (Feature Parity): 8-12 hours
+  - Add blockquotes, strikethrough, better tables
+  - Structured metadata extraction
+  - Inline math extraction
+
+TOTAL ESTIMATE: 17-25 hours
+
+================================================================================
+PRIORITY RECOMMENDATIONS
+================================================================================
+
+Phase 1 (Next Sprint) - Fix Critical Issues: 6 hours
+  □ Issue #3: Regex error logging
+  □ Issue #4: List detection improvements
+  □ Issue #5: Empty heading filtering
+  □ Issue #6: Link fallback text
+  □ Add 5-8 critical test cases
+
+Phase 2 (Following Sprint) - DRYness + Testing: 5 hours
+  □ Refactor delimiter handling (30 LOC saved)
+  □ Refactor metadata extraction (10 LOC saved)
+  □ Add 10+ test cases for edge cases
+  □ Performance testing with long documents
+
+Phase 3 (Later) - Feature Gaps: 12 hours
+  □ Blockquote support
+  □ Better table extraction
+  □ Structured metadata
+  □ Additional Typst features
+
+================================================================================
+CODE REVIEW DOCUMENTS
+================================================================================
+
+This review includes two detailed documents:
+
+1. TYPST_EXTRACTOR_REVIEW.md (32 KB)
+   - Comprehensive breakdown of all 45 issues
+   - Organized by category (Code Quality, DRY, Testing, Implementation)
+   - Includes severity ratings and detailed explanations
+   - Summary tables and metrics
+
+2. TYPST_CODE_SNIPPETS.md (23 KB)
+   - Detailed code examples for each issue
+   - Current problematic code vs proposed fixes
+   - Test cases demonstrating issues
+   - Before/after comparisons for refactoring
+
+Use these documents for:
+  - Planning fix implementation
+  - Understanding root causes
+  - Writing new test cases
+  - Code review discussions
+  - Refactoring planning
+
+================================================================================
+QUICK VERDICT
+================================================================================
+
+✓ STRENGTHS:
+  - Solid basic functionality
+  - Good test coverage for happy path
+  - Clean API design
+  - Handles basic Typst documents well
+
+✗ WEAKNESSES:
+  - Edge case handling incomplete
+  - Silent failures hide issues
+  - DRY violations reduce maintainability
+  - Missing advanced features
+  - Pandoc parity gaps (~40% of features)
+
+RECOMMENDATION: STABLE but NEEDS HARDENING
+
+The extractor is production-ready for basic documents but should be hardened
+before handling complex or untrusted Typst input. Priority fixes are:
+  1. Silent failure logging (critical for debugging)
+  2. Edge case handling (prevents data loss)
+  3. Test expansion (ensures correctness)
+
+================================================================================

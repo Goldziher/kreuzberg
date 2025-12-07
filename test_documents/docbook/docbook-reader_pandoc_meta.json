@@ -1,0 +1,4179 @@
+{
+	"pandoc-api-version": [1, 23, 1],
+	"meta": {
+		"author": {
+			"t": "MetaList",
+			"c": [
+				{ "t": "MetaInlines", "c": [{ "t": "Str", "c": "John" }, { "t": "Space" }, { "t": "Str", "c": "MacFarlane" }] },
+				{ "t": "MetaInlines", "c": [{ "t": "Str", "c": "Anonymous" }] }
+			]
+		},
+		"date": {
+			"t": "MetaInlines",
+			"c": [
+				{ "t": "Str", "c": "July" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "17," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "2006" }
+			]
+		},
+		"title": {
+			"t": "MetaInlines",
+			"c": [
+				{ "t": "Str", "c": "Pandoc" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Test" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Suite" }
+			]
+		}
+	},
+	"blocks": [
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "set" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "of" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "tests" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "for" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "pandoc." },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Most" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "of" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "them" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "are" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "adapted" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "from" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "John" },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "Gruber’s" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "markdown" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "test" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "suite." }
+			]
+		},
+		{ "t": "Header", "c": [1, ["headers", [], []], [{ "t": "Str", "c": "Headers" }]] },
+		{
+			"t": "Header",
+			"c": [
+				2,
+				["level-2-with-an-embedded-link", [], []],
+				[
+					{ "t": "Str", "c": "Level" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "2" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "with" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "an" },
+					{ "t": "Space" },
+					{
+						"t": "Link",
+						"c": [
+							["", [], []],
+							[{ "t": "Str", "c": "embedded" }, { "t": "Space" }, { "t": "Str", "c": "link" }],
+							["/url", ""]
+						]
+					}
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				3,
+				["level-3-with-emphasis", [], []],
+				[
+					{ "t": "Str", "c": "Level" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "3" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "with" },
+					{ "t": "Space" },
+					{ "t": "Emph", "c": [{ "t": "Str", "c": "emphasis" }] }
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [4, ["level-4", [], []], [{ "t": "Str", "c": "Level" }, { "t": "Space" }, { "t": "Str", "c": "4" }]]
+		},
+		{
+			"t": "Header",
+			"c": [5, ["level-5", [], []], [{ "t": "Str", "c": "Level" }, { "t": "Space" }, { "t": "Str", "c": "5" }]]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Hi." }] },
+		{
+			"t": "Header",
+			"c": [1, ["level-1", [], []], [{ "t": "Str", "c": "Level" }, { "t": "Space" }, { "t": "Str", "c": "1" }]]
+		},
+		{
+			"t": "Header",
+			"c": [
+				2,
+				["level-2-with-emphasis", [], []],
+				[
+					{ "t": "Str", "c": "Level" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "2" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "with" },
+					{ "t": "Space" },
+					{ "t": "Emph", "c": [{ "t": "Str", "c": "emphasis" }] }
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [3, ["level-3", [], []], [{ "t": "Str", "c": "Level" }, { "t": "Space" }, { "t": "Str", "c": "3" }]]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "no" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "blank" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "line" }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [4, ["", ["unnumbered"], []], [{ "t": "Str", "c": "Level" }, { "t": "Space" }, { "t": "Str", "c": "4" }]]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "An" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "unnumbered" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "section." }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [2, ["level-2", [], []], [{ "t": "Str", "c": "Level" }, { "t": "Space" }, { "t": "Str", "c": "2" }]]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "no" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "blank" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "line" }
+			]
+		},
+		{ "t": "Header", "c": [1, ["paragraphs", [], []], [{ "t": "Str", "c": "Paragraphs" }]] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here’s" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "regular" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "paragraph." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "In" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Markdown" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "1.0.0" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "earlier." },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Version" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "8." },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "line" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "turns" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "into" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "list" },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "item." },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Because" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "hard-wrapped" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "line" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "in" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "middle" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "of" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "paragraph" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "looked" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "like" },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "list" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "item." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here’s" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "one" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "bullet." },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "*" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "criminey." }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				1,
+				["block-quotes", [], []],
+				[{ "t": "Str", "c": "Block" }, { "t": "Space" }, { "t": "Str", "c": "Quotes" }]
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "E-mail" }, { "t": "Space" }, { "t": "Str", "c": "style:" }] },
+		{
+			"t": "BlockQuote",
+			"c": [
+				{
+					"t": "Para",
+					"c": [
+						{ "t": "Str", "c": "This" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "is" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "a" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "block" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "quote." },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "It" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "is" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "pretty" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "short." }
+					]
+				}
+			]
+		},
+		{
+			"t": "BlockQuote",
+			"c": [
+				{
+					"t": "Para",
+					"c": [
+						{ "t": "Str", "c": "Code" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "in" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "a" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "block" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "quote:" }
+					]
+				},
+				{ "t": "CodeBlock", "c": [["", [], []], "sub status {\n    print \"working\";\n}"] },
+				{
+					"t": "CodeBlock",
+					"c": [["", ["numberLines"], []], "sub status {\n    print \"working with line numbers\";\n}"]
+				},
+				{ "t": "CodeBlock", "c": [["", [], []], "% ls"] },
+				{ "t": "Para", "c": [{ "t": "Str", "c": "A" }, { "t": "Space" }, { "t": "Str", "c": "list:" }] },
+				{
+					"t": "OrderedList",
+					"c": [
+						[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+						[
+							[{ "t": "Para", "c": [{ "t": "Str", "c": "item" }, { "t": "Space" }, { "t": "Str", "c": "one" }] }],
+							[{ "t": "Para", "c": [{ "t": "Str", "c": "item" }, { "t": "Space" }, { "t": "Str", "c": "two" }] }]
+						]
+					]
+				},
+				{
+					"t": "Para",
+					"c": [
+						{ "t": "Str", "c": "Nested" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "block" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "quotes:" }
+					]
+				},
+				{ "t": "BlockQuote", "c": [{ "t": "Para", "c": [{ "t": "Str", "c": "nested" }] }] },
+				{ "t": "BlockQuote", "c": [{ "t": "Para", "c": [{ "t": "Str", "c": "nested" }] }] }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "should" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "not" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "be" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "block" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "quote:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "2" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": ">" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "1." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "And" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "following" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "paragraph." }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [1, ["code-blocks", [], []], [{ "t": "Str", "c": "Code" }, { "t": "Space" }, { "t": "Str", "c": "Blocks" }]]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Code:" }] },
+		{
+			"t": "CodeBlock",
+			"c": [
+				["", [], []],
+				"---- (should be four hyphens)\n\nsub status {\n    print \"working\";\n}\n\nthis code block is indented by one tab"
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "And:" }] },
+		{
+			"t": "CodeBlock",
+			"c": [
+				["", [], []],
+				"    this code block is indented by two tabs\n\nThese should not be escaped:  \\$ \\\\ \\> \\[ \\{"
+			]
+		},
+		{ "t": "Header", "c": [1, ["lists", [], []], [{ "t": "Str", "c": "Lists" }]] },
+		{ "t": "Header", "c": [2, ["unordered", [], []], [{ "t": "Str", "c": "Unordered" }]] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Asterisks" }, { "t": "Space" }, { "t": "Str", "c": "loose:" }] },
+		{
+			"t": "BulletList",
+			"c": [
+				[{ "t": "Para", "c": [{ "t": "Str", "c": "asterisk" }, { "t": "Space" }, { "t": "Str", "c": "1" }] }],
+				[{ "t": "Para", "c": [{ "t": "Str", "c": "asterisk" }, { "t": "Space" }, { "t": "Str", "c": "2" }] }],
+				[{ "t": "Para", "c": [{ "t": "Str", "c": "asterisk" }, { "t": "Space" }, { "t": "Str", "c": "3" }] }]
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Asterisks" }, { "t": "Space" }, { "t": "Str", "c": "tight:" }] },
+		{
+			"t": "BulletList",
+			"c": [
+				[{ "t": "Plain", "c": [{ "t": "Str", "c": "Plus" }, { "t": "Space" }, { "t": "Str", "c": "1" }] }],
+				[{ "t": "Plain", "c": [{ "t": "Str", "c": "Plus" }, { "t": "Space" }, { "t": "Str", "c": "2" }] }],
+				[{ "t": "Plain", "c": [{ "t": "Str", "c": "Plus" }, { "t": "Space" }, { "t": "Str", "c": "3" }] }]
+			]
+		},
+		{ "t": "Header", "c": [2, ["ordered", [], []], [{ "t": "Str", "c": "Ordered" }]] },
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "First" }] }],
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "Second" }] }],
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "Third" }] }]
+				]
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "and" }, { "t": "Space" }, { "t": "Str", "c": "tight:" }] },
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[{ "t": "Plain", "c": [{ "t": "Str", "c": "One" }] }],
+					[{ "t": "Plain", "c": [{ "t": "Str", "c": "Two" }] }],
+					[{ "t": "Plain", "c": [{ "t": "Str", "c": "Three" }] }]
+				]
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Multiple" }, { "t": "Space" }, { "t": "Str", "c": "paragraphs:" }] },
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "Item" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "1," },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "graf" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "one." }
+							]
+						},
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "Item" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "1." },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "graf" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "two." },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "The" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "quick" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "brown" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "fox" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "jumped" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "over" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "lazy" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "dog’s" },
+								{ "t": "SoftBreak" },
+								{ "t": "Str", "c": "back." }
+							]
+						}
+					],
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "Item" }, { "t": "Space" }, { "t": "Str", "c": "2." }] }],
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "Item" }, { "t": "Space" }, { "t": "Str", "c": "3." }] }]
+				]
+			]
+		},
+		{ "t": "Header", "c": [2, ["nested", [], []], [{ "t": "Str", "c": "Nested" }]] },
+		{
+			"t": "BulletList",
+			"c": [
+				[
+					{ "t": "Para", "c": [{ "t": "Str", "c": "Tab" }] },
+					{
+						"t": "BulletList",
+						"c": [
+							[
+								{ "t": "Para", "c": [{ "t": "Str", "c": "Tab" }] },
+								{ "t": "BulletList", "c": [[{ "t": "Para", "c": [{ "t": "Str", "c": "Tab" }] }]] }
+							]
+						]
+					}
+				]
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Here’s" }, { "t": "Space" }, { "t": "Str", "c": "another:" }] },
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "First" }] }],
+					[
+						{ "t": "Para", "c": [{ "t": "Str", "c": "Second:" }] },
+						{
+							"t": "BulletList",
+							"c": [
+								[{ "t": "Para", "c": [{ "t": "Str", "c": "Fee" }] }],
+								[{ "t": "Para", "c": [{ "t": "Str", "c": "Fie" }] }],
+								[{ "t": "Para", "c": [{ "t": "Str", "c": "Foe" }] }]
+							]
+						}
+					],
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "Third" }] }]
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Same" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "thing" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "but" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "paragraphs:" }
+			]
+		},
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "First" }] }],
+					[
+						{ "t": "Para", "c": [{ "t": "Str", "c": "Second:" }] },
+						{
+							"t": "BulletList",
+							"c": [
+								[{ "t": "Para", "c": [{ "t": "Str", "c": "Fee" }] }],
+								[{ "t": "Para", "c": [{ "t": "Str", "c": "Fie" }] }],
+								[{ "t": "Para", "c": [{ "t": "Str", "c": "Foe" }] }]
+							]
+						}
+					],
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "Third" }] }]
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				2,
+				["tabs-and-spaces", [], []],
+				[
+					{ "t": "Str", "c": "Tabs" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "and" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "spaces" }
+				]
+			]
+		},
+		{
+			"t": "BulletList",
+			"c": [
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "this" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "is" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "a" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "list" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "item" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "indented" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "with" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "tabs" }
+						]
+					}
+				],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "this" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "is" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "a" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "list" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "item" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "indented" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "with" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "spaces" }
+						]
+					},
+					{
+						"t": "BulletList",
+						"c": [
+							[
+								{
+									"t": "Para",
+									"c": [
+										{ "t": "Str", "c": "this" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "is" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "an" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "example" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "list" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "item" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "indented" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "with" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "tabs" }
+									]
+								}
+							],
+							[
+								{
+									"t": "Para",
+									"c": [
+										{ "t": "Str", "c": "this" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "is" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "an" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "example" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "list" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "item" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "indented" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "with" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "spaces" }
+									]
+								}
+							]
+						]
+					}
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				2,
+				["fancy-list-markers", [], []],
+				[
+					{ "t": "Str", "c": "Fancy" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "list" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "markers" }
+				]
+			]
+		},
+		{
+			"t": "OrderedList",
+			"c": [
+				[2, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "begins" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "with" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "2" }
+							]
+						}
+					],
+					[
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "and" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "now" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "3" }
+							]
+						},
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "with" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "a" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "continuation" }
+							]
+						},
+						{
+							"t": "OrderedList",
+							"c": [
+								[4, { "t": "LowerRoman" }, { "t": "DefaultDelim" }],
+								[
+									[
+										{
+											"t": "Para",
+											"c": [
+												{ "t": "Str", "c": "sublist" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "with" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "roman" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "numerals," },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "starting" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "with" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "4" }
+											]
+										}
+									],
+									[
+										{ "t": "Para", "c": [{ "t": "Str", "c": "more" }, { "t": "Space" }, { "t": "Str", "c": "items" }] },
+										{
+											"t": "OrderedList",
+											"c": [
+												[1, { "t": "UpperAlpha" }, { "t": "DefaultDelim" }],
+												[
+													[
+														{
+															"t": "Para",
+															"c": [{ "t": "Str", "c": "a" }, { "t": "Space" }, { "t": "Str", "c": "subsublist" }]
+														}
+													],
+													[
+														{
+															"t": "Para",
+															"c": [{ "t": "Str", "c": "a" }, { "t": "Space" }, { "t": "Str", "c": "subsublist" }]
+														}
+													]
+												]
+											]
+										}
+									]
+								]
+							]
+						}
+					]
+				]
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Nesting:" }] },
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "UpperAlpha" }, { "t": "DefaultDelim" }],
+				[
+					[
+						{ "t": "Para", "c": [{ "t": "Str", "c": "Upper" }, { "t": "Space" }, { "t": "Str", "c": "Alpha" }] },
+						{
+							"t": "OrderedList",
+							"c": [
+								[1, { "t": "UpperRoman" }, { "t": "DefaultDelim" }],
+								[
+									[
+										{
+											"t": "Para",
+											"c": [{ "t": "Str", "c": "Upper" }, { "t": "Space" }, { "t": "Str", "c": "Roman." }]
+										},
+										{
+											"t": "OrderedList",
+											"c": [
+												[6, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+												[
+													[
+														{
+															"t": "Para",
+															"c": [
+																{ "t": "Str", "c": "Decimal" },
+																{ "t": "Space" },
+																{ "t": "Str", "c": "start" },
+																{ "t": "Space" },
+																{ "t": "Str", "c": "with" },
+																{ "t": "Space" },
+																{ "t": "Str", "c": "6" }
+															]
+														},
+														{
+															"t": "OrderedList",
+															"c": [
+																[3, { "t": "LowerAlpha" }, { "t": "DefaultDelim" }],
+																[
+																	[
+																		{
+																			"t": "Para",
+																			"c": [
+																				{ "t": "Str", "c": "Lower" },
+																				{ "t": "Space" },
+																				{ "t": "Str", "c": "alpha" },
+																				{ "t": "Space" },
+																				{ "t": "Str", "c": "with" },
+																				{ "t": "Space" },
+																				{ "t": "Str", "c": "paren" }
+																			]
+																		}
+																	]
+																]
+															]
+														}
+													]
+												]
+											]
+										}
+									]
+								]
+							]
+						}
+					]
+				]
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Autonumbering:" }] },
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "Autonumber." }] }],
+					[
+						{ "t": "Para", "c": [{ "t": "Str", "c": "More." }] },
+						{
+							"t": "OrderedList",
+							"c": [
+								[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+								[[{ "t": "Para", "c": [{ "t": "Str", "c": "Nested." }] }]]
+							]
+						}
+					]
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Should" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "not" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "be" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "list" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "item:" }
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "M.A. 2007" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "B." }, { "t": "Space" }, { "t": "Str", "c": "Williams" }] },
+		{ "t": "Header", "c": [2, ["callout", [], []], [{ "t": "Str", "c": "Callout" }]] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Simple." }] },
+		{
+			"t": "BulletList",
+			"c": [
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "A" },
+							{ "t": "Space" },
+							{ "t": "Code", "c": [["", [], []], "__letrec"] },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "is" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "equivalent" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "to" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "a" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "normal" },
+							{ "t": "SoftBreak" },
+							{ "t": "Str", "c": "Haskell" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "LET." }
+						]
+					}
+				],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "GHC" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "compiled" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "the" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "body" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "of" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "our" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "list" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "comprehension" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "into" },
+							{ "t": "SoftBreak" },
+							{ "t": "Str", "c": "a" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "loop" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "named" },
+							{ "t": "Space" },
+							{ "t": "Code", "c": [["", [], []], "go_s1YC"] },
+							{ "t": "Str", "c": "." }
+						]
+					}
+				],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "If" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "our" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "CASE" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "expression" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "matches" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "the" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "empty" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "list," },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "we" },
+							{ "t": "SoftBreak" },
+							{ "t": "Str", "c": "return" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "the" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "empty" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "list." },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "This" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "is" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "reassuringly" },
+							{ "t": "SoftBreak" },
+							{ "t": "Str", "c": "familiar." }
+						]
+					}
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				1,
+				["definition-lists", [], []],
+				[{ "t": "Str", "c": "Definition" }, { "t": "Space" }, { "t": "Str", "c": "Lists" }]
+			]
+		},
+		{
+			"t": "DefinitionList",
+			"c": [
+				[
+					[{ "t": "Str", "c": "apple" }],
+					[[{ "t": "Para", "c": [{ "t": "Str", "c": "red" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] }]]
+				],
+				[
+					[{ "t": "Str", "c": "orange" }],
+					[[{ "t": "Para", "c": [{ "t": "Str", "c": "orange" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] }]]
+				],
+				[
+					[{ "t": "Str", "c": "banana" }],
+					[[{ "t": "Para", "c": [{ "t": "Str", "c": "yellow" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] }]]
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Multiple" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "blocks" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "italics:" }
+			]
+		},
+		{
+			"t": "DefinitionList",
+			"c": [
+				[
+					[{ "t": "Emph", "c": [{ "t": "Str", "c": "apple" }] }],
+					[
+						[
+							{ "t": "Para", "c": [{ "t": "Str", "c": "red" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] },
+							{
+								"t": "Para",
+								"c": [
+									{ "t": "Str", "c": "contains" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "seeds," },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "crisp," },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "pleasant" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "to" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "taste" }
+								]
+							}
+						]
+					]
+				],
+				[
+					[{ "t": "Emph", "c": [{ "t": "Str", "c": "orange" }] }],
+					[
+						[
+							{ "t": "Para", "c": [{ "t": "Str", "c": "orange" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] },
+							{ "t": "CodeBlock", "c": [["", [], []], "{ orange code block }"] },
+							{
+								"t": "BlockQuote",
+								"c": [
+									{
+										"t": "Para",
+										"c": [
+											{ "t": "Str", "c": "orange" },
+											{ "t": "Space" },
+											{ "t": "Str", "c": "block" },
+											{ "t": "Space" },
+											{ "t": "Str", "c": "quote" }
+										]
+									}
+								]
+							}
+						]
+					]
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Multiple" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "definitions," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "loose:" }
+			]
+		},
+		{
+			"t": "DefinitionList",
+			"c": [
+				[
+					[{ "t": "Str", "c": "apple" }],
+					[
+						[{ "t": "Para", "c": [{ "t": "Str", "c": "red" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] }],
+						[{ "t": "Para", "c": [{ "t": "Str", "c": "computer" }] }]
+					]
+				],
+				[
+					[{ "t": "Str", "c": "orange" }],
+					[
+						[{ "t": "Para", "c": [{ "t": "Str", "c": "orange" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] }],
+						[{ "t": "Para", "c": [{ "t": "Str", "c": "bank" }] }]
+					]
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Blank" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "line" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "after" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "term," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "indented" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "marker," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "alternate" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "markers:" }
+			]
+		},
+		{
+			"t": "DefinitionList",
+			"c": [
+				[
+					[{ "t": "Str", "c": "apple" }],
+					[
+						[{ "t": "Para", "c": [{ "t": "Str", "c": "red" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] }],
+						[{ "t": "Para", "c": [{ "t": "Str", "c": "computer" }] }]
+					]
+				],
+				[
+					[{ "t": "Str", "c": "orange" }],
+					[
+						[
+							{ "t": "Para", "c": [{ "t": "Str", "c": "orange" }, { "t": "Space" }, { "t": "Str", "c": "fruit" }] },
+							{
+								"t": "OrderedList",
+								"c": [
+									[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+									[
+										[{ "t": "Para", "c": [{ "t": "Str", "c": "sublist" }] }],
+										[{ "t": "Para", "c": [{ "t": "Str", "c": "sublist" }] }]
+									]
+								]
+							}
+						]
+					]
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				1,
+				["inline-markup", [], []],
+				[{ "t": "Str", "c": "Inline" }, { "t": "Space" }, { "t": "Str", "c": "Markup" }]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Emph", "c": [{ "t": "Str", "c": "emphasized" }] },
+				{ "t": "Str", "c": "," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "so" },
+				{ "t": "Space" },
+				{ "t": "Emph", "c": [{ "t": "Str", "c": "is" }, { "t": "SoftBreak" }, { "t": "Str", "c": "this" }] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Strong", "c": [{ "t": "Str", "c": "strong" }] },
+				{ "t": "Str", "c": "," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "so" },
+				{ "t": "SoftBreak" },
+				{ "t": "Strong", "c": [{ "t": "Str", "c": "is" }, { "t": "Space" }, { "t": "Str", "c": "this" }] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "An" },
+				{ "t": "Space" },
+				{
+					"t": "Emph",
+					"c": [
+						{
+							"t": "Link",
+							"c": [
+								["", [], []],
+								[{ "t": "Str", "c": "emphasized" }, { "t": "Space" }, { "t": "Str", "c": "link" }],
+								["/url", ""]
+							]
+						}
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Strong",
+					"c": [
+						{
+							"t": "Emph",
+							"c": [
+								{ "t": "Str", "c": "This" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "is" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "strong" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "and" },
+								{ "t": "SoftBreak" },
+								{ "t": "Str", "c": "em." }
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "So" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Strong", "c": [{ "t": "Emph", "c": [{ "t": "Str", "c": "this" }] }] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "word." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Strong",
+					"c": [
+						{
+							"t": "Emph",
+							"c": [
+								{ "t": "Str", "c": "This" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "is" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "strong" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "and" },
+								{ "t": "SoftBreak" },
+								{ "t": "Str", "c": "em." }
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "So" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Strong", "c": [{ "t": "Emph", "c": [{ "t": "Str", "c": "this" }] }] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "word." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "code:" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], ">"] },
+				{ "t": "Str", "c": "," },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "$"] },
+				{ "t": "Str", "c": "," },
+				{ "t": "SoftBreak" },
+				{ "t": "Code", "c": [["", [], []], "\\"] },
+				{ "t": "Str", "c": "," },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "\\$"] },
+				{ "t": "Str", "c": "," },
+				{ "t": "SoftBreak" },
+				{ "t": "Code", "c": [["", [], []], "<html>"] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "More" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "code:" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "Class"] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "Type"] }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Referencing" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "man" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "page:" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", ["citerefentry"], []], "nix.conf(5)"] }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Strikeout",
+					"c": [
+						{ "t": "Str", "c": "This" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "is" },
+						{ "t": "SoftBreak" },
+						{ "t": "Emph", "c": [{ "t": "Str", "c": "strikeout" }] },
+						{ "t": "Str", "c": "." }
+					]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Superscripts:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Superscript", "c": [{ "t": "Str", "c": "bc" }] },
+				{ "t": "Str", "c": "d" },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Superscript", "c": [{ "t": "Emph", "c": [{ "t": "Str", "c": "hello" }] }] },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Superscript", "c": [{ "t": "Str", "c": "hello there" }] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Subscripts:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "H" },
+				{ "t": "Subscript", "c": [{ "t": "Str", "c": "2" }] },
+				{ "t": "Str", "c": "O," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "H" },
+				{ "t": "Subscript", "c": [{ "t": "Str", "c": "23" }] },
+				{ "t": "Str", "c": "O," },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "H" },
+				{ "t": "Subscript", "c": [{ "t": "Str", "c": "many of them" }] },
+				{ "t": "Str", "c": "O." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "These" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "should" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "not" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "be" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "superscripts" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "or" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "subscripts," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "because" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "of" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "unescaped" },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "spaces:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a^b" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "c^d," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a~b" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "c~d." }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				1,
+				["smart-quotes-ellipses-dashes", [], []],
+				[
+					{ "t": "Str", "c": "Smart" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "quotes," },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "ellipses," },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "dashes" }
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Quoted", "c": [{ "t": "DoubleQuote" }, [{ "t": "Str", "c": "Hello," }]] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "said" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "spider." },
+				{ "t": "Space" },
+				{
+					"t": "Quoted",
+					"c": [
+						{ "t": "DoubleQuote" },
+						[
+							{ "t": "Quoted", "c": [{ "t": "SingleQuote" }, [{ "t": "Str", "c": "Shelob" }]] },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "is" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "my" },
+							{ "t": "SoftBreak" },
+							{ "t": "Str", "c": "name." }
+						]
+					]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Quoted", "c": [{ "t": "DoubleQuote" }, [{ "t": "Str", "c": "A" }]] },
+				{ "t": "Str", "c": "," },
+				{ "t": "Space" },
+				{ "t": "Quoted", "c": [{ "t": "DoubleQuote" }, [{ "t": "Str", "c": "B" }]] },
+				{ "t": "Str", "c": "," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Quoted", "c": [{ "t": "DoubleQuote" }, [{ "t": "Str", "c": "C" }]] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "are" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "letters." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Quoted",
+					"c": [
+						{ "t": "DoubleQuote" },
+						[
+							{ "t": "Str", "c": "He" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "said," },
+							{ "t": "Space" },
+							{
+								"t": "Quoted",
+								"c": [
+									{ "t": "SingleQuote" },
+									[
+										{ "t": "Str", "c": "I" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "want" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "to" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "go." }
+									]
+								]
+							}
+						]
+					]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Were" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "you" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "alive" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "in" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "70’s?" }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Some" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "dashes:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "one—two" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "—" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "three—four" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "—" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "five." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Dashes" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "between" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "numbers:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "5–7," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "255–66," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "1987–1999." }
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Ellipses…and…and…." }] },
+		{ "t": "Header", "c": [1, ["math", [], []], []] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Math", "c": [{ "t": "DisplayMath" }, "e = mc^{2}"] },
+				{ "t": "Math", "c": [{ "t": "DisplayMath" }, "1"] },
+				{ "t": "SoftBreak" },
+				{ "t": "Math", "c": [{ "t": "InlineMath" }, "e = mc^{2}"] },
+				{ "t": "SoftBreak" },
+				{ "t": "Math", "c": [{ "t": "DisplayMath" }, "e = mc^{2}"] }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				1,
+				["special-characters", [], []],
+				[{ "t": "Str", "c": "Special" }, { "t": "Space" }, { "t": "Str", "c": "Characters" }]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "some" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "unicode:" }
+			]
+		},
+		{
+			"t": "BulletList",
+			"c": [
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "I" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "hat:" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "Î" }
+						]
+					}
+				],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "o" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "umlaut:" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "ö" }
+						]
+					}
+				],
+				[{ "t": "Para", "c": [{ "t": "Str", "c": "section:" }, { "t": "Space" }, { "t": "Str", "c": "§" }] }],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "set" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "membership:" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "∈" }
+						]
+					}
+				],
+				[{ "t": "Para", "c": [{ "t": "Str", "c": "copyright:" }, { "t": "Space" }, { "t": "Str", "c": "©" }] }]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "AT&T" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "has" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "an" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "ampersand" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "in" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "their" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "name." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "AT&T" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "another" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "way" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "to" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "write" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "it." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "&" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "that." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "4" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "<" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "5." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "6" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": ">" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "5." }
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Backslash:" }, { "t": "Space" }, { "t": "Str", "c": "\\" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Backtick:" }, { "t": "Space" }, { "t": "Str", "c": "`" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Asterisk:" }, { "t": "Space" }, { "t": "Str", "c": "*" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Underscore:" }, { "t": "Space" }, { "t": "Str", "c": "_" }] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Left" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "brace:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "{" }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Right" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "brace:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "}" }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Left" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "bracket:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "[" }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Right" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "bracket:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "]" }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Left" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "paren:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "(" }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Right" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "paren:" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": ")" }
+			]
+		},
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Greater-than:" }, { "t": "Space" }, { "t": "Str", "c": ">" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Hash:" }, { "t": "Space" }, { "t": "Str", "c": "#" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Period:" }, { "t": "Space" }, { "t": "Str", "c": "." }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Bang:" }, { "t": "Space" }, { "t": "Str", "c": "!" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Plus:" }, { "t": "Space" }, { "t": "Str", "c": "+" }] },
+		{ "t": "Para", "c": [{ "t": "Str", "c": "Minus:" }, { "t": "Space" }, { "t": "Str", "c": "-" }] },
+		{ "t": "Header", "c": [1, ["links", [], []], [{ "t": "Str", "c": "Links" }]] },
+		{ "t": "Header", "c": [2, ["explicit", [], []], [{ "t": "Str", "c": "Explicit" }]] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Just" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "URL" }], ["/url/", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "URL" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "and" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "title" }
+						],
+						["/url/", ""]
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "URL" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "and" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "title" }
+						],
+						["/url/", ""]
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "URL" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "and" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "title" }
+						],
+						["/url/", ""]
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "URL" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "and" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "title" }
+						],
+						["/url/", ""]
+					]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "URL" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "and" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "title" }
+						],
+						["/url/", ""]
+					]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "with_underscore" }], ["/url/with_underscore", ""]] }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Link",
+					"c": [["", [], []], [{ "t": "Str", "c": "nobody@nowhere.net" }], ["mailto:nobody@nowhere.net", ""]]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "Empty" }], ["", ""]] }, { "t": "Str", "c": "." }]
+		},
+		{ "t": "Header", "c": [2, ["reference", [], []], [{ "t": "Str", "c": "Reference" }]] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Foo" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "bar" }], ["/url/", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Foo" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "bar" }], ["/url/", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Foo" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "bar" }], ["/url/", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "With" },
+				{ "t": "Space" },
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[{ "t": "Str", "c": "embedded" }, { "t": "Space" }, { "t": "Str", "c": "[brackets]" }],
+						["/url/", ""]
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "b" }], ["/url/", ""]] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "by" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "itself" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "should" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "be" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "link." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Indented" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "once" }], ["/url", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Indented" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "twice" }], ["/url", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Indented" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "thrice" }], ["/url", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "should" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "[not][]" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "be" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "link." }
+			]
+		},
+		{ "t": "CodeBlock", "c": [["", [], []], "[not]: /url"] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Foo" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "bar" }], ["/url/", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Foo" },
+				{ "t": "Space" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "biz" }], ["/url/", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				2,
+				["with-ampersands", [], []],
+				[{ "t": "Str", "c": "With" }, { "t": "Space" }, { "t": "Str", "c": "ampersands" }]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here’s" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "link" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "with" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "an" },
+							{ "t": "SoftBreak" },
+							{ "t": "Str", "c": "ampersand" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "in" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "the" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "URL" }
+						],
+						["http://example.com/?foo=1&bar=2", ""]
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here’s" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "link" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "an" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "amersand" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "in" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "link" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "text:" },
+				{ "t": "SoftBreak" },
+				{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "AT&T" }], ["http://att.com/", ""]] },
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here’s" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "an" },
+				{ "t": "Space" },
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[{ "t": "Str", "c": "inline" }, { "t": "Space" }, { "t": "Str", "c": "link" }],
+						["/script?foo=1&bar=2", ""]
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here’s" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "an" },
+				{ "t": "Space" },
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "inline" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "link" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "in" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "pointy" },
+							{ "t": "SoftBreak" },
+							{ "t": "Str", "c": "braces" }
+						],
+						["/script?foo=1&bar=2", ""]
+					]
+				},
+				{ "t": "Str", "c": "." }
+			]
+		},
+		{ "t": "Header", "c": [2, ["autolinks", [], []], [{ "t": "Str", "c": "Autolinks" }]] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "With" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "an" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "ampersand:" },
+				{ "t": "SoftBreak" },
+				{
+					"t": "Link",
+					"c": [
+						["", [], []],
+						[{ "t": "Str", "c": "http://example.com/?foo=1&bar=2" }],
+						["http://example.com/?foo=1&bar=2", ""]
+					]
+				}
+			]
+		},
+		{
+			"t": "BulletList",
+			"c": [
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "In" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "a" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "list?" }
+						]
+					}
+				],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{
+								"t": "Link",
+								"c": [["", [], []], [{ "t": "Str", "c": "http://example.com/" }], ["http://example.com/", ""]]
+							}
+						]
+					}
+				],
+				[{ "t": "Para", "c": [{ "t": "Str", "c": "It" }, { "t": "Space" }, { "t": "Str", "c": "should." }] }]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "An" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "e-mail" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "address:" },
+				{ "t": "Space" },
+				{
+					"t": "Link",
+					"c": [["", [], []], [{ "t": "Str", "c": "nobody@nowhere.net" }], ["mailto:nobody@nowhere.net", ""]]
+				}
+			]
+		},
+		{
+			"t": "BlockQuote",
+			"c": [
+				{
+					"t": "Para",
+					"c": [
+						{ "t": "Str", "c": "Blockquoted:" },
+						{ "t": "SoftBreak" },
+						{
+							"t": "Link",
+							"c": [["", [], []], [{ "t": "Str", "c": "http://example.com/" }], ["http://example.com/", ""]]
+						}
+					]
+				}
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Auto-links" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "should" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "not" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "occur" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "here:" },
+				{ "t": "SoftBreak" },
+				{ "t": "Code", "c": [["", [], []], "<http://example.com/>"] }
+			]
+		},
+		{ "t": "CodeBlock", "c": [["", [], []], "or here: <http://example.com/>"] },
+		{ "t": "Header", "c": [1, ["images", [], []], [{ "t": "Str", "c": "Images" }]] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "From" },
+				{ "t": "Space" },
+				{
+					"t": "Quoted",
+					"c": [
+						{ "t": "DoubleQuote" },
+						[
+							{ "t": "Str", "c": "Voyage" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "dans" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "la" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "Lune" }
+						]
+					]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "by" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Georges" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Melies" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "(1902):" }
+			]
+		},
+		{
+			"t": "Figure",
+			"c": [
+				["", [], []],
+				[
+					null,
+					[
+						{
+							"t": "Plain",
+							"c": [
+								{ "t": "Str", "c": "lalune" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "fig" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "caption" }
+							]
+						}
+					]
+				],
+				[
+					{
+						"t": "Plain",
+						"c": [
+							{
+								"t": "Image",
+								"c": [
+									["", [], []],
+									[
+										{ "t": "Str", "c": "lalune" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "alt" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "text" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "shadowed" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "by" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "fig" },
+										{ "t": "Space" },
+										{ "t": "Str", "c": "caption" }
+									],
+									["lalune.jpg", ""]
+								]
+							}
+						]
+					}
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "movie" },
+				{ "t": "Space" },
+				{ "t": "Image", "c": [["", [], []], [], ["movie.jpg", ""]] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "icon." },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "And" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "here" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "second" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "movie" },
+				{ "t": "Space" },
+				{
+					"t": "Image",
+					"c": [
+						["", [], []],
+						[{ "t": "Str", "c": "alt" }, { "t": "Space" }, { "t": "Str", "c": "text" }],
+						["movie.jpg", ""]
+					]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "icon." },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "And" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "here" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "third" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "movie" },
+				{ "t": "Space" },
+				{
+					"t": "Image",
+					"c": [
+						["", [], []],
+						[{ "t": "Str", "c": "alt" }, { "t": "Space" }, { "t": "Str", "c": "text" }],
+						["movie.jpg", ""]
+					]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "icon." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{
+					"t": "Image",
+					"c": [
+						["", [], []],
+						[
+							{ "t": "Str", "c": "lalune" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "no" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "figure" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "alt" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "text" }
+						],
+						["lalune.jpg", ""]
+					]
+				}
+			]
+		},
+		{ "t": "Header", "c": [1, ["footnotes", [], []], [{ "t": "Str", "c": "Footnotes" }]] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Here" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "footnote" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "reference," },
+				{
+					"t": "Note",
+					"c": [
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "Here" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "is" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "footnote." },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "It" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "can" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "go" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "anywhere" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "after" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "footnote" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "reference." },
+								{ "t": "SoftBreak" },
+								{ "t": "Str", "c": "It" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "need" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "not" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "be" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "placed" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "at" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "end" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "of" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "document." }
+							]
+						}
+					]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "another." },
+				{
+					"t": "Note",
+					"c": [
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "Here’s" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "long" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "note." },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "This" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "one" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "contains" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "multiple" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "blocks." }
+							]
+						},
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "Subsequent" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "blocks" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "are" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "indented" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "to" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "show" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "that" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "they" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "belong" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "to" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "SoftBreak" },
+								{ "t": "Str", "c": "footnote" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "(as" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "with" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "list" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "items)." }
+							]
+						},
+						{ "t": "CodeBlock", "c": [["", [], []], "  { <code> }"] },
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "If" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "you" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "want," },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "you" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "can" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "indent" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "every" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "line," },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "but" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "you" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "can" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "also" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "be" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "lazy" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "and" },
+								{ "t": "SoftBreak" },
+								{ "t": "Str", "c": "just" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "indent" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "first" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "line" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "of" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "each" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "block." }
+							]
+						}
+					]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "should" },
+				{ "t": "Space" },
+				{ "t": "Emph", "c": [{ "t": "Str", "c": "not" }] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "be" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "footnote" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "reference," },
+				{ "t": "SoftBreak" },
+				{ "t": "Str", "c": "because" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "it" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "contains" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "space.[^my" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "note]" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Here" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "an" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "inline" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "note." },
+				{
+					"t": "Note",
+					"c": [
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "This" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "is" },
+								{ "t": "Space" },
+								{ "t": "Emph", "c": [{ "t": "Str", "c": "easier" }] },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "to" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "type." },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "Inline" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "notes" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "may" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "contain" },
+								{ "t": "SoftBreak" },
+								{ "t": "Link", "c": [["", [], []], [{ "t": "Str", "c": "links" }], ["http://google.com", ""]] },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "and" },
+								{ "t": "Space" },
+								{ "t": "Code", "c": [["", [], []], "]"] },
+								{ "t": "SoftBreak" },
+								{ "t": "Str", "c": "verbatim" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "characters," },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "as" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "well" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "as" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "[bracketed" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "text]." }
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"t": "BlockQuote",
+			"c": [
+				{
+					"t": "Para",
+					"c": [
+						{ "t": "Str", "c": "Notes" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "can" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "go" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "in" },
+						{ "t": "Space" },
+						{ "t": "Str", "c": "quotes." },
+						{
+							"t": "Note",
+							"c": [{ "t": "Para", "c": [{ "t": "Str", "c": "In" }, { "t": "Space" }, { "t": "Str", "c": "quote." }] }]
+						}
+					]
+				}
+			]
+		},
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "Decimal" }, { "t": "DefaultDelim" }],
+				[
+					[
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "And" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "in" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "list" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "items." },
+								{
+									"t": "Note",
+									"c": [
+										{ "t": "Para", "c": [{ "t": "Str", "c": "In" }, { "t": "Space" }, { "t": "Str", "c": "list." }] }
+									]
+								}
+							]
+						}
+					]
+				]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "paragraph" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "should" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "not" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "be" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "part" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "of" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "note," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "as" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "it" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "not" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "indented." }
+			]
+		},
+		{ "t": "Header", "c": [1, ["tables", [], []], [{ "t": "Str", "c": "Tables" }]] },
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Simple" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "caption:" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[
+					null,
+					[
+						{
+							"t": "Plain",
+							"c": [
+								{ "t": "Str", "c": "Demonstration" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "of" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "simple" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "table" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "syntax." }
+							]
+						}
+					]
+				],
+				[
+					[{ "t": "AlignRight" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignCenter" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }]
+				],
+				[
+					["", [], []],
+					[
+						[
+							["", [], []],
+							[
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Right" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Left" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Center" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Default" }] }]]
+							]
+						]
+					]
+				],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Simple" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "without" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "caption:" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[null, []],
+				[
+					[{ "t": "AlignRight" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignCenter" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }]
+				],
+				[
+					["", [], []],
+					[
+						[
+							["", [], []],
+							[
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Right" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Left" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Center" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Default" }] }]]
+							]
+						]
+					]
+				],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Simple" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "indented" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "two" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "spaces:" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[
+					null,
+					[
+						{
+							"t": "Plain",
+							"c": [
+								{ "t": "Str", "c": "Demonstration" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "of" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "simple" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "table" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "syntax." }
+							]
+						}
+					]
+				],
+				[
+					[{ "t": "AlignRight" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignCenter" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }]
+				],
+				[
+					["", [], []],
+					[
+						[
+							["", [], []],
+							[
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Right" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Left" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Center" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Default" }] }]]
+							]
+						]
+					]
+				],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Multiline" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "caption:" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[
+					null,
+					[
+						{
+							"t": "Plain",
+							"c": [
+								{ "t": "Str", "c": "Here's" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "the" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "caption." },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "It" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "may" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "span" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "multiple" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "lines." }
+							]
+						}
+					]
+				],
+				[
+					[{ "t": "AlignCenter" }, { "t": "ColWidth", "c": 0.2 }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidth", "c": 0.2 }],
+					[{ "t": "AlignRight" }, { "t": "ColWidth", "c": 0.3 }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidth", "c": 0.3 }]
+				],
+				[
+					["", [], []],
+					[
+						[
+							["", [], []],
+							[
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Centered" }, { "t": "Space" }, { "t": "Str", "c": "Header" }]
+										}
+									]
+								],
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Left" }, { "t": "Space" }, { "t": "Str", "c": "Aligned" }]
+										}
+									]
+								],
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Right" }, { "t": "Space" }, { "t": "Str", "c": "Aligned" }]
+										}
+									]
+								],
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Default" }, { "t": "Space" }, { "t": "Str", "c": "aligned" }]
+										}
+									]
+								]
+							]
+						]
+					]
+				],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[{ "t": "Plain", "c": [{ "t": "Str", "c": "First" }] }]
+									],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "row" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12.0" }] }]],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "Example" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "of" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "a" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "row" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "that" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "spans" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "multiple" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "lines." }
+												]
+											}
+										]
+									]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[{ "t": "Plain", "c": [{ "t": "Str", "c": "Second" }] }]
+									],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "row" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "5.0" }] }]],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "Here's" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "another" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "one." },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "Note" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "the" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "blank" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "line" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "between" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "rows." }
+												]
+											}
+										]
+									]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "attributes" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["mytableid1", ["mytableclass1", "mytableclass2"], [["custom-style", "mytabstyle1"]]],
+				[
+					null,
+					[
+						{
+							"t": "Plain",
+							"c": [
+								{ "t": "Str", "c": "Attribute" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "table" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "caption" }
+							]
+						}
+					]
+				],
+				[[{ "t": "AlignDefault" }, { "t": "ColWidthDefault" }], [{ "t": "AlignDefault" }, { "t": "ColWidthDefault" }]],
+				[["", [], []], []],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Para",
+												"c": [
+													{ "t": "Str", "c": "body" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "cell" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "1" }
+												]
+											}
+										]
+									],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Para",
+												"c": [
+													{ "t": "Str", "c": "body" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "cell" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "2" }
+												]
+											}
+										]
+									]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "attributes," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "without" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "caption" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["mytableid2", ["mytableclass3", "mytableclass4"], [["custom-style", "mytabstyle2"]]],
+				[null, []],
+				[[{ "t": "AlignDefault" }, { "t": "ColWidthDefault" }], [{ "t": "AlignDefault" }, { "t": "ColWidthDefault" }]],
+				[["", [], []], []],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Para",
+												"c": [
+													{ "t": "Str", "c": "body" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "cell" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "1" }
+												]
+											}
+										]
+									],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Para",
+												"c": [
+													{ "t": "Str", "c": "body" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "cell" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "2" }
+												]
+											}
+										]
+									]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Multiline" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "without" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "caption:" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[null, []],
+				[
+					[{ "t": "AlignCenter" }, { "t": "ColWidth", "c": 0.1 }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidth", "c": 0.2 }],
+					[{ "t": "AlignRight" }, { "t": "ColWidth", "c": 0.3 }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidth", "c": 0.4 }]
+				],
+				[
+					["", [], []],
+					[
+						[
+							["", [], []],
+							[
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Centered" }, { "t": "Space" }, { "t": "Str", "c": "Header" }]
+										}
+									]
+								],
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Left" }, { "t": "Space" }, { "t": "Str", "c": "Aligned" }]
+										}
+									]
+								],
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Right" }, { "t": "Space" }, { "t": "Str", "c": "Aligned" }]
+										}
+									]
+								],
+								[
+									["", [], []],
+									{ "t": "AlignDefault" },
+									1,
+									1,
+									[
+										{
+											"t": "Plain",
+											"c": [{ "t": "Str", "c": "Default" }, { "t": "Space" }, { "t": "Str", "c": "aligned" }]
+										}
+									]
+								]
+							]
+						]
+					]
+				],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[{ "t": "Plain", "c": [{ "t": "Str", "c": "First" }] }]
+									],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "row" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12.0" }] }]],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "Example" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "of" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "a" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "row" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "that" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "spans" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "multiple" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "lines." }
+												]
+											}
+										]
+									]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[{ "t": "Plain", "c": [{ "t": "Str", "c": "Second" }] }]
+									],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "row" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "5.0" }] }]],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "Here's" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "another" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "one." },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "Note" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "the" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "blank" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "line" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "between" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "rows." }
+												]
+											}
+										]
+									]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "without" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "column" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "headers:" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[null, []],
+				[
+					[{ "t": "AlignRight" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignCenter" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignRight" }, { "t": "ColWidthDefault" }]
+				],
+				[["", [], []], []],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "123" }] }]]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "1" }] }]]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Multiline" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "without" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "column" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "headers:" }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[null, []],
+				[
+					[{ "t": "AlignCenter" }, { "t": "ColWidth", "c": 0.25 }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidth", "c": 0.25 }],
+					[{ "t": "AlignRight" }, { "t": "ColWidth", "c": 0.25 }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidth", "c": 0.25 }]
+				],
+				[["", [], []], []],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[{ "t": "Plain", "c": [{ "t": "Str", "c": "First" }] }]
+									],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "row" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "12.0" }] }]],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "Example" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "of" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "a" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "row" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "that" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "spans" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "multiple" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "lines." }
+												]
+											}
+										]
+									]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[{ "t": "Plain", "c": [{ "t": "Str", "c": "Second" }] }]
+									],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "row" }] }]],
+									[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "5.0" }] }]],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										1,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "Here's" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "another" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "one." },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "Note" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "the" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "blank" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "line" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "between" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "rows." }
+												]
+											}
+										]
+									]
+								]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Multiline" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "table" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "cells" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "spanning" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "multiple" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "columns" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "rows" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "without" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "caption." }
+			]
+		},
+		{
+			"t": "Table",
+			"c": [
+				["", [], []],
+				[null, []],
+				[
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }],
+					[{ "t": "AlignLeft" }, { "t": "ColWidthDefault" }]
+				],
+				[
+					["", [], []],
+					[
+						[
+							["", [], []],
+							[[["", [], []], { "t": "AlignDefault" }, 1, 3, [{ "t": "Plain", "c": [{ "t": "Str", "c": "Columns" }] }]]]
+						],
+						[
+							["", [], []],
+							[
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "A" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "B" }] }]],
+								[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "C" }] }]]
+							]
+						]
+					]
+				],
+				[
+					[
+						["", [], []],
+						0,
+						[],
+						[
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										1,
+										2,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "A1" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "+" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "B1" }
+												]
+											}
+										]
+									],
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										2,
+										1,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "C1" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "+" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "C2" }
+												]
+											}
+										]
+									]
+								]
+							],
+							[
+								["", [], []],
+								[
+									[
+										["", [], []],
+										{ "t": "AlignDefault" },
+										2,
+										2,
+										[
+											{
+												"t": "Plain",
+												"c": [
+													{ "t": "Str", "c": "A2" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "+" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "B2" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "+" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "A3" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "+" },
+													{ "t": "Space" },
+													{ "t": "Str", "c": "B3" }
+												]
+											}
+										]
+									]
+								]
+							],
+							[
+								["", [], []],
+								[[["", [], []], { "t": "AlignDefault" }, 1, 1, [{ "t": "Plain", "c": [{ "t": "Str", "c": "C3" }] }]]]
+							]
+						]
+					]
+				],
+				[["", [], []], []]
+			]
+		},
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "DefaultStyle" }, { "t": "DefaultDelim" }],
+				[
+					[{ "t": "Para", "c": [{ "t": "Str", "c": "A" }, { "t": "Space" }, { "t": "Str", "c": "Step" }] }],
+					[
+						{ "t": "Para", "c": [{ "t": "Str", "c": "Another" }, { "t": "Space" }, { "t": "Str", "c": "Step" }] },
+						{
+							"t": "OrderedList",
+							"c": [
+								[1, { "t": "DefaultStyle" }, { "t": "DefaultDelim" }],
+								[
+									[
+										{
+											"t": "Para",
+											"c": [
+												{ "t": "Str", "c": "Substeps" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "can" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "be" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "nested" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "indefinitely" },
+												{ "t": "Space" },
+												{ "t": "Str", "c": "deep." }
+											]
+										}
+									]
+								]
+							]
+						}
+					],
+					[
+						{
+							"t": "Para",
+							"c": [
+								{ "t": "Str", "c": "A" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "Final" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "Step" }
+							]
+						}
+					]
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [1, ["indexterms", [], []], [{ "t": "Str", "c": "Index" }, { "t": "Space" }, { "t": "Str", "c": "terms" }]]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "In" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "simplest" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "case," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "index" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "terms" },
+				{ "t": "Span", "c": [["", ["indexterm"], [["primary", "index term"]]], []] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "consists" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "of" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "just" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "<primary>"] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "element," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "but" },
+				{ "t": "Space" },
+				{ "t": "Span", "c": [["", ["indexterm"], [["primary", "index term"], ["secondary", "multi-level"]]], []] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "they" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "can" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "also" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "consist" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "of" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "<primary>"] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "<secondary>"] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "element," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{
+					"t": "Span",
+					"c": [
+						["", ["indexterm"], [["primary", "index term"], ["secondary", "multi-level"], ["tertiary", "3-level"]]],
+						[]
+					]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "can" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "even" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "include" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "<tertiary>"] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "term." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "Index" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "terms" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "can" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "also" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "refer" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "to" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "other" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "index" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "terms:" },
+				{ "t": "Space" },
+				{ "t": "Span", "c": [["", ["indexterm"], [["primary", "index cross referencing"]]], []] },
+				{
+					"t": "Span",
+					"c": [
+						[
+							"",
+							["indexterm"],
+							[["primary", "index term"], ["secondary", "cross references"], ["see", "index cross referencing"]]
+						],
+						[]
+					]
+				},
+				{ "t": "Str", "c": "exclusively," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "using" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "<see>"] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "tag;" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "or" },
+				{ "t": "Space" },
+				{
+					"t": "Span",
+					"c": [["", ["indexterm"], [["primary", "index cross referencing"], ["seealso", "cross referencing"]]], []]
+				},
+				{ "t": "Space" },
+				{ "t": "Str", "c": "as" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "reference" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "to" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "related" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "terms," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "using" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "the" },
+				{ "t": "Space" },
+				{ "t": "Code", "c": [["", [], []], "<seealso>"] },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "tag." }
+			]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Span", "c": [["", ["indexterm"], [["primary", "food"], ["secondary", "big baguette supreme"]]], []] },
+				{ "t": "Str", "c": "Nested" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "content" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "in" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "index" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "term" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "elements" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "flattened." }
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				1,
+				["titleabbrev", [], [["titleabbrev", "Abbr. title"]]],
+				[{ "t": "Str", "c": "Abbreviated" }, { "t": "Space" }, { "t": "Str", "c": "title" }]
+			]
+		}
+	]
+}

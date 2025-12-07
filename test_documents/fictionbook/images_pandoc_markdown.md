@@ -1,0 +1,15 @@
+#
+
+::: section
+This example test if Pandoc correctly embeds images into FictionBook.
+
+Small inline image: ![alt text a small PNG image](image1).
+
+Paragraph image:
+
+![alt text of a big JPEG image](image2 "image title text")
+
+alt text of a big missing image
+
+A missing image inline: alt text of missing image.
+:::

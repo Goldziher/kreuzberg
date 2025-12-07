@@ -1,0 +1,31 @@
+1.  One
+
+2.  Two
+
+    a.  Three
+
+    b.  Four
+
+        i.  Five
+
+        ii. Six
+
+            A.  Seven
+
+            B.  Eight
+
+                I.  Nine
+
+                II. Ten
+
+                    - Eleven
+
+                    - Twelve
+
+Out of list!
+
+Start with
+
+7.  Seven Start
+
+8.  Eight Continue

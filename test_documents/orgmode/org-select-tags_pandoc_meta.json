@@ -1,0 +1,122 @@
+{
+	"pandoc-api-version": [1, 23, 1],
+	"meta": {},
+	"blocks": [
+		{
+			"t": "Header",
+			"c": [
+				1,
+				["will-appear-because-it-is-the-ancestor-of-something-tagged-yes", [], []],
+				[
+					{ "t": "Str", "c": "Will" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "appear" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "because" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "it" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "is" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "the" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "ancestor" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "of" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "something" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "tagged" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "\"yes\"" }
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				2,
+				["will-appear", [], []],
+				[
+					{ "t": "Str", "c": "Will" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "appear" },
+					{ "t": "Space" },
+					{
+						"t": "Span",
+						"c": [["", ["tag"], [["tag-name", "yes"]]], [{ "t": "SmallCaps", "c": [{ "t": "Str", "c": "yes" }] }]]
+					}
+				]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				3,
+				["will-appear-since-the-entire-subtree-of-something-selected-will-appear", [], []],
+				[
+					{ "t": "Str", "c": "Will" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "appear" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "since" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "the" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "entire" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "subtree" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "of" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "something" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "selected" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "will" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "appear" }
+				]
+			]
+		},
+		{
+			"t": "OrderedList",
+			"c": [
+				[1, { "t": "DefaultStyle" }, { "t": "DefaultDelim" }],
+				[[{ "t": "Para", "c": [{ "t": "Str", "c": "Will" }, { "t": "Space" }, { "t": "Str", "c": "appear" }] }]]
+			]
+		},
+		{
+			"t": "Header",
+			"c": [
+				2,
+				["will-appear-because-it-is-the-ancestor-of-something-listed-in-select-tags", [], []],
+				[
+					{ "t": "Str", "c": "Will" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "appear" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "because" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "it" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "is" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "the" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "ancestor" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "of" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "something" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "listed" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "in" },
+					{ "t": "Space" },
+					{ "t": "Str", "c": "SELECT-TAGS" }
+				]
+			]
+		}
+	]
+}

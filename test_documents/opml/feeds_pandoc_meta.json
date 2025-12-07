@@ -1,0 +1,59 @@
+{
+	"pandoc-api-version": [1, 23, 1],
+	"meta": {
+		"author": {
+			"t": "MetaList",
+			"c": [{ "t": "MetaInlines", "c": [{ "t": "Str", "c": "John" }, { "t": "Space" }, { "t": "Str", "c": "Smith" }] }]
+		},
+		"date": {
+			"t": "MetaInlines",
+			"c": [
+				{ "t": "Str", "c": "Fri," },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "01" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Dec" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "2023" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "12:00:00" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "GMT" }
+			]
+		},
+		"title": {
+			"t": "MetaInlines",
+			"c": [
+				{ "t": "Str", "c": "Tech" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "News" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Feeds" }
+			]
+		}
+	},
+	"blocks": [
+		{ "t": "Header", "c": [1, ["", [], []], [{ "t": "Str", "c": "Technology" }]] },
+		{
+			"t": "Header",
+			"c": [2, ["", [], []], [{ "t": "Str", "c": "Hacker" }, { "t": "Space" }, { "t": "Str", "c": "News" }]]
+		},
+		{ "t": "Header", "c": [2, ["", [], []], [{ "t": "Str", "c": "TechCrunch" }]] },
+		{
+			"t": "Header",
+			"c": [2, ["", [], []], [{ "t": "Str", "c": "The" }, { "t": "Space" }, { "t": "Str", "c": "Verge" }]]
+		},
+		{ "t": "Header", "c": [1, ["", [], []], [{ "t": "Str", "c": "Programming" }]] },
+		{
+			"t": "Header",
+			"c": [2, ["", [], []], [{ "t": "Str", "c": "Rust" }, { "t": "Space" }, { "t": "Str", "c": "Blog" }]]
+		},
+		{ "t": "Header", "c": [2, ["", [], []], [{ "t": "Str", "c": "Dev.to" }]] },
+		{ "t": "Header", "c": [2, ["", [], []], [{ "t": "Str", "c": "InfoQ" }]] },
+		{ "t": "Header", "c": [1, ["", [], []], [{ "t": "Str", "c": "Uncategorized" }]] },
+		{
+			"t": "Header",
+			"c": [2, ["", [], []], [{ "t": "Str", "c": "Reddit" }, { "t": "Space" }, { "t": "Str", "c": "Programming" }]]
+		}
+	]
+}

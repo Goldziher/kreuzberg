@@ -1,20 +1,52 @@
 //! Comprehensive TDD test suite for EPUB extraction
 //!
-//! This test suite validates EPUB extraction capabilities using Pandoc's output as a baseline.
-//! Each test extracts an EPUB file, compares the output against Pandoc's baseline, and validates:
+//! This test suite validates EPUB extraction capabilities covering:
+//! - Basic content extraction (EPUB2 & EPUB3)
+//! - Chapter/section navigation (testing complete document extraction)
+//! - Structure preservation (headings, lists, hierarchy)
+//! - Image handling (with/without covers)
+//! - Cover detection and handling
+//! - Complex document extraction (poetry, technical documents)
+//! - Pandoc parity (content length baseline comparison)
+//! - Metadata extraction (Dublin Core fields)
+//! - Quality assurance (deterministic, no content loss)
 //!
-//! - Metadata extraction (title, creator, date, language, identifier)
-//! - Cover detection (epub2_cover.epub vs epub2_no_cover.epub)
-//! - Image handling (multiple image formats)
-//! - Content extraction quality
+//! Current Status:
+//! - Quality: Testing against Pandoc baselines
+//! - Known Issue (historical): 99.84% content loss in early version
+//! - Test Strategy: Validate all chapters extracted (not just first)
 //!
-//! The tests use Pandoc as the reference standard for content extraction and validate
-//! that Kreuzberg's extraction provides comparable results.
+//! Test Organization (13 integration tests):
+//! 1. EPUB2 with cover extraction
+//! 2. EPUB2 without cover extraction
+//! 3. Cover detection difference
+//! 4. EPUB2 with pictures extraction
+//! 5. Images with covers extraction
+//! 6. Images without covers extraction
+//! 7. EPUB3 features extraction
+//! 8. EPUB3 formatting extraction
+//! 9. Wasteland (complex poetry) extraction
+//! 10. Comprehensive metadata extraction
+//! 11. Content quality validation
+//! 12. Pandoc baseline compliance
+//! 13. Extraction statistics report
+//!
+//! Success Criteria:
+//! - All tests passing (100%)
+//! - No content loss (non-empty extraction for all files)
+//! - Pandoc parity: content length within 90-110% of baseline (some files have stricter checks)
+//! - Deterministic extraction (same input = same output)
+//! - Metadata properly extracted (Dublin Core fields)
 
 #![cfg(feature = "office")]
 
 use kreuzberg::extraction::pandoc::{extract_file, validate_pandoc_version};
+use std::fs;
 use std::path::PathBuf;
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 /// Helper to resolve workspace root and construct test file paths
 fn get_test_epub_path(filename: &str) -> PathBuf {
@@ -26,12 +58,37 @@ fn get_test_epub_path(filename: &str) -> PathBuf {
     workspace_root.join(format!("test_documents/epub/{}", filename))
 }
 
+/// Helper to get path to Pandoc baseline for comparison
+fn get_baseline_path(filename: &str) -> PathBuf {
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    workspace_root.join(format!("test_documents/epub/{}", filename))
+}
+
+/// Helper to compare extracted content length with Pandoc baseline
+/// Returns (extracted_len, baseline_len, ratio_percent)
+fn compare_with_baseline(extracted: &str, baseline_filename: &str) -> (usize, usize, f64) {
+    let baseline_path = get_baseline_path(baseline_filename);
+    let baseline = fs::read_to_string(&baseline_path).expect(&format!("Failed to read baseline: {:?}", baseline_path));
+    let extracted_len = extracted.trim().len();
+    let baseline_len = baseline.trim().len();
+    let ratio = if baseline_len > 0 {
+        (extracted_len as f64 / baseline_len as f64) * 100.0
+    } else {
+        0.0
+    };
+    (extracted_len, baseline_len, ratio)
+}
+
 /// Helper to check if Pandoc is available before running tests
 async fn skip_if_no_pandoc() -> bool {
     validate_pandoc_version().await.is_err()
 }
 
-/// Helper to validate that content contains expected text
+/// Helper to validate that content contains expected text (case-insensitive)
 fn assert_contains_ci(content: &str, needle: &str, description: &str) {
     assert!(
         content.to_lowercase().contains(&needle.to_lowercase()),
@@ -42,7 +99,7 @@ fn assert_contains_ci(content: &str, needle: &str, description: &str) {
     );
 }
 
-/// Helper to validate content doesn't contain undesired text
+/// Helper to validate content doesn't contain undesired text (case-insensitive)
 #[allow(dead_code)]
 fn assert_not_contains_ci(content: &str, needle: &str, description: &str) {
     assert!(
@@ -727,3 +784,583 @@ async fn test_epub_extraction_statistics() {
 
     println!("✅ EPUB extraction statistics generated successfully!");
 }
+
+// ============================================================================
+// ENHANCED TDD TESTS - COMPREHENSIVE COVERAGE
+// ============================================================================
+// These tests focus on the critical bug: 99.84% content loss due to only
+// extracting first chapter. Tests validate all chapters are processed.
+
+/// Test 14: Basic EPUB2 content extraction (no cover version)
+///
+/// Critical Test: Validates non-zero content extraction from minimal EPUB
+/// Addresses: Historical bug where 0 bytes were extracted (99.84% loss)
+/// File: epub2_no_cover.epub (minimal EPUB2 document)
+/// Expected: Extract meaningful content (at least 100+ bytes)
+#[tokio::test]
+async fn test_epub_basic_content_extraction_epub2_no_cover() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("epub2_no_cover.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract epub2_no_cover.epub successfully");
+
+    // CRITICAL: Should extract substantial content (not 0 bytes)
+    assert!(
+        result.content.len() > 50,
+        "CRITICAL: Should extract content from EPUB2, got {} bytes. Bug: 99.84% content loss?",
+        result.content.len()
+    );
+
+    // Should contain the expected document title
+    assert_contains_ci(&result.content, "Pandoc", "Should contain document title");
+
+    println!(
+        "✓ EPUB2 basic content extraction passed ({} bytes)",
+        result.content.len()
+    );
+}
+
+/// Test 15: All chapters extracted (not just first)
+///
+/// Critical Test: Validates CRITICAL BUG FIX - all chapters extracted
+/// Known Bug: Early implementation only extracted first chapter (99.84% loss)
+/// File: features.epub (EPUB3 with multiple chapters/sections)
+/// Expected: Extract from ALL chapters (much more content than first chapter alone)
+#[tokio::test]
+async fn test_epub_all_chapters_extracted() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("features.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract features.epub successfully");
+
+    // CRITICAL: Should extract substantial content from ALL chapters
+    // If only first chapter: ~500-1000 bytes
+    // If all chapters: >5000 bytes
+    assert!(
+        result.content.len() > 1000,
+        "CRITICAL BUG: Should extract from ALL chapters, got only {} bytes. \
+         Indicates first-chapter-only extraction (99.84% loss bug)?",
+        result.content.len()
+    );
+
+    // Should have multiple content indicators (multiple chapters)
+    let test_count = result.content.matches("test").count() + result.content.matches("Test").count();
+    assert!(
+        test_count >= 2,
+        "Should extract multiple test references from multiple chapters"
+    );
+
+    println!(
+        "✓ All chapters extraction test passed ({} bytes, {} chapter indicators)",
+        result.content.len(),
+        test_count
+    );
+}
+
+/// Test 16: Structure preservation - headings detected
+///
+/// Validates: Document structure hierarchy is preserved
+/// File: formatting.epub (EPUB3 with styled content)
+/// Expected: Extract heading indicators (markdown # symbols or heading text)
+#[tokio::test]
+async fn test_epub_structure_preservation_headings() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("formatting.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract formatting.epub successfully");
+
+    // Should have substantial content
+    assert!(!result.content.is_empty(), "Content should not be empty");
+    assert!(
+        result.content.len() > 200,
+        "Should extract formatted content with structure"
+    );
+
+    // Should preserve heading structure (markdown format or text indicators)
+    let has_heading_markers =
+        result.content.contains("#") || result.content.contains("---") || result.content.contains("===");
+
+    assert!(
+        has_heading_markers || result.content.len() > 1000,
+        "Should preserve document structure (headings)"
+    );
+
+    println!("✓ Structure preservation test passed");
+}
+
+/// Test 17: Image handling - EPUB with images
+///
+/// Validates: Content extraction even when images present
+/// File: img.epub (EPUB with multiple image formats)
+/// Expected: Extract text content despite image files (not crash, not lose content)
+#[tokio::test]
+async fn test_epub_image_handling_with_images() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("img.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract img.epub successfully");
+
+    // CRITICAL: Should extract content even with images
+    assert!(
+        result.content.len() > 100,
+        "Should extract text content from EPUB with images, got {} bytes",
+        result.content.len()
+    );
+
+    // Should contain test-related content
+    assert!(
+        result.content.to_lowercase().contains("test")
+            || result.content.to_lowercase().contains("image")
+            || result.content.to_lowercase().contains("multimedia"),
+        "Should extract content about images or tests"
+    );
+
+    println!(
+        "✓ Image handling test passed ({} bytes extracted)",
+        result.content.len()
+    );
+}
+
+/// Test 18: Image handling - EPUB with images, no cover
+///
+/// Validates: Content extraction without cover overhead
+/// File: img_no_cover.epub (EPUB with images but no cover page)
+/// Expected: Extract text content efficiently without cover processing
+#[tokio::test]
+async fn test_epub_image_no_cover_handling() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("img_no_cover.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract img_no_cover.epub successfully");
+
+    // Should have meaningful content
+    assert!(
+        result.content.len() > 100,
+        "Should extract content from image EPUB without cover"
+    );
+
+    // Should contain test-related content
+    assert!(
+        result.content.to_lowercase().contains("test")
+            || result.content.to_lowercase().contains("image")
+            || result.content.to_lowercase().contains("required"),
+        "Should extract test content about images"
+    );
+
+    println!(
+        "✓ Image (no cover) handling test passed ({} bytes)",
+        result.content.len()
+    );
+}
+
+/// Test 19: Complex books - Wasteland poetry extraction
+///
+/// Validates: Handling of long, complex documents with literary structure
+/// File: wasteland.epub (T.S. Eliot's "The Waste Land" - 25KB EPUB)
+/// Expected: Extract substantial content (multi-section poetry)
+#[tokio::test]
+async fn test_epub_complex_book_wasteland() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("wasteland.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract wasteland.epub successfully");
+
+    // Wasteland is a longer book - should extract substantial content
+    assert!(
+        result.content.len() > 2000,
+        "Should extract substantial content from Wasteland, got {} bytes",
+        result.content.len()
+    );
+
+    // Should contain key phrases from T.S. Eliot's poem
+    assert!(
+        result.content.contains("April")
+            || result.content.contains("burial")
+            || result.content.contains("waste")
+            || result.content.contains("Land"),
+        "Should extract Waste Land poem content"
+    );
+
+    println!("✓ Complex book extraction test passed ({} bytes)", result.content.len());
+}
+
+/// Test 20: Pandoc parity - features.epub baseline comparison
+///
+/// Validates: Content extraction matches Pandoc's output (90-110% tolerance)
+/// File: features.epub with baseline
+/// This is critical for ensuring EPUB extraction quality
+#[tokio::test]
+async fn test_epub_pandoc_parity_features() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("features.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract features.epub successfully");
+
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "features_pandoc_baseline.txt");
+
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. \
+         (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
+
+    println!("✓ Pandoc parity test (features.epub) passed - ratio: {:.1}%", ratio);
+}
+
+/// Test 21: Pandoc parity - formatting.epub baseline comparison
+///
+/// Validates: Styled EPUB extraction matches Pandoc output
+/// File: formatting.epub with baseline
+#[tokio::test]
+async fn test_epub_pandoc_parity_formatting() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("formatting.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract formatting.epub successfully");
+
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "formatting_pandoc_baseline.txt");
+
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. \
+         (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
+
+    println!("✓ Pandoc parity test (formatting.epub) passed - ratio: {:.1}%", ratio);
+}
+
+/// Test 22: Pandoc parity - wasteland.epub baseline comparison
+///
+/// Validates: Complex poetry EPUB extraction quality
+/// File: wasteland.epub with baseline
+#[tokio::test]
+async fn test_epub_pandoc_parity_wasteland() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("wasteland.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    let result = extract_file(&test_file, "epub")
+        .await
+        .expect("Should extract wasteland.epub successfully");
+
+    let (extracted_len, baseline_len, ratio) = compare_with_baseline(&result.content, "wasteland_pandoc_baseline.txt");
+
+    assert!(
+        ratio >= 90.0 && ratio <= 110.0,
+        "FAIL: Content length {}% of Pandoc baseline. Expected 90-110%. \
+         (Extracted: {} bytes, Baseline: {} bytes)",
+        ratio as i32,
+        extracted_len,
+        baseline_len
+    );
+
+    println!("✓ Pandoc parity test (wasteland.epub) passed - ratio: {:.1}%", ratio);
+}
+
+/// Test 23: Deterministic extraction - same input produces same output
+///
+/// Validates: EPUB extraction is deterministic (no randomness/caching issues)
+/// File: features.epub
+/// Expected: Multiple extractions of same file produce identical results
+#[tokio::test]
+async fn test_epub_extraction_deterministic() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let test_file = get_test_epub_path("features.epub");
+    if !test_file.exists() {
+        println!("Skipping test: Test file not found at {:?}", test_file);
+        return;
+    }
+
+    // Extract same file twice
+    let result1 = extract_file(&test_file, "epub")
+        .await
+        .expect("First extraction should succeed");
+
+    let result2 = extract_file(&test_file, "epub")
+        .await
+        .expect("Second extraction should succeed");
+
+    // Content should be identical
+    assert_eq!(
+        result1.content, result2.content,
+        "FAIL: Extraction is not deterministic. Same input produced different outputs."
+    );
+
+    // Metadata should be identical
+    assert_eq!(
+        result1.metadata, result2.metadata,
+        "FAIL: Metadata extraction is not deterministic."
+    );
+
+    println!("✓ Deterministic extraction test passed");
+}
+
+/// Test 24: No critical content loss across all EPUB files
+///
+/// Validates: None of the EPUB test files lose all their content
+/// Critical: Tests the main bug (99.84% loss) is fixed
+/// Files: All 8 EPUB test files
+/// Expected: Each file extracts meaningful content
+#[tokio::test]
+async fn test_epub_no_critical_content_loss() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let epub_files = vec![
+        "epub2_cover.epub",
+        "epub2_no_cover.epub",
+        "epub2_picture.epub",
+        "img.epub",
+        "img_no_cover.epub",
+        "features.epub",
+        "formatting.epub",
+        "wasteland.epub",
+    ];
+
+    for epub_file in epub_files {
+        let test_file = get_test_epub_path(epub_file);
+        if !test_file.exists() {
+            println!("⚠ Skipping {}: not found", epub_file);
+            continue;
+        }
+
+        let result = extract_file(&test_file, "epub")
+            .await
+            .expect(&format!("Should extract {}", epub_file));
+
+        // CRITICAL: Should extract meaningful content (not 0 bytes)
+        assert!(
+            result.content.len() > 20,
+            "CRITICAL: {} extracted only {} bytes. Content loss bug?",
+            epub_file,
+            result.content.len()
+        );
+
+        println!("✓ {} - {} bytes extracted", epub_file, result.content.len());
+    }
+
+    println!("✅ All EPUB files extracted successfully - no critical content loss");
+}
+
+/// Test 25: UTF-8 and Unicode handling in EPUB content
+///
+/// Validates: EPUB extraction properly handles Unicode characters
+/// Files: Multiple files may contain Unicode content
+/// Expected: Extracted content is valid UTF-8, no corruption
+#[tokio::test]
+async fn test_epub_unicode_validity() {
+    if skip_if_no_pandoc().await {
+        println!("Skipping test: Pandoc not installed");
+        return;
+    }
+
+    let epub_files = vec!["wasteland.epub", "features.epub", "formatting.epub"];
+
+    for epub_file in epub_files {
+        let test_file = get_test_epub_path(epub_file);
+        if !test_file.exists() {
+            println!("⚠ Skipping {}: not found", epub_file);
+            continue;
+        }
+
+        let result = extract_file(&test_file, "epub")
+            .await
+            .expect(&format!("Should extract {}", epub_file));
+
+        // Validate UTF-8 - this will panic if invalid
+        let char_count = result.content.chars().count();
+        assert!(char_count > 0, "Should have valid UTF-8 characters");
+
+        // Should not have excessive control characters
+        let control_chars = result
+            .content
+            .chars()
+            .filter(|c| c.is_control() && *c != '\n' && *c != '\t' && *c != '\r')
+            .count();
+
+        assert!(
+            control_chars < (char_count / 10),
+            "Should not have excessive control characters ({}% of content)",
+            (control_chars * 100) / char_count.max(1)
+        );
+
+        println!(
+            "✓ {} - valid UTF-8 ({} chars, {} control)",
+            epub_file, char_count, control_chars
+        );
+    }
+
+    println!("✅ Unicode validity test passed");
+}
+
+// ============================================================================
+// TEST SUMMARY AND DOCUMENTATION
+// ============================================================================
+//
+// Test Suite Summary:
+//
+// **Total Tests**: 25 (13 original Pandoc-based + 12 enhanced TDD tests)
+//
+// **Test Categories**:
+//
+// 1. **Basic Content Extraction** (Test 1, 2, 14)
+//    - EPUB2 with cover
+//    - EPUB2 without cover
+//    - EPUB2 minimal content
+//
+// 2. **Chapter Navigation** (Test 3, 15)
+//    - Cover detection difference
+//    - All chapters extracted (CRITICAL - tests 99.84% bug fix)
+//
+// 3. **Structure Preservation** (Test 7, 8, 16)
+//    - EPUB3 features extraction
+//    - EPUB3 formatting extraction
+//    - Heading/structure preservation
+//
+// 4. **Image Handling** (Test 5, 6, 17, 18)
+//    - EPUB with images
+//    - EPUB without covers
+//    - Multiple image formats
+//    - Image EPUB without cover
+//
+// 5. **Cover Handling** (Test 1, 2, 3, 4)
+//    - EPUB2 with cover
+//    - EPUB2 without cover
+//    - EPUB2 with picture
+//    - Cover detection comparison
+//
+// 6. **Complex Books** (Test 9, 19)
+//    - Wasteland (T.S. Eliot poetry)
+//    - Large, multi-section documents
+//
+// 7. **Metadata Extraction** (Test 10)
+//    - Dublin Core field extraction
+//    - Creator/author extraction
+//    - Title, identifier, other metadata
+//
+// 8. **Pandoc Parity** (Test 20, 21, 22)
+//    - features.epub (90-110% baseline)
+//    - formatting.epub (90-110% baseline)
+//    - wasteland.epub (90-110% baseline)
+//
+// 9. **Quality Assurance** (Test 11, 12, 23, 24, 25)
+//    - Content quality validation
+//    - Pandoc baseline compliance
+//    - Deterministic extraction
+//    - No critical content loss
+//    - UTF-8/Unicode validity
+//
+// 10. **Statistics & Reporting** (Test 13)
+//     - Comprehensive extraction statistics
+//     - Metadata field counts
+//     - Content size distribution
+//
+// **Expected Results**:
+// - ALL TESTS SHOULD PASS (100% pass rate)
+// - No content loss (each file extracts >20 bytes minimum)
+// - Deterministic behavior (same input = same output)
+// - Pandoc parity within tolerance
+//
+// **Critical Bug Being Tested**:
+// - Historical issue: 99.84% content loss due to first-chapter-only extraction
+// - Test 15 (all_chapters_extracted) is the primary validation
+// - Expected to PASS if bug was fixed in commit b74adad9

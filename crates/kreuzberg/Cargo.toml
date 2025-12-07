@@ -42,7 +42,7 @@ office = [
     "dep:tree-sitter-latex",
 ]
 email = ["dep:mail-parser", "dep:msg_parser"]
-html = ["dep:html-to-markdown-rs", "dep:html-escape", "dep:scraper"]
+html = ["dep:html-to-markdown-rs", "dep:html-escape"]
 xml = ["dep:quick-xml", "dep:roxmltree"]
 archives = ["dep:zip", "dep:tar", "dep:sevenz-rust"]
 
@@ -136,7 +136,6 @@ mail-parser = { version = "0.11.1", optional = true }
 msg_parser = { version = "0.1.1", optional = true }
 html-to-markdown-rs = { version = "2.11.1", features = ["inline-images"], optional = true }
 html-escape = { version = "0.2.13", optional = true }
-scraper = { version = "0.24.0", optional = true }
 quick-xml = { version = "0.38.4", features = ["serialize"], optional = true }
 tar = { version = "0.4.44", optional = true }
 sevenz-rust = { version = "0.6.1", optional = true }

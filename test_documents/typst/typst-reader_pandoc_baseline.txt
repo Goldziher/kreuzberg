@@ -1,0 +1,353 @@
+Fibonacci sequence
+
+The Fibonacci sequence is defined through the recurrence relation
+F_(n) = F_(n − 1) + F_(n − 2). It can also be expressed in closed form:
+
+$$F_{n} = \left\lfloor {\frac{1}{\sqrt{5}}\phi^{n}} \right\rceil,\quad\phi = \frac{1 + \sqrt{5}}{2}$$
+
+The first 8 numbers of the sequence are:
+
+  ---- ---- ---- ---- ---- ---- ---- ----
+  F₁   F₂   F₃   F₄   F₅   F₆   F₇   F₈
+  1    1    2    3    5    8    13   21
+  ---- ---- ---- ---- ---- ---- ---- ----
+
+Typst Math for Undergrads
+
+This is a Typst port of L A T E X Math for Undergrads by Jim Hefferon.
+The original version is available at
+https://gitlab.com/jim.hefferon/undergradmath.
+
+Meaning of annotations  
+
++:----------------------+:----------------------------------------------+
+| 2023-05-22 ❌         | This is unavailable. Last check date is       |
+|                       | 2023-05-22.                                   |
++-----------------------+-----------------------------------------------+
+
++:----------------------+:----------------------------------------------+
+| 💦                    | Get this in a tricky way. Need a simpler      |
+|                       | method.                                       |
++-----------------------+-----------------------------------------------+
+
++:----------------------+:----------------------------------------------+
+| No idea 😕            | Don’t know how to get this.                   |
++-----------------------+-----------------------------------------------+
+
+Rule One  Any mathematics at all, even a single character, gets a
+mathematical setting. Thus, for “the value of x is 7” enter
+the value of $x$ is $7$.
+
+Template  Your document should contain at least this.
+
++---+------------------------------+
+|   |     -- document body here -- |
+|   |                              |
++---+------------------------------+
+
+Common constructs  
+
+  ------------------- -----------------------------------------------
+  x² x^2              $\sqrt{2}$, $\sqrt[n]{3}$ sqrt(2), root(n, 3)
+  x_(i, j) x_(i, j)   $\frac{2}{3}$, 2/3 2 / 3, 2 \/ 3 or 2 slash 3
+  ------------------- -----------------------------------------------
+
+Calligraphic letters  Use as in $cal(A)$.
+
+𝒜ℬ𝒞𝒟ℰℱ𝒢ℋℐ𝒥𝒦ℒℳ𝒩𝒪𝒫𝒬ℛ𝒮𝒯𝒰𝒱𝒲𝒳𝒴𝒵
+
+Getting script letters is [unavailable].
+
+Greek  
+
+  --------------------- -----------------------
+  α alpha               ξ, Ξ xi, Xi
+  β beta                ο omicron
+  γ, Γ gamma, Gamma     π, Π pi, Pi
+  δ, Δ delta, Delta     ϖ pi.alt
+  ϵ epsilon.alt         ρ rho
+  ε epsilon             𝜚 rho.alt
+  ζ zeta                σ, Σ sigma, Sigma
+  η eta                 𝜍 \u{03C2} [tricky]
+  θ, Θ theta, Theta     τ tau
+  ϑ theta.alt           υ, Υ upsilon, Upsilon
+  ι iota                ϕ, Φ phi.alt, Phi
+  κ Κ                   φ phi
+  λ, Λ lambda, Lambda   χ chi
+  μ mu                  ψ, Ψ psi, Psi
+  ν nu                  ω, Ω omega, Omega
+  --------------------- -----------------------
+
+Sets and logic  
+
+  ------------- ------------- -----------
+  ∪ union       ℝ RR, bb(R)   ∀ forall
+  ∩ sect        ℤ ZZ, bb(Z)   ∃ exists
+  ⊂ subset      ℚ QQ, bb(Q)   ¬ not
+  ⊆ subset.eq   ℕ NN, bb(N)   ∨ or
+  ⊃ supset      ℂ CC, bb(C)   ∧ and
+  ⊇ supset.eq   ⌀ diameter    ⊢ tack.r
+  ∈ in          ⌀ nothing     ⊨ models
+  ∉ in.not      א alef        ∖ without
+  ------------- ------------- -----------
+
+Negate an operator, as in ⊄, with subset.not. Get the set complement
+A^(c) with A^(sans(c)) (or A^(∁) with A^(complement), or $\overline{A}$
+with overline(A)).
+
+Remark
+
+    Using diameter for \varnothing may cause some confusion. However,
+    L A T E X also uses ⌀ (\u{2300}) instead of ⌀ (\u{2205}), see newcm
+    §13.3. Another solution is to use text(font: "Fira Sans", nothing),
+    but the resultant glyph ⌀ is subtly different from the widely used
+    one. Ultimately, the choice is always your decision.
+
+Decorations  
+
+  ---------------------- --------------------- -------------------------------------
+  f^(′) f', f prime      ȧ dot(a)              ã tilde(a)
+  f^(″) f prime.double   $\ddot{a}$ diaer(a)   $\overline{a}$ macron(a)
+  Σ^(*) Sigma^*          â hat(a)              $\overset{\rightarrow}{a}$ arrow(a)
+  ---------------------- --------------------- -------------------------------------
+
+If the decorated letter is i or j then some decorations need \u{1D6A4}
+[tricky] and \u{1D6A5} [tricky], as in $\overset{\rightarrow}{\imath}$
+with arrow(\u{1D6A4}). Some authors use boldface for vectors: bold(x).
+
+Entering overline(x + y) produces $\overline{x + y}$, and hat(x + y)
+gives $\hat{x + y}$. Comment on an expression as here (there is also
+overbrace(..)).
+
+$\underset{|A|}{\underbrace{x + y}}$ underbrace(x + y, |A|)
+
+Dots  Use low dots in a list {0, 1, 2, …}, entered as {0, 1, 2, ...}.
+Use centered dots in a sum or product 1 + ⋯ + 100, entered as
+1 + dots.h.c + 100. You can also get vertical dots dots.v, diagonal dots
+dots.down and anti-diagonal dots dots.up.
+
+Roman names  Just type them!
+
+  ---------- ------------ ----------------
+  sin  sin   sinh  sinh   arcsin  arcsin
+  cos  cos   cosh  cosh   arccos  arccos
+  tan  tan   tanh  tanh   arctan  arctan
+  sec  sec   coth  coth   min  min
+  csc  csc   det  det     max  max
+  cot  cot   dim  dim     inf  inf
+  exp  exp   ker  ker     sup  sup
+  log  log   deg  deg     liminf  liminf
+  ln  ln     arg  arg     limsup  limsup
+  lg  lg     gcd  gcd     lim  lim
+  ---------- ------------ ----------------
+
+Other symbols  
+
+  --------------------- --------------------- -----------------------
+  < <, lt               ∠ angle               ⋅ dot
+  ≤ <=, lt.eq           ∡ angle.arc           ± plus.minus
+  > >, gt               ℓ ell                 ∓ minus.plus
+  ≥ >=, gt.eq           ∥ parallel            × times
+  ≠ !=, eq.not          45^(∘) 45 degree      ÷ div
+  ≪ <<, lt.double       ≅ tilde.equiv         * *, ast
+  ≫ >>, gt.double       ≇ tilde.equiv.not     ∣ divides
+  ≈ approx              ∼ tilde               ∤ divides.not
+  ≍ \u{224D} [tricky]   ≃ tilde.eq            n! n!
+  ≡ equiv               ≁ tilde.not           ∂ diff
+  ≺ prec                ⊕ plus.circle         ∇ nabla
+  ≼ prec.eq             ⊖ minus.circle        ħ planck.reduce
+  ≻ succ                ⊙ dot.circle          ∘ circle.stroked.tiny
+  ≽ succ.eq             ⊗ times.circle        ⋆ star
+  ∝ prop                ⊘ \u{2298} [tricky]   $\sqrt{}$ sqrt("")
+  ≐ \u{2250} [tricky]   ↾ harpoon.tr          ✓ checkmark
+  --------------------- --------------------- -----------------------
+
+Use a divides b for the divides relation, a ∣ b, and a divides.not b for
+the negation, a ∤ b. Use | to get set builder notation
+{a ∈ S | a is odd} with {a in S | a "is odd"}.
+
+Arrows  
+
+  ----------------------- ------------------------
+  → ->, arrow.r           ↦ |->, arrow.r.bar
+  ↛ arrow.r.not           ↦ arrow.r.long.bar
+  → arrow.r.long          ← <-, arrow.l
+  ⇒ =>, arrow.r.double    ↔ <-->, arrow.l.r.long
+  ⇏ arrow.r.double.not    ↓ arrow.b
+  ⇒ arrow.r.double.long   ↑ arrow.t
+  ⇝ arrow.squiggly        ↕ arrow.t.b
+  ----------------------- ------------------------
+
+The right arrows in the first column have matching left arrows, such as
+arrow.l.not, and there are some other matches for down arrows, etc.
+
+Variable-sized operators  The summation $\sum_{j = 0}^{3}j^{2}$
+sum_(j = 0)^3 j^2 and the integral ∫_(x = 0)³x²dx
+integral_(x = 0)^3 x^2 dif x expand when displayed.
+
+$$\sum_{j = 0}^{3}j^{2}\qquad\int_{x = 0}^{3}x^{2}dx$$
+
+These do the same.
+
+  ------------------- ------------------- -------------
+  ∫ integral          ∭ integral.triple   ⋃ union.big
+  ∬ integral.double   ∮ integral.cont     ⋂ sect.big
+  ------------------- ------------------- -------------
+
+Fences  
+
+  ------- -------------------- -------------
+  () ()   ⟨⟩ angle.l angle.r   || abs("")
+  [] []   ⌊⌋ floor("")         ∥∥ norm("")
+  {} {}   ⌈⌉ ceil("")
+  ------- -------------------- -------------
+
+Fix the size with the lr function.
+
++:------------------------------------------------------------------------+:--------------------------------------------+
+| $$\left. \left\lbrack \sum_{k = 0}^{n}e^{k^{2}} \right\rbrack \right.$$ |     lr([sum_(k = 0)^n e^(k^2)], size: #50%) |
+|                                                                         |                                             |
++-------------------------------------------------------------------------+---------------------------------------------+
+
+To have them grow with the enclosed formula, also use the lr function.
+
++:---------------+:-----------------------------------+
+| ⟨i, 2^(2^(i))⟩ |     lr(angle.l i, 2^(2^i) angle.r) |
+|                |                                    |
++----------------+------------------------------------+
+
+Fences scale by default if entered directly as codepoints, and don’t
+scale automatically if entered as symbol notation.
+
++:----------------------------------------+:----------------------------------+
+| $$\left( \frac{1}{n^{\alpha}} \right)$$ |     (1 / n^(alpha))               |
+|                                         |                                   |
++-----------------------------------------+-----------------------------------+
+| $$(\frac{1}{n^{\alpha}})$$              |     paren.l 1 / n^(alpha) paren.r |
+|                                         |                                   |
++-----------------------------------------+-----------------------------------+
+
+The lr function also allows to scale unmatched delimiters and one-side
+fences.
+
++:-----------------------------------------+:-----------------------------------+
+| $$\left. \frac{df}{dx} \right|_{x_{0}}$$ |     lr(frac(dif f, dif x) |)_(x_0) |
+|                                          |                                    |
++------------------------------------------+------------------------------------+
+
+Arrays, Matrices  Get a matrix with the mat function. You can pass an
+array to it.
+
++:------------------+:------------------------+
+| $$\begin{pmatrix} |     $ mat(a, b; c, d) $ |
+| a & b \\          |                         |
+| c & d             |                         |
+| \end{pmatrix}$$   |                         |
++-------------------+-------------------------+
+
+In Typst, array is a sequence of values, while in L A T E X, array is a
+matrix without fences, which is $mat(delim: #none, ..)$ in Typst.
+
+For the determinant use |A|, text operator det  det or
+mat(delim: "|", ..).
+
+Definition by cases can be easily obtained with the cases function.
+
++:---------------------------------+:--------------------------------+
+| $$f_{n} = \begin{cases}          |     $ f_n = cases(              |
+| a & \text{if }n = 0 \\           |         a &"if" n = 0,          |
+| r \cdot f_{n - 1} & \text{else } |         r dot f_(n - 1) &"else" |
+| \end{cases}$$                    |       ) $                       |
+|                                  |                                 |
++----------------------------------+---------------------------------+
+
+Spacing in mathematics  Improve $\sqrt{2}x$ to $\sqrt{2}\, x$ with a
+thin space, as in sqrt(2) thin x. Slightly wider are medium and thick
+(the three are in ratio 3 : 4 : 5). Bigger space is quad for →  ←, which
+is useful between parts of a display. Get arbitrary space with the h
+function. For example, use #h(2em) for \qquad in L A T E X and
+#h(-0.1667em) for \!.
+
+Displayed equations  Display equations in a block level using $ ... $
+with at least one space separating the math content and the $.
+
++:-------------+:-----------------------+
+| S = k ⋅ lg W |     $ S = k dot lg W $ |
+|              |                        |
++--------------+------------------------+
+
+You can break into multiple lines.
+
++:----------------------------------+:----------------------------------+
+| $$\begin{array}{r}                |     $ sin(x) = x - x^3 / 3! \     |
+| \sin(x) = x - \frac{x^{3}}{3!} \\ |           + x^5 / 5! - dots.h.c $ |
+|  + \frac{x^{5}}{5!} - \cdots      |                                   |
+| \end{array}$$                     |                                   |
++-----------------------------------+-----------------------------------+
+
+Align equations using &
+
++:------------------------------------+:---------------------------------+
+| $$\begin{aligned}                   |     $ nabla dot bold(D) &= rho \ |
+| \nabla \cdot \mathbf{D} & = \rho \\ |         nabla dot bold(B) &= 0 $ |
+| \nabla \cdot \mathbf{B} & = 0       |                                  |
+| \end{aligned}$$                     |                                  |
++-------------------------------------+----------------------------------+
+
+(the left or right side of an alignment can be empty). Get a numbered
+version by #set math.equation(numbering: ..).
+
+Calculus examples  The last three here are display style.
+
++---------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------+
+| f : ℝ → ℝ                                                                             |     f: RR -> RR                                                                   |
+|                                                                                       |                                                                                   |
++---------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------+
+| 9.8  m/s²                                                                             | "9.8" "m/s"^2 [tricky]                                                            |
++---------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------+
+| $$\lim\limits_{h \rightarrow 0}\frac{f(x + h) - f(x)}{h}$$                            |     lim_(h -> 0) (f(x + h) - f(x)) / h                                            |
+|                                                                                       |                                                                                   |
++---------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------+
+| ∫x²dx = x³/3 + C                                                                      |     integral x^2 dif x = x^3 \/ 3 + C                                             |
+|                                                                                       |                                                                                   |
++---------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------+
+| $$\nabla = \mathbf{i}\frac{d}{dx} + \mathbf{j}\frac{d}{dy} + \mathbf{k}\frac{d}{dz}$$ |     nabla = bold(i) dif / (dif x) + bold(j) dif / (dif y) + bold(k) dif / (dif z) |
+|                                                                                       |                                                                                   |
++---------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------+
+
+Discrete mathematics examples  For modulo, there is a symbol ≡ from
+equiv and a text operator mod  from mod.
+
+For combinations the binomial symbol $\binom{n}{k}$ is from binom(n, k).
+This resizes to be bigger in a display.
+
+For permutations use $n^{\underline{r}}$ from n^(underline(r)) (some
+authors use P(n, r), or _(n)P_(r) from ""_n P_r).
+
+Statistics examples  
+
++-------------------------------------------------+------------------------------------------+
+| $\sigma^{2} = \sqrt{{\sum(x_{i} - \mu)}^{2}/N}$ |     sigma^2 = sqrt(sum(x_i - mu)^2 \/ N) |
+|                                                 |                                          |
++-------------------------------------------------+------------------------------------------+
+| E(X) = μ_(X) = ∑(x_(i) − P(x_(i)))              |     E(X) = mu_X = sum(x_i - P(x_i))      |
+|                                                 |                                          |
++-------------------------------------------------+------------------------------------------+
+
+The probability density of the normal distribution
+
+$$\frac{1}{\sqrt{2\sigma^{2}\pi}}e^{- \frac{(x - \mu)^{2}}{2\sigma^{2}}}$$
+
+comes from this.
+
++---+----------------------------------------+
+|   |     1 / sqrt(2 sigma^2 pi)             |
+|   |         e^(- (x - mu)^2 / (2 sigma^2)) |
+|   |                                        |
++---+----------------------------------------+
+
+For more  See also the Typst Documentation at https://typst.app/docs.
+
+------------------------------------------------------------------------
+
+johanvx (https://github.com/johanvx)    2023-05-22

@@ -1,0 +1,40 @@
+{
+	"pandoc-api-version": [1, 23, 1],
+	"meta": {},
+	"blocks": [
+		{
+			"t": "Header",
+			"c": [1, ["", [], []], [{ "t": "Str", "c": "Hello" }, { "t": "Space" }, { "t": "Str", "c": "World" }]]
+		},
+		{
+			"t": "Para",
+			"c": [
+				{ "t": "Str", "c": "This" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "is" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "minimal" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "Typst" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "document" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "with" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "just" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "a" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "heading" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "and" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "some" },
+				{ "t": "Space" },
+				{ "t": "Str", "c": "text." }
+			]
+		}
+	]
+}

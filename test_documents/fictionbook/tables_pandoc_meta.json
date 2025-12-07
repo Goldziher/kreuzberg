@@ -1,0 +1,170 @@
+{
+	"pandoc-api-version": [1, 23, 1],
+	"meta": {},
+	"blocks": [
+		{ "t": "Header", "c": [1, ["", [], []], []] },
+		{
+			"t": "Div",
+			"c": [
+				["", ["section"], []],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Simple" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "table" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "with" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "caption:" }
+						]
+					},
+					{
+						"t": "Para",
+						"c": [
+							{
+								"t": "Emph",
+								"c": [
+									{ "t": "Str", "c": "Demonstration" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "of" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "simple" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "table" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "syntax." }
+								]
+							}
+						]
+					},
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Simple" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "table" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "without" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "caption:" }
+						]
+					},
+					{ "t": "Para", "c": [{ "t": "Emph", "c": [] }] },
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Simple" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "table" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "indented" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "two" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "spaces:" }
+						]
+					},
+					{
+						"t": "Para",
+						"c": [
+							{
+								"t": "Emph",
+								"c": [
+									{ "t": "Str", "c": "Demonstration" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "of" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "simple" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "table" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "syntax." }
+								]
+							}
+						]
+					},
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Multiline" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "table" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "with" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "caption:" }
+						]
+					},
+					{
+						"t": "Para",
+						"c": [
+							{
+								"t": "Emph",
+								"c": [
+									{ "t": "Str", "c": "Here’s" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "the" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "caption." },
+									{ "t": "SoftBreak" },
+									{ "t": "Str", "c": "It" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "may" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "span" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "multiple" },
+									{ "t": "Space" },
+									{ "t": "Str", "c": "lines." }
+								]
+							}
+						]
+					},
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Multiline" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "table" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "without" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "caption:" }
+						]
+					},
+					{ "t": "Para", "c": [{ "t": "Emph", "c": [] }] },
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Table" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "without" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "column" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "headers:" }
+						]
+					},
+					{ "t": "Para", "c": [{ "t": "Emph", "c": [] }] },
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Multiline" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "table" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "without" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "column" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "headers:" }
+						]
+					},
+					{ "t": "Para", "c": [{ "t": "Emph", "c": [] }] }
+				]
+			]
+		}
+	]
+}

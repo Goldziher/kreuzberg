@@ -1,0 +1,53 @@
+{
+	"pandoc-api-version": [1, 23, 1],
+	"meta": {},
+	"blocks": [
+		{
+			"t": "Div",
+			"c": [
+				["", ["section"], []],
+				[
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Note" },
+							{ "t": "Space" },
+							{
+								"t": "Note",
+								"c": [
+									{ "t": "Para", "c": [{ "t": "Str", "c": "Note" }, { "t": "Space" }, { "t": "Str", "c": "contents" }] }
+								]
+							},
+							{ "t": "Str", "c": "." }
+						]
+					},
+					{
+						"t": "Para",
+						"c": [
+							{ "t": "Str", "c": "Second" },
+							{ "t": "Space" },
+							{ "t": "Str", "c": "note" },
+							{ "t": "Space" },
+							{
+								"t": "Note",
+								"c": [
+									{
+										"t": "Para",
+										"c": [
+											{ "t": "Str", "c": "Second" },
+											{ "t": "Space" },
+											{ "t": "Str", "c": "note" },
+											{ "t": "Space" },
+											{ "t": "Str", "c": "contents." }
+										]
+									}
+								]
+							},
+							{ "t": "Str", "c": "." }
+						]
+					}
+				]
+			]
+		}
+	]
+}

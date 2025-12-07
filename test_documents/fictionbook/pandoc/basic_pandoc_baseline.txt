@@ -1,0 +1,38 @@
+Top-level title
+
+Section
+
+Subsection
+
+This emphasized strong verbatim markdown. See this link.
+
+Ordered list:
+
+1. one
+
+2. two
+
+3. three
+
+  Blockquote is for citatons.
+
+------------------------------------------------------------------------
+
+Code
+
+block
+
+is
+
+for
+
+code.
+
+------------------------------------------------------------------------
+
+~~Strikeout~~ is Pandoc’s extension. Superscript and subscripts too: H₂O
+is a liquid[1]. 2¹⁰ is 1024.
+
+Math is another Pandoc extension: E = m c^2.
+
+[1] Sometimes.

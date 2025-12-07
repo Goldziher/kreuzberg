@@ -1,0 +1,61 @@
+{
+	"pandoc-api-version": [1, 23, 1],
+	"meta": {},
+	"blocks": [
+		{
+			"t": "Div",
+			"c": [
+				["", ["section"], []],
+				[
+					{
+						"t": "Header",
+						"c": [2, ["", [], []], [{ "t": "Str", "c": "Poem" }, { "t": "Space" }, { "t": "Str", "c": "title" }]]
+					},
+					{
+						"t": "Div",
+						"c": [
+							["", ["epigraph"], []],
+							[{ "t": "Para", "c": [{ "t": "Str", "c": "Poem" }, { "t": "Space" }, { "t": "Str", "c": "epigraph" }] }]
+						]
+					},
+					{ "t": "Header", "c": [2, ["", ["unnumbered"], []], [{ "t": "Str", "c": "Subtitle" }]] },
+					{
+						"t": "Header",
+						"c": [
+							2,
+							["", [], []],
+							[
+								{ "t": "Str", "c": "First" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "stanza" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "title" }
+							]
+						]
+					},
+					{
+						"t": "LineBlock",
+						"c": [
+							[{ "t": "Str", "c": "Verse" }],
+							[{ "t": "Emph", "c": [{ "t": "Str", "c": "More" }] }, { "t": "Space" }, { "t": "Str", "c": "verse" }]
+						]
+					},
+					{
+						"t": "LineBlock",
+						"c": [
+							[
+								{ "t": "Str", "c": "One" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "more" },
+								{ "t": "Space" },
+								{ "t": "Str", "c": "stanza" }
+							]
+						]
+					},
+					{ "t": "Para", "c": [{ "t": "Str", "c": "Author" }] },
+					{ "t": "Para", "c": [{ "t": "Str", "c": "April" }, { "t": "Space" }, { "t": "Str", "c": "2018" }] }
+				]
+			]
+		}
+	]
+}

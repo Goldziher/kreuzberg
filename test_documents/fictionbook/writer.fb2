@@ -11,6 +11,7 @@
 <nickname>Anonymous</nickname>
 </author>
 <book-title>Pandoc Test Suite</book-title>
+<keywords>test, markdown, fictionbook</keywords>
 <date>July 17, 2006</date>
 </title-info>
 <document-info>
@@ -119,12 +120,8 @@ It is pretty short.</p>
 <p>1. item one</p>
 <p>2. item two</p>
 <p>Nested block quotes:</p>
-<cite>
 <p>nested</p>
-</cite>
-<cite>
 <p>nested</p>
-</cite>
 </cite>
 <p>This should not be a block quote: 2
 &gt; 1.</p>

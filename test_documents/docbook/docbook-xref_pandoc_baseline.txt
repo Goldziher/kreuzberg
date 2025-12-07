@@ -1,0 +1,75 @@
+XRef Samples
+
+This paragraph demonstrates several features of XRef.
+
+- A straight link generates the cross-reference text: The Second
+  Chapter.
+
+- A link to an element with an XRefLabel: Chapter the Third.
+
+- A link with an EndTerm: Chapter 4.
+
+- A link to an cmdsynopsis element: chgrp.
+
+- A link to an funcsynopsis element: max.
+
+- A link to a figure element: The Pythagorean Theorem Illustrated.
+
+- A link to a table element: Supported features by version.
+
+- A link to a part element: Later Part.
+
+- A link to a book element: An Example Book.
+
+The Second Chapter
+
+Some content here
+
+Later Part
+
+The Third Chapter
+
+Some content here
+
+The Fourth Chapter
+
+Some content here
+
+chgrp
+
+-R
+
+-H
+
+-L
+
+-P
+
+-f
+
+group
+
+file
+
+int
+
+max
+
+int
+
+int1
+
+int
+
+int2
+
+[An illustration of the Pythagorean Theorem]
+
+  -----------------------------------------------------------------------
+  Version                             Feat
+  ----------------------------------- -----------------------------------
+  Free                                no
+
+  -----------------------------------------------------------------------
+
+  : Supported features by version {#table01}
