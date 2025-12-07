@@ -17,7 +17,7 @@ runs:
       with:
         path: |
           ${{ runner.temp }}/onnxruntime
-        key: onnx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
+        key: onnx-v2-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
 
     - name: Prepare ONNX Runtime (Linux)
       if: runner.os == 'Linux'
@@ -38,18 +38,36 @@ runs:
           echo "Cache hit: Using cached ONNX Runtime ${ort_version}"
         fi
         ort_root="$extract_dir/onnxruntime-linux-x64-${ort_version}"
+
+        # Verify library directory exists and contains libraries
         if [ ! -d "$ort_root/lib" ]; then
-          echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+          echo "ERROR: ONNX Runtime lib directory missing at $ort_root/lib" >&2
+          echo "Available directories:" >&2
+          ls -la "$extract_dir" >&2 || true
           exit 1
         fi
+
+        # Verify that library files actually exist
+        if ! ls "$ort_root/lib"/*.so* 1> /dev/null 2>&1; then
+          echo "ERROR: No ONNX Runtime libraries found in $ort_root/lib" >&2
+          echo "Directory contents:" >&2
+          ls -la "$ort_root/lib" >&2 || true
+          exit 1
+        fi
+
         dest="$GITHUB_WORKSPACE/${{ inputs.dest-dir }}"
         mkdir -p "$dest"
         cp -f "$ort_root/lib/"*.so* "$dest/"
+
+        # Add library path variables and RUSTFLAGS for complete library path resolution
         {
           echo "ORT_LIB_LOCATION=$ort_root/lib"
           echo "ORT_PREFER_DYNAMIC_LINK=1"
           echo "ORT_SKIP_DOWNLOAD=1"
-          echo "LD_LIBRARY_PATH=$dest:${LD_LIBRARY_PATH:-}"
+          echo "ORT_STRATEGY=system"
+          echo "LD_LIBRARY_PATH=$ort_root/lib:$dest:${LD_LIBRARY_PATH:-}"
+          echo "LIBRARY_PATH=$ort_root/lib:$dest:${LIBRARY_PATH:-}"
+          echo "RUSTFLAGS=-L $ort_root/lib"
         } >> "$GITHUB_ENV"
 
     - name: Prepare ONNX Runtime (macOS)
@@ -60,29 +78,57 @@ runs:
         ort_version="${{ inputs.ort-version }}"
         extract_dir="$RUNNER_TEMP/onnxruntime"
 
+        # Detect macOS architecture (arm64 or x86_64)
+        arch=$(uname -m)
+        if [ "$arch" = "arm64" ]; then
+          ort_arch="arm64"
+        else
+          ort_arch="x86_64"
+        fi
+        echo "Detected macOS architecture: $arch -> $ort_arch"
+
         # Download only if not cached
-        if [ ! -d "$extract_dir/onnxruntime-osx-arm64-${ort_version}" ]; then
-          echo "Cache miss: Downloading ONNX Runtime ${ort_version}"
-          archive="onnxruntime-osx-arm64-${ort_version}.tgz"
+        if [ ! -d "$extract_dir/onnxruntime-osx-${ort_arch}-${ort_version}" ]; then
+          echo "Cache miss: Downloading ONNX Runtime ${ort_version} for macOS ${ort_arch}"
+          archive="onnxruntime-osx-${ort_arch}-${ort_version}.tgz"
           curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
           mkdir -p "$extract_dir"
           tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
         else
           echo "Cache hit: Using cached ONNX Runtime ${ort_version}"
         fi
-        ort_root="$extract_dir/onnxruntime-osx-arm64-${ort_version}"
+        ort_root="$extract_dir/onnxruntime-osx-${ort_arch}-${ort_version}"
+
+        # Verify library directory exists and contains libraries
         if [ ! -d "$ort_root/lib" ]; then
-          echo "ONNX Runtime lib directory missing at $ort_root/lib" >&2
+          echo "ERROR: ONNX Runtime lib directory missing at $ort_root/lib" >&2
+          echo "Available directories:" >&2
+          ls -la "$extract_dir" >&2 || true
           exit 1
         fi
+
+        # Verify that library files actually exist
+        if ! ls "$ort_root/lib"/libonnxruntime*.dylib 1> /dev/null 2>&1; then
+          echo "ERROR: No ONNX Runtime libraries found in $ort_root/lib" >&2
+          echo "Directory contents:" >&2
+          ls -la "$ort_root/lib" >&2 || true
+          exit 1
+        fi
+
         dest="$GITHUB_WORKSPACE/${{ inputs.dest-dir }}"
         mkdir -p "$dest"
         cp -f "$ort_root/lib/"libonnxruntime*.dylib "$dest/"
+
+        # Add both DYLD environment variables and RUSTFLAGS for complete library path resolution
         {
           echo "ORT_LIB_LOCATION=$ort_root/lib"
           echo "ORT_PREFER_DYNAMIC_LINK=1"
           echo "ORT_SKIP_DOWNLOAD=1"
-          echo "DYLD_LIBRARY_PATH=$dest:${DYLD_LIBRARY_PATH:-}"
+          echo "ORT_STRATEGY=system"
+          echo "DYLD_LIBRARY_PATH=$ort_root/lib:$dest:${DYLD_LIBRARY_PATH:-}"
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$ort_root/lib:$dest:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+          echo "LIBRARY_PATH=$ort_root/lib:$dest:${LIBRARY_PATH:-}"
+          echo "RUSTFLAGS=-L $ort_root/lib"
         } >> "$GITHUB_ENV"
 
     - name: Prepare ONNX Runtime (Windows)
@@ -105,10 +151,21 @@ runs:
           Write-Host "Cache hit: Using cached ONNX Runtime $OrtVersion"
         }
 
+        # Verify library directory exists
         if (!(Test-Path (Join-Path $OrtRoot 'lib'))) {
-          Write-Error "ONNX Runtime lib directory missing at $OrtRoot\lib"
+          Write-Error "ERROR: ONNX Runtime lib directory missing at $OrtRoot\lib"
+          Get-ChildItem -Path $ExtractRoot -Recurse | Write-Host
           exit 1
         }
+
+        # Verify that library files actually exist
+        $LibFiles = Get-ChildItem -Path (Join-Path $OrtRoot 'lib') -Filter "*.lib" -ErrorAction SilentlyContinue
+        if ($LibFiles.Count -eq 0) {
+          Write-Error "ERROR: No ONNX Runtime library files found in $OrtRoot\lib"
+          Get-ChildItem -Path (Join-Path $OrtRoot 'lib') | Write-Host
+          exit 1
+        }
+
         $Dest = Join-Path $env:GITHUB_WORKSPACE "${{ inputs.dest-dir }}"
         New-Item -ItemType Directory -Path $Dest -Force | Out-Null
         Copy-Item -Path (Join-Path $OrtRoot 'lib' '*') -Destination $Dest -Force
@@ -116,5 +173,9 @@ runs:
           "ORT_LIB_LOCATION=$OrtRoot\lib"
           "ORT_PREFER_DYNAMIC_LINK=1"
           "ORT_SKIP_DOWNLOAD=1"
+          "ORT_STRATEGY=system"
+          "RUSTFLAGS=-L $OrtRoot\lib"
+          "LIB=$OrtRoot\lib;$env:LIB"
+          "LIBRARY_PATH=$OrtRoot\lib;$env:LIBRARY_PATH"
           "PATH=$Dest;$env:PATH"
         ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

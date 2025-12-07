@@ -6,7 +6,7 @@
 #   2. User config: ~/.config/kreuzberg/config.toml
 #   3. System config: /etc/kreuzberg/config.toml
 #
-# Documentation: https://kreuzberg.goldziher.dev/guides/configuration/
+# Documentation: https://kreuzberg.dev/guides/configuration/
 
 # ==============================================================================
 # Extraction Configuration
@@ -178,6 +178,10 @@ show_download_progress = true
 #   - "all-MiniLM-L6-v2": Fast, 384-dimensional embeddings (default)
 #   - "all-mpnet-base-v2": High quality, 768-dimensional embeddings
 #   - "paraphrase-multilingual-MiniLM-L12-v2": Multilingual support
+#
+# Example: enable multilingual paraphrase embeddings explicitly
+# model = "paraphrase-multilingual-MiniLM-L12-v2"
+
 # Note: Model configuration in TOML is complex. Use programmatic API for custom models.
 
 # ==============================================================================
@@ -203,7 +207,7 @@ enabled = true
 min_confidence = 0.8
 
 # Detect multiple languages vs. dominant only (default: false)
-detect_multiple = false
+detect_multiple = false # set to true to return all detected languages for mixed-language docs
 
 # ==============================================================================
 # Post-Processing Configuration

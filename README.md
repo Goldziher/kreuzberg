@@ -4,7 +4,7 @@
 [![PyPI](https://badge.fury.io/py/kreuzberg.svg)](https://badge.fury.io/py/kreuzberg)
 [![npm](https://img.shields.io/npm/v/@kreuzberg/node)](https://www.npmjs.com/package/@kreuzberg/node)
 [![RubyGems](https://badge.fury.io/rb/kreuzberg.svg)](https://rubygems.org/gems/kreuzberg)
-[![Go Reference](https://pkg.go.dev/badge/github.com/Goldziher/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/Goldziher/kreuzberg/packages/go/kreuzberg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg)
 [![Maven Central](https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg)](https://central.sonatype.com/artifact/dev.kreuzberg/kreuzberg)
 [![NuGet](https://img.shields.io/nuget/v/Goldziher.Kreuzberg)](https://www.nuget.org/packages/Goldziher.Kreuzberg/)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
@@ -13,7 +13,7 @@
 **A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats. Available for Rust, Python, TypeScript/Node.js, Ruby, Go, Java, and C#—or use via CLI, REST API, or MCP server.
 
 > **🚀 Version 4.0.0 Release Candidate**
-> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter. Help us make the stable release better!
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter. Help us make the stable release better!
 
 ## Why Kreuzberg
 
@@ -64,7 +64,7 @@ npm install @kreuzberg/node
 ### Go
 
 ```bash
-go get github.com/Goldziher/kreuzberg/packages/go/kreuzberg@latest
+go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 ```
 
 Build the FFI crate (`cargo build -p kreuzberg-ffi --release`) and set `LD_LIBRARY_PATH`/`DYLD_FALLBACK_LIBRARY_PATH` to `target/release` so cgo can locate `libkreuzberg_ffi`.
@@ -106,12 +106,11 @@ Requires .NET 10.0+. Build the FFI crate (`cargo build -p kreuzberg-ffi --releas
 ```toml
 [dependencies]
 # Use git dependency for full feature support (including embeddings)
-kreuzberg = { git = "https://github.com/Goldziher/kreuzberg", tag = "v4.0.0" }
+kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", tag = "v4.0.0" }
 
 # Or use a specific branch
-# kreuzberg = { git = "https://github.com/Goldziher/kreuzberg", branch = "main" }
+# kreuzberg = { git = "https://github.com/kreuzberg-dev/kreuzberg", branch = "main" }
 ```
-
 
 **[Rust Documentation →](crates/kreuzberg/README.md)**
 
@@ -230,7 +229,7 @@ Model Context Protocol server for Claude and other AI assistants. Enables AI age
 
 Official Docker images available in multiple variants:
 
-- **Core** (~1.0-1.3GB): Tesseract OCR, Pandoc, modern Office formats
+- **Core** (~1.0-1.3GB): Tesseract OCR, modern Office formats
 - **Full** (~1.5-2.1GB): Adds LibreOffice for legacy Office formats (.doc, .ppt)
 
 All images support API server, CLI, and MCP server modes with automatic platform detection for linux/amd64 and linux/arm64.

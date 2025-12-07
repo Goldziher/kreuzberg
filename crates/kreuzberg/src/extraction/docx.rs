@@ -16,7 +16,7 @@ use crate::error::{KreuzbergError, Result};
 ///
 /// # Performance
 /// docx-lite uses streaming XML parsing for minimal memory overhead and high throughput
-/// (~160 MB/s average). It eliminates subprocess overhead compared to Pandoc (~400x faster).
+/// (~160 MB/s average).
 pub fn extract_text(bytes: &[u8]) -> Result<String> {
     docx_lite::extract_text_from_bytes(bytes)
         .map_err(|e| KreuzbergError::parsing(format!("DOCX text extraction failed: {}", e)))

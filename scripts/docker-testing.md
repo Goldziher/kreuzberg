@@ -11,7 +11,6 @@ The Docker testing system validates the full functionality of the Kreuzberg Dock
 - **OCR capabilities** (Tesseract integration)
 - **API server** (health checks, extraction endpoints)
 - **LibreOffice conversion** (legacy .doc files)
-- **Pandoc integration**
 - **Security** (non-root user, read-only volumes, memory limits)
 
 ## Files

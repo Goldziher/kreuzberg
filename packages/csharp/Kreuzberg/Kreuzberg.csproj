@@ -13,7 +13,7 @@
     <Description>High-performance document intelligence library for .NET powered by Rust. Extract text, metadata, and structured content from 50+ file formats including PDF, Office documents, images, HTML, XML, and more. Features OCR support (Tesseract), metadata parsing, table extraction, and async/sync APIs. 10-50x faster than Python alternatives with 60-90% less memory usage.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://kreuzberg.dev</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Goldziher/kreuzberg</RepositoryUrl>
+    <RepositoryUrl>https://github.com/kreuzberg-dev/kreuzberg</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>kreuzberg;document;extraction;rust;ffi;pdf;ocr;office;docx;excel;document-processing;document-intelligence;text-extraction;metadata;parsing;tesseract;dotnet;netcore</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>

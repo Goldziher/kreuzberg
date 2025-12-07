@@ -2,7 +2,7 @@
 	"document": "../../../test_documents/documents/test_emf_docx.docx",
 	"file_type": "docx",
 	"file_size": 425984,
-	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
 	"metadata": {
 		"description": "Large formatted DOCX - 416KB document with EMF graphics",
 		"category": "docx-complex",

@@ -51,6 +51,12 @@ mod build_tesseract {
             return PathBuf::from(custom);
         }
 
+        if cfg!(target_os = "windows") {
+            // Avoid deeply nested OUT_DIR paths (e.g., Ruby gems) that blow past MAX_PATH.
+            // Always prefer a short, deterministic cache root.
+            return PathBuf::from("C:\\tess");
+        }
+
         if let Some(workspace_cache) = workspace_cache_dir_from_out_dir() {
             return workspace_cache;
         }
@@ -72,13 +78,37 @@ mod build_tesseract {
                     .expect("Neither HOME nor USER environment variable set")
             });
             PathBuf::from(home_dir).join(".tesseract-rs")
-        } else if cfg!(target_os = "windows") {
-            // Windows MAX_PATH (260 char) handling: use shortest possible path
-            // Use C:\tess as the absolute shortest path to avoid path length issues
-            PathBuf::from("C:\\tess")
         } else {
             panic!("Unsupported operating system");
         }
+    }
+
+    fn target_triple() -> String {
+        env::var("TARGET").unwrap_or_else(|_| env::var("HOST").unwrap_or_default())
+    }
+
+    fn target_matches(target: &str, needle: &str) -> bool {
+        target.contains(needle)
+    }
+
+    fn is_windows_target(target: &str) -> bool {
+        target_matches(target, "windows")
+    }
+
+    fn is_macos_target(target: &str) -> bool {
+        target_matches(target, "apple-darwin")
+    }
+
+    fn is_linux_target(target: &str) -> bool {
+        target_matches(target, "linux")
+    }
+
+    fn is_msvc_target(target: &str) -> bool {
+        is_windows_target(target) && target_matches(target, "msvc")
+    }
+
+    fn is_mingw_target(target: &str) -> bool {
+        is_windows_target(target) && target_matches(target, "gnu")
     }
 
     fn prepare_out_dir() -> PathBuf {
@@ -99,6 +129,10 @@ mod build_tesseract {
 
     pub fn build() {
         let custom_out_dir = prepare_out_dir();
+        let target = target_triple();
+        let windows_target = is_windows_target(&target);
+        let msvc_target = is_msvc_target(&target);
+        let mingw_target = is_mingw_target(&target);
 
         println!("cargo:warning=custom_out_dir: {:?}", custom_out_dir);
 
@@ -179,9 +213,13 @@ mod build_tesseract {
             }
 
             // Configure build tools for Windows
-            if cfg!(target_os = "windows") {
-                // Use NMake on Windows to avoid Visual Studio generator path length issues
-                if let Ok(_vs_install_dir) = env::var("VSINSTALLDIR") {
+            if windows_target {
+                if mingw_target {
+                    leptonica_config.generator("MinGW Makefiles");
+                    // Prevent MSYS argument conversion from touching MSVC-style flags if they sneak in
+                    leptonica_config.define("MSYS2_ARG_CONV_EXCL", "/MD;/MDd");
+                } else if msvc_target && env::var("VSINSTALLDIR").is_ok() {
+                    // Use NMake on Windows to avoid Visual Studio generator path length issues
                     leptonica_config.generator("NMake Makefiles");
                 }
                 // Disable multi-tool task to reduce intermediate path depth
@@ -213,12 +251,18 @@ mod build_tesseract {
                 .define("CMAKE_INSTALL_PREFIX", &leptonica_install_dir);
 
             // Windows-specific defines
-            if cfg!(target_os = "windows") {
-                if cfg!(target_env = "msvc") {
+            if windows_target {
+                if msvc_target {
                     leptonica_config
                         .define("CMAKE_C_FLAGS_RELEASE", "/MD /O2")
                         .define("CMAKE_C_FLAGS_DEBUG", "/MDd /Od");
+                } else if mingw_target {
+                    // MinGW/GNU toolchains reject MSVC-style flags, use GCC syntax
+                    leptonica_config
+                        .define("CMAKE_C_FLAGS_RELEASE", "-O2 -DNDEBUG")
+                        .define("CMAKE_C_FLAGS_DEBUG", "-O0 -g");
                 } else {
+                    // Fallback for other Windows toolchains
                     leptonica_config
                         .define("CMAKE_C_FLAGS_RELEASE", "-O2")
                         .define("CMAKE_C_FLAGS_DEBUG", "-O0 -g");
@@ -250,9 +294,14 @@ mod build_tesseract {
 
             let mut tesseract_config = Config::new(&tesseract_dir);
             // Configure build tools for Windows
-            if cfg!(target_os = "windows") {
-                // Use NMake on Windows to avoid Visual Studio generator path length issues
-                if let Ok(_vs_install_dir) = env::var("VSINSTALLDIR") {
+            if windows_target {
+                if mingw_target {
+                    // Explicitly pick MinGW generator to avoid MSVC flags like /MD being added
+                    tesseract_config.generator("MinGW Makefiles");
+                    // Prevent MSYS from path-converting /MD flags that may sneak in
+                    tesseract_config.define("MSYS2_ARG_CONV_EXCL", "/MD;/MDd");
+                } else if msvc_target && env::var("VSINSTALLDIR").is_ok() {
+                    // Use NMake on MSVC to avoid Visual Studio generator path length issues
                     tesseract_config.generator("NMake Makefiles");
                 }
                 // Disable multi-tool task to reduce intermediate path depth
@@ -337,14 +386,21 @@ mod build_tesseract {
     fn get_os_specific_config() -> (String, Vec<(String, String)>) {
         let mut cmake_cxx_flags = String::new();
         let mut additional_defines = Vec::new();
+        let target = target_triple();
+        let target_macos = is_macos_target(&target);
+        let target_linux = is_linux_target(&target);
+        let target_windows = is_windows_target(&target);
+        let target_msvc = is_msvc_target(&target);
+        let target_mingw = is_mingw_target(&target);
+        let target_musl = target.contains("musl");
 
-        if cfg!(target_os = "macos") {
+        if target_macos {
             cmake_cxx_flags.push_str("-stdlib=libc++ ");
             cmake_cxx_flags.push_str("-std=c++17 ");
-        } else if cfg!(target_os = "linux") {
+        } else if target_linux {
             cmake_cxx_flags.push_str("-std=c++17 ");
             // Check if we're on a system using clang
-            if cfg!(target_env = "musl") || env::var("CC").map(|cc| cc.contains("clang")).unwrap_or(false) {
+            if target_musl || env::var("CC").map(|cc| cc.contains("clang")).unwrap_or(false) {
                 cmake_cxx_flags.push_str("-stdlib=libc++ ");
                 // Use CXX env var if set, otherwise derive from target for cross-compilation
                 let cxx_compiler = env::var("CXX").unwrap_or_else(|_| {
@@ -376,11 +432,13 @@ mod build_tesseract {
                 });
                 additional_defines.push(("CMAKE_CXX_COMPILER".to_string(), cxx_compiler));
             }
-        } else if cfg!(target_os = "windows") {
-            if cfg!(target_env = "msvc") {
+        } else if target_windows {
+            if target_msvc {
                 // Windows-specific MSVC flags
                 // Add TESSERACT_STATIC to prevent __declspec(dllimport) on API functions
                 cmake_cxx_flags.push_str("/EHsc /MP /std:c++17 /DTESSERACT_STATIC ");
+                additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "/MD /O2".to_string()));
+                additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "/MDd /Od".to_string()));
                 additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "/MD /O2 /DTESSERACT_STATIC".to_string(),
@@ -393,9 +451,28 @@ mod build_tesseract {
                 // This flag causes CMake to export symbols for DLL linkage which creates
                 // __imp_ prefixed symbols that the linker can't find in static libraries
                 additional_defines.push(("CMAKE_MSVC_RUNTIME_LIBRARY".to_string(), "MultiThreadedDLL".to_string()));
-            } else {
-                // MinGW/GNU toolchains reject MSVC-style flags, so stick to GCC syntax
+            } else if target_mingw {
+                // MinGW/GNU toolchains reject MSVC-style flags, use GCC syntax
                 cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
+                additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "-O2 -DNDEBUG".to_string()));
+                additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "-O0 -g".to_string()));
+                // Force CMake to pick the MinGW GCC toolchain instead of defaulting to MSVC
+                additional_defines.push(("CMAKE_C_COMPILER".to_string(), "gcc".to_string()));
+                additional_defines.push(("CMAKE_CXX_COMPILER".to_string(), "g++".to_string()));
+                additional_defines.push(("CMAKE_SYSTEM_NAME".to_string(), "Windows".to_string()));
+                additional_defines.push((
+                    "CMAKE_CXX_FLAGS_RELEASE".to_string(),
+                    "-O2 -DNDEBUG -DTESSERACT_STATIC".to_string(),
+                ));
+                additional_defines.push((
+                    "CMAKE_CXX_FLAGS_DEBUG".to_string(),
+                    "-O0 -g -DTESSERACT_STATIC".to_string(),
+                ));
+            } else {
+                // Fallback for other Windows toolchains
+                cmake_cxx_flags.push_str("-std=c++17 -DTESSERACT_STATIC ");
+                additional_defines.push(("CMAKE_C_FLAGS_RELEASE".to_string(), "-O2 -DNDEBUG".to_string()));
+                additional_defines.push(("CMAKE_C_FLAGS_DEBUG".to_string(), "-O0 -g".to_string()));
                 additional_defines.push((
                     "CMAKE_CXX_FLAGS_RELEASE".to_string(),
                     "-O2 -DNDEBUG -DTESSERACT_STATIC".to_string(),
@@ -412,7 +489,7 @@ mod build_tesseract {
         additional_defines.push(("CMAKE_POSITION_INDEPENDENT_CODE".to_string(), "ON".to_string()));
 
         // Windows-specific path length mitigation
-        if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+        if target_windows && target_msvc {
             // MSVC-specific flags to reduce intermediate path depth
             // /d2Zi+ uses shorter symbol names, /permissive- speeds up and uses less space
             cmake_cxx_flags.push_str("/permissive- ");
@@ -426,10 +503,17 @@ mod build_tesseract {
     }
 
     fn set_os_specific_link_flags() {
-        if cfg!(target_os = "macos") {
+        let target = target_triple();
+        let target_macos = is_macos_target(&target);
+        let target_linux = is_linux_target(&target);
+        let target_windows = is_windows_target(&target);
+        let target_mingw = is_mingw_target(&target);
+        let target_musl = target.contains("musl");
+
+        if target_macos {
             println!("cargo:rustc-link-lib=c++");
-        } else if cfg!(target_os = "linux") {
-            if cfg!(target_env = "musl") || env::var("CC").map(|cc| cc.contains("clang")).unwrap_or(false) {
+        } else if target_linux {
+            if target_musl || env::var("CC").map(|cc| cc.contains("clang")).unwrap_or(false) {
                 println!("cargo:rustc-link-lib=c++");
             } else {
                 println!("cargo:rustc-link-lib=stdc++");
@@ -440,8 +524,8 @@ mod build_tesseract {
             println!("cargo:rustc-link-lib=pthread");
             println!("cargo:rustc-link-lib=m");
             println!("cargo:rustc-link-lib=dl");
-        } else if cfg!(target_os = "windows") {
-            if cfg!(target_env = "gnu") {
+        } else if target_windows {
+            if target_mingw {
                 println!("cargo:rustc-link-lib=stdc++");
             }
             // Windows requires explicit linking of system libraries for static tesseract
@@ -567,7 +651,7 @@ mod build_tesseract {
         let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
         let target_triple = env::var("TARGET")
             .unwrap_or_else(|_| env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_else(|_| "unknown".to_string()));
-        let is_windows = cfg!(target_os = "windows");
+        let is_windows = target_triple.contains("windows");
         let is_windows_gnu = is_windows && target_env == "gnu";
 
         // Expected library name for caching

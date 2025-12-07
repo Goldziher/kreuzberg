@@ -1,5 +1,4 @@
 import { join, resolve } from "node:path";
-import { expect } from "vitest";
 import type {
 	ChunkingConfig,
 	ExtractionConfig,
@@ -12,6 +11,7 @@ import type {
 	TesseractConfig,
 	TokenReductionConfig,
 } from "@kreuzberg/node";
+import { expect } from "vitest";
 
 const WORKSPACE_ROOT = resolve(__dirname, "../../..");
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");

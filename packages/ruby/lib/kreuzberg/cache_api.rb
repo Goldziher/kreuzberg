@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Kreuzberg
+  # Provides caching capabilities for extraction results.
   module CacheAPI
     def clear_cache
       native_clear_cache

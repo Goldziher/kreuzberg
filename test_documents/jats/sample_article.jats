@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN" "JATS-journalpublishing1.dtd">
+<article xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:mml="http://www.w3.org/1998/Math/MathML"
+         dtd-version="1.2"
+         article-type="research-article"
+         xml:lang="en">
+  <front>
+    <journal-meta>
+      <journal-id journal-id-type="nlm-ta">PLoS Med</journal-id>
+      <journal-id journal-id-type="iso-abbrev">PLoS Medicine</journal-id>
+      <journal-title-group>
+        <journal-title>PLoS Medicine</journal-title>
+      </journal-title-group>
+      <publisher>
+        <publisher-name>Public Library of Science</publisher-name>
+      </publisher>
+    </journal-meta>
+    <article-meta>
+      <article-id pub-id-type="doi">10.1371/journal.pmed.0020124</article-id>
+      <article-id pub-id-type="pii">05-PLME-RA-0071R2</article-id>
+      <article-title>Effects of Caffeine on Human Health</article-title>
+      <subtitle>A Systematic Review and Meta-Analysis</subtitle>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Smith</surname>
+            <given-names>John A.</given-names>
+          </name>
+          <xref ref-type="aff" rid="aff1">1</xref>
+          <xref ref-type="aff" rid="aff2">2</xref>
+        </contrib>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Johnson</surname>
+            <given-names>Jane B.</given-names>
+          </name>
+          <xref ref-type="aff" rid="aff1">1</xref>
+        </contrib>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Williams</surname>
+            <given-names>Robert C.</given-names>
+          </name>
+          <xref ref-type="aff" rid="aff3">3</xref>
+          <role>Correspondence</role>
+        </contrib>
+      </contrib-group>
+      <aff id="aff1"><label>1</label>Department of Medicine, Harvard University, Cambridge, Massachusetts, United States</aff>
+      <aff id="aff2"><label>2</label>Center for Health Research, Boston Medical Center, Boston, Massachusetts, United States</aff>
+      <aff id="aff3"><label>3</label>Department of Nutrition, Yale University, New Haven, Connecticut, United States</aff>
+      <author-notes>
+        <corresp id="cor1"><label>*</label>To whom correspondence should be addressed. E-mail: <email>rwilliams@yale.edu</email></corresp>
+      </author-notes>
+      <pub-date pub-type="epub">
+        <day>18</day>
+        <month>04</month>
+        <year>2005</year>
+      </pub-date>
+      <volume>2</volume>
+      <issue>4</issue>
+      <fpage>e124</fpage>
+      <lpage>e132</lpage>
+      <permissions>
+        <copyright-statement>Smith et al.</copyright-statement>
+        <copyright-year>2005</copyright-year>
+        <license>
+          <license-p>This is an open-access article distributed under the terms of the Creative Commons Attribution License</license-p>
+        </license>
+      </permissions>
+      <abstract>
+        <sec>
+          <title>Background</title>
+          <p>Caffeine is one of the most widely consumed psychoactive substances in the world.</p>
+        </sec>
+        <sec>
+          <title>Methods and Findings</title>
+          <p>We conducted a systematic review and meta-analysis of studies examining the effects of caffeine on human health.</p>
+        </sec>
+        <sec>
+          <title>Conclusions</title>
+          <p>Moderate caffeine consumption appears to have both beneficial and adverse health effects.</p>
+        </sec>
+      </abstract>
+      <kwd-group>
+        <kwd>caffeine</kwd>
+        <kwd>meta-analysis</kwd>
+        <kwd>systematic review</kwd>
+        <kwd>human health</kwd>
+      </kwd-group>
+      <article-categories>
+        <subj-group subj-group-type="heading">
+          <subject>Medicine</subject>
+        </subj-group>
+      </article-categories>
+    </article-meta>
+  </front>
+  <body>
+    <sec id="s1">
+      <title>Introduction</title>
+      <p>Caffeine (1,3,7-trimethylxanthine) is a stimulant of the central nervous system.</p>
+      <p>This review examines the evidence for both beneficial and adverse effects of caffeine consumption.</p>
+    </sec>
+    <sec id="s2">
+      <title>Methods</title>
+      <sec id="s2a">
+        <title>Search Strategy</title>
+        <p>We searched MEDLINE, Embase, and the Cochrane Central Register of Controlled Trials.</p>
+      </sec>
+      <sec id="s2b">
+        <title>Selection Criteria</title>
+        <p>We included randomized controlled trials and observational studies examining caffeine effects.</p>
+      </sec>
+    </sec>
+    <sec id="s3">
+      <title>Results</title>
+      <p>We identified 47 studies meeting inclusion criteria.</p>
+      <table-wrap id="tbl1">
+        <label>Table 1</label>
+        <caption>
+          <title>Characteristics of Included Studies</title>
+          <p>Summary of study design and population characteristics.</p>
+        </caption>
+        <table>
+          <thead>
+            <tr>
+              <th>Study</th>
+              <th>Year</th>
+              <th>Population</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Study A</td>
+              <td>2003</td>
+              <td>100 adults</td>
+              <td>Increased alertness</td>
+            </tr>
+            <tr>
+              <td>Study B</td>
+              <td>2004</td>
+              <td>50 subjects</td>
+              <td>Sleep disruption</td>
+            </tr>
+          </tbody>
+        </table>
+      </table-wrap>
+    </sec>
+    <sec id="s4">
+      <title>Discussion</title>
+      <p>Our findings suggest that caffeine has complex effects on human health.</p>
+      <p>Low to moderate consumption may provide cognitive benefits <xref ref-type="bibr" rid="ref1">1</xref>, while high doses may lead to adverse effects <xref ref-type="bibr" rid="ref2">2</xref>.</p>
+    </sec>
+    <sec id="s5">
+      <title>Conclusions</title>
+      <p>Caffeine consumption should be tailored to individual tolerance and health status.</p>
+    </sec>
+  </body>
+  <back>
+    <ack>
+      <title>Acknowledgments</title>
+      <p>We thank all participants who contributed to this research.</p>
+    </ack>
+    <ref-list>
+      <title>References</title>
+      <ref id="ref1">
+        <element-citation publication-type="journal">
+          <person-group person-group-type="author">
+            <name>
+              <surname>Brown</surname>
+              <given-names>T</given-names>
+            </name>
+            <name>
+              <surname>Davis</surname>
+              <given-names>K</given-names>
+            </name>
+          </person-group>
+          <article-title>Cognitive effects of caffeine</article-title>
+          <source>J Neurosci</source>
+          <year>2002</year>
+          <volume>15</volume>
+          <fpage>234</fpage>
+          <lpage>241</lpage>
+        </element-citation>
+      </ref>
+      <ref id="ref2">
+        <element-citation publication-type="journal">
+          <person-group person-group-type="author">
+            <name>
+              <surname>Green</surname>
+              <given-names>M</given-names>
+            </name>
+          </person-group>
+          <article-title>Adverse effects of high caffeine consumption</article-title>
+          <source>Am J Health</source>
+          <year>2003</year>
+          <volume>8</volume>
+          <fpage>112</fpage>
+          <lpage>120</lpage>
+        </element-citation>
+      </ref>
+    </ref-list>
+    <supplementary-material>
+      <label>Supplementary Material 1</label>
+      <caption>
+        <p>Additional data and statistical analyses</p>
+      </caption>
+    </supplementary-material>
+  </back>
+</article>

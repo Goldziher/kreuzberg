@@ -1,13 +1,12 @@
 # Format Support
 
-Kreuzberg supports 56 file formats across major categories, providing comprehensive document intelligence capabilities through native Rust extractors, Pandoc integration, and LibreOffice conversion.
+Kreuzberg supports 56 file formats across major categories, providing comprehensive document intelligence capabilities through native Rust extractors and LibreOffice conversion.
 
 ## Overview
 
-Kreuzberg v4 uses a high-performance Rust core with three extraction methods:
+Kreuzberg v4 uses a high-performance Rust core with two extraction methods:
 
 - **Native Rust Extractors**: Fast, memory-efficient extractors for common formats
-- **Pandoc Integration**: Support for 30+ academic and publishing formats
 - **LibreOffice Conversion**: Legacy Microsoft Office format support (`.doc`, `.ppt`)
 
 All formats support async/await and batch processing. Image formats and PDFs support optional OCR when configured.
@@ -21,10 +20,10 @@ All formats support async/await and batch processing. Image formats and PDFs sup
 | PDF | `.pdf` | `application/pdf` | Native Rust (pdfium-render) | Yes | Metadata extraction, image extraction, text layer detection |
 | Excel | `.xlsx`, `.xlsm`, `.xlsb`, `.xls`, `.xlam`, `.xla`, `.ods` | Various Excel MIME types | Native Rust (calamine) | No | Multi-sheet support, formula preservation |
 | PowerPoint | `.pptx`, `.pptm`, `.ppsx` | `application/vnd.openxmlformats-officedocument.presentationml.presentation` | Native Rust (roxmltree) | Yes (for embedded images) | Slide extraction, image OCR, table detection |
-| Word (Modern) | `.docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | Pandoc | No | Preserves formatting, extracts metadata |
-| Word (Legacy) | `.doc` | `application/msword` | LibreOffice + Pandoc | No | Converts to DOCX then extracts |
-| PowerPoint (Legacy) | `.ppt` | `application/vnd.ms-powerpoint` | LibreOffice + Pandoc | No | Converts to PPTX then extracts |
-| OpenDocument Text | `.odt` | `application/vnd.oasis.opendocument.text` | Pandoc | No | Full OpenDocument support |
+| Word (Modern) | `.docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | Native Rust | No | Preserves formatting, extracts metadata |
+| Word (Legacy) | `.doc` | `application/msword` | LibreOffice conversion | No | Converts to DOCX then extracts |
+| PowerPoint (Legacy) | `.ppt` | `application/vnd.ms-powerpoint` | LibreOffice conversion | No | Converts to PPTX then extracts |
+| OpenDocument Text | `.odt` | `application/vnd.oasis.opendocument.text` | Native Rust | No | Full OpenDocument support |
 | OpenDocument Spreadsheet | `.ods` | `application/vnd.oasis.opendocument.spreadsheet` | Native Rust (calamine) | No | Multi-sheet support |
 
 ### Text & Markup
@@ -36,9 +35,9 @@ All formats support async/await and batch processing. Image formats and PDFs sup
 | HTML | `.html`, `.htm` | `text/html`, `application/xhtml+xml` | Native Rust (html-to-markdown-rs) | No | Converts to Markdown, metadata extraction |
 | XML | `.xml` | `application/xml`, `text/xml` | Native Rust (quick-xml streaming) | No | Element counting, unique element tracking |
 | SVG | `.svg` | `image/svg+xml` | Native Rust (XML parser) | No | Treated as XML document |
-| reStructuredText | `.rst` | `text/x-rst` | Pandoc | No | Full reST syntax support |
-| Org Mode | `.org` | `text/x-org` | Pandoc | No | Emacs Org mode support |
-| Rich Text Format | `.rtf` | `application/rtf`, `text/rtf` | Pandoc | No | RTF 1.x support |
+| reStructuredText | `.rst` | `text/x-rst` | Native (rst-parser) | No | Full reST syntax support |
+| Org Mode | `.org` | `text/x-org` | Native (org) | No | Emacs Org mode support |
+| Rich Text Format | `.rtf` | `application/rtf`, `text/rtf` | Native (rtf-parser) | No | RTF 1.x support |
 
 ### Structured Data
 
@@ -47,8 +46,8 @@ All formats support async/await and batch processing. Image formats and PDFs sup
 | JSON | `.json` | `application/json`, `text/json` | Native Rust (serde_json) | No | Field counting, nested structure extraction |
 | YAML | `.yaml` | `application/x-yaml`, `text/yaml`, `text/x-yaml` | Native Rust (serde_yaml) | No | Multi-document support, field counting |
 | TOML | `.toml` | `application/toml`, `text/toml` | Native Rust (toml crate) | No | Configuration file support |
-| CSV | `.csv` | `text/csv` | Native Rust (via Pandoc) | No | Tabular data extraction |
-| TSV | `.tsv` | `text/tab-separated-values` | Native Rust (via Pandoc) | No | Tab-separated data extraction |
+| CSV | `.csv` | `text/csv` | Native Rust | No | Tabular data extraction |
+| TSV | `.tsv` | `text/tab-separated-values` | Native Rust | No | Tab-separated data extraction |
 
 ### Email
 
@@ -81,40 +80,40 @@ All image formats support OCR when configured with `ocr` parameter in `Extractio
 | 7-Zip | `.7z` | `application/x-7z-compressed` | Native Rust (sevenz-rust) | No | High compression format support |
 | Gzip | `.gz` | `application/gzip` | Native Rust | No | Gzip compression support |
 
-### Academic & Publishing (via Pandoc)
+### Academic & Publishing (Native)
 
 | Format | Extensions | MIME Type | Extraction Method | OCR Support | Special Features |
 |--------|-----------|-----------|-------------------|-------------|------------------|
-| LaTeX | `.tex`, `.latex` | `application/x-latex`, `text/x-tex` | Pandoc | No | Full LaTeX document support |
-| EPUB | `.epub` | `application/epub+zip` | Pandoc | No | E-book format, metadata extraction |
-| BibTeX | `.bib` | `application/x-bibtex`, `application/x-biblatex` | Pandoc | No | Bibliography database support |
-| Typst | `.typst` | `application/x-typst` | Pandoc | No | Modern typesetting format |
-| Jupyter Notebook | `.ipynb` | `application/x-ipynb+json` | Pandoc | No | Code cells, markdown cells, output extraction |
-| FictionBook | - | `application/x-fictionbook+xml` | Pandoc | No | XML-based e-book format |
-| DocBook | - | `application/docbook+xml` | Pandoc | No | Technical documentation format |
-| JATS | - | `application/x-jats+xml` | Pandoc | No | Journal article XML format |
-| OPML | - | `application/x-opml+xml` | Pandoc | No | Outline format |
-| RIS | - | `application/x-research-info-systems` | Pandoc | No | Citation format |
-| EndNote XML | - | `application/x-endnote+xml` | Pandoc | No | Reference manager format |
-| CSL JSON | - | `application/csl+json` | Pandoc | No | Citation Style Language JSON |
+| LaTeX | `.tex`, `.latex` | `application/x-latex`, `text/x-tex` | Native (manual parser) | No | Full LaTeX document support |
+| EPUB | `.epub` | `application/epub+zip` | Native (zip + roxmltree + html-to-markdown-rs) | No | E-book format, metadata extraction |
+| BibTeX | `.bib` | `application/x-bibtex`, `application/x-biblatex` | Native (biblatex) | No | Bibliography database support |
+| Typst | `.typst` | `application/x-typst` | Native (typst-syntax) | No | Modern typesetting format |
+| Jupyter Notebook | `.ipynb` | `application/x-ipynb+json` | Native (JSON parsing) | No | Code cells, markdown cells, output extraction |
+| FictionBook | - | `application/x-fictionbook+xml` | Native (fb2) | No | XML-based e-book format |
+| DocBook | - | `application/docbook+xml` | Native (roxmltree) | No | Technical documentation format |
+| JATS | - | `application/x-jats+xml` | Native (roxmltree) | No | Journal article XML format |
+| OPML | - | `application/x-opml+xml` | Native (roxmltree) | No | Outline format |
+| RIS | - | `application/x-research-info-systems` | Native (ris-parser) | No | Citation format |
+| EndNote XML | - | `application/x-endnote+xml` | Native (XML parser) | No | Reference manager format |
+| CSL JSON | - | `application/csl+json` | Native (JSON parser) | No | Citation Style Language JSON |
 
-### Markdown Variants (via Pandoc)
+### Markdown Variants (Native)
 
 | Format | MIME Type | Extraction Method | Special Features |
 |--------|-----------|-------------------|------------------|
-| CommonMark | `text/x-commonmark` | Pandoc | Standard Markdown spec |
-| GitHub Flavored Markdown | `text/x-gfm` | Pandoc | GFM extensions (tables, strikethrough, etc.) |
-| MultiMarkdown | `text/x-multimarkdown` | Pandoc | MMD extensions |
-| Markdown Extra | `text/x-markdown-extra` | Pandoc | PHP Markdown Extra extensions |
+| CommonMark | `text/x-commonmark` | Native (pulldown-cmark) | Standard Markdown spec |
+| GitHub Flavored Markdown | `text/x-gfm` | Native (pulldown-cmark) | GFM extensions (tables, strikethrough, etc.) |
+| MultiMarkdown | `text/x-multimarkdown` | Native (pulldown-cmark) | MMD extensions |
+| Markdown Extra | `text/x-markdown-extra` | Native (pulldown-cmark) | PHP Markdown Extra extensions |
 
 ### Other Formats
 
 | Format | MIME Type | Extraction Method | Special Features |
 |--------|-----------|-------------------|------------------|
-| Man Pages | `text/x-mdoc` | Pandoc | Unix manual page format |
-| Troff | `text/troff` | Pandoc | Unix document format |
-| POD | `text/x-pod` | Pandoc | Perl documentation format |
-| DokuWiki | `text/x-dokuwiki` | Pandoc | Wiki markup format |
+| Man Pages | `text/x-mdoc` | Native (mdoc-parser) | Unix manual page format |
+| Troff | `text/troff` | Native (troff-parser) | Unix document format |
+| POD | `text/x-pod` | Native (pod-parser) | Perl documentation format |
+| DokuWiki | `text/x-dokuwiki` | Native (dokuwiki-parser) | Wiki markup format |
 
 ## Architecture Diagram
 
@@ -124,7 +123,6 @@ graph TD
     B --> C{Extraction Method}
 
     C -->|Native Format| D[Rust Core Extractors]
-    C -->|Pandoc Format| E[Pandoc Subprocess]
     C -->|Legacy Office| F[LibreOffice Conversion]
 
     D --> G[PDF Extractor]
@@ -134,11 +132,9 @@ graph TD
     D --> K[Email Extractor]
     D --> L[Archive Extractor]
 
-    E --> M[DOCX/ODT/EPUB/LaTeX]
-
     F --> N[Convert DOC→DOCX]
     F --> O[Convert PPT→PPTX]
-    N --> E
+    N --> D
     O --> D
 
     G --> P{OCR Needed?}
@@ -151,7 +147,6 @@ graph TD
     J --> R
     K --> R
     L --> R
-    M --> R
 
     R --> S[Post-Processing Pipeline]
     S --> T[Final Result]
@@ -165,7 +160,7 @@ Kreuzberg uses Cargo feature flags to enable optional format support:
 |-------------|----------------|---------|
 | `pdf` | PDF documents | No |
 | `excel` | Excel spreadsheets (all variants) | No |
-| `office` | PowerPoint, Pandoc formats | No |
+| `office` | PowerPoint and Office formats | No |
 | `ocr` | OCR for images and PDFs | No |
 | `email` | EML, MSG email formats | No |
 | `html` | HTML to Markdown conversion | No |
@@ -223,25 +218,6 @@ sudo dnf install tesseract
 scoop install tesseract
 ```
 
-### Pandoc (Optional)
-
-Required for academic and publishing formats (DOCX, EPUB, LaTeX, etc.):
-
-```bash
-# macOS
-brew install pandoc
-
-# Ubuntu/Debian
-sudo apt-get install pandoc
-
-# RHEL/CentOS/Fedora
-sudo dnf install pandoc
-
-# Windows (Scoop)
-scoop install pandoc
-```
-
-Minimum version: Pandoc 2.x or later
 
 ### LibreOffice (Optional)
 
@@ -417,12 +393,6 @@ Override with `force_ocr=True` to always use OCR regardless of native text quali
 - **XML**: Streaming parser, memory-efficient for large documents
 - **Text/Markdown**: Streaming parser with lazy regex compilation
 - **Archives**: Efficient extraction without full decompression
-
-### Pandoc Extractors
-
-- Subprocess overhead (~50-200ms per file)
-- Good for batch processing with concurrent execution
-- Memory-efficient for large documents
 
 ### LibreOffice Extractors
 

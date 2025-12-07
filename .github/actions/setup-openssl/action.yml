@@ -3,14 +3,30 @@ description: Install and expose OpenSSL headers/libs across platforms
 runs:
   using: composite
   steps:
-    - name: Install OpenSSL (Linux)
+    - name: Restore OpenSSL cache (Linux)
       if: runner.os == 'Linux'
+      uses: actions/cache@v4
+      id: cache-linux
+      with:
+        path: |
+          /home/runner/.cache/openssl-build
+        key: openssl-${{ runner.os }}-${{ hashFiles('/usr/bin/pkg-config', '/usr/bin/gcc') }}-v2
+        restore-keys: |
+          openssl-${{ runner.os }}-
+
+    - name: Install OpenSSL (Linux)
+      if: runner.os == 'Linux' && steps.cache-linux.outputs.cache-hit != 'true'
       shell: bash
       run: |
         set -euo pipefail
         sudo apt-get update
         sudo apt-get install -y pkg-config libssl-dev build-essential
 
+    - name: Configure OpenSSL environment (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
         # Set environment variables for OpenSSL detection
         # On Ubuntu, OpenSSL is typically in /usr with pkgconfig in arch-specific path
         OPENSSL_ROOT="/usr"
@@ -37,14 +53,30 @@ runs:
         echo "  PKG_CONFIG_PATH=${PKG_CONFIG_DIR}"
         pkg-config --modversion openssl
 
-    - name: Install OpenSSL (macOS)
+    - name: Restore OpenSSL cache (macOS)
       if: runner.os == 'macOS'
+      uses: actions/cache@v4
+      id: cache-macos
+      with:
+        path: /usr/local/opt/openssl@3/
+        key: openssl-${{ runner.os }}-${{ hashFiles('/usr/bin/gcc') }}-v2
+        restore-keys: |
+          openssl-${{ runner.os }}-
+
+    - name: Install OpenSSL (macOS)
+      if: runner.os == 'macOS' && steps.cache-macos.outputs.cache-hit != 'true'
       shell: bash
       run: |
         set -euo pipefail
         # Install packages only if not already present
-        brew list openssl@3 &>/dev/null || brew install openssl
+        brew list openssl@3 &>/dev/null || brew install openssl@3
         brew list pkg-config &>/dev/null || brew install pkg-config
+
+    - name: Configure OpenSSL environment (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
         prefix="$(brew --prefix openssl@3 2>/dev/null || brew --prefix openssl 2>/dev/null || true)"
         if [ -z "$prefix" ]; then
           echo "Failed to locate Homebrew OpenSSL prefix" >&2
@@ -57,11 +89,28 @@ runs:
           echo "PKG_CONFIG_PATH=$prefix/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
         } >> "$GITHUB_ENV"
 
-    - name: Install OpenSSL (Windows)
+    - name: Restore OpenSSL cache (Windows)
       if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      id: cache-windows
+      with:
+        path: |
+          C:\Program Files\OpenSSL-Win64
+          C:\Program Files\OpenSSL
+        key: openssl-${{ runner.os }}-${{ hashFiles('C:\Program Files\Git\cmd\git.exe') }}-v2
+        restore-keys: |
+          openssl-${{ runner.os }}-
+
+    - name: Install OpenSSL (Windows)
+      if: runner.os == 'Windows' && steps.cache-windows.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
         choco install openssl -y
+
+    - name: Configure OpenSSL environment (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
         $opensslDirs = @(
           "C:\Program Files\OpenSSL-Win64",
           "C:\Program Files\OpenSSL",

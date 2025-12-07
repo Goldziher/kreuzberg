@@ -4,13 +4,13 @@ dev = [
   "maturin>=1.10.2",
   "mypy>=1.19.0",
   "prek>=0.2.19",
-  "pytest>=9.0.1",
+  "pytest>=9.0.2",
   "pytest-asyncio>=1.3.0",
   "pytest-cov>=7.0.0",
   "pytest-mock>=3.15.1",
   "pytest-rerunfailures>=16.1",
   "pytest-timeout>=2.4.0",
-  "ruff>=0.14.7",
+  "ruff>=0.14.8",
   "types-pillow>=10.2",
   "types-psutil>=7.1.3.20251202",
   "uv-bump",
@@ -21,7 +21,7 @@ docs = [
   "mkdocs-material>=9.7.0",
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings>=1.0.0",
-  "mkdocstrings-python>=2.0.0",
+  "mkdocstrings-python>=2.0.1",
 ]
 doc = [
   "mike>=2.1.3",
@@ -33,7 +33,7 @@ doc = [
   "mkdocs-minify-plugin>=0.8.0",
   "mkdocstrings[python]>=1.0.0",
 ]
-benchmark = [ "docling>=2.63.0", "extractous>=0.3.0", "markitdown>=0.1.4", "unstructured>=0.18.21" ]
+benchmark = [ "docling>=2.64.0", "markitdown>=0.1.4", "unstructured>=0.18.21" ]
 
 [tool.setuptools]
 packages = [  ]
@@ -57,7 +57,7 @@ uv-bump = { git = "https://github.com/Goldziher/uv-bump" }
 target-version = "py310"
 line-length = 120
 src = [ "packages/python/*" ]
-extend-exclude = [ "benchmarks", "crates", "scripts", "v3" ]
+extend-exclude = [ "benchmarks", "crates", "scripts", "test_documents", "v3" ]
 format.docstring-code-line-length = 120
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
@@ -178,7 +178,7 @@ testpaths = [ "packages/python/tests" ]
 norecursedirs = [ "dist", "build", "*.egg" ]
 markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-  "integration: marks tests as integration tests",
+  "integration: marks tests as integration tests (requires running services)",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -209,6 +209,10 @@ exclude_lines = [
   "class .*\\bProtocol\\):",
   "@(abc\\.)?abstractmethod",
 ]
+omit = [
+  "packages/python/kreuzberg/ocr/easyocr.py",
+  "packages/python/kreuzberg/ocr/paddleocr.py",
+]
 
 [tool.mypy]
 packages = [ "kreuzberg" ]
@@ -225,10 +229,10 @@ module = [
   "keybert",
   "easyocr",
   "paddle",
+  "paddle.*",
   "paddleocr",
   "torch",
   "kreuzberg._internal_bindings",
-  "extractous",
   "docling.*",
   "markitdown",
   "unstructured.*",

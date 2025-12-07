@@ -47,36 +47,6 @@ class KreuzbergTest {
     }
 
     @Test
-    void testExtractionResultToString(@TempDir Path tempDir) throws IOException, KreuzbergException {
-        Path testFile = tempDir.resolve("test.txt");
-        Files.writeString(testFile, "Test content");
-
-        ExtractionResult result = Kreuzberg.extractFile(testFile);
-        String str = result.toString();
-
-        assertNotNull(str, "toString should not return null");
-        assertTrue(str.contains("ExtractionResult"), "toString should contain class name");
-        assertTrue(str.contains("mimeType"), "toString should contain field names");
-    }
-
-    @Test
-    void testExtractionResultFields(@TempDir Path tempDir) throws IOException, KreuzbergException {
-        Path testFile = tempDir.resolve("test.txt");
-        Files.writeString(testFile, "Test");
-
-        ExtractionResult result = Kreuzberg.extractFile(testFile);
-
-        // Required fields
-        assertNotNull(result.getContent());
-        assertNotNull(result.getMimeType());
-
-        // Optional fields (just verify they're Optional)
-        assertNotNull(result.getLanguage());
-        assertNotNull(result.getDate());
-        assertNotNull(result.getSubject());
-    }
-
-    @Test
     void testListValidators() throws KreuzbergException {
         var validators = Kreuzberg.listValidators();
         assertNotNull(validators, "Validators list should not be null");

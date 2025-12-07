@@ -741,7 +741,7 @@ for (int i = 0; i < 10; i++) {
 - **C FFI Standards**: https://en.cppreference.com/w/c
 - **cbindgen Documentation**: https://rust-lang.github.io/cbindgen/
 - **Project Homepage**: https://kreuzberg.dev
-- **GitHub Repository**: https://github.com/Goldziher/kreuzberg
+- **GitHub Repository**: https://github.com/kreuzberg-dev/kreuzberg
 
 ## Contributing
 

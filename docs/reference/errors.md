@@ -538,7 +538,6 @@ except (json.JSONDecodeError, TypeError) as e:
 **Common Causes:**
 
 - Tesseract not installed (for OCR)
-- Pandoc not installed (for DOCX, EPUB, LaTeX)
 - LibreOffice not installed (for .doc, .ppt)
 
 **Example (Rust):**

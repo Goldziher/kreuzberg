@@ -3,30 +3,32 @@ name: CI Python
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-py/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/python/**'
-    #   - 'e2e/python/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'uv.lock'
-    #   - 'pyproject.toml'
-    #   - '.github/workflows/ci-python.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/python/**'
+      - 'e2e/python/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'uv.lock'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-python.yaml'
+      - '.cargo/config.toml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-py/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/python/**'
-    #   - 'e2e/python/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'uv.lock'
-    #   - 'pyproject.toml'
-    #   - '.github/workflows/ci-python.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-py/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/python/**'
+      - 'e2e/python/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'uv.lock'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-python.yaml'
+      - '.cargo/config.toml'
 
 concurrency:
   group: ci-python-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -45,7 +47,7 @@ env:
 jobs:
   build-and-smoke-python:
     name: Python Build + Smoke (${{ matrix.target }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     env:
       RUSTC_WRAPPER: ""
       CARGO_BUILD_RUSTC_WRAPPER: ""
@@ -66,7 +68,7 @@ jobs:
             platform: windows-x86_64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -116,10 +118,10 @@ jobs:
           command: build
           args: --release --strip --out ../../target/wheels
           sccache: 'false'
-          manylinux: auto
+          manylinux: off
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.platform }}
           path: target/wheels/*.whl
@@ -135,10 +137,10 @@ jobs:
 
   build-python-sdist:
     name: Python Sdist
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -157,7 +159,7 @@ jobs:
           uv run maturin sdist --out ../../target/wheels
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: python-sdist
           path: target/wheels/*.tar.gz
@@ -201,7 +203,7 @@ jobs:
       TRANSFORMERS_CACHE: ~/.cache/huggingface
       RUSTC_WRAPPER: ''
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -219,7 +221,7 @@ jobs:
           key: huggingface-${{ runner.os }}-py-${{ matrix.python-version }}-${{ hashFiles('packages/python/pyproject.toml') || 'fallback' }}
 
       - name: Download wheels
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: wheels-${{ matrix.platform }}
           path: dist/

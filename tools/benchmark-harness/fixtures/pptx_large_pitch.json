@@ -2,7 +2,7 @@
 	"document": "../../../test_documents/presentations/pitch_deck_presentation.pptx",
 	"file_type": "pptx",
 	"file_size": 4612096,
-	"expected_frameworks": ["kreuzberg", "docling", "extractous", "markitdown", "unstructured"],
+	"expected_frameworks": ["kreuzberg", "docling", "markitdown", "unstructured"],
 	"metadata": {
 		"description": "Large pitch deck - 4.4MB presentation with high-res images",
 		"category": "pptx-pitch-deck",

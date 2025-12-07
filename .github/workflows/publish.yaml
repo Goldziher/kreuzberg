@@ -39,6 +39,8 @@ jobs:
   prepare:
     name: Prepare metadata
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
       version: ${{ steps.meta.outputs.version }}
@@ -61,7 +63,7 @@ jobs:
       release_csharp: ${{ steps.meta.outputs.release_csharp }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Validate tag and compute version
         id: meta
@@ -102,7 +104,7 @@ jobs:
           echo "release_csharp=$(echo "$metadata" | jq -r '.release_csharp')" >> "$GITHUB_OUTPUT"
 
       - name: Upload release metadata
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: release-metadata
           path: release-metadata.json
@@ -113,11 +115,13 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_python == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check PyPI for existing version
         id: check
@@ -130,11 +134,13 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_node == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check npm for existing version
         id: check
@@ -147,11 +153,13 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_ruby == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check RubyGems for existing version
         id: check
@@ -164,11 +172,13 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_java == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check Maven Central for existing version
         id: check
@@ -181,11 +191,13 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_csharp == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check NuGet for existing version
         id: check
@@ -198,6 +210,8 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       kreuzberg_exists: ${{ steps.check.outputs.kreuzberg_exists }}
       tesseract_exists: ${{ steps.check.outputs.tesseract_exists }}
@@ -205,7 +219,7 @@ jobs:
       exists: ${{ steps.check.outputs.all_exist }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check crates.io for existing versions
         id: check
@@ -230,6 +244,8 @@ jobs:
     if: ${{ needs.prepare.outputs.release_python == 'true' && needs.check-pypi.outputs.exists != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -283,7 +299,7 @@ jobs:
           remove-docker-images: 'true'
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -383,7 +399,7 @@ jobs:
 
       - name: Setup Python (macOS)
         if: matrix.label == 'macos-arm64'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -412,7 +428,7 @@ jobs:
           df -h /
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: target/wheels/*.whl
@@ -424,6 +440,8 @@ jobs:
     if: ${{ needs.prepare.outputs.release_python == 'true' && needs.check-pypi.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Show initial disk space
         run: |
@@ -431,7 +449,7 @@ jobs:
           df -h /
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -473,7 +491,7 @@ jobs:
         run: bash scripts/build_python_sdist.sh dist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: python-sdist
           path: dist/*.tar.gz
@@ -485,6 +503,8 @@ jobs:
     if: ${{ needs.prepare.outputs.release_node == 'true' && needs.check-npm.outputs.exists != 'true' }}
     runs-on: ${{ matrix.settings.os }}
     timeout-minutes: 90
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -518,7 +538,7 @@ jobs:
             use_napi_cross: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -571,9 +591,9 @@ jobs:
         run: cargo install cross --git https://github.com/cross-rs/cross --locked
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           check-latest: true
 
       - name: Enable corepack
@@ -668,14 +688,14 @@ jobs:
 
       - name: Upload TypeScript definitions
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: node-typescript-defs
           path: typescript-defs
           retention-days: 14
 
       - name: Upload Node artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: node-bindings-${{ matrix.settings.target }}
           path: node-bindings-${{ matrix.settings.target }}.tar.gz
@@ -686,6 +706,8 @@ jobs:
     needs: prepare
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -709,7 +731,7 @@ jobs:
             use_cross: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -802,7 +824,7 @@ jobs:
 
       - name: Upload CLI artifact
         if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.tar.gz
@@ -810,7 +832,7 @@ jobs:
 
       - name: Upload CLI artifact (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.zip
@@ -820,6 +842,8 @@ jobs:
     name: Build Ruby gem (${{ matrix.label }})
     needs: [prepare, check-rubygems]
     if: ${{ needs.prepare.outputs.release_ruby == 'true' && needs.check-rubygems.outputs.exists != 'true' }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -836,7 +860,7 @@ jobs:
       RB_SYS_CARGO_PROFILE: release
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1004,7 +1028,7 @@ jobs:
           ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle _2.5.12_ exec rake clean && bundle _2.5.12_ exec rake build"
 
       - name: Upload gem artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: rubygems-${{ matrix.label }}
           path: packages/ruby/pkg/*.gem
@@ -1016,6 +1040,8 @@ jobs:
     if: ${{ needs.prepare.outputs.release_java == 'true' && needs.check-maven.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     env:
       PDFIUM_VERSION: "7529"
     steps:
@@ -1025,7 +1051,7 @@ jobs:
           df -h /
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1064,7 +1090,7 @@ jobs:
           cache-key-prefix: publish-java
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '23'
@@ -1090,7 +1116,7 @@ jobs:
         run: mvn clean package -DskipTests
 
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: maven-packages
           path: packages/java/target/*.jar
@@ -1102,6 +1128,8 @@ jobs:
     if: ${{ needs.prepare.outputs.release_csharp == 'true' && needs.check-nuget.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Show initial disk space
         run: |
@@ -1109,7 +1137,7 @@ jobs:
           df -h /
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1137,7 +1165,7 @@ jobs:
           df -h /
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.x"
 
@@ -1156,7 +1184,7 @@ jobs:
             -o artifacts/csharp
 
       - name: Upload NuGet artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: csharp-nuget
           path: artifacts/csharp/*.nupkg
@@ -1170,9 +1198,11 @@ jobs:
     if: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1228,7 +1258,7 @@ jobs:
           fi
 
       - name: Upload crate packages
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: cargo-crates
           path: crate-artifacts/*.crate
@@ -1279,7 +1309,7 @@ jobs:
 
       - name: Checkout
         if: ${{ needs.prepare.outputs.release_docker == 'true' }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
@@ -1368,7 +1398,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -1378,7 +1408,7 @@ jobs:
         run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download CLI artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           pattern: cli-*
           path: dist/cli
@@ -1403,7 +1433,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -1413,7 +1443,7 @@ jobs:
         run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
       - name: Download C# artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: csharp-nuget
           path: dist/csharp
@@ -1433,9 +1463,11 @@ jobs:
       needs.prepare.outputs.release_rust == 'true' &&
       needs.check-cratesio.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -1585,17 +1617,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
+      contents: read
       id-token: write
     steps:
       - name: Download wheel artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           pattern: python-wheels-*
           path: dist
           merge-multiple: true
 
       - name: Download sdist artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: python-sdist
           path: dist
@@ -1628,10 +1661,11 @@ jobs:
       needs.ruby-gem.result == 'success'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       id-token: write
     steps:
       - name: Download Ruby gem artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           pattern: rubygems-*
           path: dist
@@ -1750,9 +1784,11 @@ jobs:
       needs.check-npm.outputs.exists != 'true' &&
       needs.node-bindings.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -1762,23 +1798,23 @@ jobs:
           package_json_file: package.json
 
       - name: Download Node artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           pattern: node-bindings-*
           path: node-artifacts
           merge-multiple: true
 
       - name: Download TypeScript definitions
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: node-typescript-defs
           path: typescript-defs
           if-no-files-found: ignore
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org/
 
       - name: Enable corepack
@@ -1889,11 +1925,13 @@ jobs:
       needs.check-maven.outputs.exists != 'true' &&
       needs.java-package.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       PDFIUM_VERSION: "7529"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.ref }}
 
@@ -1953,7 +1991,7 @@ jobs:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "23"
@@ -2020,15 +2058,17 @@ jobs:
       needs.check-nuget.outputs.exists != 'true' &&
       needs.csharp-package.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Download NuGet artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: csharp-nuget
           path: dist
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.x"
 
@@ -2057,13 +2097,15 @@ jobs:
       needs.prepare.outputs.release_homebrew == 'true' &&
       needs.upload-cli-release.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Extract release info
         id: release
         run: |
           tag="${{ needs.prepare.outputs.tag }}"
           version="${{ needs.prepare.outputs.version }}"
-          url="https://github.com/Goldziher/kreuzberg/archive/$tag.tar.gz"
+          url="https://github.com/kreuzberg-dev/kreuzberg/archive/$tag.tar.gz"
 
           echo "tag=$tag" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
@@ -2079,7 +2121,7 @@ jobs:
         with:
           formula-name: kreuzberg
           formula-path: Formula/kreuzberg.rb
-          homebrew-tap: Goldziher/homebrew-tap
+          homebrew-tap: kreuzberg-dev/homebrew-tap
           tag-name: ${{ needs.prepare.outputs.tag }}
           download-url: ${{ steps.release.outputs.url }}
           commit-message: |

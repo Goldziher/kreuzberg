@@ -1,3 +1,3 @@
 ```bash
-docker pull goldziher/kreuzberg:v4-core
+docker pull goldziher/kreuzberg:latest
 ```

@@ -70,7 +70,6 @@ FROM debian:trixie-slim
 WORKDIR /app
 
 # Download and install dependencies (Core version - without LibreOffice)
-ARG PANDOC_VERSION=3.6.3
 ARG TARGETARCH
 
 # Install runtime dependencies and download binaries
@@ -93,17 +92,6 @@ RUN apt-get update && \
         tesseract-ocr-rus \
         tesseract-ocr-hin \
         && \
-    # Download and install Pandoc (arch-aware)
-    if [ "$TARGETARCH" = "arm64" ]; then \
-        PANDOC_ARCH="arm64"; \
-    else \
-        PANDOC_ARCH="amd64"; \
-    fi && \
-    curl -fL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
-        -o /tmp/pandoc.tar.gz && \
-    tar -xzf /tmp/pandoc.tar.gz -C /tmp && \
-    cp /tmp/pandoc-${PANDOC_VERSION}/bin/pandoc /usr/local/bin/ && \
-    rm -rf /tmp/pandoc* && \
     # Clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

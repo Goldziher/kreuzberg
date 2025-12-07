@@ -18,13 +18,13 @@ crate="${1:?Crate name argument required}"
 wait_seconds="${2:-0}"
 
 if [ -z "${CARGO_TOKEN:-}" ]; then
-  echo "::error::CARGO_TOKEN secret not set"
-  exit 1
+	echo "::error::CARGO_TOKEN secret not set"
+	exit 1
 fi
 
 if [ "$wait_seconds" -gt 0 ]; then
-  echo "Waiting $wait_seconds seconds before publishing $crate..."
-  sleep "$wait_seconds"
+	echo "Waiting $wait_seconds seconds before publishing $crate..."
+	sleep "$wait_seconds"
 fi
 
 publish_log=$(mktemp)
@@ -34,12 +34,12 @@ status=${PIPESTATUS[0]}
 set -e
 
 if [ "$status" -ne 0 ]; then
-  if grep -qi "already uploaded" "$publish_log"; then
-    echo "::notice::$crate already published; skipping."
-  else
-    rm -f "$publish_log"
-    exit "$status"
-  fi
+	if grep -qi "already uploaded" "$publish_log"; then
+		echo "::notice::$crate already published; skipping."
+	else
+		rm -f "$publish_log"
+		exit "$status"
+	fi
 fi
 
 rm -f "$publish_log"

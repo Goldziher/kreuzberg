@@ -1,0 +1,381 @@
+================================================================================
+TYPST EXTRACTOR - ISSUES MATRIX
+================================================================================
+
+ISSUE TRACKING BY ID, SEVERITY, LOCATION, AND STATUS
+
+================================================================================
+CODE QUALITY ISSUES (11 TOTAL)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-01: Unclosed Delimiter Data Loss                              [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    430-438, 441-449, 452-460, 463-471                               │
+│ Function: process_line()                                                    │
+│ Impact:   Text after unclosed formatting markers could be lost              │
+│ Status:   FALSE POSITIVE - Code actually works correctly                    │
+│ Fix:      Update comments to clarify behavior                               │
+│ Tests:    1 (already passes)                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-02: Infinite Loop Risk - Bracket Counting                      [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    356-386                                                           │
+│ Function: extract_table_content()                                           │
+│ Impact:   Malformed tables with mismatched brackets                         │
+│ Status:   UNLIKELY but POSSIBLE - lacks safety bounds checking              │
+│ Fix:      Add paren_depth/bracket_depth < 0 checks                          │
+│ Tests:    ADD: test_malformed_table_mismatched_brackets                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-03: Silent Regex Compilation Failures                             [HIGH] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    181-186, 192-195, 204, 491                                        │
+│ Function: extract_quoted_value(), extract_keywords(), extract_link_text()   │
+│ Impact:   Metadata lost without any warning/error message                   │
+│ Status:   CONFIRMED - Silent failures hide issues                           │
+│ Fix:      Add logging/tracing when regex compilation fails                  │
+│ Tests:    ADD: test_regex_error_debugging                                   │
+│ Severity: Makes debugging nearly impossible                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-04: List Detection False Negatives                                [HIGH] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    300-309                                                           │
+│ Function: extract_content()                                                 │
+│ Impact:   Lists like "+Item" (no space) not recognized                      │
+│ Status:   CONFIRMED - Detection logic too strict                            │
+│ Fix:      Relax check to allow alphanumeric after marker                    │
+│ Tests:    ADD: test_list_detection_edge_cases (4 sub-cases)                 │
+│ Examples: "+Item", "+-weird", "+ ", "-"                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-05: Empty Heading Markers                                         [HIGH] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    282-298                                                           │
+│ Function: extract_content()                                                 │
+│ Impact:   Outputs "= " with no text, cluttering output                      │
+│ Status:   CONFIRMED - Empty headings preserved                              │
+│ Fix:      Skip headings where heading_text is empty                         │
+│ Tests:    ADD: test_empty_heading_markers                                   │
+│ Examples: "= ", "==", "=    "                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-06: Link Text Loss on Empty Brackets                              [HIGH] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    488-502                                                           │
+│ Function: extract_link_text()                                               │
+│ Impact:   #link("url")[] produces [](url) with empty link text              │
+│ Status:   CONFIRMED - No fallback text                                      │
+│ Fix:      Use URL as fallback when text is empty                            │
+│ Tests:    ADD: test_link_with_empty_text                                    │
+│ Recommendation: Better: [example.com](https://example.com)                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-07: Table Nested Bracket Parsing Too Simplistic               [MEDIUM] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    388-421                                                           │
+│ Function: extract_table_content()                                           │
+│ Impact:   Nested function calls in cells like [#align(left, "Text")]        │
+│ Status:   CONFIRMED - Flat bracket parsing, no nesting support              │
+│ Fix:      Track nested bracket depth separately                             │
+│ Tests:    ADD: test_table_with_nested_functions                             │
+│ Example:  [#text(size: 12pt, "Text")] → corrupted output                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-08: No Escaped Character Support                                 [MEDIUM] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    178-186 (and similar)                                             │
+│ Function: extract_quoted_value()                                            │
+│ Impact:   Metadata with escaped quotes truncated                            │
+│ Status:   CONFIRMED - Regex doesn't handle backslash escapes                │
+│ Fix:      Update regex: r#"{}:\s*"((?:\\.|[^"])*)""#                        │
+│ Tests:    ADD: test_metadata_with_escaped_quotes                            │
+│ Example:  title: "Text \"quoted\"" → extracts only "Text \"                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-09: Link Prefix Detection Without Full Validation                  [LOW] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    474-477                                                           │
+│ Function: process_line()                                                    │
+│ Impact:   Checks for "#l" but doesn't validate full "link(...)" format      │
+│ Status:   MINOR - Works but inefficient                                     │
+│ Fix:      Remove premature check or improve it                              │
+│ Tests:    Already covered by existing tests                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-10: Inconsistent Line Processing in Brackets                       [LOW] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    321-327                                                           │
+│ Function: extract_content()                                                 │
+│ Impact:   Content from brackets processed twice through process_line()      │
+│ Status:   MINOR - Inconsistency, not critical                               │
+│ Fix:      Document or consolidate processing                                │
+│ Tests:    Existing tests cover this                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CQ-11: String Allocation in Loop                                      [LOW] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    206-209                                                           │
+│ Function: extract_keywords()                                                │
+│ Impact:   Performance: allocates string per keyword                         │
+│ Status:   MINOR - Negligible impact, but poor pattern                       │
+│ Fix:      Use iterator chain with collect()                                 │
+│ Tests:    No test needed (performance only)                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+DRYness VIOLATIONS (4 TOTAL)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DRY-01: Delimiter Handling Repetition                              [MEDIUM] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    430-438 (backticks), 441-449 ($), 452-460 (*), 463-471 (_)        │
+│ Duplication: 4 × 8-9 lines = ~36 LOC with identical logic                   │
+│ Fix:      Extract consume_until_delimiter() helper function                 │
+│ Savings:  ~15 LOC (4 lines match, rest removed)                             │
+│ Impact:   Easier to maintain, consistent behavior                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DRY-02: Metadata Extraction Pattern Repetition                       [LOW] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    153-175 (extract_metadata)                                        │
+│ Duplication: 4 × if-let blocks with similar pattern                         │
+│ Fix:      Loop over field names with conditional for special cases          │
+│ Savings:  ~8 LOC                                                            │
+│ Impact:   Easier to add new metadata fields                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DRY-03: Bracket Counting Repetition                                  [LOW] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    359-367, 374-382 (exact duplicates)                               │
+│ Duplication: Same 9-line match block appears twice                          │
+│ Fix:      Extract count_brackets(text) -> (paren_count, bracket_count)      │
+│ Savings:  ~7 LOC per use                                                    │
+│ Impact:   Easier to update counting logic                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DRY-04: Regex Capture Validation Repetition                          [LOW] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ File:     src/extractors/typst.rs                                           │
+│ Lines:    196-209 (extract_keywords - captures.get() pattern)               │
+│ Duplication: Repeated checks for capture groups                             │
+│ Fix:      Use filter_map in iterator chain                                  │
+│ Savings:  ~3 LOC                                                            │
+│ Impact:   More idiomatic Rust                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TOTAL DRY SAVINGS: ~33-40 LOC with no functional changes
+
+================================================================================
+TESTING GAPS (15 TOTAL)
+================================================================================
+
+CRITICAL GAPS (5):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TG-01: Unclosed Delimiter Test                                    [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Missing:  test_unclosed_delimiters()                                        │
+│ Scenario: "Text with `unclosed backtick and more"                           │
+│ Expected: All text preserved                                                │
+│ Status:   Actually works, but test would document behavior                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TG-02: Malformed Table Test                                       [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Missing:  test_malformed_table_bounds()                                     │
+│ Scenario: Mismatched brackets in table cells                                │
+│ Expected: No panic, graceful handling                                       │
+│ Status:   NEEDED - Ensures robustness                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TG-03: Escaped Characters in Metadata                              [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Missing:  test_metadata_with_escaped_quotes()                               │
+│ Scenario: title: "Document \"Title\" Here"                                  │
+│ Expected: Extract full title with quotes                                    │
+│ Status:   Currently FAILS - title truncated                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TG-04: Empty List Items                                            [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Missing:  test_empty_list_items()                                           │
+│ Scenario: +\n- Item\n+                                                       │
+│ Expected: Only non-empty items extracted                                    │
+│ Status:   Behavior unclear                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TG-05: Nested Function Calls in Tables                             [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Missing:  test_table_with_nested_functions()                                │
+│ Scenario: [#align(center, "Centered")], [#text(size: 12pt, "Text")]        │
+│ Expected: Extract meaningful cell content                                   │
+│ Status:   Currently FAILS - corrupted output                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+HIGH SEVERITY GAPS (5):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TG-06: Link with Empty Text                                          [HIGH] │
+│ Missing:  test_link_with_empty_text()                                       │
+│ Scenario: #link("https://example.com")[]                                    │
+│ Expected: URL shown or fallback provided                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TG-07: Mixed List Markers                                            [HIGH] │
+│ Missing:  test_mixed_list_markers()                                         │
+│ Scenario: + and - markers in same document                                  │
+│ Expected: All normalized to "- "                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TG-08: Metadata Keywords Array Format                                [HIGH] │
+│ Missing:  test_metadata_keywords_array_format()                             │
+│ Scenario: keywords: ("keyword1", "keyword2", "keyword3")                    │
+│ Expected: All keywords extracted                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TG-09: Empty Headings                                                [HIGH] │
+│ Missing:  test_empty_heading()                                              │
+│ Scenario: = \n ==\n Content                                                  │
+│ Expected: No empty heading lines                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TG-10: Code Block with Backticks                                    [HIGH] │
+│ Missing:  test_code_block_with_backticks()                                  │
+│ Scenario: Code containing backticks in code block                           │
+│ Expected: Backticks in content preserved                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MEDIUM SEVERITY GAPS (5):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TG-11: Very Long Lines (Performance)                              [MEDIUM] │
+│ TG-12: Deeply Nested Formatting                                   [MEDIUM] │
+│ TG-13: Unicode and Non-ASCII Text                                  [MEDIUM] │
+│ TG-14: Multiple Documents in Sequence                              [MEDIUM] │
+│ TG-15: Table Edge Cases (empty cells, single cell, multi-block)    [MEDIUM] │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TOTAL TEST CASES TO ADD: 15
+
+================================================================================
+IMPLEMENTATION GAPS (15 TOTAL)
+================================================================================
+
+CRITICAL MISSING FEATURES (2):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ IG-01: No Blockquote Support                                      [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Missing:  Support for > syntax (blockquotes)                                │
+│ Impact:   All blockquotes silently ignored                                  │
+│ Pandoc:   Extracts as blockquote structure                                  │
+│ Fix:      Add handler: if trimmed.starts_with('>') { ... }                  │
+│ Effort:   LOW (5-10 LOC)                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ IG-02: No Structured Table Extraction                              [CRITICAL] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Missing:  ExtractionResult.tables field is always empty                     │
+│ Impact:   Line 111: tables: Vec::new() - no tables ever returned            │
+│ Pandoc:   Returns structured table data with headers, alignment, etc.       │
+│ Fix:      Parse table structure, return in ExtractionResult                 │
+│ Effort:   HIGH (20-30 LOC + new types)                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+HIGH PRIORITY GAPS (8):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ IG-03: No #raw() Code Block Syntax                                   [HIGH] │
+│ IG-04: No Strikethrough Support                                     [HIGH] │
+│ IG-05: No Footnotes/References                                      [HIGH] │
+│ IG-06: No Inline Math Extraction (Structured)                       [HIGH] │
+│ IG-07: No Display Math Block Detection                               [HIGH] │
+│ IG-08: No Advanced Link Types (automatic, reference)                [HIGH] │
+│ IG-09: No Heading Attributes/IDs                                    [HIGH] │
+│ IG-10: Incomplete Metadata Fields                                   [HIGH] │
+│        (Missing: creator, producer, creation-date, etc.)                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MEDIUM PRIORITY GAPS (4):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ IG-11: No Comment Removal (//)                                     [MEDIUM] │
+│ IG-12: No Indentation Preservation                                 [MEDIUM] │
+│ IG-13: No List Nesting Support                                     [MEDIUM] │
+│ IG-14: No Horizontal Rule Support                                  [MEDIUM] │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MISSING: Abbreviation/Acronym handling (LOW)
+
+FEATURE COMPLETENESS vs PANDOC: ~60%
+
+================================================================================
+ISSUE SUMMARY BY CATEGORY
+================================================================================
+
+                    CRITICAL  HIGH  MEDIUM  LOW   TOTAL
+Code Quality            3      2      3      3     11
+DRYness                 0      0      1      3      4
+Testing Gaps            5      5      5      0     15
+Implementation Gaps     2      8      4      1     15
+────────────────────────────────────────────────────────────────
+TOTAL:                 10     15     13      7     45
+
+================================================================================
+PRIORITY ROADMAP
+================================================================================
+
+IMMEDIATE (Fix This Week):
+  ✓ CQ-03: Regex error logging (enable debugging)
+  ✓ CQ-04: List detection improvements (fix false negatives)
+  ✓ CQ-05: Empty heading filtering (clean output)
+  ✓ CQ-06: Link fallback text (preserve information)
+  + Add tests TG-06, TG-07, TG-09
+
+SOON (Next 2 Weeks):
+  ✓ CQ-07: Table nested bracket handling (fix corruption)
+  ✓ CQ-08: Escaped character support (fix truncation)
+  ✓ DRY-01: Refactor delimiter handling (30 LOC saved)
+  + Add tests TG-01 through TG-15
+  + Add test_malformed_input_graceful_handling()
+
+PLANNED (Month):
+  ✓ IG-01: Blockquote support (easy feature)
+  ✓ IG-02: Structured table extraction (complex feature)
+  ✓ IG-03 through IG-10: Additional features
+  ✓ Performance testing with large documents
+  ✓ Unicode/internationalization testing
+
+================================================================================

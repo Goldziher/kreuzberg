@@ -13,7 +13,7 @@ High-performance document intelligence for Node.js and TypeScript, powered by Ru
 Extract text, tables, images, and metadata from 50+ file formats including PDF, DOCX, PPTX, XLSX, images, and more.
 
 > **🚀 Version 4.0.0 Release Candidate**
-> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter.
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter.
 
 ## Features
 
@@ -653,7 +653,7 @@ For comprehensive documentation, visit [https://kreuzberg.dev](https://kreuzberg
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](https://github.com/Goldziher/kreuzberg/blob/main/docs/contributing.md) for details.
+We welcome contributions! Please see our [Contributing Guide](https://github.com/kreuzberg-dev/kreuzberg/blob/main/docs/contributing.md) for details.
 
 ## License
 
@@ -663,7 +663,7 @@ MIT
 
 - [Website](https://kreuzberg.dev)
 - [Documentation](https://kreuzberg.dev)
-- [GitHub](https://github.com/Goldziher/kreuzberg)
-- [Issue Tracker](https://github.com/Goldziher/kreuzberg/issues)
-- [Changelog](https://github.com/Goldziher/kreuzberg/blob/main/CHANGELOG.md)
+- [GitHub](https://github.com/kreuzberg-dev/kreuzberg)
+- [Issue Tracker](https://github.com/kreuzberg-dev/kreuzberg/issues)
+- [Changelog](https://github.com/kreuzberg-dev/kreuzberg/blob/main/CHANGELOG.md)
 - [npm Package](https://www.npmjs.com/package/kreuzberg)

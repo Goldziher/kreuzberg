@@ -1,92 +1,90 @@
-# Third-Party Code Attributions
+# Attributions
 
-This file documents third-party code that has been vendored, adapted, or incorporated into Kreuzberg.
+This document acknowledges the sources of test documents and baseline data used in the Kreuzberg project.
 
----
+## Pandoc Test Suite
 
-## kreuzberg-tesseract
+Test documents and reference baseline outputs derived from the Pandoc test suite:
 
-**Location**: `crates/kreuzberg-tesseract/`
+- **Source**: https://github.com/jgm/pandoc
+- **License**: GPL-2.0-or-later
+- **Usage**: Test documents and reference baselines only (no code copied from Pandoc)
+- **Attribution**: John MacFarlane and Pandoc contributors
+- **Purpose**: Baseline reference testing - used to validate our native Rust extractors work correctly on the same documents that Pandoc processes
 
-**Original Source**: https://github.com/cafercangundogdu/tesseract-rs
+### Test Documents from Pandoc
 
-**Original Author**: Cafer Can Gündoğdu
+The following test documents were copied from the Pandoc repository to `/test_documents/`:
 
-**License**: MIT
+#### Org Mode
+- `org-select-tags.org` - SELECT_TAGS and EXCLUDE_TAGS testing
+- `pandoc-tables.org` - Org Mode table formats
+- `pandoc-writer.org` - Comprehensive Pandoc test suite in Org Mode format
 
-**Modifications**: This crate was forked and substantially modified for integration into the Kreuzberg project. Major changes include:
-- Windows MAX_PATH handling improvements
-- Build system optimizations for cross-platform compilation
-- Caching improvements for faster incremental builds
-- CMake configuration updates for Ruby gem compatibility
-- Integration with Kreuzberg workspace standards
+#### Typst
+- `typst-reader.typ` - Fibonacci sequence with mathematical formulas
+- `undergradmath.typ` - Comprehensive undergraduate mathematics document (16KB)
 
-The original MIT license is preserved in the crate's LICENSE file. Full attribution to the original author is maintained.
+#### DocBook
+- `docbook-chapter.docbook` - Recursive section hierarchy (7 nested levels)
+- `docbook-reader.docbook` - Comprehensive DocBook 4.4 test suite (36KB, 1704 lines)
+- `docbook-xref.docbook` - Cross-reference (xref) functionality testing
 
----
+#### JATS
+- `jats-reader.xml` - Comprehensive JATS (Z39.96) Journal Archiving test document (38KB, 1460 lines)
 
-## pptx-to-md
+#### FictionBook
+- `test_documents/fictionbook/pandoc/` - 13 FictionBook test files including:
+  - `basic.fb2` - Basic FictionBook structure
+  - `images-embedded.fb2` - Embedded base64 images
+  - `math.fb2` - Mathematical content
+  - `meta.fb2` - Document metadata testing
+  - `reader/emphasis.fb2` - Text emphasis testing
+  - `reader/epigraph.fb2` - Epigraph/quote elements
+  - `reader/meta.fb2` - Document metadata and title info
+  - `reader/notes.fb2` - Footnotes/endnotes with cross-references
+  - `reader/poem.fb2` - Poem/verse structure
+  - `reader/titles.fb2` - Section titles and heading hierarchy
+  - And others
 
-**Original Project**: pptx-to-md (pptx-parser)
+#### OPML
+- `opml-reader.opml` - OPML 2.0 outline structure (US states example)
+- `pandoc-writer.opml` - Comprehensive Pandoc test suite in OPML format
 
-**Repository**: https://github.com/nilskruthoff/pptx-parser
+### Baseline Outputs Generated
 
-**Version**: Based on v0.4.0 (July 2025)
+For each test document listed above, three baseline outputs were generated using Pandoc 3.8.3:
 
-**Author**: Nils Kruthoff
+1. **Plain Text** (`*_pandoc_baseline.txt`) - Raw text content extraction
+2. **JSON Metadata** (`*_pandoc_meta.json`) - Full Pandoc AST with document structure and metadata
+3. **Markdown** (`*_pandoc_markdown.md`) - Markdown representation for format comparison
 
-**License**: MIT OR Apache-2.0
+**Total**: 132 baseline files for 44 documents across 6 formats
 
-**Used in**: `crates/kreuzberg/src/extraction/pptx.rs`
+### GPL Compliance Statement
 
-### Description
+We acknowledge that Pandoc is licensed under GPL-2.0-or-later. We have:
 
-PowerPoint (PPTX) parsing and extraction functionality. The original library provides comprehensive parsing of PPTX files including text, tables, lists, and embedded images.
+- ✓ Used Pandoc's test documents (test data is allowed under GPL)
+- ✓ Generated baseline outputs using Pandoc for comparison purposes
+- ✓ NOT copied any Pandoc source code
+- ✓ Implemented our extractors independently in Rust
+- ✓ Used Pandoc only as a behavioral baseline for testing
 
-### Modifications
+Our Rust extractors are independently implemented and do not contain any GPL-licensed code from Pandoc.
 
-The code has been adapted and integrated into Kreuzberg with the following changes:
+### Verification
 
-- Integrated with Kreuzberg's error handling system (`KreuzbergError`)
-- Added custom Office metadata extraction using Kreuzberg's office metadata module
-- Integrated with Kreuzberg's image extraction pipeline (`ExtractedImage` types)
-- Adapted for Kreuzberg's configuration system (`ExtractionConfig`)
-- Modified to work with Kreuzberg's plugin architecture
-- Maintained core parsing logic for text, tables, lists, and images
-- Added streaming iterator support for memory-efficient processing
+Test documents and baselines can be regenerated at any time using:
 
-### Original License
-
-#### MIT License
-
+```bash
+./generate_pandoc_baselines.sh
 ```
-Copyright (c) 2025 Nils Kruthoff
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-#### Apache License 2.0
-
-The original project is also licensed under Apache-2.0. The full text of the Apache License 2.0 can be found at: http://www.apache.org/licenses/LICENSE-2.0
+This script processes all test documents and generates fresh baselines using the installed version of Pandoc.
 
 ---
 
-## Other Dependencies
-
-All other dependencies are listed in the respective `Cargo.toml`, `package.json`, `pyproject.toml`, `Gemfile`, `pom.xml`, and `go.mod` files throughout the project. These are standard dependencies from their respective package registries (crates.io, npm, PyPI, RubyGems, Maven Central, Go modules).
+**Last Updated**: December 6, 2025
+**Pandoc Version Used**: 3.8.3
+**Baseline Generation Date**: December 6, 2025

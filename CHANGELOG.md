@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.0-rc.5] - 2025-12-01
 
-### Release Candidate 5 - macOS Binary Fix
+### Release Candidate 5 - macOS Binary Fix & Complete Pandoc Removal
+
+#### Breaking Changes
+
+**Complete Pandoc Removal**:
+- **Removed all Pandoc dependencies** from v4 codebase (100% native Rust extractors)
+  - Deleted 7 Pandoc code files (3,006 lines)
+  - Removed `pandoc-fallback` feature flag from Cargo.toml
+  - Removed Pandoc installation from all CI/CD workflows (Linux, macOS, Windows)
+  - Removed Pandoc from Docker images (saving ~500MB-1GB per image)
+  - Updated all documentation to reflect native-only approach
+  - Deleted 160+ Pandoc baseline test files
+- **Native Rust extractors** now handle all 12 previously Pandoc-supported formats:
+  - LaTeX, EPUB, BibTeX, Typst, Jupyter, FictionBook, DocBook, JATS, OPML
+  - Org-mode, reStructuredText, RTF, Markdown variants
+- **Benefits**: Simpler installation (no system dependencies), faster CI builds (~2-5 min improvement), smaller Docker images, pure Rust codebase
+- **Migration**: No action required - native extractors are drop-in replacements with equivalent or better quality
 
 #### Bug Fixes
 
@@ -16,6 +32,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Build script now correctly copies libpdfium.dylib to target-specific directory when using --target flag
   - Resolves: `dyld: Library not loaded: @rpath/libpdfium.dylib`
   - Impact: macOS CLI binary now functional in releases
+
+**Windows Go Builds**:
+- Fixed persistent Windows Go CI failures where `ring` crate failed with MSVC toolchain detection
+  - Set GNU as default Rust toolchain on Windows: `rustup default stable-x86_64-pc-windows-gnu`
+  - Updated Rust build cache keys to include target architecture, preventing MSVC cache reuse
+  - Added MSYS2 UCRT64 setup with comprehensive GNU toolchain configuration
+  - Resolves: `TARGET = Some(x86_64-pc-windows-msvc)` error in build scripts
+  - Impact: Windows Go bindings now build successfully with proper GNU toolchain isolation
+
+**Ruby CI Bundler 4.0 Compatibility**:
+- Fixed gem installation failures on macOS and Linux caused by empty environment variables
+  - Removed job-level `GEM_HOME=""` and `BUNDLE_PATH=""` that broke non-Windows builds
+  - These variables are now only set on Windows with proper short paths for MAX_PATH mitigation
+  - Updated to `bundle update --all` (deprecated `bundle update` removed in Bundler 4.0)
+  - Resolves: `ERROR: While executing gem ... (Errno::ENOENT) No such file or directory @ dir_s_mkdir`
+  - Impact: Ruby gem builds now succeed on all platforms with Bundler 4.0.0
 
 **Note**: rc.4 workflow fixes for Python, Node, Ruby, and Maven were committed after rc.4 tag, causing those packages not to publish. All fixes are now present for rc.5.
 
@@ -225,7 +257,6 @@ v4 introduces native metadata extraction across all major document formats:
 - **DOCX**: Core properties (Dublin Core metadata), app properties (page/word/character/line/paragraph counts, template, editing time), custom properties
 - **XLSX**: Core properties, app properties (worksheet names, sheet count), custom properties
 - **PPTX**: Core properties, app properties (slide count, notes, hidden slides, slide titles), custom properties
-- Automatic merging with Pandoc metadata for DOCX (Pandoc takes precedence for conflicts)
 - Non-blocking extraction (falls back gracefully if metadata unavailable)
 
 **Email** (via `mail-parser`):
@@ -260,13 +291,10 @@ v4 introduces native metadata extraction across all major document formats:
 - YAML frontmatter automatically stripped from markdown content
 - Accessible via `ExtractionResult.metadata.html`
 
-**Pandoc-Only Formats** (metadata via Pandoc subprocess):
-- ODT, EPUB, LaTeX, reStructuredText, RTF, Typst, Jupyter Notebooks, FictionBook, Org Mode, DocBook, JATS, OPML
-- Extracts whatever metadata Pandoc provides (varies by format)
 
 **Key Improvements from v3**:
 - PDF: Pure Rust `lopdf` instead of Python `playa-pdf` for better performance
-- Office: Comprehensive native metadata extraction merged with Pandoc (v3 relied solely on Pandoc)
+- Office: Comprehensive native metadata extraction via Office Open XML parsing
 - All metadata extraction is non-blocking and gracefully handles failures
 - **Python Type Safety**: All metadata types now have proper `TypedDict` definitions with comprehensive field typing
   - `PdfMetadata`, `ExcelMetadata`, `EmailMetadata`, `PptxMetadata`, `ArchiveMetadata`
@@ -276,8 +304,8 @@ v4 introduces native metadata extraction across all major document formats:
 
 **Legacy MS Office Support**:
 - LibreOffice conversion for `.doc` and `.ppt` files
-- Automatic fallback to modern format extractors
-- Optional system dependency (graceful degradation)
+- Automatic fallback to modern format extractors after LibreOffice conversion
+- Optional system dependency (graceful degradation if unavailable)
 
 **PDF Improvements**:
 - Better text extraction with pdfium-render
@@ -427,13 +455,13 @@ register_ocr_backend(CloudOCR())
 
 ### Docker Images
 
-All Docker images include LibreOffice, Pandoc, and Tesseract by default:
+All Docker images include LibreOffice and Tesseract by default:
 
-- `goldziher/kreuzberg:4.0.0-rc.1` - Core image with Tesseract OCR
-- `goldziher/kreuzberg:4.0.0-rc.1-easyocr` - Core + EasyOCR
-- `goldziher/kreuzberg:4.0.0-rc.1-paddle` - Core + PaddleOCR
-- `goldziher/kreuzberg:4.0.0-rc.1-vision-tables` - Core + vision-based table extraction
-- `goldziher/kreuzberg:4.0.0-rc.1-all` - All features included
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1` - Core image with Tesseract OCR
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-easyocr` - Core + EasyOCR
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-paddle` - Core + PaddleOCR
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-vision-tables` - Core + vision-based table extraction
+- `kreuzberg-dev/kreuzberg:4.0.0-rc.1-all` - All features included
 
 ### Installation
 
@@ -527,7 +555,7 @@ See [Migration Guide](https://docs.kreuzberg.dev/migration/v3-to-v4/) for detail
 
 - All dependencies audited and updated
 - No known security vulnerabilities
-- Sandboxed subprocess execution (Pandoc, LibreOffice)
+- Sandboxed subprocess execution (LibreOffice)
 - Input validation on all user-provided data
 
 ### Contributors
@@ -554,10 +582,10 @@ Kreuzberg v4 was a major undertaking. Thank you to all contributors!
 
 - **Documentation**: https://docs.kreuzberg.dev
 - **Migration Guide**: https://docs.kreuzberg.dev/migration/v3-to-v4/
-- **Examples**: https://github.com/Goldziher/kreuzberg/tree/v4-dev/examples
-- **Support**: https://github.com/Goldziher/kreuzberg/issues
+- **Examples**: https://github.com/kreuzberg-dev/kreuzberg/tree/v4-dev/examples
+- **Support**: https://github.com/kreuzberg-dev/kreuzberg/issues
 
-[4.0.0-rc.2]: https://github.com/Goldziher/kreuzberg/compare/v4.0.0-rc.1...v4.0.0-rc.2
-[4.0.0-rc.1]: https://github.com/Goldziher/kreuzberg/compare/v4.0.0-rc.0...v4.0.0-rc.1
-[4.0.0-rc.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v4.0.0-rc.0
-[3.22.0]: https://github.com/Goldziher/kreuzberg/compare/v3.21.0...v3.22.0
+[4.0.0-rc.2]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.1...v4.0.0-rc.2
+[4.0.0-rc.1]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.0...v4.0.0-rc.1
+[4.0.0-rc.0]: https://github.com/kreuzberg-dev/kreuzberg/compare/v3.21.0...v4.0.0-rc.0
+[3.22.0]: https://github.com/kreuzberg-dev/kreuzberg/compare/v3.21.0...v3.22.0

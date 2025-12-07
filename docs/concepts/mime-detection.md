@@ -151,37 +151,7 @@ Kreuzberg supports multiple file formats across many categories:
 | `.epub` | `application/epub+zip` |
 | `.mobi` | `application/x-mobipocket-ebook` |
 
-## Fallback Mechanisms
-
-When MIME detection fails or format is unsupported, Kreuzberg provides fallback options:
-
-```mermaid
-flowchart TD
-    Unsupported[Unsupported Format] --> Pandoc{Pandoc<br/>Installed?}
-
-    Pandoc -->|Yes| TryConvert[Try Pandoc Conversion]
-    Pandoc -->|No| Error1([UnsupportedFormat Error])
-
-    TryConvert --> ConvertOK{Conversion<br/>Successful?}
-    ConvertOK -->|Yes| Extract[Extract Converted Content]
-    ConvertOK -->|No| Error2([ParsingError])
-
-    Extract --> Success([Return Result])
-
-    style Success fill:#c8e6c9
-    style Error1 fill:#ffcdd2
-    style Error2 fill:#ffcdd2
-```
-
-**Pandoc Fallback:**
-
-If Pandoc is installed, Kreuzberg attempts to convert unsupported formats to supported ones:
-
-- **Input**: `.odt`, `.rtf`, `.epub`, `.rst`, and 30+ other formats
-- **Conversion**: Pandoc converts to HTML or Markdown
-- **Extraction**: Converted content extracted normally
-
-**Explicit MIME Type Override:**
+## Explicit MIME Type Override
 
 Users can override auto-detection by providing explicit MIME type:
 

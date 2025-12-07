@@ -7,6 +7,7 @@ on:
       - 'crates/**'
       - 'packages/**'
       - 'tools/**'
+      - '.cargo/config.toml'
       - '.github/workflows/ci-validate.yaml'
   pull_request:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'crates/**'
       - 'packages/**'
       - 'tools/**'
+      - '.cargo/config.toml'
       - '.github/workflows/ci-validate.yaml'
 
 concurrency:
@@ -34,9 +36,9 @@ jobs:
   validate:
     name: Validate (Lint & Format)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -63,19 +65,19 @@ jobs:
           working-directory: packages/ruby
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '23'
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: '1.25'
           cache-dependency-path: packages/go/go.sum
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0'
 
@@ -85,6 +87,10 @@ jobs:
 
       - name: Install Task
         uses: ./.github/actions/install-task
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+        shell: bash
 
       - name: Cache Prek
         uses: actions/cache@v4

@@ -1,0 +1,16 @@
+#+title: Links Test Document
+#+author: Test Author
+
+* Links Section
+
+** With ampersands
+
+Here's a [[http://example.com/?foo=1&bar=2][link with an ampersand in the URL]].
+
+Here's a link with an ampersand in the link text: [[http://att.com/][AT&T]].
+
+** Regular links
+
+Just a [[https://example.com][URL]].
+
+Contact us via [[mailto:example@example.com][email]].

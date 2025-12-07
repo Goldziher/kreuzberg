@@ -634,21 +634,20 @@ See [CLI Usage](cli/usage.md) for complete documentation.
 **Required (all platforms):**
 - Tesseract OCR (4.0+) for OCR functionality
 - LibreOffice (optional) for legacy Office formats (.doc, .ppt)
-- Pandoc (optional) for advanced document conversion
 
 **Installation:**
 ```bash
 # macOS
-brew install tesseract libreoffice pandoc
+brew install tesseract libreoffice
 
 # Ubuntu/Debian
-apt-get install tesseract-ocr libreoffice pandoc
+apt-get install tesseract-ocr libreoffice
 
 # RHEL/CentOS/Fedora
-dnf install tesseract libreoffice pandoc
+dnf install tesseract libreoffice
 
 # Windows (Chocolatey)
-choco install tesseract libreoffice pandoc
+choco install tesseract libreoffice
 ```
 
 ### Python Requirements

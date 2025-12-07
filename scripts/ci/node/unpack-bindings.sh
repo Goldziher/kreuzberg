@@ -6,21 +6,34 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# scripts/ci/node lives three levels below repo root
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+
+# Validate REPO_ROOT is correct by checking for Cargo.toml
+if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
+	echo "Error: REPO_ROOT validation failed. Expected Cargo.toml at: $REPO_ROOT/Cargo.toml" >&2
+	echo "REPO_ROOT resolved to: $REPO_ROOT" >&2
+	exit 1
+fi
+
+cd "$REPO_ROOT"
+
 echo "=== Unpacking and installing Node bindings ==="
 
-cd crates/kreuzberg-node
+cd "$REPO_ROOT/crates/kreuzberg-node"
 
 # Extract the tarball to get the built .node file
-pkg=$(ls kreuzberg-node-*.tgz | head -n 1)
+pkg=$(find . -maxdepth 1 -name "kreuzberg-node-*.tgz" -print | head -n 1)
 if [ -z "$pkg" ]; then
-    echo "No kreuzberg-node tarball found" >&2
-    exit 1
+	echo "No kreuzberg-node tarball found" >&2
+	exit 1
 fi
 
 echo "Found package: $pkg"
 
 # Install the package from tarball in the TypeScript workspace
 cd ../../packages/typescript
-pnpm add "file:../../crates/kreuzberg-node/$pkg"
+pnpm add --workspace-root "file:../../crates/kreuzberg-node/$pkg"
 
 echo "Installation complete"

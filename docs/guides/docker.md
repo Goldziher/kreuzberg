@@ -9,11 +9,10 @@ Kreuzberg offers two Docker image variants optimized for different use cases:
 ### Core Image
 
 **Size:** ~1.0-1.3GB
-**Image:** `goldziher/kreuzberg:v4-core`
+**Image:** `goldziher/kreuzberg:latest`
 
 **Included Features:**
 - Tesseract OCR with 12 language packs (eng, spa, fra, deu, ita, por, chi-sim, chi-tra, jpn, ara, rus, hin)
-- Pandoc 3.6.3 for document conversion
 - pdfium for PDF rendering
 - Full support for modern file formats
 
@@ -33,7 +32,7 @@ Kreuzberg offers two Docker image variants optimized for different use cases:
 ### Full Image
 
 **Size:** ~1.5-2.1GB
-**Image:** `goldziher/kreuzberg:v4-full`
+**Image:** `goldziher/kreuzberg:latest-all`
 
 **Included Features:**
 - All Core image features
@@ -86,25 +85,25 @@ The default mode starts an HTTP REST API server.
 
 **Default Behavior:**
 ```bash
-docker run -p 8000:8000 goldziher/kreuzberg:v4-core
+docker run -p 8000:8000 goldziher/kreuzberg:latest
 ```
 
 **Custom Configuration:**
 ```bash
 # Change host and port
-docker run -p 9000:9000 goldziher/kreuzberg:v4-core \
+docker run -p 9000:9000 goldziher/kreuzberg:latest \
   serve --host 0.0.0.0 --port 9000
 
 # With environment variables
 docker run -p 8000:8000 \
   -e KREUZBERG_CORS_ORIGINS="https://myapp.com" \
   -e KREUZBERG_MAX_UPLOAD_SIZE_MB=200 \
-  goldziher/kreuzberg:v4-core
+  goldziher/kreuzberg:latest
 
 # With configuration file
 docker run -p 8000:8000 \
   -v $(pwd)/kreuzberg.toml:/config/kreuzberg.toml \
-  goldziher/kreuzberg:v4-core \
+  goldziher/kreuzberg:latest \
   serve --config /config/kreuzberg.toml
 ```
 
@@ -117,42 +116,42 @@ Run Kreuzberg as a command-line tool for file processing.
 **Extract Files:**
 ```bash
 # Mount directory and extract file
-docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
+docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   extract /data/document.pdf
 
 # Extract with OCR
-docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
+docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   extract /data/scanned.pdf --ocr true
 
 # Output as JSON
-docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
+docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   extract /data/document.pdf --output-format json > result.json
 ```
 
 **Batch Processing:**
 ```bash
 # Process multiple files
-docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
+docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   batch /data/*.pdf --output-format json
 
 # With custom concurrency
-docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
+docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   batch /data/*.pdf --concurrency 8
 ```
 
 **MIME Detection:**
 ```bash
-docker run -v $(pwd):/data goldziher/kreuzberg:v4-core \
+docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   detect /data/unknown-file.bin
 ```
 
 **Cache Management:**
 ```bash
 # View cache statistics
-docker run goldziher/kreuzberg:v4-core cache stats
+docker run goldziher/kreuzberg:latest cache stats
 
 # Clear cache
-docker run goldziher/kreuzberg:v4-core cache clear
+docker run goldziher/kreuzberg:latest cache clear
 ```
 
 See [CLI Usage Guide](../cli/usage.md) for complete CLI documentation.
@@ -163,14 +162,14 @@ Run Kreuzberg as a Model Context Protocol server for AI agent integration.
 
 **Start MCP Server:**
 ```bash
-docker run goldziher/kreuzberg:v4-core mcp
+docker run goldziher/kreuzberg:latest mcp
 ```
 
 **With Configuration:**
 ```bash
 docker run \
   -v $(pwd)/kreuzberg.toml:/config/kreuzberg.toml \
-  goldziher/kreuzberg:v4-core \
+  goldziher/kreuzberg:latest \
   mcp --config /config/kreuzberg.toml
 ```
 
@@ -222,7 +221,7 @@ docker run --security-opt no-new-privileges \
   --read-only \
   --tmpfs /tmp \
   -p 8000:8000 \
-  goldziher/kreuzberg:v4-core
+  goldziher/kreuzberg:latest
 ```
 
 ## Production Deployment
@@ -236,7 +235,7 @@ version: '3.8'
 
 services:
   kreuzberg-api:
-    image: goldziher/kreuzberg:v4-core
+    image: goldziher/kreuzberg:latest
     ports:
       - "8000:8000"
     environment:
@@ -264,7 +263,7 @@ volumes:
 ```yaml
 services:
   kreuzberg-full:
-    image: goldziher/kreuzberg:v4-full
+    image: goldziher/kreuzberg:latest-all
     ports:
       - "8000:8000"
     environment:
@@ -302,7 +301,7 @@ spec:
     spec:
       containers:
       - name: kreuzberg
-        image: goldziher/kreuzberg:v4-core
+        image: goldziher/kreuzberg:latest
         ports:
         - containerPort: 8000
           name: http
@@ -398,7 +397,7 @@ KREUZBERG_CACHE_DIR=/app/.kreuzberg  # Cache directory (default)
 # Mount cache directory for persistence
 docker run -p 8000:8000 \
   -v kreuzberg-cache:/app/.kreuzberg \
-  goldziher/kreuzberg:v4-core
+  goldziher/kreuzberg:latest
 ```
 
 **Configuration Files:**
@@ -406,7 +405,7 @@ docker run -p 8000:8000 \
 # Mount configuration file
 docker run -p 8000:8000 \
   -v $(pwd)/kreuzberg.toml:/config/kreuzberg.toml \
-  goldziher/kreuzberg:v4-core \
+  goldziher/kreuzberg:latest \
   serve --config /config/kreuzberg.toml
 ```
 
@@ -414,7 +413,7 @@ docker run -p 8000:8000 \
 ```bash
 # Mount documents directory (read-only)
 docker run -v $(pwd)/documents:/data:ro \
-  goldziher/kreuzberg:v4-core \
+  goldziher/kreuzberg:latest \
   extract /data/document.pdf
 ```
 
@@ -425,7 +424,6 @@ docker run -v $(pwd)/documents:/data:ro \
 | **Base Image** | debian:trixie-slim | debian:trixie-slim | - |
 | **Size** | ~1.0-1.3GB | ~1.5-2.1GB | ~500-800MB |
 | **Tesseract OCR** | ✅ 12 languages | ✅ 12 languages | - |
-| **Pandoc** | ✅ 3.6.3 | ✅ 3.6.3 | - |
 | **pdfium** | ✅ | ✅ | - |
 | **Modern Office** | ✅ DOCX, PPTX, XLSX | ✅ DOCX, PPTX, XLSX | - |
 | **Legacy Office** | ❌ | ✅ DOC, PPT, XLS | LibreOffice 25.8.2 |
@@ -451,7 +449,7 @@ Clone the repository and build:
 Create a custom Dockerfile based on official images:
 
 ```dockerfile
-FROM goldziher/kreuzberg:v4-core
+FROM goldziher/kreuzberg:latest
 
 # Install additional system dependencies
 USER root
@@ -488,14 +486,14 @@ CMD ["serve", "--config", "/app/kreuzberg.toml"]
 docker run -p 8000:8000 \
   --memory=1g \
   --cpus=1 \
-  goldziher/kreuzberg:v4-core
+  goldziher/kreuzberg:latest
 ```
 
 **Docker Compose:**
 ```yaml
 services:
   kreuzberg:
-    image: goldziher/kreuzberg:v4-core
+    image: goldziher/kreuzberg:latest
     deploy:
       resources:
         limits:
@@ -551,14 +549,14 @@ chown -R 1000:1000 /path/to/mounted/directory
 ```bash
 docker run -p 8000:8000 \
   --memory=4g \
-  goldziher/kreuzberg:v4-core
+  goldziher/kreuzberg:latest
 ```
 
 **Increase upload size:**
 ```bash
 docker run -p 8000:8000 \
   -e KREUZBERG_MAX_UPLOAD_SIZE_MB=1000 \
-  goldziher/kreuzberg:v4-core
+  goldziher/kreuzberg:latest
 ```
 
 ### LibreOffice Not Available
@@ -567,8 +565,8 @@ LibreOffice is only available in the **Full** image variant. If you need legacy 
 
 ```bash
 # Switch to full image
-docker pull goldziher/kreuzberg:v4-full
-docker run -p 8000:8000 goldziher/kreuzberg:v4-full
+docker pull goldziher/kreuzberg:latest-all
+docker run -p 8000:8000 goldziher/kreuzberg:latest-all
 ```
 
 ## Next Steps

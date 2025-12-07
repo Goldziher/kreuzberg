@@ -28,9 +28,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/Goldziher/kreuzberg.git</connection>
-        <developerConnection>scm:git:ssh://github.com:Goldziher/kreuzberg.git</developerConnection>
-        <url>https://github.com/Goldziher/kreuzberg</url>
+        <connection>scm:git:git://github.com/kreuzberg-dev/kreuzberg.git</connection>
+        <developerConnection>scm:git:ssh://github.com:kreuzberg-dev/kreuzberg.git</developerConnection>
+        <url>https://github.com/kreuzberg-dev/kreuzberg</url>
     </scm>
 
     <distributionManagement>
@@ -63,6 +63,7 @@
         <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -138,7 +139,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <argLine>--enable-native-access=ALL-UNNAMED -Djava.library.path=${project.basedir}/../../target/release</argLine>
+                    <argLine>@{argLine} --enable-native-access=ALL-UNNAMED -Djava.library.path=${project.basedir}/../../target/release</argLine>
                     <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                     <skipAfterFailureCount>1</skipAfterFailureCount>
                 </configuration>
@@ -255,7 +256,6 @@
                 <version>${maven-pmd-plugin.version}</version>
                 <configuration>
                     <targetJdk>23</targetJdk>
-                    <pmdVersion>${pmd.version}</pmdVersion>
                     <typeResolution>false</typeResolution>
                     <rulesets>
                         <ruleset>/rulesets/java/quickstart.xml</ruleset>
@@ -356,6 +356,27 @@
                         </googleJavaFormat>
                     </java>
                 </configuration>
+            </plugin>
+
+            <!-- JaCoCo Maven Plugin for code coverage -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

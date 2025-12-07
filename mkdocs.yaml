@@ -2,8 +2,8 @@ site_name: Kreuzberg
 site_description: A modern text extraction library supporting PDFs, images, office documents and more
 site_url: https://kreuzberg.dev
 site_author: Na'aman Hirschfeld
-repo_name: Goldziher/kreuzberg
-repo_url: https://github.com/Goldziher/kreuzberg
+repo_name: kreuzberg-dev/kreuzberg
+repo_url: https://github.com/kreuzberg-dev/kreuzberg
 edit_uri: edit/main/docs/
 copyright: |
   Copyright &copy; 2023-2025 Na'aman Hirschfeld<br>
@@ -129,7 +129,7 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/Goldziher/kreuzberg
+      link: https://github.com/kreuzberg-dev/kreuzberg
       name: View on GitHub
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/kreuzberg/

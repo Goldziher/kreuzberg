@@ -422,7 +422,7 @@ openapi_config = OpenAPIConfig(
     description="Document intelligence framework API for extracting text, metadata, and structured data from diverse file formats",
     contact=Contact(
         name="Kreuzberg",
-        url="https://github.com/Goldziher/kreuzberg",
+        url="https://github.com/kreuzberg-dev/kreuzberg",
     ),
     license=License(
         name="MIT",

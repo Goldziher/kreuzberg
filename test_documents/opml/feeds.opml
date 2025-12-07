@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>Tech News Feeds</title>
+    <dateCreated>Mon, 06 Nov 2023 00:00:00 GMT</dateCreated>
+    <dateModified>Fri, 01 Dec 2023 12:00:00 GMT</dateModified>
+    <ownerName>John Smith</ownerName>
+    <ownerEmail>john@example.com</ownerEmail>
+    <expansionState>1, 6, 13, 16</expansionState>
+    <vertScrollState>1</vertScrollState>
+    <windowBottom>600</windowBottom>
+    <windowLeft>50</windowLeft>
+    <windowRight>800</windowRight>
+    <windowTop>50</windowTop>
+  </head>
+  <body>
+    <outline text="Technology" type="folder">
+      <outline text="Hacker News" type="rss" xmlUrl="https://news.ycombinator.com/rss" htmlUrl="https://news.ycombinator.com/" />
+      <outline text="TechCrunch" type="rss" xmlUrl="https://techcrunch.com/feed/" htmlUrl="https://techcrunch.com/" />
+      <outline text="The Verge" type="rss" xmlUrl="https://www.theverge.com/rss/index.xml" htmlUrl="https://www.theverge.com/" />
+    </outline>
+    <outline text="Programming" type="folder">
+      <outline text="Rust Blog" type="rss" xmlUrl="https://blog.rust-lang.org/feed.xml" htmlUrl="https://blog.rust-lang.org/" />
+      <outline text="Dev.to" type="rss" xmlUrl="https://dev.to/feed" htmlUrl="https://dev.to/" />
+      <outline text="InfoQ" type="rss" xmlUrl="https://feed.infoq.com/feed/" htmlUrl="https://www.infoq.com/" />
+    </outline>
+    <outline text="Uncategorized" type="folder">
+      <outline text="Reddit Programming" type="rss" xmlUrl="https://www.reddit.com/r/programming/.rss" htmlUrl="https://www.reddit.com/r/programming/" />
+    </outline>
+  </body>
+</opml>

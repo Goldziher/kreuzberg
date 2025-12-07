@@ -44,6 +44,7 @@ tasks:
     desc: Run all linters with auto-fix enabled
     cmds:
       - task: rust:lint
+      - task: rust:licenses
       - task: python:lint
       - task: typescript:lint
       - task: ruby:lint
@@ -54,6 +55,7 @@ tasks:
     desc: Run all linters in check-only mode (no modifications)
     cmds:
       - task: rust:lint:check
+      - task: rust:licenses
       - task: python:lint:check
       - task: typescript:lint:check
       - task: ruby:lint:check
@@ -120,36 +122,18 @@ tasks:
     desc: Check Rust code formatting without modifications
     cmds:
       - cargo fmt --all -- --check
+  rust:licenses:
+    desc: Check Rust dependency licenses with cargo-deny
+    cmds:
+      - cargo deny check licenses
   toml:format:
     desc: Format TOML files with taplo
     cmds:
-      - |
-        taplo format \
-          Cargo.toml \
-          pyproject.toml \
-          rustfmt.toml \
-          .cargo/config.toml \
-          crates/*/Cargo.toml \
-          tools/*/Cargo.toml \
-          e2e/rust/Cargo.toml \
-          packages/ruby/ext/kreuzberg_rb/native/Cargo.toml \
-          crates/*/cbindgen.toml \
-          examples/*.toml 2>/dev/null || true
+      - scripts/toml_format.sh
   toml:format:check:
     desc: Check TOML formatting without modifications
     cmds:
-      - |
-        taplo format --check \
-          Cargo.toml \
-          pyproject.toml \
-          rustfmt.toml \
-          .cargo/config.toml \
-          crates/*/Cargo.toml \
-          tools/*/Cargo.toml \
-          e2e/rust/Cargo.toml \
-          packages/ruby/ext/kreuzberg_rb/native/Cargo.toml \
-          crates/*/cbindgen.toml \
-          examples/*.toml 2>/dev/null
+      - scripts/toml_format.sh --check
   rust:doc:
     desc: Generate Rust documentation
     cmds:
@@ -233,7 +217,7 @@ tasks:
     desc: Update Ruby dependencies
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} update"
+      - "{{.BUNDLE}} update --all"
   ruby:test:
     desc: Run Ruby tests
     dir: packages/ruby
@@ -248,24 +232,24 @@ tasks:
     desc: Lint Ruby code with auto-fix (rubocop + steep)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml --autocorrect-all"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml --autocorrect-all"
       - "{{.BUNDLE}} exec steep check"
   ruby:lint:check:
     desc: Lint Ruby code in check-only mode (rubocop + steep, no fixes)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml"
       - "{{.BUNDLE}} exec steep check"
   ruby:format:
     desc: Format Ruby code with modifications (rubocop)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml --autocorrect-all"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml --autocorrect-all"
   ruby:format:check:
     desc: Check Ruby code formatting without modifications (rubocop)
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml"
   ruby:typecheck:
     desc: Run steep type checking
     dir: packages/ruby
@@ -280,7 +264,8 @@ tasks:
     desc: Install TypeScript dependencies
     dir: crates/kreuzberg-node
     cmds:
-      - pnpm install
+      - corepack enable
+      - pnpm install -r
   typescript:setup:
     desc: Alias for typescript:install (idempotent)
     dir: crates/kreuzberg-node
@@ -321,6 +306,7 @@ tasks:
     dir: crates/kreuzberg-node
     cmds:
       - echo "Updating TypeScript dependencies..."
+      - corepack up
       - pnpm up --latest
   java:install:
     desc: Install Java dependencies
@@ -453,7 +439,7 @@ tasks:
     desc: Lint generated Ruby E2E suite
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rubocop --config .rubocop.yaml ../../e2e/ruby/spec"
+      - "{{.BUNDLE}} exec rubocop --config .rubocop.yml ../../e2e/ruby/spec"
   e2e:ruby:test:
     desc: Run Ruby E2E tests
     dir: packages/ruby
@@ -473,7 +459,7 @@ tasks:
     desc: Run Java E2E tests
     dir: e2e/java
     cmds:
-      - mvn test
+      - mvn -B -DtrimStackTrace=false -Dsurefire.useFile=false test
   e2e:java:verify:
     desc: Regenerate and validate Java E2E suite
     cmds:
@@ -484,17 +470,11 @@ tasks:
     desc: Generate Go E2E tests from fixtures
     cmds:
       - cargo run -p kreuzberg-e2e-generator -- generate --lang go --fixtures fixtures --output e2e
-      - cmd: |
-          cd e2e/go
-          gofmt -w .
+      - scripts/e2e/go/format.sh
   e2e:go:test:
     desc: Run Go E2E tests
-    dir: e2e/go
     cmds:
-      - |
-        DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
-        LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
-        go test ./...
+      - scripts/e2e/go/test.sh
   e2e:go:verify:
     desc: Regenerate and validate Go E2E suite
     cmds:
@@ -506,21 +486,8 @@ tasks:
       - cargo run -p kreuzberg-e2e-generator -- generate --lang csharp --fixtures fixtures --output e2e
   e2e:csharp:test:
     desc: Run C# E2E tests
-    dir: e2e/csharp
     cmds:
-      - |
-        # Set Tesseract data path for all platforms
-        if [ "$RUNNER_OS" = "Linux" ]; then
-            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
-        elif [ "$RUNNER_OS" = "macOS" ]; then
-            export TESSDATA_PREFIX="$HOME/Library/Application Support/tesseract-rs/tessdata"
-        elif [ "$RUNNER_OS" = "Windows" ]; then
-            export TESSDATA_PREFIX="$APPDATA/tesseract-rs/tessdata"
-        fi
-
-        DYLD_LIBRARY_PATH=../../target/release:${DYLD_LIBRARY_PATH:-} \
-        LD_LIBRARY_PATH=../../target/release:${LD_LIBRARY_PATH:-} \
-        dotnet test Kreuzberg.E2E.csproj -c Release
+      - bash scripts/e2e/csharp/test.sh
   e2e:csharp:verify:
     desc: Regenerate and validate C# E2E suite
     cmds:
@@ -663,24 +630,12 @@ tasks:
   go:install:
     desc: Install Go tools and modules
     cmds:
-      - |
-        echo "Installing golangci-lint v{{.GOLANGCI_LINT_VERSION}}..."
-        go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v{{.GOLANGCI_LINT_VERSION}}
-      - cmd: |
-          cd packages/go
-          go mod download
-          go mod tidy
+      - scripts/go/install.sh {{.GOLANGCI_LINT_VERSION}}
 
   go:update:
     desc: Update Go dependencies and linters
     cmds:
-      - |
-        echo "Updating golangci-lint to v{{.GOLANGCI_LINT_VERSION}}..."
-        go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v{{.GOLANGCI_LINT_VERSION}}
-      - cmd: |
-          cd packages/go
-          go get -u ./...
-          go mod tidy
+      - scripts/go/update.sh {{.GOLANGCI_LINT_VERSION}}
 
   go:lint:
     desc: Lint Go code with auto-fix (gofmt + golangci-lint)
@@ -692,7 +647,7 @@ tasks:
     desc: Lint Go code in check-only mode (gofmt + golangci-lint, no fixes)
     dir: packages/go
     cmds:
-      - gofmt -l . | grep -q . && exit 1 || true
+      - ../../scripts/go/format_check.sh
       - golangci-lint run --config ../../.golangci.yml ./...
   go:format:
     desc: Format Go code with modifications (gofmt)
@@ -703,17 +658,12 @@ tasks:
     desc: Check Go code formatting without modifications (gofmt)
     dir: packages/go
     cmds:
-      - gofmt -l . | grep -q . && exit 1 || true
+      - ../../scripts/go/format_check.sh
 
   go:test:
     desc: Run Go tests
-    dir: packages/go
     cmds:
-      - bash ../../scripts/download_pdfium_runtime.sh
-      - |
-        export LD_LIBRARY_PATH="$PWD/../../target/release:${LD_LIBRARY_PATH:-}"
-        export DYLD_FALLBACK_LIBRARY_PATH="$PWD/../../target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
-        go test ./...
+      - scripts/go/test.sh
 
   csharp:install:
     desc: Restore C# dependencies
@@ -731,19 +681,8 @@ tasks:
 
   csharp:test:
     desc: Run C# tests
-    dir: packages/csharp
     cmds:
-      - |
-        # Set Tesseract data path for all platforms
-        if [ "$RUNNER_OS" = "Linux" ]; then
-            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
-        elif [ "$RUNNER_OS" = "macOS" ]; then
-            export TESSDATA_PREFIX="$HOME/Library/Application Support/tesseract-rs/tessdata"
-        elif [ "$RUNNER_OS" = "Windows" ]; then
-            export TESSDATA_PREFIX="$APPDATA/tesseract-rs/tessdata"
-        fi
-
-        dotnet test Kreuzberg.Tests/Kreuzberg.Tests.csproj -c Release
+      - scripts/csharp/test.sh
 
   csharp:lint:
     desc: Lint/format C# code with auto-fix (dotnet format)
@@ -787,11 +726,5 @@ tasks:
 
   smoke:node:
     desc: Run Node smoke test locally (require KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg.tgz)
-    dir: e2e/smoke/node
     cmds:
-      - |
-        : "${KREUZBERG_NODE_SPEC:?Set KREUZBERG_NODE_SPEC=file:/abs/path/to/kreuzberg.tgz}"
-        node ../../.github/actions/smoke-node/update-package-spec.js
-        rm -f pnpm-lock.yaml
-        pnpm install --no-frozen-lockfile
-        pnpm run check
+      - scripts/smoke_node.sh

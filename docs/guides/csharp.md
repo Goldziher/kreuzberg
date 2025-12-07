@@ -5,7 +5,7 @@ High-performance document intelligence for .NET applications. Extract text, meta
 **Powered by a Rust core** – Native performance for document extraction with P/Invoke interoperability.
 
 > **Version 4.0.0 Release Candidate**
-> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/Goldziher/kreuzberg/issues) you encounter.
+> This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter.
 
 ## Installation
 
@@ -43,14 +43,6 @@ brew install libreoffice
 sudo apt-get install libreoffice
 ```
 
-**Pandoc** (Optional, for advanced document conversion):
-```bash
-# macOS
-brew install pandoc
-
-# Ubuntu/Debian
-sudo apt-get install pandoc
-```
 
 ## Quick Start
 
@@ -815,4 +807,4 @@ For large documents, consider:
 
 ## License
 
-MIT License - see the [LICENSE](https://github.com/Goldziher/kreuzberg/blob/main/LICENSE) file in the repository for details.
+MIT License - see the [LICENSE](https://github.com/kreuzberg-dev/kreuzberg/blob/main/LICENSE) file in the repository for details.

@@ -3,26 +3,48 @@ name: CI Rust
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-cli/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'e2e/rust/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'rust-toolchain.toml'
-    #   - '.github/workflows/ci-rust.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-cli/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'e2e/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/config.toml'
+      - 'rust-toolchain.toml'
+      - 'scripts/ci/rust/**'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-openssl/**'
+      - '.github/actions/cache-hf-fastembed/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/actions/install-task/**'
+      - '.github/actions/cleanup-rust-cache/**'
+      - '.github/workflows/ci-rust.yaml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-cli/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'e2e/rust/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'rust-toolchain.toml'
-    #   - '.github/workflows/ci-rust.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-cli/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'e2e/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/config.toml'
+      - 'rust-toolchain.toml'
+      - 'scripts/ci/rust/**'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-openssl/**'
+      - '.github/actions/cache-hf-fastembed/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/actions/install-task/**'
+      - '.github/actions/cleanup-rust-cache/**'
+      - '.github/workflows/ci-rust.yaml'
 
 concurrency:
   group: ci-rust-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -43,6 +65,8 @@ jobs:
     name: Rust Unit Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +78,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -91,6 +115,15 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Configure Tesseract data path
+        shell: bash
+        run: |
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            echo "TESSDATA_PREFIX=/opt/homebrew/share/tessdata" >> "$GITHUB_ENV"
+          else
+            echo "TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata" >> "$GITHUB_ENV"
+          fi
+
       - name: Run unit tests
         run: scripts/ci/rust/run-unit-tests.sh
         shell: bash
@@ -102,9 +135,9 @@ jobs:
   rust-e2e:
     name: Rust E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -150,7 +183,7 @@ jobs:
 
   build-and-smoke-cli:
     name: CLI Build + Smoke (${{ matrix.target }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -166,7 +199,7 @@ jobs:
             archive: zip
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -202,7 +235,7 @@ jobs:
         run: scripts/ci/rust/package-cli-windows.ps1 -Target ${{ matrix.target }}
 
       - name: Upload CLI binary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: cli-${{ matrix.target }}
           path: kreuzberg-cli-${{ matrix.target }}.${{ matrix.archive }}

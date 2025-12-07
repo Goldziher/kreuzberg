@@ -6,7 +6,11 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# scripts/ci/ruby lives three levels below repo root
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+
 echo "=== Building Ruby gem ==="
-cd packages/ruby
+cd "$REPO_ROOT/packages/ruby"
 bundle exec rake build
 echo "Gem build complete"

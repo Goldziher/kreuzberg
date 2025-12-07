@@ -10,9 +10,9 @@ set -euo pipefail
 TARGET="${1:-}"
 
 if [ -z "$TARGET" ]; then
-  echo "Usage: package-cli-unix.sh <target>"
-  echo "  target: Rust build target"
-  exit 1
+	echo "Usage: package-cli-unix.sh <target>"
+	echo "  target: Rust build target"
+	exit 1
 fi
 
 echo "=== Packaging CLI binary for $TARGET ==="

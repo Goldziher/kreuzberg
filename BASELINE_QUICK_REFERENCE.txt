@@ -1,0 +1,167 @@
+================================================================================
+PANDOC BASELINE QUICK REFERENCE
+================================================================================
+
+GENERATION STATUS: COMPLETE (2025-12-06)
+- 47 documents processed
+- 132 baselines generated (96% success)
+- Processing time: 5 seconds
+
+================================================================================
+BASELINE FORMATS (3 per document)
+================================================================================
+
+1. Plain Text: {filename}_pandoc_baseline.txt
+   Content:  Text-only document content
+   Use:      Verify content extraction accuracy
+   Size:     100-500 bytes typical
+
+2. JSON AST:  {filename}_pandoc_meta.json
+   Content:  Full Pandoc Abstract Syntax Tree with metadata
+   Use:      Verify structure, headers, links, formatting
+   Size:     1-10 KB typical
+
+3. Markdown:  {filename}_pandoc_markdown.md
+   Content:  Markdown representation
+   Use:      Verify intermediate format conversion
+   Size:     200-800 bytes typical
+
+================================================================================
+BASELINE LOCATIONS
+================================================================================
+
+Org Mode:        test_documents/orgmode/
+Typst:           test_documents/typst/
+DocBook:         test_documents/docbook/
+JATS:            test_documents/jats/
+FictionBook:     test_documents/fictionbook/
+OPML:            test_documents/opml/
+
+All baselines are colocated with source documents.
+
+================================================================================
+QUICK COMMANDS
+================================================================================
+
+View all baselines in a format:
+  ls test_documents/orgmode/*_pandoc_*
+
+Count baselines:
+  find test_documents/ -name "*_pandoc_baseline.txt" | wc -l
+
+View plain text baseline:
+  cat test_documents/orgmode/links_pandoc_baseline.txt
+
+Parse JSON baseline:
+  jq . test_documents/fictionbook/basic_pandoc_meta.json
+
+Compare plain text:
+  diff test_documents/orgmode/links_pandoc_baseline.txt <(output)
+
+Regenerate all:
+  /Users/naamanhirschfeld/workspace/kreuzberg/generate_pandoc_baselines.sh
+
+================================================================================
+RESULTS SUMMARY
+================================================================================
+
+Format          Docs  Success  Baselines  Status
+---------------------------------------------------
+Org Mode        7     4        12         3 failed (parse errors)
+Typst           7     7        21         100% success
+DocBook         3     3        9          100% success
+JATS            1     1        3          100% success
+FictionBook     24    24       72         100% success
+OPML            5     5        15         100% success
+---------------------------------------------------
+TOTAL           47    43       132        96% success
+
+================================================================================
+KNOWN ISSUES
+================================================================================
+
+ORG MODE FAILURES:
+  - comprehensive.org (line 67 syntax error)
+  - pandoc-writer.org (parse error)
+  - writer.org (parse error)
+
+ACTION: These files have Org Mode syntax incompatible with Pandoc.
+        Fix source files or document as known incompatibilities.
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+Use this to verify baseline integrity:
+
+[ ] Plain text files contain actual content (non-empty)
+[ ] JSON files parse without errors
+[ ] Markdown files are valid
+[ ] All 3 files exist for each document
+[ ] File sizes are reasonable (>100 bytes for complex docs)
+[ ] No duplicate baselines
+[ ] Naming convention followed
+
+Quick verification:
+  find test_documents -name "*_pandoc_*" -size 0
+
+If any zero-size files appear, regenerate that format.
+
+================================================================================
+INTEGRATION EXAMPLES
+================================================================================
+
+Python comparison:
+  with open('test_documents/jats/jats-reader_pandoc_meta.json') as f:
+    baseline = json.load(f)
+  extracted = extract_jats('jats-reader.xml')
+  assert extracted == baseline
+
+Bash comparison:
+  diff <(pandoc test_documents/orgmode/links.org -t plain) \
+       <(my-extractor test_documents/orgmode/links.org)
+
+Test assertion:
+  assert baseline_text == extractor_output
+
+================================================================================
+MAINTENANCE
+================================================================================
+
+When to regenerate:
+  - Test documents are updated
+  - Pandoc version changes
+  - Format specifications change
+  - Baseline corruption detected
+
+How to regenerate:
+  /Users/naamanhirschfeld/workspace/kreuzberg/generate_pandoc_baselines.sh
+
+Log all changes:
+  git log test_documents/*/\*_pandoc_\*
+
+================================================================================
+DOCUMENTATION FILES
+================================================================================
+
+Detailed Report:
+  /Users/naamanhirschfeld/workspace/kreuzberg/PANDOC_BASELINE_REPORT.md
+  - Complete statistics
+  - Results by format
+  - Known issues
+  - Recommendations
+
+Implementation Guide:
+  /Users/naamanhirschfeld/workspace/kreuzberg/BASELINE_IMPLEMENTATION_GUIDE.md
+  - Integration examples
+  - Maintenance procedures
+  - CI/CD setup
+  - Troubleshooting
+
+Generation Script:
+  /Users/naamanhirschfeld/workspace/kreuzberg/generate_pandoc_baselines.sh
+  - Automated baseline generation
+  - Handles all 6 formats
+  - Graceful error handling
+
+================================================================================

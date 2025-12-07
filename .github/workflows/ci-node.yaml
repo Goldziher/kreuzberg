@@ -3,30 +3,46 @@ name: CI Node
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-node/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/typescript/**'
-    #   - 'e2e/typescript/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'pnpm-lock.yaml'
-    #   - 'package.json'
-    #   - '.github/workflows/ci-node.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/typescript/**'
+      - 'e2e/typescript/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-openssl/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/workflows/ci-node.yaml'
+      - '.cargo/config.toml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-node/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/typescript/**'
-    #   - 'e2e/typescript/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'pnpm-lock.yaml'
-    #   - 'package.json'
-    #   - '.github/workflows/ci-node.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-node/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/typescript/**'
+      - 'e2e/typescript/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-openssl/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/cache-pdfium/**'
+      - '.github/actions/download-pdfium/**'
+      - '.github/actions/setup-onnx-runtime/**'
+      - '.github/workflows/ci-node.yaml'
+      - '.cargo/config.toml'
 
 concurrency:
   group: ci-node-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -45,7 +61,7 @@ env:
 jobs:
   build-and-smoke-node:
     name: Node Build + Smoke (${{ matrix.target }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -61,7 +77,7 @@ jobs:
             platform: windows-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -96,9 +112,30 @@ jobs:
       - name: Build Node bindings
         shell: bash
         run: scripts/ci/node/build-napi.sh ${{ matrix.target }}
+        env:
+          # Disable sccache if it causes issues with ARM64 cross-compilation
+          RUSTC_WRAPPER: ''
+          SCCACHE_GHA_ENABLED: 'false'
+
+      - name: Verify TypeScript build artifacts
+        shell: bash
+        run: |
+          cd crates/kreuzberg-node
+          echo "Checking dist directory:"
+          ls -la dist/ || echo "ERROR: dist directory not found"
+          echo ""
+          echo "Checking tarball contents for dist files:"
+          tgz=$(find . -maxdepth 1 -name "*.tgz" -type f | head -n1)
+          if [ -n "$tgz" ]; then
+            echo "Found tarball: $tgz"
+            tar tzf "$tgz" | grep "^package/dist/" | wc -l | xargs echo "dist files in tarball:"
+          else
+            echo "ERROR: No tarball found"
+            exit 1
+          fi
 
       - name: Upload Node bindings
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: napi-${{ matrix.target }}
           path: |
@@ -125,7 +162,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            node-version: "20"
+            node-version: "22"
             target: x86_64-unknown-linux-gnu
             coverage: true
           - os: ubuntu-latest
@@ -133,7 +170,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             coverage: false
           - os: macos-latest
-            node-version: "20"
+            node-version: "22"
             target: aarch64-apple-darwin
             coverage: false
           - os: macos-latest
@@ -141,7 +178,7 @@ jobs:
             target: aarch64-apple-darwin
             coverage: false
           - os: windows-latest
-            node-version: "20"
+            node-version: "22"
             target: x86_64-pc-windows-msvc
             coverage: false
           - os: windows-latest
@@ -150,7 +187,7 @@ jobs:
             coverage: false
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -182,7 +219,7 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Download Node bindings
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: napi-${{ matrix.target }}
           path: crates/kreuzberg-node/

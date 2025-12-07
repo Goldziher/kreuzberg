@@ -1,0 +1,57 @@
+@charset "UTF-8";
+@namespace "http://www.w3.org/1999/xhtml";
+@namespace epub "http://www.idpf.org/2007/ops";
+
+body {
+	margin-left: 6em;
+	margin-right: 16em;
+	color: black;
+	font-family: times, "times new roman", serif;
+	background-color: rgb(255, 255, 245);
+	line-height: 1.5em;
+}
+
+h2 {
+	margin-top: 5em;
+	margin-bottom: 2em;
+}
+
+h3 {
+	margin-top: 3em;
+}
+
+.linegroup {
+	margin-top: 1.6em;
+}
+
+span.lnum {
+	float: right;
+	color: gray;
+	font-size: 90%;
+}
+
+a.noteref {
+	color: rgb(215, 215, 195);
+	text-decoration: none;
+	margin-left: 0.5em;
+	margin-right: 0.5em;
+}
+
+section#rearnotes a {
+	color: black;
+	text-decoration: none;
+	border-bottom: 1px dotted gray;
+	margin-right: 0.8em;
+}
+
+.indent {
+	padding-left: 3em;
+}
+
+.indent2 {
+	padding-left: 5em;
+}
+
+*[epub|type~="dedication"] {
+	padding-left: 2em;
+}

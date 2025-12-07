@@ -9,7 +9,8 @@
 //!   "document": "path/to/document.pdf",
 //!   "file_type": "pdf",
 //!   "file_size": 1024000,
-//!   "expected_frameworks": ["kreuzberg", "docling", "extractous"],
+//!   "expected_frameworks": ["kreuzberg", "docling"],
+//!   // Note: frameworks can be Kreuzberg language bindings or open source extraction alternatives
 //!   "metadata": {
 //!     "title": "Test Document",
 //!     "pages": 10
@@ -38,7 +39,8 @@ pub struct Fixture {
     /// File size in bytes
     pub file_size: u64,
 
-    /// Frameworks that should be able to process this file
+    /// Extraction frameworks that should be able to process this file
+    /// (can be Kreuzberg language bindings or open source extraction alternatives)
     #[serde(default)]
     pub expected_frameworks: Vec<String>,
 

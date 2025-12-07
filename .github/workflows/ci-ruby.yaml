@@ -3,32 +3,34 @@ name: CI Ruby
 'on':
   push:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-ffi/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/ruby/**'
-    #   - 'e2e/ruby/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'Gemfile'
-    #   - 'Gemfile.lock'
-    #   - 'packages/ruby/Rakefile'
-    #   - '.github/workflows/ci-ruby.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-ffi/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/ruby/**'
+      - 'e2e/ruby/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - 'packages/ruby/Rakefile'
+      - '.github/workflows/ci-ruby.yaml'
+      - '.cargo/config.toml'
   pull_request:
     branches: [main]
-    # paths:
-    #   - 'crates/kreuzberg/**'
-    #   - 'crates/kreuzberg-ffi/**'
-    #   - 'crates/kreuzberg-tesseract/**'
-    #   - 'packages/ruby/**'
-    #   - 'e2e/ruby/**'
-    #   - 'Cargo.toml'
-    #   - 'Cargo.lock'
-    #   - 'Gemfile'
-    #   - 'Gemfile.lock'
-    #   - 'packages/ruby/Rakefile'
-    #   - '.github/workflows/ci-ruby.yaml'
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-ffi/**'
+      - 'crates/kreuzberg-tesseract/**'
+      - 'packages/ruby/**'
+      - 'e2e/ruby/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - 'packages/ruby/Rakefile'
+      - '.github/workflows/ci-ruby.yaml'
+      - '.cargo/config.toml'
 
 concurrency:
   group: ci-ruby-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -43,11 +45,13 @@ env:
   PDFIUM_VERSION: "7529"
   ORT_VERSION: "1.23.2"
   MACOSX_DEPLOYMENT_TARGET: "14.0"
+  # Windows MAX_PATH mitigation: Use shorter build paths (Windows override set per-job)
+  CARGO_TARGET_DIR: target
 
 jobs:
   build-ruby-gem:
     name: Ruby Gem (${{ matrix.os }}, Ruby ${{ matrix.ruby-version }})
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -72,7 +76,7 @@ jobs:
             platform: windows-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -89,8 +93,39 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
+          bundler: none
           bundler-cache: false
           working-directory: packages/ruby
+
+      - name: Install Bundler
+        shell: bash
+        run: |
+          gem install bundler -v 4.0.0 --no-document || gem install bundler --no-document
+          bundler --version
+
+      - name: Configure short paths for Windows MAX_PATH mitigation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Create short path directories
+          New-Item -ItemType Directory -Path "C:\\t" -Force
+          New-Item -ItemType Directory -Path "C:\\b" -Force
+          New-Item -ItemType Directory -Path "C:\\g" -Force
+
+          # Configure bundler to use shorter path
+          cd packages/ruby
+          bundle config set path "C:\\b"
+          bundle config set no_prune true
+
+          # Export env vars for subsequent steps
+          Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_DIR=C:\\t"
+          Add-Content -Path $env:GITHUB_ENV -Value "BUNDLE_PATH=C:\\b"
+          Add-Content -Path $env:GITHUB_ENV -Value "GEM_HOME=C:\\g"
+
+          Write-Host "Windows MAX_PATH mitigation paths configured:"
+          Write-Host "  CARGO_TARGET_DIR: C:\\t"
+          Write-Host "  BUNDLE_PATH: C:\\b"
+          Write-Host "  GEM_HOME: C:\\g"
 
       - name: Install Ruby deps
         if: runner.os != 'Windows'
@@ -136,7 +171,7 @@ jobs:
         run: scripts/ci/ruby/build-gem.sh
 
       - name: Upload gem
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: gem-${{ matrix.platform }}-${{ matrix.ruby-version }}
           path: packages/ruby/pkg/*.gem
@@ -176,7 +211,7 @@ jobs:
     env:
       RUSTC_WRAPPER: ""
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -185,8 +220,43 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: ${{ runner.os != 'Windows' }}
+          bundler: none
+          bundler-cache: false
           working-directory: packages/ruby
+
+      - name: Install Bundler
+        shell: bash
+        run: |
+          gem install bundler -v 4.0.0 --no-document || gem install bundler --no-document
+          bundler --version
+
+      - name: Install Ruby deps
+        if: runner.os != 'Windows'
+        shell: bash
+        run: scripts/ci/ruby/install-ruby-deps.sh
+
+      - name: Configure short paths for Windows MAX_PATH mitigation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Create short path directories
+          New-Item -ItemType Directory -Path "C:\\t" -Force
+          New-Item -ItemType Directory -Path "C:\\b" -Force
+          New-Item -ItemType Directory -Path "C:\\g" -Force
+
+          # Configure bundler to use shorter path
+          bundle config set path "C:\\b"
+          bundle config set no_prune true
+
+          # Export env vars for subsequent steps
+          Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_DIR=C:\\t"
+          Add-Content -Path $env:GITHUB_ENV -Value "BUNDLE_PATH=C:\\b"
+          Add-Content -Path $env:GITHUB_ENV -Value "GEM_HOME=C:\\g"
+
+          Write-Host "Windows MAX_PATH mitigation paths configured:"
+          Write-Host "  CARGO_TARGET_DIR: C:\\t"
+          Write-Host "  BUNDLE_PATH: C:\\b"
+          Write-Host "  GEM_HOME: C:\\g"
 
       - name: Install Ruby deps (Windows)
         if: runner.os == 'Windows'
@@ -202,7 +272,7 @@ jobs:
         shell: bash
 
       - name: Download gem
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: gem-${{ matrix.platform }}-${{ matrix.ruby-version }}
           path: packages/ruby/pkg/
@@ -220,6 +290,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: scripts/ci/ruby/configure-tesseract-windows.ps1
+
+      - name: Vendor kreuzberg core for native extension
+        shell: bash
+        run: scripts/ci/ruby/vendor-kreuzberg-core.sh
 
       - name: Build local native extension
         shell: bash

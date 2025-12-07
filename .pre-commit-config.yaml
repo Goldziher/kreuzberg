@@ -43,20 +43,30 @@ repos:
       - id: oxlint
         args: ["--fix"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.7
+    rev: v0.14.8
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
         exclude: ^(v3|benchmarks|scripts|crates)/
       - id: ruff-format
         exclude: ^(v3|benchmarks|scripts|crates)/
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.11.0
+    hooks:
+      - id: shellcheck
+        exclude: ^(crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.12.0-2
+    hooks:
+      - id: shfmt
+        exclude: ^(crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
     hooks:
       - id: fmt
       - id: clippy
   - repo: https://github.com/gherynos/pre-commit-java
-    rev: v0.6.29
+    rev: v0.6.30
     hooks:
       - id: cpd
         exclude: 'crates/kreuzberg-tesseract/third_party/.*'
