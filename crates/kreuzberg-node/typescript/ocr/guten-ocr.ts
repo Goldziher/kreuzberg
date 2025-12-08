@@ -305,7 +305,9 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 				const image = (sharp as (buffer: Buffer) => { metadata: () => Promise<Record<string, unknown>> })(buffer);
 				const metadata = await image.metadata();
 				const metadataRecord = metadata as Record<string, unknown>;
+				// biome-ignore lint/complexity/useLiteralKeys: TypeScript TS4111 requires bracket notation for index signature properties
 				width = (metadataRecord["width"] as number | undefined) ?? 0;
+				// biome-ignore lint/complexity/useLiteralKeys: TypeScript TS4111 requires bracket notation for index signature properties
 				height = (metadataRecord["height"] as number | undefined) ?? 0;
 			} catch (metadataError) {
 				const error = metadataError as Error;
