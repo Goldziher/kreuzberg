@@ -65,15 +65,19 @@ repos:
     hooks:
       - id: fmt
       - id: clippy
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.9
+    hooks:
+      - id: actionlint
   - repo: https://github.com/gherynos/pre-commit-java
     rev: v0.6.30
     hooks:
       - id: cpd
-        exclude: 'crates/kreuzberg-tesseract/third_party/.*'
+        exclude: "crates/kreuzberg-tesseract/third_party/.*"
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
         files: ^packages/java/src/.*\.java$
-        exclude: 'crates/kreuzberg-tesseract/third_party/.*'
+        exclude: "crates/kreuzberg-tesseract/third_party/.*"
   - repo: local
     hooks:
       - id: golangci-lint

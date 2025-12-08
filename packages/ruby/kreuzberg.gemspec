@@ -54,31 +54,31 @@ end
 # Check for vendored crates (copied during CI/packaging)
 vendor_files = Dir.chdir(__dir__) do
   kreuzberg_files = if Dir.exist?('vendor/kreuzberg')
-    Dir.glob('vendor/kreuzberg/**/*', File::FNM_DOTMATCH)
-       .reject { |f| File.directory?(f) }
-       .reject { |f| f.include?('/.fastembed_cache/') }
-       .reject { |f| f.include?('/target/') }
-       .grep_v(/\.(swp|bak|tmp)$/)
-       .grep_v(/~$/)
-  else
-    []
-  end
+                      Dir.glob('vendor/kreuzberg/**/*', File::FNM_DOTMATCH)
+                         .reject { |f| File.directory?(f) }
+                         .reject { |f| f.include?('/.fastembed_cache/') }
+                         .reject { |f| f.include?('/target/') }
+                         .grep_v(/\.(swp|bak|tmp)$/)
+                         .grep_v(/~$/)
+                    else
+                      []
+                    end
 
   rb_sys_files = if Dir.exist?('vendor/rb-sys')
-    Dir.glob('vendor/rb-sys/**/*', File::FNM_DOTMATCH)
-       .reject { |f| File.directory?(f) }
-       .reject { |f| f.include?('/target/') }
-       .grep_v(/\.(swp|bak|tmp)$/)
-       .grep_v(/~$/)
-  else
-    []
-  end
+                   Dir.glob('vendor/rb-sys/**/*', File::FNM_DOTMATCH)
+                      .reject { |f| File.directory?(f) }
+                      .reject { |f| f.include?('/target/') }
+                      .grep_v(/\.(swp|bak|tmp)$/)
+                      .grep_v(/~$/)
+                 else
+                   []
+                 end
 
   workspace_toml = if File.exist?('vendor/Cargo.toml')
-    ['vendor/Cargo.toml']
-  else
-    []
-  end
+                     ['vendor/Cargo.toml']
+                   else
+                     []
+                   end
 
   kreuzberg_files + rb_sys_files + workspace_toml
 end
