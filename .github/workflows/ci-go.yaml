@@ -257,7 +257,7 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: go-ffi-lib-${{ matrix.os }}
-          path: .
+          path: target
 
       - name: Debug - Show directory structure
         shell: bash
