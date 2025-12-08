@@ -127,6 +127,7 @@ final class KreuzbergFFI {
         MemoryLayout.PathElement.groupElement("data_len"));
     static final long BYTES_MIME_OFFSET = C_BYTES_WITH_MIME_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("mime_type"));
+    static final long BYTES_WITH_MIME_ALIGNMENT = 8;
 
     static {
         try {

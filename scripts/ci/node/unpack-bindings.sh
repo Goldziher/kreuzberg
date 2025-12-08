@@ -32,8 +32,11 @@ fi
 
 echo "Found package: $pkg"
 
+# Get absolute path to tarball before changing directories
+pkg_abs_path="$(cd "$(dirname "$pkg")" && pwd)/$(basename "$pkg")"
+
 # Install the package from tarball in the TypeScript workspace
 cd ../../packages/typescript
-pnpm add --workspace-root "file:../../crates/kreuzberg-node/$pkg"
+pnpm add --workspace-root "file:$pkg_abs_path"
 
 echo "Installation complete"

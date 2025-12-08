@@ -79,6 +79,10 @@ def _discover_dev_cli_binary(requested_subcommand: str | None) -> str | None:
         if _binary_supports_subcommand(candidate, requested_subcommand):
             return str(candidate)
 
+    # Don't try to build in non-development scenarios
+    if not (workspace_root / "Cargo.toml").exists():
+        return None
+
     feature = _FEATURE_SUBCOMMANDS.get(requested_subcommand)
     if feature is None:
         return None
@@ -94,6 +98,14 @@ def _discover_dev_cli_binary(requested_subcommand: str | None) -> str | None:
 
 def _find_packaged_cli_binary() -> str | None:
     """Look for the CLI binary in common installation paths before building one."""
+    # First check if it's in the package directory (for wheel installations)
+    package_dir = Path(__file__).parent
+    for name in ("kreuzberg-cli", "kreuzberg", "kreuzberg-cli.exe", "kreuzberg.exe"):
+        candidate = package_dir / name
+        if candidate.exists() and candidate.is_file():
+            return str(candidate)
+
+    # Then check venv bin directory
     script_dir = Path(sys.executable).parent
     for name in ("kreuzberg-cli", "kreuzberg"):
         candidate = script_dir / name

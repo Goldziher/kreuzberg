@@ -180,7 +180,10 @@ public final class Kreuzberg {
 
         try (Arena arena = Arena.ofConfined()) {
             long structSize = KreuzbergFFI.C_BYTES_WITH_MIME_LAYOUT.byteSize();
-            MemorySegment bytesWithMimeArray = arena.allocate(structSize * items.size(), structSize);
+            MemorySegment bytesWithMimeArray = arena.allocate(
+                structSize * items.size(),
+                KreuzbergFFI.BYTES_WITH_MIME_ALIGNMENT
+            );
             for (int i = 0; i < items.size(); i++) {
                 BytesWithMime item = items.get(i);
                 MemorySegment element = bytesWithMimeArray.asSlice((long) i * structSize, structSize);

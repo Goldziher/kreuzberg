@@ -27,8 +27,17 @@ if [ -d "$RB_SYS_CACHE" ]; then
 	echo "Copying rb-sys ${RB_SYS_VERSION} from cargo cache"
 	cp -R "$RB_SYS_CACHE" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
 else
-	echo "Warning: rb-sys ${RB_SYS_VERSION} not found in cargo cache at $RB_SYS_CACHE"
-	echo "Run 'cargo fetch' or build the Ruby extension to download rb-sys first"
+	echo "rb-sys ${RB_SYS_VERSION} not found in cargo cache, fetching..."
+	cd "$REPO_ROOT/packages/ruby/ext/kreuzberg_rb/native"
+	cargo fetch
+	cd "$REPO_ROOT"
+	if [ -d "$RB_SYS_CACHE" ]; then
+		echo "Copying rb-sys ${RB_SYS_VERSION} from cargo cache after fetch"
+		cp -R "$RB_SYS_CACHE" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
+	else
+		echo "Error: rb-sys ${RB_SYS_VERSION} not found in cargo cache at $RB_SYS_CACHE even after fetch" >&2
+		exit 1
+	fi
 fi
 
 # Clean up build artifacts

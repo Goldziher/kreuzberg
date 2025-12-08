@@ -67,6 +67,7 @@ impl DocumentExtractor for PlainTextExtractor {
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         let text = String::from_utf8_lossy(content).into_owned();
+        let text = text.trim_end_matches('\n').trim_end_matches('\r').to_string();
         let line_count = text.lines().count();
         let word_count = text.split_whitespace().count();
         let character_count = text.len();

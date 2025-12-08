@@ -257,6 +257,7 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: go-ffi-lib-${{ matrix.os }}
+          path: target
 
       - name: Make FFI library executable
         run: chmod +x target/release/libkreuzberg_ffi.* || true
