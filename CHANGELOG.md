@@ -51,6 +51,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed RUSTFLAGS handling in `setup-onnx-runtime` action
   - Now appends to existing RUSTFLAGS instead of overwriting
   - Preserves `-C target-feature=+crt-static` for Windows GNU builds
+- Fixed Go Windows CI artifact download path causing linker failures
+  - Changed download path from `target` to `.` to prevent double-nesting (target/target/...)
+  - Linker can now find libkreuzberg_ffi.dll at correct location
+  - Added debug logging to show directory structure after artifact download
+
+**Ruby Bindings**:
+- Fixed rb-sys links conflict in gem build
+  - Removed rb-sys vendoring, now uses version 0.9.119 from crates.io
+  - Resolves Cargo error: "package rb-sys links to native library rb, but it conflicts with previous package"
+  - Allows Cargo to unify rb-sys dependency across magnus and kreuzberg-rb
+
+**C# E2E Tests**:
+- Fixed OCR tests failing with empty content
+  - Added render_config_expression function to C# E2E generator
+  - Tests now pass proper OCR config JSON instead of null
+  - Regenerated all C# tests with tesseract backend configuration
+- Fixed metadata array contains assertion for single value in array
+  - Extended ValueContains method to handle value-in-array case
+  - Fixes sheet_names metadata assertions in Excel tests
+
+**Python Bindings**:
+- Fixed missing format_type in text extraction metadata
+  - TypstExtractor and LatexExtractor incorrectly claimed text/plain MIME type
+  - Removed text/plain from both extractors' supported types
+  - PlainTextExtractor now correctly handles text/plain with proper TextMetadata
+  - Metadata now includes format_type, line_count, word_count, character_count
+  - Added unit test for Metadata serialization to verify format field flattening
 
 ## [4.0.0-rc.5] - 2025-12-01
 
