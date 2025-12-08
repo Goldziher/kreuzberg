@@ -31,8 +31,11 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	go test -v -race ./...
 else
 	# Unix paths (Linux/macOS)
-	export LD_LIBRARY_PATH="${PWD}/../../target/release:${LD_LIBRARY_PATH:-}"
-	export DYLD_LIBRARY_PATH="${PWD}/../../target/release:${DYLD_LIBRARY_PATH:-}"
+	workspace=$(cd ../.. && pwd)
+	ffiPath="$workspace/target/release"
+	export LD_LIBRARY_PATH="$ffiPath:${LD_LIBRARY_PATH:-}"
+	export DYLD_LIBRARY_PATH="$ffiPath:${DYLD_LIBRARY_PATH:-}"
+	export CGO_LDFLAGS="-L$ffiPath"
 	export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 	go test -v -race ./...
 fi
