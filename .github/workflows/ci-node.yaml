@@ -227,6 +227,12 @@ jobs:
         shell: bash
         run: scripts/ci/node/unpack-bindings.sh
 
+      - name: Build TypeScript wrapper
+        shell: bash
+        run: |
+          cd crates/kreuzberg-node
+          pnpm build:ts
+
       - name: Run TypeScript tests
         shell: bash
         run: |

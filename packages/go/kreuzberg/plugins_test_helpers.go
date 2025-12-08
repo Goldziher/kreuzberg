@@ -4,7 +4,7 @@ package kreuzberg
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/../../../crates/kreuzberg-ffi
-#cgo LDFLAGS: -L${SRCDIR}/../../../target/release -L${SRCDIR}/../../../target/debug -lkreuzberg_ffi
+#cgo LDFLAGS: -L${SRCDIR}/../../../target/release -L${SRCDIR}/../../../target/debug
 #include "../../../crates/kreuzberg-ffi/kreuzberg.h"
 #include <stdlib.h>
 #include <string.h>

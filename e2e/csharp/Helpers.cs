@@ -46,7 +46,7 @@ public static class TestHelpers
             }
         }
 
-        throw new SkipException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
+        throw new Xunit.SkipException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
     }
 
     private static string LibraryFileName()
@@ -69,7 +69,7 @@ public static class TestHelpers
         {
             if (skipIfMissing)
             {
-                throw new SkipException($"Missing document {path}");
+                throw new Xunit.SkipException($"Missing document {path}");
             }
             throw new FileNotFoundException($"Document unavailable: {path}");
         }

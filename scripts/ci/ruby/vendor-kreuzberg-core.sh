@@ -21,7 +21,7 @@ mkdir -p "$REPO_ROOT/packages/ruby/vendor"
 cp -R "$REPO_ROOT/crates/kreuzberg" "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
 
 # Copy rb-sys from cargo cache if available
-RB_SYS_VERSION="0.9.117"
+RB_SYS_VERSION="0.9.119"
 RB_SYS_CACHE="$HOME/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rb-sys-${RB_SYS_VERSION}"
 if [ -d "$RB_SYS_CACHE" ]; then
 	echo "Copying rb-sys ${RB_SYS_VERSION} from cargo cache"
@@ -34,7 +34,7 @@ else
 	trap 'rm -rf "$TEMP_DIR"' EXIT
 	cd "$TEMP_DIR"
 	cargo init --lib --name temp_rb_sys_fetch
-	echo 'rb-sys = "0.9.117"' >>Cargo.toml
+	echo 'rb-sys = "0.9.119"' >>Cargo.toml
 	cargo fetch
 	cd "$REPO_ROOT"
 	if [ -d "$RB_SYS_CACHE" ]; then

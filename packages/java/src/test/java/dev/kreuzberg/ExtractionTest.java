@@ -159,7 +159,7 @@ class ExtractionTest {
 
 
     @Test
-    void testExtractCSVContent(@TempDir Path tempDir) throws IOException {
+    void testExtractCSVContent(@TempDir Path tempDir) throws IOException, KreuzbergException {
         Path testFile = tempDir.resolve("data.csv");
         String content = "Name,Age,City\nAlice,30,New York\nBob,25,Los Angeles";
         Files.writeString(testFile, content);

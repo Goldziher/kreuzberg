@@ -274,5 +274,9 @@ jobs:
           export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
           export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
           export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
-          export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
+          else
+            export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+          fi
           task e2e:go:test
