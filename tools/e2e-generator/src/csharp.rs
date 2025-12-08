@@ -2,7 +2,7 @@ use crate::fixtures::{Assertions, Fixture};
 use anyhow::{Context, Result};
 use camino::Utf8Path;
 use itertools::Itertools;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::fmt::Write as _;
 use std::fs;
 
@@ -448,6 +448,22 @@ fn render_category(category: &str, fixtures: &[&Fixture]) -> Result<String> {
     Ok(buffer)
 }
 
+fn render_config_expression(config: &Map<String, Value>) -> Result<String> {
+    if config.is_empty() {
+        Ok("null".to_string())
+    } else {
+        let json = serde_json::to_string(&Value::Object(config.clone()))?;
+        // Escape the JSON string for C# string literal
+        let escaped = json
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r")
+            .replace('\t', "\\t");
+        Ok(format!("\"{}\"", escaped))
+    }
+}
+
 fn render_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
     let test_name = sanitize_method_name(&fixture.id);
     writeln!(buffer, "        [Fact]")?;
@@ -455,10 +471,12 @@ fn render_test(buffer: &mut String, fixture: &Fixture) -> Result<()> {
     writeln!(buffer, "        {{")?;
 
     let doc = fixture.document();
+    let config_json = render_config_expression(&fixture.extraction().config)?;
     writeln!(
         buffer,
-        "            var result = TestHelpers.RunExtraction(\"{}\", null);",
-        escape_csharp_string(&doc.path)
+        "            var result = TestHelpers.RunExtraction(\"{}\", {});",
+        escape_csharp_string(&doc.path),
+        config_json
     )?;
 
     let assertions = fixture.assertions();

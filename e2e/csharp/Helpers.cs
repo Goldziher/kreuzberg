@@ -8,7 +8,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Kreuzberg;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Kreuzberg.E2E;
 
@@ -24,34 +23,9 @@ public static class TestHelpers
 
     private static string ResolveWorkspaceRoot()
     {
-        // Check CI environment variable (GitHub Actions)
-        var githubWorkspace = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE");
-        if (!string.IsNullOrEmpty(githubWorkspace) && Directory.Exists(githubWorkspace))
-        {
-            return githubWorkspace;
-        }
-
-        // Check local override
-        var workspaceRoot = Environment.GetEnvironmentVariable("KREUZBERG_WORKSPACE_ROOT");
-        if (!string.IsNullOrEmpty(workspaceRoot) && Directory.Exists(workspaceRoot))
-        {
-            return workspaceRoot;
-        }
-
-        // Fall back to Cargo.toml search
         var cwd = Directory.GetCurrentDirectory();
-        var current = new DirectoryInfo(cwd);
-
-        while (current != null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "Cargo.toml")))
-            {
-                return current.FullName;
-            }
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not find workspace root (Cargo.toml not found)");
+        var root = Path.GetFullPath(Path.Combine(cwd, "..", ".."));
+        return root;
     }
 
     private static void EnsureNativeLibraryLoaded()
@@ -71,7 +45,7 @@ public static class TestHelpers
             }
         }
 
-        throw new Xunit.SkipException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
+        Assert.Skip($"Native library not found. Expected at: {string.Join(", ", candidates)}");
     }
 
     private static string LibraryFileName()
@@ -94,7 +68,7 @@ public static class TestHelpers
         {
             if (skipIfMissing)
             {
-                throw new Xunit.SkipException($"Missing document {path}");
+                Assert.Skip($"Missing document {path}");
             }
             throw new FileNotFoundException($"Document unavailable: {path}");
         }
@@ -383,6 +357,19 @@ public static class TestHelpers
                     return false;
             }
             return true;
+        }
+
+        // Handle case where value is an array and contains is a single value
+        if (value is JsonArray va2)
+        {
+            foreach (var vItem in va2)
+            {
+                if (JsonEquals(vItem!, contains))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         return false;

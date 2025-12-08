@@ -11,7 +11,7 @@ namespace Kreuzberg.E2E.Image {
         [Fact]
         public void ImageMetadataOnly()
         {
-            var result = TestHelpers.RunExtraction("images/example.jpg", null);
+            var result = TestHelpers.RunExtraction("images/example.jpg", "{\"ocr\":null}");
             TestHelpers.AssertExpectedMime(result, new[] { "image/jpeg" });
             TestHelpers.AssertMaxContentLength(result, 100);
         }

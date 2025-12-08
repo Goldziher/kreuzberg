@@ -11,7 +11,7 @@ namespace Kreuzberg.E2E.Ocr {
         [Fact]
         public void OcrImageHelloWorld()
         {
-            var result = TestHelpers.RunExtraction("images/test_hello_world.png", null);
+            var result = TestHelpers.RunExtraction("images/test_hello_world.png", "{\"force_ocr\":true,\"ocr\":{\"backend\":\"tesseract\",\"language\":\"eng\"}}");
             TestHelpers.AssertExpectedMime(result, new[] { "image/png" });
             TestHelpers.AssertMinContentLength(result, 5);
             TestHelpers.AssertContentContainsAny(result, new[] { "hello", "world" });
@@ -20,7 +20,7 @@ namespace Kreuzberg.E2E.Ocr {
         [Fact]
         public void OcrImageNoText()
         {
-            var result = TestHelpers.RunExtraction("images/flower_no_text.jpg", null);
+            var result = TestHelpers.RunExtraction("images/flower_no_text.jpg", "{\"force_ocr\":true,\"ocr\":{\"backend\":\"tesseract\",\"language\":\"eng\"}}");
             TestHelpers.AssertExpectedMime(result, new[] { "image/jpeg" });
             TestHelpers.AssertMaxContentLength(result, 200);
         }
@@ -28,7 +28,7 @@ namespace Kreuzberg.E2E.Ocr {
         [Fact]
         public void OcrPdfImageOnlyGerman()
         {
-            var result = TestHelpers.RunExtraction("pdfs/image_only_german_pdf.pdf", null);
+            var result = TestHelpers.RunExtraction("pdfs/image_only_german_pdf.pdf", "{\"force_ocr\":true,\"ocr\":{\"backend\":\"tesseract\",\"language\":\"eng\"}}");
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 20);
             var metadataNode = TestHelpers.MetadataToJson(result.Metadata);
@@ -38,7 +38,7 @@ namespace Kreuzberg.E2E.Ocr {
         [Fact]
         public void OcrPdfRotated90()
         {
-            var result = TestHelpers.RunExtraction("pdfs/ocr_test_rotated_90.pdf", null);
+            var result = TestHelpers.RunExtraction("pdfs/ocr_test_rotated_90.pdf", "{\"force_ocr\":true,\"ocr\":{\"backend\":\"tesseract\",\"language\":\"eng\"}}");
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 10);
         }
@@ -46,7 +46,7 @@ namespace Kreuzberg.E2E.Ocr {
         [Fact]
         public void OcrPdfTesseract()
         {
-            var result = TestHelpers.RunExtraction("pdfs/ocr_test.pdf", null);
+            var result = TestHelpers.RunExtraction("pdfs/ocr_test.pdf", "{\"force_ocr\":true,\"ocr\":{\"backend\":\"tesseract\",\"language\":\"eng\"}}");
             TestHelpers.AssertExpectedMime(result, new[] { "application/pdf" });
             TestHelpers.AssertMinContentLength(result, 20);
             TestHelpers.AssertContentContainsAny(result, new[] { "Docling", "Markdown", "JSON" });
