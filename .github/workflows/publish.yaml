@@ -65,6 +65,7 @@ jobs:
       release_homebrew: ${{ steps.meta.outputs.release_homebrew }}
       release_java: ${{ steps.meta.outputs.release_java }}
       release_csharp: ${{ steps.meta.outputs.release_csharp }}
+      release_go: ${{ steps.meta.outputs.release_go }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -107,6 +108,7 @@ jobs:
             echo "release_homebrew=$(echo "$metadata" | jq -r '.release_homebrew')"
             echo "release_java=$(echo "$metadata" | jq -r '.release_java')"
             echo "release_csharp=$(echo "$metadata" | jq -r '.release_csharp')"
+            echo "release_go=$(echo "$metadata" | jq -r '.release_go')"
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload release metadata
@@ -260,7 +262,7 @@ jobs:
             os: ubuntu-latest
             artifact: python-wheels-linux-x86_64
             rust_target: x86_64-unknown-linux-gnu
-            manylinux: auto
+            manylinux: off
             python: "3.10"
             needs_qemu: false
             extra_args: ""
@@ -364,6 +366,12 @@ jobs:
         shell: bash
         run: rustup target add aarch64-apple-darwin
 
+      - name: Clean previous wheel artifacts
+        shell: bash
+        run: |
+          rm -rf target/wheels target/maturin
+          rm -f packages/python/kreuzberg/_internal_bindings.*
+
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
         uses: PyO3/maturin-action@v1
@@ -371,7 +379,7 @@ jobs:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
           target: ${{ matrix.rust_target }}
-          manylinux: ${{ matrix.manylinux }}
+          manylinux: off
           working-directory: packages/python
           sccache: ${{ steps.tesseract-cache.outputs.cache-enabled }}
           docker-options: ${{ steps.tesseract-cache.outputs.docker-options }}
@@ -415,6 +423,15 @@ jobs:
       - name: List built wheels
         shell: bash
         run: ls -lh target/wheels
+
+      - name: Setup Python for smoke test
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Smoke test wheel
+        shell: bash
+        run: bash scripts/ci/python/smoke-test-wheel.sh
 
       - name: Clean up Docker resources (Ubuntu)
         if: matrix.os == 'ubuntu-latest' && always()
@@ -640,6 +657,12 @@ jobs:
           if ($env:USE_NAPI_CROSS -eq 'true') { $args += '--use-napi-cross' }
           if ($env:USE_CROSS -eq 'true') { $args += '--use-cross' }
           pnpm --filter @kreuzberg/node exec napi build @args
+
+      - name: Build TypeScript wrapper
+        shell: bash
+        run: |
+          cd crates/kreuzberg-node
+          pnpm exec tsup
 
       - name: Package artifacts
         if: runner.os != 'Windows'
@@ -889,8 +912,27 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
-          bundler: "2.5.12"
+          bundler: none
           bundler-cache: false
+
+      - name: Install Bundler
+        shell: bash
+        run: |
+          gem install bundler -v 4.0.0 --no-document || gem install bundler --no-document
+          bundler --version
+
+      - name: Configure short paths for Windows MAX_PATH mitigation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "C:\\t" -Force
+          New-Item -ItemType Directory -Path "C:\\b" -Force
+          New-Item -ItemType Directory -Path "C:\\g" -Force
+          cd packages/ruby
+          bundle config set path "C:\\b"
+          Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_DIR=C:\\t"
+          Add-Content -Path $env:GITHUB_ENV -Value "BUNDLE_PATH=C:\\b"
+          Add-Content -Path $env:GITHUB_ENV -Value "GEM_HOME=C:\\g"
 
       - name: Configure bindgen compatibility headers (Windows)
         if: runner.os == 'Windows'
@@ -959,18 +1001,14 @@ jobs:
 
       - name: Install Ruby dependencies (Unix)
         if: runner.os != 'Windows'
-        env:
-          BUNDLE_CMD: "bundle _2.5.12_"
-          SKIP_BUNDLE_PATH: "true"
-        run: bash scripts/install_ruby_dependencies.sh packages/ruby
+        run: bash scripts/ci/ruby/install-ruby-deps.sh packages/ruby
 
       - name: Install Ruby dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
-          $gemdir = "$workspace/packages/ruby"
-          ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle _2.5.12_ install --jobs 4 --retry 3"
+          ridk exec bash -lc "cd $workspace/packages/ruby && bash scripts/ci/ruby/install-ruby-deps.sh ."
 
       - name: Vendor kreuzberg core crate
         shell: bash
@@ -997,8 +1035,8 @@ jobs:
         working-directory: packages/ruby
         run: |
           set -euo pipefail
-          bundle _2.5.12_ exec rake clean
-          bundle _2.5.12_ exec rake build
+          bundle exec rake clean
+          bundle exec rake build
 
       - name: Build gem (Windows)
         if: runner.os == 'Windows'
@@ -1006,13 +1044,106 @@ jobs:
         run: |
           $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
           $gemdir = "$workspace/packages/ruby"
-          ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle _2.5.12_ exec rake clean && bundle _2.5.12_ exec rake build"
+          ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake clean && bundle exec rake build"
 
       - name: Upload gem artifacts
         uses: actions/upload-artifact@v5
         with:
           name: rubygems-${{ matrix.label }}
           path: packages/ruby/pkg/*.gem
+          retention-days: 14
+
+  go-ffi-libraries:
+    name: Build Go FFI libraries
+    needs: prepare
+    if: ${{ needs.prepare.outputs.release_go == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      PDFIUM_VERSION: "7529"
+    steps:
+      - name: Show initial disk space
+        run: |
+          echo "=== Initial disk space ==="
+          df -h /
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Free up disk space
+        run: |
+          echo "=== Removing unnecessary packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
+
+          echo "=== Cleaning apt cache ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "=== Cleaning Docker ==="
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          echo "=== Available disk space after cleanup ==="
+          df -h /
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+          cache-dependency-path: packages/go/go.sum
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-go
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Build FFI library
+        run: cargo build -p kreuzberg-ffi --release
+
+      - name: Build Go bindings
+        working-directory: packages/go
+        run: |
+          set -euo pipefail
+          go build -o artifacts/libkreuzberg.so -v ./...
+
+      - name: Upload Go artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: go-ffi-libraries
+          path: packages/go/artifacts/
           retention-days: 14
 
   java-package:
@@ -1149,6 +1280,35 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.x"
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-csharp
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Build FFI library
+        run: cargo build -p kreuzberg-ffi --release
 
       - name: Restore C# dependencies
         run: dotnet restore packages/csharp/Kreuzberg/Kreuzberg.csproj
@@ -1430,6 +1590,40 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/publish/upload-csharp-packages.sh "${{ needs.prepare.outputs.tag }}" dist/csharp
+
+  upload-go-release:
+    name: Upload Go FFI libraries to GitHub Release
+    needs: [prepare, go-ffi-libraries]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_go == 'true' &&
+      needs.go-ffi-libraries.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Ensure GitHub release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
+
+      - name: Download Go artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: go-ffi-libraries
+          path: dist/go
+
+      - name: Upload Go FFI libraries (idempotent)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/publish/upload-go-libraries.sh "${{ needs.prepare.outputs.tag }}" dist/go
 
   publish-crates:
     name: Publish crates.io packages
@@ -1991,6 +2185,12 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
+      - name: Setup ONNX Runtime
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
       - name: Prefer gpg2 binary
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
         run: |
@@ -2129,6 +2329,7 @@ jobs:
       - publish-docker
       - upload-cli-release
       - upload-csharp-release
+      - upload-go-release
     if: always() && needs.prepare.outputs.is_tag == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -2160,6 +2361,7 @@ jobs:
               "Docker": "${{ needs.publish-docker.result }}",
               "CLI Release": "${{ needs.upload-cli-release.result }}",
               "C# Release": "${{ needs.upload-csharp-release.result }}",
+              "Go FFI Libraries": "${{ needs.upload-go-release.result }}",
           }
 
           summary_lines = ["## Release Status for ${{ needs.prepare.outputs.tag }}", ""]

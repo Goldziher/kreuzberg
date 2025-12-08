@@ -7,6 +7,7 @@
 //! - Input size limits
 //! - Entity length validation
 
+#[cfg(feature = "archives")]
 use std::io::{Read, Seek};
 
 /// Configuration for security limits across extractors.
@@ -139,10 +140,12 @@ impl std::fmt::Display for SecurityError {
 impl std::error::Error for SecurityError {}
 
 /// Helper struct for validating ZIP archives for security issues.
+#[cfg(feature = "archives")]
 pub struct ZipBombValidator {
     limits: SecurityLimits,
 }
 
+#[cfg(feature = "archives")]
 impl ZipBombValidator {
     /// Create a new ZIP bomb validator.
     pub fn new(limits: SecurityLimits) -> Self {
