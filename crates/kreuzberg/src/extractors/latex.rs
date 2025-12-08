@@ -97,7 +97,7 @@ impl DocumentExtractor for LatexExtractor {
     }
 
     fn supported_mime_types(&self) -> &[&str] {
-        &["application/x-latex", "text/x-tex", "text/plain"]
+        &["application/x-latex", "text/x-tex"]
     }
 
     fn priority(&self) -> i32 {

@@ -859,3 +859,45 @@ pub struct LibreOfficeConversionResult {
     /// Target MIME type after conversion
     pub target_mime: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_metadata_serialization_with_format() {
+        let mut metadata = Metadata {
+            format: Some(FormatMetadata::Text(TextMetadata {
+                line_count: 1,
+                word_count: 2,
+                character_count: 13,
+                headers: None,
+                links: None,
+                code_blocks: None,
+            })),
+            ..Default::default()
+        };
+
+        metadata
+            .additional
+            .insert("quality_score".to_string(), serde_json::json!(1.0));
+
+        let json = serde_json::to_value(&metadata).unwrap();
+        println!("Serialized metadata: {}", serde_json::to_string_pretty(&json).unwrap());
+
+        // Check that format_type is present
+        assert!(
+            json.get("format_type").is_some(),
+            "format_type should be present in serialized JSON"
+        );
+        assert_eq!(json.get("format_type").unwrap(), "text");
+
+        // Check that Text metadata fields are present
+        assert_eq!(json.get("line_count").unwrap(), 1);
+        assert_eq!(json.get("word_count").unwrap(), 2);
+        assert_eq!(json.get("character_count").unwrap(), 13);
+
+        // Check that additional field is merged
+        assert_eq!(json.get("quality_score").unwrap(), 1.0);
+    }
+}

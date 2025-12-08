@@ -116,7 +116,7 @@ impl DocumentExtractor for TypstExtractor {
     }
 
     fn supported_mime_types(&self) -> &[&str] {
-        &["application/x-typst", "text/x-typst", "text/plain"]
+        &["application/x-typst", "text/x-typst"]
     }
 
     fn priority(&self) -> i32 {
