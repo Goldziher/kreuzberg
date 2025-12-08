@@ -10,14 +10,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # scripts/ci/ruby lives three levels below repo root
 REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
-echo "=== Vendoring kreuzberg core crate ==="
+echo "=== Vendoring kreuzberg core crate and rb-sys ==="
 
 # Remove and recreate vendor directory
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
+rm -rf "$REPO_ROOT/packages/ruby/vendor/rb-sys"
 mkdir -p "$REPO_ROOT/packages/ruby/vendor"
 
 # Copy core crate
 cp -R "$REPO_ROOT/crates/kreuzberg" "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
+
+# Copy rb-sys from cargo cache if available
+RB_SYS_VERSION="0.9.117"
+RB_SYS_CACHE="$HOME/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rb-sys-${RB_SYS_VERSION}"
+if [ -d "$RB_SYS_CACHE" ]; then
+	echo "Copying rb-sys ${RB_SYS_VERSION} from cargo cache"
+	cp -R "$RB_SYS_CACHE" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
+else
+	echo "Warning: rb-sys ${RB_SYS_VERSION} not found in cargo cache at $RB_SYS_CACHE"
+	echo "Run 'cargo fetch' or build the Ruby extension to download rb-sys first"
+fi
 
 # Clean up build artifacts
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg/.fastembed_cache"
@@ -58,7 +70,7 @@ rm -f "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml.bak"
 
 cat >"$REPO_ROOT/packages/ruby/vendor/Cargo.toml" <<'EOF'
 [workspace]
-members = ["kreuzberg"]
+members = ["kreuzberg", "rb-sys"]
 
 [workspace.package]
 version = "__CORE_VERSION__"
@@ -102,4 +114,6 @@ sed -i.bak "s/__CORE_VERSION__/${core_version}/" packages/ruby/vendor/Cargo.toml
 rm -f packages/ruby/vendor/Cargo.toml.bak
 
 echo "Vendoring complete (core version: $core_version)"
-echo "Native extension Cargo.toml uses path '../../../vendor/kreuzberg' which resolves to this vendored crate"
+echo "Native extension Cargo.toml uses:"
+echo "  - path '../../../vendor/kreuzberg' for kreuzberg crate"
+echo "  - path '../../../vendor/rb-sys' for rb-sys crate"
