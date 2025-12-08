@@ -127,7 +127,7 @@ jobs:
           tgz=$(find . -maxdepth 1 -name "*.tgz" -type f | head -n1)
           if [ -n "$tgz" ]; then
             echo "Found tarball: $tgz"
-            tar tzf "$tgz" | grep "^package/dist/" | wc -l | xargs echo "dist files in tarball:"
+            tar tzf "$tgz" | grep -c "^package/dist/" | xargs echo "dist files in tarball:"
           else
             echo "ERROR: No tarball found"
             exit 1
