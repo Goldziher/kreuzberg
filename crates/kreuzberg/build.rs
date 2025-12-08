@@ -300,9 +300,9 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
 
     if let Ok(profile) = env::var("PROFILE") {
         let target_dir = if let Ok(cargo_target) = env::var("TARGET") {
-            workspace_root.join("target").join(cargo_target).join(profile)
+            workspace_root.join("target").join(cargo_target).join(&profile)
         } else {
-            workspace_root.join("target").join(profile)
+            workspace_root.join("target").join(&profile)
         };
 
         if target_dir.exists() {
@@ -310,6 +310,18 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
                 &src_lib,
                 &target_dir.join(&runtime_lib_name),
                 "CLI target directory",
+                target,
+            );
+        }
+
+        // Also copy to target/{profile} for Java FFI (Maven expects it here)
+        let simple_target_dir = workspace_root.join("target").join(&profile);
+        if simple_target_dir != target_dir {
+            fs::create_dir_all(&simple_target_dir).ok();
+            copy_lib_if_needed(
+                &src_lib,
+                &simple_target_dir.join(&runtime_lib_name),
+                "Java FFI target directory",
                 target,
             );
         }
