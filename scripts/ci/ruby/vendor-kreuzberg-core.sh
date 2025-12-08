@@ -99,8 +99,8 @@ tempfile = "3.23.0"
 criterion = { version = "0.8", features = ["html_reports"] }
 EOF
 
-sed -i.bak "s/__CORE_VERSION__/${core_version}/" packages/ruby/vendor/Cargo.toml
-rm -f packages/ruby/vendor/Cargo.toml.bak
+sed -i.bak "s/__CORE_VERSION__/${core_version}/" "$REPO_ROOT/packages/ruby/vendor/Cargo.toml"
+rm -f "$REPO_ROOT/packages/ruby/vendor/Cargo.toml.bak"
 
 echo "Vendoring complete (core version: $core_version)"
 echo "Native extension Cargo.toml uses:"
