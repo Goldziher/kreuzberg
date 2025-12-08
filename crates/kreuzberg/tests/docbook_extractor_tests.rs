@@ -4,13 +4,23 @@ use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::plugins::{DocumentExtractor, Plugin};
 use std::path::PathBuf;
 
+/// Helper to get absolute path to test documents
+fn test_file_path(filename: &str) -> PathBuf {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    PathBuf::from(manifest_dir)
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("test_documents")
+        .join("docbook")
+        .join(filename)
+}
+
 /// DocBook 4.x extractor test helper
 async fn extract_docbook4_file(filename: &str) -> kreuzberg::Result<kreuzberg::types::ExtractionResult> {
     let extractor = kreuzberg::extractors::DocbookExtractor::new();
-    let path = PathBuf::from(format!(
-        "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/docbook/{}",
-        filename
-    ));
+    let path = test_file_path(filename);
     let config = ExtractionConfig::default();
     extractor.extract_file(&path, "application/docbook+xml", &config).await
 }
@@ -18,10 +28,7 @@ async fn extract_docbook4_file(filename: &str) -> kreuzberg::Result<kreuzberg::t
 /// DocBook 5.x extractor test helper
 async fn extract_docbook5_file(filename: &str) -> kreuzberg::Result<kreuzberg::types::ExtractionResult> {
     let extractor = kreuzberg::extractors::DocbookExtractor::new();
-    let path = PathBuf::from(format!(
-        "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/docbook/{}",
-        filename
-    ));
+    let path = test_file_path(filename);
     let config = ExtractionConfig::default();
     extractor.extract_file(&path, "application/docbook+xml", &config).await
 }
