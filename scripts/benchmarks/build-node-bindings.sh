@@ -23,5 +23,5 @@ pnpm exec napi build --platform --release --target "${TARGET}"
 # Build TypeScript separately (no TARGET needed for tsup/esbuild)
 pnpm run build:ts
 pkg=$(pnpm pack | tail -n1 | tr -d '\r')
-pnpm install -w "crates/kreuzberg-node/${pkg}"
 cd "$REPO_ROOT"
+pnpm add --workspace-root "file:crates/kreuzberg-node/${pkg}"
