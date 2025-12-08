@@ -662,7 +662,7 @@ jobs:
         shell: bash
         run: |
           cd crates/kreuzberg-node
-          pnpm exec tsup
+          pnpm build:ts
 
       - name: Package artifacts
         if: runner.os != 'Windows'
@@ -930,6 +930,7 @@ jobs:
           New-Item -ItemType Directory -Path "C:\\g" -Force
           cd packages/ruby
           bundle config set path "C:\\b"
+          bundle config set no_prune true
           Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_DIR=C:\\t"
           Add-Content -Path $env:GITHUB_ENV -Value "BUNDLE_PATH=C:\\b"
           Add-Content -Path $env:GITHUB_ENV -Value "GEM_HOME=C:\\g"
@@ -1054,21 +1055,30 @@ jobs:
           retention-days: 14
 
   go-ffi-libraries:
-    name: Build Go FFI libraries
-    needs: prepare
+    name: Build Go FFI libraries (${{ matrix.settings.label }})
+    needs: [prepare]
     if: ${{ needs.prepare.outputs.release_go == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ${{ matrix.settings.os }}
+    timeout-minutes: 60
     permissions:
       contents: read
-    env:
-      PDFIUM_VERSION: "7529"
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            target: x86_64-unknown-linux-gnu
+            build_features: default
+          - os: macos-14
+            label: macos-arm64
+            target: aarch64-apple-darwin
+            build_features: default
+          - os: windows-latest
+            label: windows-x86_64
+            target: x86_64-pc-windows-gnu
+            build_features: core
     steps:
-      - name: Show initial disk space
-        run: |
-          echo "=== Initial disk space ==="
-          df -h /
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -1080,40 +1090,40 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
-      - name: Free up disk space
+      - name: Free up disk space (Linux)
+        if: runner.os == 'Linux'
         run: |
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
           docker system prune -af --volumes || true
-          docker builder prune -af || true
 
-          echo "=== Available disk space after cleanup ==="
-          df -h /
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.21"
-          cache: true
-          cache-dependency-path: packages/go/go.sum
+      - name: Configure Windows GNU toolchain
+        if: matrix.settings.os == 'windows-latest'
+        shell: bash
+        run: |
+          {
+            echo "CC=gcc"
+            echo "CXX=g++"
+            echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
+            echo "RUSTFLAGS=-C target-feature=+crt-static"
+            echo "CARGO_BUILD_TARGET=x86_64-pc-windows-gnu"
+          } >> "$GITHUB_ENV"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
-      - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
-
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          cache-key-prefix: publish-go
+          cache-key-prefix: ${{ matrix.settings.os == 'windows-latest' && 'publish-go-windows-gnu' || format('publish-go-{0}', matrix.settings.os) }}
+          use-sccache: ${{ matrix.settings.os != 'windows-latest' }}
+          target: ${{ matrix.settings.target }}
+          toolchain: ${{ matrix.settings.os == 'windows-latest' && 'stable-x86_64-pc-windows-gnu' || '' }}
+
+      - name: Set GNU as default (Windows)
+        if: matrix.settings.os == 'windows-latest'
+        shell: pwsh
+        run: rustup default stable-x86_64-pc-windows-gnu
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
@@ -1125,25 +1135,45 @@ jobs:
         with:
           pdfium-version: ${{ env.PDFIUM_VERSION }}
 
-      - name: Setup ONNX Runtime
+      - name: Setup ONNX Runtime (Unix only)
+        if: matrix.settings.build_features == 'default'
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Setup MSYS2 (Windows)
+        if: matrix.settings.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+
       - name: Build FFI library
-        run: cargo build -p kreuzberg-ffi --release
-
-      - name: Build Go bindings
-        working-directory: packages/go
+        shell: pwsh
         run: |
-          set -euo pipefail
-          go build -o artifacts/libkreuzberg.so -v ./...
+          if ("${{ runner.os }}" -eq "Windows") {
+            $env:RUSTC_WRAPPER = ""
+            cargo build -p kreuzberg-ffi --release --target x86_64-pc-windows-gnu --no-default-features --features core
+            if (-not (Test-Path "target/release")) { New-Item -ItemType Directory -Path "target/release" }
+            Copy-Item "target/x86_64-pc-windows-gnu/release/libkreuzberg_ffi.*" "target/release/" -Force
+          } else {
+            cargo build -p kreuzberg-ffi --release
+          }
 
-      - name: Upload Go artifacts
+      - name: Package FFI library
+        shell: bash
+        run: |
+          cd target/release
+          tar -czf "../../go-ffi-${{ matrix.settings.label }}.tar.gz" libkreuzberg_ffi.*
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
-          name: go-ffi-libraries
-          path: packages/go/artifacts/
+          name: go-ffi-${{ matrix.settings.label }}
+          path: go-ffi-${{ matrix.settings.label }}.tar.gz
           retention-days: 14
 
   java-package:
@@ -1614,16 +1644,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/publish/ensure-github-release-exists.sh "${{ needs.prepare.outputs.tag }}"
 
-      - name: Download Go artifacts
+      - name: Download Go FFI artifacts
         uses: actions/download-artifact@v6
         with:
-          name: go-ffi-libraries
+          pattern: go-ffi-*
           path: dist/go
+          merge-multiple: true
 
-      - name: Upload Go FFI libraries (idempotent)
+      - name: Upload Go FFI libraries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash scripts/publish/upload-go-libraries.sh "${{ needs.prepare.outputs.tag }}" dist/go
+        run: |
+          for file in dist/go/go-ffi-*.tar.gz; do
+            gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber
+          done
 
   publish-crates:
     name: Publish crates.io packages
