@@ -1339,19 +1339,14 @@ pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchRe
     if !batch_result.is_null() {
         let batch = unsafe { Box::from_raw(batch_result) };
 
+        // NOTE: Do not free individual results here - calling code is responsible for that.
+        // The Java bindings call parseAndFreeResult for each result before calling this function.
+        // Freeing them here would cause a double-free.
+
+        // Only free the results array itself
         if !batch.results.is_null() {
-            let results_slice = unsafe { std::slice::from_raw_parts_mut(batch.results, batch.count) };
-
-            for result_ptr in results_slice {
-                if !result_ptr.is_null() {
-                    unsafe { kreuzberg_free_result(*result_ptr) };
-                }
-            }
-
             unsafe {
-                #[allow(clippy::cast_slice_from_raw_parts)]
-                let slice = std::slice::from_raw_parts_mut(batch.results, batch.count);
-                drop(Box::from_raw(slice));
+                let _results_array = Box::from_raw(std::slice::from_raw_parts_mut(batch.results, batch.count));
             };
         }
     }
