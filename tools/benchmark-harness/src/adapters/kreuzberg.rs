@@ -121,6 +121,7 @@ fn build_library_env() -> Result<Vec<(String, String)>> {
             "DYLD_LIBRARY_PATH".to_string(),
             prepend_env("DYLD_LIBRARY_PATH", &lib_str, ":"),
         ),
+        ("CGO_ENABLED".to_string(), "1".to_string()),
     ];
     if cfg!(target_os = "windows") {
         envs.push(("PATH".to_string(), prepend_env("PATH", &lib_str, ";")));
