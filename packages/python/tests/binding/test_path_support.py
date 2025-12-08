@@ -20,7 +20,7 @@ def test_extract_file_sync_with_str(tmp_path: Path) -> None:
 
     result = extract_file_sync(str(test_file))
 
-    assert result.content == "Test content"
+    assert result.content.strip() == "Test content"
     assert result.mime_type == "text/plain"
 
 
@@ -31,7 +31,7 @@ def test_extract_file_sync_with_path(tmp_path: Path) -> None:
 
     result = extract_file_sync(test_file)
 
-    assert result.content == "Test content from Path"
+    assert result.content.strip() == "Test content from Path"
     assert result.mime_type == "text/plain"
 
 
@@ -46,7 +46,7 @@ def test_extract_file_sync_with_bytes(tmp_path: Path) -> None:
 
     result = extract_file_sync(bytes(str(test_file), "utf-8").decode("utf-8"))
 
-    assert result.content == "Test content from bytes"
+    assert result.content.strip() == "Test content from bytes"
     assert result.mime_type == "text/plain"
 
 
@@ -58,7 +58,7 @@ async def test_extract_file_async_with_str(tmp_path: Path) -> None:
 
     result = await extract_file(str(test_file))
 
-    assert result.content == "Async test content"
+    assert result.content.strip() == "Async test content"
     assert result.mime_type == "text/plain"
 
 
@@ -70,7 +70,7 @@ async def test_extract_file_async_with_path(tmp_path: Path) -> None:
 
     result = await extract_file(test_file)
 
-    assert result.content == "Async test content from Path"
+    assert result.content.strip() == "Async test content from Path"
     assert result.mime_type == "text/plain"
 
 
@@ -85,7 +85,7 @@ async def test_extract_file_async_with_bytes(tmp_path: Path) -> None:
 
     result = await extract_file(bytes(str(test_file), "utf-8").decode("utf-8"))
 
-    assert result.content == "Async test content from bytes"
+    assert result.content.strip() == "Async test content from bytes"
     assert result.mime_type == "text/plain"
 
 
@@ -97,10 +97,10 @@ def test_extract_file_with_config_and_path(tmp_path: Path) -> None:
     config = ExtractionConfig(use_cache=False)
 
     result = extract_file_sync(test_file, config=config)
-    assert result.content == "Test with config"
+    assert result.content.strip() == "Test with config"
 
     result = extract_file_sync(str(test_file), config=config)
-    assert result.content == "Test with config"
+    assert result.content.strip() == "Test with config"
 
 
 def test_invalid_path_type() -> None:

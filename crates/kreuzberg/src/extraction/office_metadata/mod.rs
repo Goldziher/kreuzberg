@@ -35,6 +35,7 @@
 pub mod app_properties;
 pub mod core_properties;
 pub mod custom_properties;
+pub mod odt_properties;
 
 pub use app_properties::{
     DocxAppProperties, PptxAppProperties, XlsxAppProperties, extract_docx_app_properties, extract_pptx_app_properties,
@@ -42,6 +43,7 @@ pub use app_properties::{
 };
 pub use core_properties::{CoreProperties, extract_core_properties};
 pub use custom_properties::{CustomProperties, extract_custom_properties};
+pub use odt_properties::{OdtProperties, extract_odt_properties};
 
 use roxmltree::Node;
 

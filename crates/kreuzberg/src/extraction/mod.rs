@@ -63,8 +63,9 @@ pub use libreoffice::{check_libreoffice_available, convert_doc_to_docx, convert_
 
 #[cfg(feature = "office")]
 pub use office_metadata::{
-    CoreProperties, CustomProperties, DocxAppProperties, PptxAppProperties, XlsxAppProperties, extract_core_properties,
-    extract_custom_properties, extract_docx_app_properties, extract_pptx_app_properties, extract_xlsx_app_properties,
+    CoreProperties, CustomProperties, DocxAppProperties, OdtProperties, PptxAppProperties, XlsxAppProperties,
+    extract_core_properties, extract_custom_properties, extract_docx_app_properties, extract_odt_properties,
+    extract_pptx_app_properties, extract_xlsx_app_properties,
 };
 
 #[cfg(feature = "office")]

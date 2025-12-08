@@ -24,9 +24,34 @@ public static class TestHelpers
 
     private static string ResolveWorkspaceRoot()
     {
+        // Check CI environment variable (GitHub Actions)
+        var githubWorkspace = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE");
+        if (!string.IsNullOrEmpty(githubWorkspace) && Directory.Exists(githubWorkspace))
+        {
+            return githubWorkspace;
+        }
+
+        // Check local override
+        var workspaceRoot = Environment.GetEnvironmentVariable("KREUZBERG_WORKSPACE_ROOT");
+        if (!string.IsNullOrEmpty(workspaceRoot) && Directory.Exists(workspaceRoot))
+        {
+            return workspaceRoot;
+        }
+
+        // Fall back to Cargo.toml search
         var cwd = Directory.GetCurrentDirectory();
-        var root = Path.GetFullPath(Path.Combine(cwd, "..", ".."));
-        return root;
+        var current = new DirectoryInfo(cwd);
+
+        while (current != null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "Cargo.toml")))
+            {
+                return current.FullName;
+            }
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find workspace root (Cargo.toml not found)");
     }
 
     private static void EnsureNativeLibraryLoaded()

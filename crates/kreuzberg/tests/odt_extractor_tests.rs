@@ -43,11 +43,18 @@ fn ensure_test_file_exists(path: &Path) -> bool {
 }
 
 /// Tests extraction of document metadata from ODT meta.xml
-/// Validates: creator, creation date, modification date, document statistics
+/// Validates: title, subject, creator, dates, generator
 #[tokio::test]
 async fn test_odt_metadata_extraction() {
-    let test_file = get_test_file_path("bold.odt");
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let test_file = workspace_root.join("test_documents/metadata_test.odt");
+
     if !ensure_test_file_exists(&test_file) {
+        println!("Skipping metadata test: metadata_test.odt not found");
         return;
     }
 
@@ -57,13 +64,58 @@ async fn test_odt_metadata_extraction() {
         .expect("Should extract ODT metadata successfully");
 
     assert!(!result.content.is_empty(), "Content should not be empty");
+    assert!(
+        result.content.contains("Test Document"),
+        "Should contain document title in content"
+    );
 
-    println!("Content extracted: {}", result.content);
-    println!("Metadata format: {:?}", result.metadata.format);
+    // Verify metadata extraction
+    let metadata = &result.metadata.additional;
+    println!("Extracted metadata: {:?}", metadata);
 
-    assert!(result.content.contains("bold"), "Content should contain 'bold' text");
+    // Check title
+    if let Some(title) = metadata.get("title") {
+        assert_eq!(title.as_str(), Some("Test Metadata Document"), "Title should match");
+    }
+
+    // Check subject
+    if let Some(subject) = metadata.get("subject") {
+        assert_eq!(
+            subject.as_str(),
+            Some("Testing ODT Metadata Extraction"),
+            "Subject should match"
+        );
+    }
+
+    // Check creator/author
+    if let Some(created_by) = metadata.get("created_by") {
+        assert_eq!(created_by.as_str(), Some("John Doe"), "Creator should match");
+    }
+
+    // Check authors array
+    if let Some(authors) = metadata.get("authors") {
+        let authors_array = authors.as_array().expect("Authors should be an array");
+        assert_eq!(authors_array.len(), 1, "Should have one author");
+        assert_eq!(authors_array[0].as_str(), Some("John Doe"), "Author name should match");
+    }
+
+    // Check creation date (should exist)
+    assert!(metadata.get("created_at").is_some(), "Creation date should be present");
+
+    // Check modification date (should exist)
+    assert!(
+        metadata.get("modified_at").is_some(),
+        "Modification date should be present"
+    );
+
+    // Check generator
+    if let Some(generator) = metadata.get("generator") {
+        let gen_str = generator.as_str().expect("Generator should be a string");
+        assert!(gen_str.contains("Pandoc"), "Generator should be Pandoc");
+    }
 
     println!("✅ ODT metadata extraction test passed!");
+    println!("   Metadata fields extracted: {}", metadata.len());
 }
 
 /// Tests extraction of tables with captions from ODT
@@ -533,4 +585,111 @@ async fn test_odt_extraction_variety() {
         successful_extractions,
         test_files.len()
     );
+}
+
+/// Test that ODT table extraction doesn't include duplicate cell content
+/// This is a regression test for the bug where table cells were extracted twice:
+/// once as markdown tables and once as raw cell text
+#[tokio::test]
+async fn test_odt_table_no_duplicate_content() {
+    let test_file = get_test_file_path("simpleTable.odt");
+    if !ensure_test_file_exists(&test_file) {
+        return;
+    }
+
+    let config = ExtractionConfig::default();
+    let result = extract_file(&test_file, None, &config)
+        .await
+        .expect("Should extract table successfully");
+
+    assert!(!result.content.is_empty(), "Content should not be empty");
+
+    // Count how many times we see "Content" in the output
+    // In a properly fixed version, it should appear only once in the markdown table
+    // or possibly twice if headers appear with the same name, but not multiple times
+    // for the same cell
+    let content_count = result.content.matches("Content").count();
+
+    // "Content" appears twice in the header "More content" in a simple table
+    // It should not appear more than 3 times (once in header, once in data cell, once in a different word like "More content")
+    println!("   'Content' appears {} times in output", content_count);
+    println!("   Content preview:\n{}", result.content);
+
+    // This verifies that we're not getting duplicate cell content extracted
+    assert!(
+        content_count <= 3,
+        "Content should not appear excessively, indicating no duplicate table cell extraction"
+    );
+
+    println!("✅ ODT table no duplicate content test passed!");
+}
+
+/// Test comprehensive table extraction with headers, multiple rows, and tables
+/// Uses the extraction_test document created with pandoc to ensure complete content
+#[tokio::test]
+async fn test_odt_comprehensive_table_extraction() {
+    // This test uses the pandoc-generated test document
+    let test_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("test_documents/extraction_test.odt");
+
+    if !test_file.exists() {
+        println!("⚠️  Test document not found at {:?}, skipping", test_file);
+        return;
+    }
+
+    let config = ExtractionConfig::default();
+    let result = extract_file(&test_file, None, &config)
+        .await
+        .expect("Should extract comprehensive table document successfully");
+
+    assert!(!result.content.is_empty(), "Content should not be empty");
+
+    // Verify all sections are present
+    assert!(result.content.contains("Comprehensive"), "Should contain heading");
+    assert!(
+        result.content.contains("First Section") || result.content.contains("First"),
+        "Should contain first section"
+    );
+    assert!(
+        result.content.contains("Second Section") || result.content.contains("Second"),
+        "Should contain second section"
+    );
+    assert!(
+        result.content.contains("Third Section") || result.content.contains("Third"),
+        "Should contain third section"
+    );
+
+    // Verify tables are present and formatted correctly (as markdown)
+    assert!(
+        result.content.contains("|"),
+        "Should contain pipe characters for markdown tables"
+    );
+    assert!(result.content.contains("---"), "Should contain table separator");
+
+    // Verify table content is extracted
+    assert!(
+        result.content.contains("Header 1") || result.content.contains("Cell 1A"),
+        "Should contain table data"
+    );
+    assert!(
+        result.content.contains("Product") || result.content.contains("Apple"),
+        "Should contain second table data"
+    );
+
+    // Verify no excessive duplication of cells (a simple heuristic check)
+    // Count "Cell 1A" - should appear once or twice at most
+    let cell_count = result.content.matches("Cell 1A").count();
+    assert!(
+        cell_count <= 2,
+        "Cell content should not be heavily duplicated (found {} instances)",
+        cell_count
+    );
+
+    println!("✅ ODT comprehensive table extraction test passed!");
+    println!("   Extracted content length: {} chars", result.content.len());
+    println!("   Tables found in output: {}", result.tables.len());
 }

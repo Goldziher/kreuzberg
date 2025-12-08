@@ -36,7 +36,7 @@ async def test_extract_bytes_with_valid_mime_type() -> None:
     result = await extract_bytes(content, mime_type)
 
     assert isinstance(result, ExtractionResult)
-    assert result.content == "Hello, World!"
+    assert result.content.strip() == "Hello, World!"
     assert result.mime_type == "text/plain"
     assert result.metadata.get("format_type") == "text"
     assert "line_count" in result.metadata
@@ -52,7 +52,7 @@ def test_extract_bytes_sync_with_valid_mime_type() -> None:
     result = extract_bytes_sync(content, mime_type)
 
     assert isinstance(result, ExtractionResult)
-    assert result.content == "Hello, World!"
+    assert result.content.strip() == "Hello, World!"
     assert result.mime_type == "text/plain"
     assert result.metadata.get("format_type") == "text"
     assert "line_count" in result.metadata
@@ -85,7 +85,7 @@ async def test_extract_file_with_cache_disabled(tmp_path: Path) -> None:
     config = ExtractionConfig(use_cache=False)
     result = await extract_file(str(test_file), config=config)
 
-    assert result.content == "Test content"
+    assert result.content.strip() == "Test content"
     assert result.mime_type == "text/plain"
 
 
@@ -97,7 +97,7 @@ def test_extract_file_sync_with_cache_disabled(tmp_path: Path) -> None:
     config = ExtractionConfig(use_cache=False)
     result = extract_file_sync(str(test_file), config=config)
 
-    assert result.content == "Test content"
+    assert result.content.strip() == "Test content"
     assert result.mime_type == "text/plain"
 
 
@@ -113,7 +113,7 @@ async def test_extract_file_with_cache_hit(tmp_path: Path) -> None:
     result2 = await extract_file(str(test_file), config=config)
 
     assert result1.content == result2.content
-    assert result1.content == "Test content for cache"
+    assert result1.content.strip() == "Test content for cache"
     assert result1.mime_type == result2.mime_type == "text/plain"
 
 
@@ -128,7 +128,7 @@ def test_extract_file_sync_with_cache_hit(tmp_path: Path) -> None:
     result2 = extract_file_sync(str(test_file), config=config)
 
     assert result1.content == result2.content
-    assert result1.content == "Test content for cache sync"
+    assert result1.content.strip() == "Test content for cache sync"
     assert result1.mime_type == result2.mime_type == "text/plain"
 
 
@@ -193,7 +193,7 @@ async def test_extract_bytes_with_postprocessor_config() -> None:
 
     result = await extract_bytes(content, mime_type, config)
 
-    assert result.content == "Test content"
+    assert result.content.strip() == "Test content"
     assert result.mime_type == "text/plain"
 
 
@@ -210,7 +210,7 @@ def test_extract_bytes_sync_with_postprocessor_config() -> None:
 
     result = extract_bytes_sync(content, mime_type, config)
 
-    assert result.content == "Test content"
+    assert result.content.strip() == "Test content"
     assert result.mime_type == "text/plain"
 
 

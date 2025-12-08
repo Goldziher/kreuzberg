@@ -1346,7 +1346,7 @@ pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchRe
         // Only free the results array itself
         if !batch.results.is_null() {
             unsafe {
-                let _results_array = Box::from_raw(std::slice::from_raw_parts_mut(batch.results, batch.count));
+                let _results_array = Box::from_raw(std::ptr::slice_from_raw_parts_mut(batch.results, batch.count));
             };
         }
     }

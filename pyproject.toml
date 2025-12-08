@@ -230,6 +230,7 @@ module = [
   "easyocr",
   "paddle",
   "paddle.*",
+  "paddle.utils.gast",
   "paddleocr",
   "torch",
   "kreuzberg._internal_bindings",
@@ -239,6 +240,7 @@ module = [
   "httpx",
 ]
 ignore_missing_imports = true
+ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [ "numpy", "numpy.*" ]

@@ -41,7 +41,7 @@ def _binary_supports_subcommand(binary: Path, subcommand: str) -> bool:
             capture_output=True,
             text=True,
             check=False,
-            timeout=2,
+            timeout=10,
         )
 
         if probe.returncode == 0:
@@ -53,16 +53,23 @@ def _binary_supports_subcommand(binary: Path, subcommand: str) -> bool:
         return False
 
 
-def _build_cli_with_features(workspace_root: Path, feature: str) -> None:
+def _build_cli_with_features(workspace_root: Path, feature: str) -> bool:
+    """Build CLI with specified features. Returns True if successful."""
     cargo = shutil.which("cargo")
     if cargo is None:
-        return
+        return False
 
-    subprocess.run(
-        [cargo, "build", "-p", "kreuzberg-cli", "--features", feature],
-        cwd=workspace_root,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            [cargo, "build", "-p", "kreuzberg-cli", "--features", feature],
+            cwd=workspace_root,
+            check=False,
+            capture_output=True,
+            timeout=300,  # 5 minute timeout for builds
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        return False
 
 
 def _discover_dev_cli_binary(requested_subcommand: str | None) -> str | None:
@@ -87,7 +94,8 @@ def _discover_dev_cli_binary(requested_subcommand: str | None) -> str | None:
     if feature is None:
         return None
 
-    _build_cli_with_features(workspace_root, feature)
+    if not _build_cli_with_features(workspace_root, feature):
+        return None
 
     for candidate in _iter_dev_cli_candidates(workspace_root):
         if _binary_supports_subcommand(candidate, requested_subcommand):

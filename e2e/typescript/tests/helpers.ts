@@ -1,4 +1,5 @@
-import { join, resolve } from "node:path";
+import { join, resolve, dirname } from "node:path";
+import { existsSync } from "node:fs";
 import type {
 	ChunkingConfig,
 	ExtractionConfig,
@@ -13,7 +14,33 @@ import type {
 } from "@kreuzberg/node";
 import { expect } from "vitest";
 
-const WORKSPACE_ROOT = resolve(__dirname, "../../../../..");
+function resolveWorkspaceRoot(): string {
+	// Check CI environment variable (GitHub Actions)
+	const githubWorkspace = process.env.GITHUB_WORKSPACE;
+	if (githubWorkspace && existsSync(githubWorkspace)) {
+		return githubWorkspace;
+	}
+
+	// Check local override
+	const workspaceRoot = process.env.KREUZBERG_WORKSPACE_ROOT;
+	if (workspaceRoot && existsSync(workspaceRoot)) {
+		return workspaceRoot;
+	}
+
+	// Fall back to Cargo.toml search
+	let current = __dirname;
+
+	while (current !== dirname(current)) {
+		if (existsSync(join(current, "Cargo.toml"))) {
+			return current;
+		}
+		current = dirname(current);
+	}
+
+	throw new Error("Could not find workspace root (Cargo.toml not found)");
+}
+
+const WORKSPACE_ROOT = resolveWorkspaceRoot();
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
 
 type PlainRecord = Record<string, unknown>;

@@ -4,10 +4,23 @@ use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::plugins::DocumentExtractor;
 use std::path::PathBuf;
 
+/// Helper to get absolute path to test documents
+fn test_file_path(filename: &str) -> PathBuf {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    PathBuf::from(manifest_dir)
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("test_documents")
+        .join("fictionbook")
+        .join(filename)
+}
+
 #[tokio::test]
 async fn test_fictionbook_extract_metadata_title() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/meta.fb2");
+    let path = test_file_path("meta.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -23,7 +36,7 @@ async fn test_fictionbook_extract_metadata_title() {
 #[tokio::test]
 async fn test_fictionbook_extract_metadata_genre() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/meta.fb2");
+    let path = test_file_path("meta.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -36,7 +49,7 @@ async fn test_fictionbook_extract_metadata_genre() {
 #[tokio::test]
 async fn test_fictionbook_extract_content_sections() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/titles.fb2");
+    let path = test_file_path("titles.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -56,7 +69,7 @@ async fn test_fictionbook_extract_content_sections() {
 #[tokio::test]
 async fn test_fictionbook_extract_section_hierarchy() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/basic.fb2");
+    let path = test_file_path("basic.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -77,7 +90,7 @@ async fn test_fictionbook_extract_section_hierarchy() {
 #[tokio::test]
 async fn test_fictionbook_extract_inline_markup() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/emphasis.fb2");
+    let path = test_file_path("emphasis.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -94,7 +107,7 @@ async fn test_fictionbook_extract_inline_markup() {
 #[tokio::test]
 async fn test_fictionbook_extract_emphasis() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/basic.fb2");
+    let path = test_file_path("basic.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -110,7 +123,7 @@ async fn test_fictionbook_extract_emphasis() {
 #[tokio::test]
 async fn test_fictionbook_extract_strong() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/basic.fb2");
+    let path = test_file_path("basic.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -123,7 +136,7 @@ async fn test_fictionbook_extract_strong() {
 #[tokio::test]
 async fn test_fictionbook_extract_code() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/basic.fb2");
+    let path = test_file_path("basic.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -136,7 +149,7 @@ async fn test_fictionbook_extract_code() {
 #[tokio::test]
 async fn test_fictionbook_extract_blockquote() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/basic.fb2");
+    let path = test_file_path("basic.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -149,7 +162,7 @@ async fn test_fictionbook_extract_blockquote() {
 #[tokio::test]
 async fn test_fictionbook_extract_tables() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/tables.fb2");
+    let path = test_file_path("tables.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -165,7 +178,7 @@ async fn test_fictionbook_extract_tables() {
 #[tokio::test]
 async fn test_fictionbook_markdown_formatting_preservation() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/emphasis.fb2");
+    let path = test_file_path("emphasis.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())
@@ -193,7 +206,7 @@ async fn test_fictionbook_markdown_formatting_preservation() {
 #[tokio::test]
 async fn test_fictionbook_formatting_in_body_paragraphs() {
     let extractor = kreuzberg::extractors::FictionBookExtractor::new();
-    let path = PathBuf::from("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/fictionbook/basic.fb2");
+    let path = test_file_path("basic.fb2");
 
     let result = extractor
         .extract_file(&path, "application/x-fictionbook+xml", &ExtractionConfig::default())

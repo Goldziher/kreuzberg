@@ -262,6 +262,15 @@ jobs:
       - name: Make FFI library executable
         run: chmod +x target/release/libkreuzberg_ffi.* || true
 
+      - name: Set CGO environment variables (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          workspace=$(pwd)
+          {
+            echo "CGO_LDFLAGS=-L${workspace}/target/x86_64-pc-windows-gnu/release -L${workspace}/target/release"
+          } >> "$GITHUB_ENV"
+
       - name: Run Go tests
         run: scripts/ci/go/run-tests.sh
         shell: bash
@@ -271,9 +280,14 @@ jobs:
 
       - name: Run E2E tests
         run: |
-          export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
-          export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
-          export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            export PATH="${PWD}/target/x86_64-pc-windows-gnu/release:${PWD}/target/release:${PATH}"
+            export CGO_LDFLAGS="-L${PWD}/target/x86_64-pc-windows-gnu/release -L${PWD}/target/release"
+          else
+            export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
+            export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
+            export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+          fi
           if [[ "$RUNNER_OS" == "macOS" ]]; then
             export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
           else

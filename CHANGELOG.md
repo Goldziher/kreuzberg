@@ -20,6 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Bug Fixes
 
+**ODT Extraction**:
+- Fixed ODT table extraction producing duplicate content
+  - Table cells were being extracted twice: once as markdown tables (correct) and again as raw paragraphs (incorrect)
+  - Root cause: XML traversal using `.descendants()` included nested table cell content as document-level text
+  - Solution: Changed to only process direct children of `<office:text>` element, isolating table content
+  - Impact: ODT extraction now produces clean output without cell duplication
+- Enhanced ODT metadata extraction to match Office Open XML capabilities
+  - Added comprehensive metadata extraction from `meta.xml` (OpenDocument standard)
+  - New `OdtProperties` struct supports all OpenDocument metadata fields
+  - Extracts: title, subject, creator, initial-creator, keywords, description, dates, language
+  - Document statistics: page count, word count, character count, paragraph count, table count, image count
+  - Metadata extraction now consistent between ODT, DOCX, XLSX, and PPTX formats
+  - Impact: ODT files now provide rich metadata comparable to other Office formats
+
 **Go Bindings**:
 - Fixed Windows MinGW builds by disabling embeddings feature
   - Windows ONNX Runtime only provides MSVC .lib files incompatible with MinGW

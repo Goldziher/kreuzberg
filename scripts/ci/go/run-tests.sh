@@ -23,8 +23,11 @@ cd "$REPO_ROOT/packages/go"
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
 	# Windows path - handled via PowerShell wrapper
 	workspace=$(cd ../.. && pwd)
-	ffiPath="$workspace/target/x86_64-pc-windows-gnu/release"
-	export PATH="$ffiPath:$PATH"
+	ffiPathGnu="$workspace/target/x86_64-pc-windows-gnu/release"
+	ffiPathRelease="$workspace/target/release"
+	export PATH="$ffiPathGnu:$ffiPathRelease:$PATH"
+	# Set CGO_LDFLAGS to help linker find the library
+	export CGO_LDFLAGS="-L$ffiPathGnu -L$ffiPathRelease"
 	go test -v -race ./...
 else
 	# Unix paths (Linux/macOS)
