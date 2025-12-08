@@ -257,7 +257,20 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: go-ffi-lib-${{ matrix.os }}
-          path: target
+          path: .
+
+      - name: Debug - Show directory structure
+        shell: bash
+        run: |
+          echo "=== Current directory: $(pwd) ==="
+          echo "=== Listing all files recursively ==="
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            find . -type f -name "*.dll" -o -name "*.a" -o -name "*.lib" 2>/dev/null || true
+          else
+            find . -type f \( -name "*.so" -o -name "*.dylib" -o -name "*.a" \) 2>/dev/null || true
+          fi
+          echo "=== target/ structure ==="
+          ls -laR target/ 2>/dev/null || echo "target/ not found"
 
       - name: Make FFI library executable
         run: chmod +x target/release/libkreuzberg_ffi.* || true
