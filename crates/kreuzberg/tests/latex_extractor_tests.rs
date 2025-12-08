@@ -401,7 +401,7 @@ async fn test_latex_lists_pandoc_parity() {
     let content = fs::read(test_file_path("lists.tex")).expect("Failed to read lists.tex");
 
     let extractor = LatexExtractor::new();
-    let result = extractor
+    let _result = extractor
         .extract_bytes(&content, "text/x-tex", &ExtractionConfig::default())
         .await
         .expect("Should extract LaTeX lists");

@@ -35,8 +35,13 @@ echo "Found package: $pkg"
 # Get absolute path to tarball before changing directories
 pkg_abs_path="$(cd "$(dirname "$pkg")" && pwd)/$(basename "$pkg")"
 
-# Install the package from tarball in the TypeScript workspace
-cd ../../packages/typescript
+# On Windows (Git Bash/MSYS), convert POSIX path to Windows path for file: URL
+if command -v cygpath >/dev/null 2>&1; then
+	pkg_abs_path="$(cygpath -w "$pkg_abs_path")"
+fi
+
+# Install the package from tarball in the workspace root
+cd "$REPO_ROOT"
 pnpm add --workspace-root "file:$pkg_abs_path"
 
 echo "Installation complete"

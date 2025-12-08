@@ -231,11 +231,11 @@ jobs:
         shell: bash
         run: |
           source scripts/ci/node/setup-library-paths.sh
-          cd packages/typescript
+          cd e2e/typescript
           if [ "${{ matrix.coverage }}" = "true" ]; then
-            pnpm test:coverage
+            pnpm vitest run --coverage
           else
-            pnpm test
+            pnpm vitest run
           fi
 
       - name: Upload coverage
@@ -243,7 +243,7 @@ jobs:
         uses: deepsourcelabs/test-coverage-action@master
         with:
           key: typescript
-          coverage-file: packages/typescript/coverage/lcov.info
+          coverage-file: e2e/typescript/coverage/lcov.info
           dsn: ${{ secrets.DEEPSOURCE_DSN }}
 
       - name: Install Task

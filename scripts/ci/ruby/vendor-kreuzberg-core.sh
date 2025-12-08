@@ -28,7 +28,13 @@ if [ -d "$RB_SYS_CACHE" ]; then
 	cp -R "$RB_SYS_CACHE" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
 else
 	echo "rb-sys ${RB_SYS_VERSION} not found in cargo cache, fetching..."
-	cd "$REPO_ROOT/packages/ruby/ext/kreuzberg_rb/native"
+	# Create a temporary project to fetch rb-sys from the registry
+	# (cargo fetch doesn't work for path dependencies)
+	TEMP_DIR=$(mktemp -d)
+	trap 'rm -rf "$TEMP_DIR"' EXIT
+	cd "$TEMP_DIR"
+	cargo init --lib --name temp_rb_sys_fetch
+	echo 'rb-sys = "0.9.117"' >>Cargo.toml
 	cargo fetch
 	cd "$REPO_ROOT"
 	if [ -d "$RB_SYS_CACHE" ]; then
@@ -36,6 +42,7 @@ else
 		cp -R "$RB_SYS_CACHE" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
 	else
 		echo "Error: rb-sys ${RB_SYS_VERSION} not found in cargo cache at $RB_SYS_CACHE even after fetch" >&2
+		printf '%s\n' "$HOME/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rb-sys"* 2>/dev/null || true
 		exit 1
 	fi
 fi

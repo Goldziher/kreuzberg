@@ -536,7 +536,7 @@ async fn test_typst_citations_preserved() {
 #[tokio::test]
 async fn test_typst_link_extraction() {
     let content = load_test_document("advanced.typ");
-    let baseline = load_pandoc_baseline("advanced");
+    let _baseline = load_pandoc_baseline("advanced");
     let config = ExtractionConfig::default();
 
     let result = extract_bytes(&content, "application/x-typst", &config)
@@ -561,7 +561,7 @@ async fn test_typst_link_extraction() {
 #[tokio::test]
 async fn test_typst_list_extraction() {
     let content = load_test_document("simple.typ");
-    let baseline = load_pandoc_baseline("simple");
+    let _baseline = load_pandoc_baseline("simple");
     let config = ExtractionConfig::default();
 
     let result = extract_bytes(&content, "application/x-typst", &config)
@@ -587,7 +587,7 @@ async fn test_typst_list_extraction() {
 #[tokio::test]
 async fn test_typst_code_block_extraction() {
     let content = load_test_document("advanced.typ");
-    let baseline = load_pandoc_baseline("advanced");
+    let _baseline = load_pandoc_baseline("advanced");
     let config = ExtractionConfig::default();
 
     let result = extract_bytes(&content, "application/x-typst", &config)
@@ -656,7 +656,7 @@ async fn test_typst_nested_formatting() {
 #[tokio::test]
 async fn test_typst_multiple_paragraphs() {
     let content = load_test_document("advanced.typ");
-    let baseline = load_pandoc_baseline("advanced");
+    let _baseline = load_pandoc_baseline("advanced");
     let config = ExtractionConfig::default();
 
     let result = extract_bytes(&content, "application/x-typst", &config)
@@ -730,7 +730,7 @@ async fn test_typst_whitespace_handling() {
 #[tokio::test]
 async fn test_typst_minimal_document() {
     let content = load_test_document("minimal.typ");
-    let baseline = load_pandoc_baseline("minimal");
+    let _baseline = load_pandoc_baseline("minimal");
     let config = ExtractionConfig::default();
 
     let result = extract_bytes(&content, "application/x-typst", &config)
@@ -1144,7 +1144,7 @@ async fn test_typst_pathological_whitespace() {
 #[tokio::test]
 async fn test_typst_full_simple_document_comparison() {
     let content = load_test_document("simple.typ");
-    let baseline = load_pandoc_baseline("simple");
+    let _baseline = load_pandoc_baseline("simple");
     let config = ExtractionConfig::default();
 
     let result = extract_bytes(&content, "application/x-typst", &config)
@@ -1164,7 +1164,7 @@ async fn test_typst_full_simple_document_comparison() {
 #[tokio::test]
 async fn test_typst_full_advanced_document_comparison() {
     let content = load_test_document("advanced.typ");
-    let baseline = load_pandoc_baseline("advanced");
+    let _baseline = load_pandoc_baseline("advanced");
     let config = ExtractionConfig::default();
 
     let result = extract_bytes(&content, "application/x-typst", &config)

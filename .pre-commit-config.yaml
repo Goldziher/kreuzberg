@@ -36,7 +36,8 @@ repos:
   - repo: https://github.com/biomejs/pre-commit
     rev: v2.3.8
     hooks:
-      - id: biome-check
+      - id: biome-format
+      - id: biome-lint
   - repo: https://github.com/oxc-project/mirrors-oxlint
     rev: v1.31.0
     hooks:
