@@ -1,3 +1,5 @@
+// Auto-generated tests for smoke fixtures.
+
 import { existsSync } from "node:fs";
 import type { ExtractionResult } from "@kreuzberg/node";
 import { extractFileSync } from "@kreuzberg/node";

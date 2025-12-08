@@ -1,3 +1,4 @@
+# Auto-generated tests for structured fixtures.
 from __future__ import annotations
 
 import pytest

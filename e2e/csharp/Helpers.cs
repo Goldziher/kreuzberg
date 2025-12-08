@@ -24,24 +24,9 @@ public static class TestHelpers
 
     private static string ResolveWorkspaceRoot()
     {
-        // Use assembly location instead of unpredictable cwd
-        var assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-        var assemblyDir = Path.GetDirectoryName(assemblyPath)
-            ?? throw new InvalidOperationException("Cannot determine assembly directory");
-
-        // Walk up the directory tree looking for Cargo.toml (workspace root marker)
-        var current = new DirectoryInfo(assemblyDir);
-        while (current is not null && current.Parent is not null)
-        {
-            var cargoToml = Path.Combine(current.FullName, "Cargo.toml");
-            if (File.Exists(cargoToml))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException(
-            $"Cannot locate workspace root from assembly path: {assemblyPath}");
+        var cwd = Directory.GetCurrentDirectory();
+        var root = Path.GetFullPath(Path.Combine(cwd, "..", ".."));
+        return root;
     }
 
     private static void EnsureNativeLibraryLoaded()
@@ -61,7 +46,7 @@ public static class TestHelpers
             }
         }
 
-        throw new InvalidOperationException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
+        throw new SkipTestException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
     }
 
     private static string LibraryFileName()
@@ -84,7 +69,7 @@ public static class TestHelpers
         {
             if (skipIfMissing)
             {
-                throw new Xunit.SkipException($"Missing document {path}");
+                throw new SkipTestException($"Missing document {path}");
             }
             throw new FileNotFoundException($"Document unavailable: {path}");
         }
@@ -103,15 +88,7 @@ public static class TestHelpers
     public static ExtractionResult RunExtraction(string relativePath, string? configJson)
     {
         var documentPath = EnsureDocument(relativePath, true);
-        var config = BuildConfig(configJson) ?? new ExtractionConfig
-        {
-            Ocr = new OcrConfig
-            {
-                Backend = "tesseract",
-                Language = "eng",
-            },
-            ForceOcr = true,
-        };
+        var config = BuildConfig(configJson);
         return KreuzbergClient.ExtractFileSync(documentPath, config);
     }
 
@@ -257,28 +234,28 @@ public static class TestHelpers
             throw new XunitException($"Invalid expectation for {path}: {expectationJson}");
         }
 
-        if (spec.TryGetPropertyValue("eq", out var eq) && eq != null)
+        if (spec.TryGetPropertyValue("eq", out var eq))
         {
             if (!JsonEquals(value, eq))
             {
                 throw new XunitException($"Expected metadata {path} == {eq}, got {value}");
             }
         }
-        if (spec.TryGetPropertyValue("gte", out var gte) && gte != null)
+        if (spec.TryGetPropertyValue("gte", out var gte))
         {
             if (!CompareFloat(value, gte, true))
             {
                 throw new XunitException($"Expected metadata {path} >= {gte}, got {value}");
             }
         }
-        if (spec.TryGetPropertyValue("lte", out var lte) && lte != null)
+        if (spec.TryGetPropertyValue("lte", out var lte))
         {
             if (!CompareFloat(value, lte, false))
             {
                 throw new XunitException($"Expected metadata {path} <= {lte}, got {value}");
             }
         }
-        if (spec.TryGetPropertyValue("contains", out var contains) && contains != null)
+        if (spec.TryGetPropertyValue("contains", out var contains))
         {
             if (!ValueContains(value, contains))
             {
@@ -364,25 +341,12 @@ public static class TestHelpers
             }
         }
 
-        // Check if array contains a single value
-        if (value is JsonArray va && contains is JsonValue)
-        {
-            foreach (var vItem in va)
-            {
-                if (JsonEquals(vItem!, contains))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        if (value is JsonArray vArr && contains is JsonArray ca)
+        if (value is JsonArray va && contains is JsonArray ca)
         {
             foreach (var item in ca)
             {
                 bool found = false;
-                foreach (var vItem in vArr)
+                foreach (var vItem in va)
                 {
                     if (JsonEquals(vItem!, item!))
                     {

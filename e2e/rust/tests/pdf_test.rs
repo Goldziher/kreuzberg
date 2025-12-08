@@ -1,9 +1,12 @@
+// Auto-generated tests for pdf fixtures.
 #![allow(clippy::too_many_lines)]
 use e2e_rust::{assertions, resolve_document};
 use kreuzberg::core::config::ExtractionConfig;
 
 #[test]
 fn test_pdf_assembly_technical() {
+    // Assembly language technical manual with large body of text.
+
     let document_path = resolve_document("pdfs/assembly_language_for_beginners_al4_b_en.pdf");
     if !document_path.exists() {
         println!(
@@ -27,6 +30,8 @@ fn test_pdf_assembly_technical() {
 
 #[test]
 fn test_pdf_bayesian_data_analysis() {
+    // Bayesian data analysis textbook PDF with large content volume.
+
     let document_path = resolve_document("pdfs/bayesian_data_analysis_third_edition_13th_feb_2020.pdf");
     if !document_path.exists() {
         println!(
@@ -50,6 +55,8 @@ fn test_pdf_bayesian_data_analysis() {
 
 #[test]
 fn test_pdf_code_and_formula() {
+    // PDF containing code snippets and formulas should retain substantial content.
+
     let document_path = resolve_document("pdfs/code_and_formula.pdf");
     if !document_path.exists() {
         println!(
@@ -71,6 +78,8 @@ fn test_pdf_code_and_formula() {
 
 #[test]
 fn test_pdf_deep_learning() {
+    // Deep learning textbook PDF to ensure long-form extraction quality.
+
     let document_path = resolve_document("pdfs/fundamentals_of_deep_learning_2014.pdf");
     if !document_path.exists() {
         println!(
@@ -94,6 +103,8 @@ fn test_pdf_deep_learning() {
 
 #[test]
 fn test_pdf_embedded_images() {
+    // PDF with embedded images should extract text and tables when present.
+
     let document_path = resolve_document("pdfs/embedded_images_tables.pdf");
     if !document_path.exists() {
         println!(
@@ -116,6 +127,8 @@ fn test_pdf_embedded_images() {
 
 #[test]
 fn test_pdf_google_doc() {
+    // Google Docs exported PDF to verify conversion fidelity.
+
     let document_path = resolve_document("pdfs/google_doc_document.pdf");
     if !document_path.exists() {
         println!(
@@ -138,6 +151,8 @@ fn test_pdf_google_doc() {
 
 #[test]
 fn test_pdf_large_ciml() {
+    // Large machine learning textbook PDF to stress extraction length.
+
     let document_path = resolve_document("pdfs/a_course_in_machine_learning_ciml_v0_9_all.pdf");
     if !document_path.exists() {
         println!(
@@ -161,6 +176,8 @@ fn test_pdf_large_ciml() {
 
 #[test]
 fn test_pdf_non_english_german() {
+    // German technical PDF to ensure non-ASCII content extraction.
+
     let document_path = resolve_document("pdfs/5_level_paging_and_5_level_ept_intel_revision_1_1_may_2017.pdf");
     if !document_path.exists() {
         println!(
@@ -184,6 +201,8 @@ fn test_pdf_non_english_german() {
 
 #[test]
 fn test_pdf_right_to_left() {
+    // Right-to-left language PDF to verify RTL extraction.
+
     let document_path = resolve_document("pdfs/right_to_left_01.pdf");
     if !document_path.exists() {
         println!(
@@ -206,6 +225,8 @@ fn test_pdf_right_to_left() {
 
 #[test]
 fn test_pdf_simple_text() {
+    // Simple text-heavy PDF should extract content without OCR or tables.
+
     let document_path = resolve_document("pdfs/fake_memo.pdf");
     if !document_path.exists() {
         println!(
@@ -228,6 +249,8 @@ fn test_pdf_simple_text() {
 
 #[test]
 fn test_pdf_tables_large() {
+    // Large PDF with extensive tables to stress table extraction.
+
     let document_path = resolve_document("pdfs_with_tables/large.pdf");
     if !document_path.exists() {
         println!(
@@ -250,6 +273,8 @@ fn test_pdf_tables_large() {
 
 #[test]
 fn test_pdf_tables_medium() {
+    // Medium-sized PDF with multiple tables.
+
     let document_path = resolve_document("pdfs_with_tables/medium.pdf");
     if !document_path.exists() {
         println!(
@@ -272,6 +297,8 @@ fn test_pdf_tables_medium() {
 
 #[test]
 fn test_pdf_tables_small() {
+    // Small PDF containing tables to validate table extraction.
+
     let document_path = resolve_document("pdfs_with_tables/tiny.pdf");
     if !document_path.exists() {
         println!(
@@ -305,6 +332,8 @@ fn test_pdf_tables_small() {
 
 #[test]
 fn test_pdf_technical_stat_learning() {
+    // Technical statistical learning PDF requiring substantial extraction.
+
     let document_path =
         resolve_document("pdfs/an_introduction_to_statistical_learning_with_applications_in_r_islr_sixth_printing.pdf");
     if !document_path.exists() {

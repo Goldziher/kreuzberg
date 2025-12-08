@@ -121,6 +121,7 @@ func TestListDocumentExtractors(t *testing.T) {
 		t.Fatalf("Failed to write test PDF file: %v", err)
 	}
 
+	// This will initialize the PDF extractor
 	_, _ = kreuzberg.ExtractFileSync(testFile, nil)
 
 	result, err := kreuzberg.ListDocumentExtractors()

@@ -1,9 +1,12 @@
+// Auto-generated tests for image fixtures.
 #![allow(clippy::too_many_lines)]
 use e2e_rust::{assertions, resolve_document};
 use kreuzberg::core::config::ExtractionConfig;
 
 #[test]
 fn test_image_metadata_only() {
+    // JPEG image to validate metadata extraction without OCR.
+
     let document_path = resolve_document("images/example.jpg");
     if !document_path.exists() {
         println!(

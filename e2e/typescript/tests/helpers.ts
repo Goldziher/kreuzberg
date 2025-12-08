@@ -13,7 +13,7 @@ import type {
 } from "@kreuzberg/node";
 import { expect } from "vitest";
 
-const WORKSPACE_ROOT = resolve(__dirname, "../../..");
+const WORKSPACE_ROOT = resolve(__dirname, "../../../../..");
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
 
 type PlainRecord = Record<string, unknown>;

@@ -392,7 +392,7 @@ pub fn generate(fixtures: &[Fixture], output_root: &Utf8Path) -> Result<()> {
 
     for (category, mut fixtures) in grouped {
         fixtures.sort_by(|a, b| a.id.cmp(&b.id));
-        let filename = format!("{}_Tests.cs", sanitize_typename(&category));
+        let filename = format!("{}Tests.cs", sanitize_typename(&category));
         let content = render_category(&category, &fixtures)?;
         fs::write(csharp_root.join(&filename), content)
             .with_context(|| format!("Failed to write C# test file {filename}"))?;
@@ -410,7 +410,7 @@ fn clean_tests(dir: &Utf8Path) -> Result<()> {
         let entry = entry?;
         if entry.path().extension().is_some_and(|ext| ext == "cs") {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.ends_with("_Tests.cs") || name == "Helpers.cs" {
+            if name.ends_with("Tests.cs") || name == "Helpers.cs" {
                 fs::remove_file(entry.path())?;
             }
         }

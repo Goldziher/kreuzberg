@@ -14,6 +14,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.3.8
         version: 2.3.8
+      vitest:
+        specifier: ^4.0.14
+        version: 4.0.15(@types/node@24.10.1)
 
   crates/kreuzberg-node:
     dependencies:

@@ -1,3 +1,4 @@
+// Auto-generated from fixtures/plugin_api/ - DO NOT EDIT
 /**
  * E2E tests for plugin/config/utility APIs.
  *
