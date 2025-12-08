@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "99078677bdd36b9e84828518792e13e8e8e5c114"
+  },
+  "path_in_vcs": "crates/rb-sys"
+}

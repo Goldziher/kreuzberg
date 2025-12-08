@@ -14,7 +14,7 @@ echo "=== Vendoring kreuzberg core crate ==="
 
 # Remove and recreate vendor directory
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
-rm -rf "$REPO_ROOT/packages/ruby/vendor/rb-sys"
+# Keep rb-sys - it's patched for Windows compatibility
 mkdir -p "$REPO_ROOT/packages/ruby/vendor"
 
 # Copy core crate

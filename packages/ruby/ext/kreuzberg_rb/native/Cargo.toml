@@ -1,6 +1,10 @@
 # This crate is excluded from the workspace to use a vendored kreuzberg crate for gem packaging
 [workspace]
 
+[patch.crates-io]
+# Patch rb-sys to fix Windows i32/i64 type mismatch in tracking_allocator.rs
+rb-sys = { path = "../../../vendor/rb-sys" }
+
 [package]
 name = "kreuzberg-rb"
 version = "4.0.0-rc.5"

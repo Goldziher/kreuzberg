@@ -9,4 +9,6 @@ lib/*.dll
 
 # Vendor directory for local development (symlink to ../../crates/kreuzberg)
 # In CI, this is replaced by the actual vendored crate files
+# Exception: vendor/rb-sys is patched and committed
+!vendor/rb-sys/
 vendor/

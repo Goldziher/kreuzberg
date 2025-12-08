@@ -94,6 +94,7 @@ packages/*/htmlcov/
 packages/*/test-results/
 packages/*/TestResults/
 packages/ruby/.bundle/
+!packages/ruby/vendor/rb-sys/
 packages/ruby/vendor/
 pnpm-debug.log*
 prompt_template.egg-info/
