@@ -218,7 +218,7 @@ jobs:
           ort-version: ${{ env.ORT_VERSION }}
 
       - name: Download Node bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: napi-${{ matrix.target }}
           path: crates/kreuzberg-node/
