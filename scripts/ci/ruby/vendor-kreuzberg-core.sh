@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # scripts/ci/ruby lives three levels below repo root
 REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
-echo "=== Vendoring kreuzberg core crate and rb-sys ==="
+echo "=== Vendoring kreuzberg core crate ==="
 
 # Remove and recreate vendor directory
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
@@ -19,33 +19,6 @@ mkdir -p "$REPO_ROOT/packages/ruby/vendor"
 
 # Copy core crate
 cp -R "$REPO_ROOT/crates/kreuzberg" "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
-
-# Copy rb-sys from cargo cache if available
-RB_SYS_VERSION="0.9.119"
-RB_SYS_CACHE="$HOME/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rb-sys-${RB_SYS_VERSION}"
-if [ -d "$RB_SYS_CACHE" ]; then
-	echo "Copying rb-sys ${RB_SYS_VERSION} from cargo cache"
-	cp -R "$RB_SYS_CACHE" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
-else
-	echo "rb-sys ${RB_SYS_VERSION} not found in cargo cache, fetching..."
-	# Create a temporary project to fetch rb-sys from the registry
-	# (cargo fetch doesn't work for path dependencies)
-	TEMP_DIR=$(mktemp -d)
-	trap 'rm -rf "$TEMP_DIR"' EXIT
-	cd "$TEMP_DIR"
-	cargo init --lib --name temp_rb_sys_fetch
-	echo 'rb-sys = "0.9.119"' >>Cargo.toml
-	cargo fetch
-	cd "$REPO_ROOT"
-	if [ -d "$RB_SYS_CACHE" ]; then
-		echo "Copying rb-sys ${RB_SYS_VERSION} from cargo cache after fetch"
-		cp -R "$RB_SYS_CACHE" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
-	else
-		echo "Error: rb-sys ${RB_SYS_VERSION} not found in cargo cache at $RB_SYS_CACHE even after fetch" >&2
-		printf '%s\n' "$HOME/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rb-sys"* 2>/dev/null || true
-		exit 1
-	fi
-fi
 
 # Clean up build artifacts
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg/.fastembed_cache"
@@ -86,7 +59,7 @@ rm -f "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml.bak"
 
 cat >"$REPO_ROOT/packages/ruby/vendor/Cargo.toml" <<'EOF'
 [workspace]
-members = ["kreuzberg", "rb-sys"]
+members = ["kreuzberg"]
 
 [workspace.package]
 version = "__CORE_VERSION__"
@@ -132,4 +105,4 @@ rm -f packages/ruby/vendor/Cargo.toml.bak
 echo "Vendoring complete (core version: $core_version)"
 echo "Native extension Cargo.toml uses:"
 echo "  - path '../../../vendor/kreuzberg' for kreuzberg crate"
-echo "  - path '../../../vendor/rb-sys' for rb-sys crate"
+echo "  - rb-sys from crates.io"

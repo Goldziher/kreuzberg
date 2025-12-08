@@ -29,7 +29,7 @@ kreuzberg = { path = "../../../vendor/kreuzberg", features = ["full", "embedding
 magnus = { git = "https://github.com/matsadler/magnus", rev = "f6db11769efb517427bf7f121f9c32e18b059b38", features = [
     "rb-sys",
 ] }
-rb-sys = { path = "../../../vendor/rb-sys", default-features = false, features = [
+rb-sys = { version = "0.9.119", default-features = false, features = [
     "stable-api-compiled-fallback",
 ] }
 serde_json = "1.0.145"
