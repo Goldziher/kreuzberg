@@ -316,6 +316,7 @@ pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionC
         extraction.batch_size = paths.len(),
     )
 ))]
+#[cfg(feature = "tokio-runtime")]
 pub async fn batch_extract_file(
     paths: Vec<impl AsRef<Path>>,
     config: &ExtractionConfig,
@@ -412,6 +413,7 @@ pub async fn batch_extract_file(
         extraction.batch_size = contents.len(),
     )
 ))]
+#[cfg(feature = "tokio-runtime")]
 pub async fn batch_extract_bytes(
     contents: Vec<(&[u8], &str)>,
     config: &ExtractionConfig,

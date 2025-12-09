@@ -254,6 +254,11 @@ def main():
             version,
         ),
         (
+            repo_root / "packages/java/pom.xml",
+            r'(<version>)([^<]+)(</version>)',
+            rf"\g<1>{version}\g<3>",
+        ),
+        (
             repo_root / "packages/go/README.md",
             r'\d+\.\d+\.\d+-rc\.\d+',
             version,

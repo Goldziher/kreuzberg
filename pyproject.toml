@@ -137,6 +137,9 @@ lint.per-file-ignores."examples/**/*.py" = [
   "PTH207",  # Replace glob with Path.glob
   "S112",    # try-except-continue (examples show error handling patterns)
 ]
+lint.per-file-ignores."packages/python/build.py" = [
+  "INP001", # build backend hook lives alongside project root without __init__.py
+]
 lint.per-file-ignores."packages/python/tests/e2e/*_test.py" = [
   "T201", # print statements are needed for test output
 ]

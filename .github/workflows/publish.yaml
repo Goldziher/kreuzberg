@@ -1104,6 +1104,8 @@ jobs:
         run: |
           {
             echo "CC=gcc"
+            echo "AR=ar"
+            echo "RANLIB=ranlib"
             echo "CXX=g++"
             echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
             echo "RUSTFLAGS=-C target-feature=+crt-static"
@@ -1151,19 +1153,25 @@ jobs:
           install: >-
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-zstd
+            mingw-w64-ucrt-x86_64-binutils
 
-      - name: Build FFI library
+      - name: Verify MSYS2 toolchain and add to PATH (Windows)
+        if: matrix.settings.os == 'windows-latest'
         shell: pwsh
-        run: |
-          if ("${{ runner.os }}" -eq "Windows") {
-            $env:RUSTC_WRAPPER = ""
-            $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
-            cargo build -p kreuzberg-ffi --release --target x86_64-pc-windows-gnu --no-default-features --features core
-            if (-not (Test-Path "target/release")) { New-Item -ItemType Directory -Path "target/release" }
-            Copy-Item "target/x86_64-pc-windows-gnu/release/libkreuzberg_ffi.*" "target/release/" -Force
-          } else {
-            cargo build -p kreuzberg-ffi --release
-          }
+        run: scripts/ci/go/setup-msys2-windows.ps1
+
+      - name: Build FFI library (Windows)
+        if: matrix.settings.os == 'windows-latest'
+        shell: pwsh
+        run: scripts/ci/go/build-ffi.ps1
+
+      - name: Build FFI library (Unix)
+        if: matrix.settings.os != 'windows-latest'
+        shell: bash
+        run: cargo build -p kreuzberg-ffi --release
 
       - name: Package FFI library
         shell: bash
@@ -1291,11 +1299,6 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "10.x"
-
       - name: Free up disk space
         run: |
           echo "=== Removing unnecessary packages ==="
@@ -1312,6 +1315,11 @@ jobs:
 
           echo "=== Available disk space after cleanup ==="
           df -h /
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.x"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps

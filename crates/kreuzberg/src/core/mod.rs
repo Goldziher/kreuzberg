@@ -28,6 +28,7 @@
 //! # }
 //! ```
 
+#[cfg(feature = "tokio-runtime")]
 pub(crate) mod batch_mode;
 pub mod config;
 pub mod extractor;
@@ -39,4 +40,6 @@ pub use config::{
     ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
     TokenReductionConfig,
 };
-pub use extractor::{batch_extract_bytes, batch_extract_file, extract_bytes, extract_file};
+#[cfg(feature = "tokio-runtime")]
+pub use extractor::{batch_extract_bytes, batch_extract_file};
+pub use extractor::{extract_bytes, extract_file};

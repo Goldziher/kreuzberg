@@ -4,7 +4,6 @@
 
 use crate::{KreuzbergError, Result};
 use std::path::Path;
-use tokio::fs;
 
 /// Read a file asynchronously.
 ///
@@ -19,8 +18,9 @@ use tokio::fs;
 /// # Errors
 ///
 /// Returns `KreuzbergError::Io` for I/O errors (these always bubble up).
+#[cfg(feature = "tokio-runtime")]
 pub async fn read_file_async(path: impl AsRef<Path>) -> Result<Vec<u8>> {
-    fs::read(path.as_ref()).await.map_err(KreuzbergError::Io)
+    tokio::fs::read(path.as_ref()).await.map_err(KreuzbergError::Io)
 }
 
 /// Read a file synchronously.
@@ -181,6 +181,7 @@ mod tests {
     use std::io::Write;
     use tempfile::tempdir;
 
+    #[cfg(feature = "tokio-runtime")]
     #[tokio::test]
     async fn test_read_file_async() {
         let dir = tempdir().unwrap();
@@ -311,6 +312,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "tokio-runtime")]
     #[tokio::test]
     async fn test_read_file_async_io_error() {
         let result = read_file_async("/nonexistent/file.txt").await;

@@ -406,6 +406,7 @@ impl DocumentExtractor for DocbookExtractor {
         })
     }
 
+    #[cfg(feature = "tokio-runtime")]
     #[cfg_attr(
         feature = "otel",
         tracing::instrument(

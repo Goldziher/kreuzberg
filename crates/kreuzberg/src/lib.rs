@@ -80,7 +80,9 @@ pub mod pdf;
 pub use error::{KreuzbergError, Result};
 pub use types::*;
 
-pub use core::extractor::{batch_extract_bytes, batch_extract_file, extract_bytes, extract_file};
+#[cfg(feature = "tokio-runtime")]
+pub use core::extractor::{batch_extract_bytes, batch_extract_file};
+pub use core::extractor::{extract_bytes, extract_file};
 
 pub use core::extractor::{batch_extract_bytes_sync, batch_extract_file_sync, extract_bytes_sync, extract_file_sync};
 

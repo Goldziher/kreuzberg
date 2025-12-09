@@ -120,3 +120,4 @@ visualizations/
 wheels/
 yarn-debug.log*
 yarn-error.log*
+packages/python/kreuzberg/kreuzberg-cli

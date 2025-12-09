@@ -17,8 +17,9 @@ readme = "README.md"
 crate-type = ["rlib"]
 
 [features]
-default = []
+default = ["tokio-runtime"]
 
+tokio-runtime = []
 profiling = ["dep:pprof"]
 
 # Format extractors

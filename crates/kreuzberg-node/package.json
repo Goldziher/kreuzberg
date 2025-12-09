@@ -1,6 +1,6 @@
 {
 	"name": "@kreuzberg/node",
-	"version": "4.0.0-rc.5",
+	"version": "4.0.0-rc.6",
 	"description": "Kreuzberg document intelligence - Node.js native bindings",
 	"author": {
 		"name": "Na'aman Hirschfeld",
