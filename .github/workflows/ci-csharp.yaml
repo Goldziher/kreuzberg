@@ -69,7 +69,7 @@ jobs:
           cache-key-prefix: csharp-${{ matrix.os }}
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -143,7 +143,7 @@ jobs:
         uses: ./.github/actions/install-system-deps
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 

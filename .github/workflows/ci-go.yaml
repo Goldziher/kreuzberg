@@ -295,12 +295,10 @@ jobs:
 
       - name: Set CGO environment variables (Windows only)
         if: matrix.os == 'windows-latest'
-        shell: bash
+        shell: pwsh
         run: |
-          workspace=$(pwd)
-          {
-            echo "CGO_LDFLAGS=-L${workspace}/target/x86_64-pc-windows-gnu/release -L${workspace}/target/release"
-          } >> "$GITHUB_ENV"
+          $workspace = (Get-Location).Path
+          Add-Content -Path $env:GITHUB_ENV -Value "CGO_LDFLAGS=-L$workspace\target\x86_64-pc-windows-gnu\release -L$workspace\target\release"
 
       - name: Run Go tests
         run: scripts/ci/go/run-tests.sh

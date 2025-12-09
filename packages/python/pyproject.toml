@@ -1,6 +1,7 @@
 [build-system]
-build-backend = "maturin"
+build-backend = "build"
 requires = [ "maturin>=1,<2" ]
+backend-path = [ "." ]
 
 [project]
 name = "kreuzberg"
@@ -86,15 +87,14 @@ scripts.kreuzberg = "kreuzberg.__main__:main"
 module-name = "kreuzberg._internal_bindings"
 # Point to the PyO3 bindings crate
 manifest-path = "../../crates/kreuzberg-py/Cargo.toml"
-# Build the CLI binary from the workspace and include it
-bins = [
-  { name = "kreuzberg", package = "kreuzberg-cli", rename-to = "kreuzberg-cli", features = [ "all" ] },
-]
-# Include pdfium native libraries for all platforms
+# Include pdfium native libraries and CLI binary for all platforms
 include = [
   { path = "kreuzberg/pdfium.dll", format = "wheel" },
   { path = "kreuzberg/libpdfium.dylib", format = "wheel" },
   { path = "kreuzberg/libpdfium.so", format = "wheel" },
+  # Include the CLI binary (must be built with --features all)
+  { path = "kreuzberg/kreuzberg-cli", format = "wheel" },
+  { path = "kreuzberg/kreuzberg-cli.exe", format = "wheel" },
 ]
 
 [tool.pytest.ini_options]
