@@ -213,6 +213,62 @@ jobs:
           output=$(bash scripts/publish/check_nuget.sh "${{ needs.prepare.outputs.version }}")
           echo "$output" >> "$GITHUB_OUTPUT"
 
+  check-cli:
+    name: Check if CLI assets already published
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_cli == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Check release for existing CLI assets
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          exists=false
+          if gh release view "$TAG" --json assets >/tmp/release.json 2>/dev/null; then
+            if jq -e '.assets[].name | select(startswith("kreuzberg-cli-"))' /tmp/release.json >/dev/null; then
+              exists=true
+            fi
+          fi
+          echo "exists=$exists" >> "$GITHUB_OUTPUT"
+          if [ "$exists" = "true" ]; then
+            echo "CLI artifacts already exist on release $TAG; skipping CLI build/publish." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  check-go:
+    name: Check if Go FFI assets already published
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_go == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - name: Check release for existing Go artifacts
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          exists=false
+          if gh release view "$TAG" --json assets >/tmp/release.json 2>/dev/null; then
+            if jq -e '.assets[].name | select(startswith("go-ffi-"))' /tmp/release.json >/dev/null; then
+              exists=true
+            fi
+          fi
+          echo "exists=$exists" >> "$GITHUB_OUTPUT"
+          if [ "$exists" = "true" ]; then
+            echo "Go FFI artifacts already exist on release $TAG; skipping Go publish." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   check-docker:
     name: Check if Docker image tag exists
     needs: prepare
@@ -749,7 +805,8 @@ jobs:
 
   cli-binaries:
     name: Build CLI binaries (${{ matrix.target }})
-    needs: prepare
+    needs: [prepare, check-cli]
+    if: ${{ needs.prepare.outputs.release_cli == 'true' && (needs.check-cli.outputs.exists != 'true' || needs.prepare.outputs.dry_run == 'true') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     permissions:
@@ -1092,8 +1149,8 @@ jobs:
 
   go-ffi-libraries:
     name: Build Go FFI libraries (${{ matrix.settings.label }})
-    needs: [prepare]
-    if: ${{ needs.prepare.outputs.release_go == 'true' }}
+    needs: [prepare, check-go]
+    if: ${{ needs.prepare.outputs.release_go == 'true' && (needs.check-go.outputs.exists != 'true' || needs.prepare.outputs.dry_run == 'true') }}
     runs-on: ${{ matrix.settings.os }}
     timeout-minutes: 60
     permissions:
@@ -1421,7 +1478,8 @@ jobs:
 
   cargo-packages:
     name: Package Rust crates
-    needs: prepare
+    needs: [prepare, check-cratesio]
+    if: ${{ needs.prepare.outputs.release_rust == 'true' && needs.check-cratesio.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1618,12 +1676,13 @@ jobs:
 
   upload-cli-release:
     name: Upload CLI binaries to GitHub Release
-    needs: [prepare, cli-binaries]
+    needs: [prepare, check-cli, cli-binaries]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
       needs.prepare.outputs.is_tag == 'true' &&
       needs.prepare.outputs.release_cli == 'true' &&
+      needs.check-cli.outputs.exists != 'true' &&
       needs.cli-binaries.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -1687,12 +1746,13 @@ jobs:
 
   upload-go-release:
     name: Upload Go FFI libraries to GitHub Release
-    needs: [prepare, go-ffi-libraries]
+    needs: [prepare, check-go, go-ffi-libraries]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
       needs.prepare.outputs.is_tag == 'true' &&
       needs.prepare.outputs.release_go == 'true' &&
+      needs.check-go.outputs.exists != 'true' &&
       needs.go-ffi-libraries.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -1731,7 +1791,8 @@ jobs:
       needs.prepare.outputs.dry_run != 'true' &&
       needs.prepare.outputs.is_tag == 'true' &&
       needs.prepare.outputs.release_rust == 'true' &&
-      needs.check-cratesio.result == 'success'
+      needs.check-cratesio.result == 'success' &&
+      needs.check-cratesio.outputs.exists != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
