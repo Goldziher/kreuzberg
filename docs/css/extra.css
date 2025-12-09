@@ -99,29 +99,45 @@
 
 /* Code block title styling - Dark Mode */
 [data-md-color-scheme="slate"] .highlight .filename {
-	background: transparent;
-	color: rgba(50, 48, 64, 0.60);
+    color: rgba(50, 48, 64, 0.60);
 	font-family: Inter, sans-serif;
 	font-size: 14px;
 	font-style: normal;
 	font-weight: 400;
 	line-height: 22px;
-	padding: 0;
-	margin: 0;
+    padding: 0 0 0 24px;
+    margin: 0;
 	align-self: flex-start;
+    background: transparent url('/assets/icons/file.svg') no-repeat left center;
+    background-size: 16px 16px;
 }
 
 [data-md-color-scheme="slate"] .highlight pre {
 	background-color: transparent;
 	color: #323040;
 	margin: 0;
+	font-family: Inter, sans-serif;
 	font-size: 14px;
-	line-height: 1.6;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22.4px;
+	position: relative;
+	width: 100%;
 }
 
 [data-md-color-scheme="slate"] .highlight code {
 	background-color: transparent;
 	color: #323040;
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22.4px;
+}
+
+[data-md-color-scheme="slate"] .highlight .md-code__content {
+	padding-left: 0;
+	margin-left: 0;
 }
 
 /* Code Block Styling - Light Mode Code Card Style */
@@ -139,16 +155,17 @@
 
 /* Code block title styling - Light Mode */
 [data-md-color-scheme="default"] .highlight .filename {
-	background: transparent;
 	color: rgba(255, 255, 255, 0.60);
 	font-family: Inter, sans-serif;
 	font-size: 14px;
 	font-style: normal;
 	font-weight: 400;
 	line-height: 22px;
-	padding: 0;
+	padding: 0 0 0 24px;
 	margin: 0;
 	align-self: flex-start;
+	background: transparent url('/assets/icons/file.svg') no-repeat left center;
+	background-size: 16px 16px;
 }
 
 [data-md-color-scheme="default"] .highlight pre {
@@ -160,6 +177,8 @@
 	font-style: normal;
 	font-weight: 400;
 	line-height: 22.4px;
+	position: relative;
+	width: 100%;
 }
 
 [data-md-color-scheme="default"] .highlight code {
@@ -172,22 +191,21 @@
 	line-height: 22.4px;
 }
 
-/* Code block copy button styling - Light Mode */
-[data-md-color-scheme="default"] .md-clipboard {
-	background: transparent;
-	color: var(--md-accent-fg-color);
-	position: absolute;
-	right: 16px;
-	top: 16px;
+[data-md-color-scheme="default"] .highlight .md-code__content {
+	padding-left: 0;
+	margin-left: 0;
 }
 
-/* Code block copy button styling - Dark Mode */
-[data-md-color-scheme="slate"] .md-clipboard {
-	background: transparent;
-	color: var(--md-accent-fg-color);
+/* Code block copy button styling */
+.highlight .md-code__nav {
 	position: absolute;
-	right: 16px;
-	top: 16px;
+	right: 0;
+	top: 0;
+	background: transparent;
+}
+
+.highlight .md-code__button {
+	color: var(--md-accent-fg-color);
 }
 
 /* Inline code styling */
@@ -212,6 +230,28 @@
 	color: #da2ae0;
 }
 
+/* Comment styling - match title color (dark mode) */
+[data-md-color-scheme="slate"] .highlight .c,
+[data-md-color-scheme="slate"] .highlight .c1,
+[data-md-color-scheme="slate"] .highlight .cm,
+[data-md-color-scheme="slate"] .highlight .ch {
+	color: rgba(50, 48, 64, 0.60);
+}
+
+/* Ruby/TOML keyword and name styling (dark mode) */
+[data-md-color-scheme="slate"] .highlight .n,
+[data-md-color-scheme="slate"] .highlight .nb,
+[data-md-color-scheme="slate"] .highlight .ni,
+[data-md-color-scheme="slate"] .highlight .nn,
+[data-md-color-scheme="slate"] .highlight .no {
+	color: #5a5869;
+}
+
+/* Operator styling (dark mode) */
+[data-md-color-scheme="slate"] .highlight .o {
+	color: #5a5869;
+}
+
 [data-md-color-scheme="slate"] .highlight .s,
 [data-md-color-scheme="slate"] .highlight .s1,
 [data-md-color-scheme="slate"] .highlight .s2 {
@@ -228,6 +268,28 @@
 [data-md-color-scheme="default"] .highlight .kn,
 [data-md-color-scheme="default"] .highlight .kd {
 	color: #da2ae0;
+}
+
+/* Comment styling - match title color (light mode) */
+[data-md-color-scheme="default"] .highlight .c,
+[data-md-color-scheme="default"] .highlight .c1,
+[data-md-color-scheme="default"] .highlight .cm,
+[data-md-color-scheme="default"] .highlight .ch {
+	color: rgba(255, 255, 255, 0.60);
+}
+
+/* Ruby/TOML keyword and name styling (light mode) */
+[data-md-color-scheme="default"] .highlight .n,
+[data-md-color-scheme="default"] .highlight .nb,
+[data-md-color-scheme="default"] .highlight .ni,
+[data-md-color-scheme="default"] .highlight .nn,
+[data-md-color-scheme="default"] .highlight .no {
+	color: rgba(255, 255, 255, 0.85);
+}
+
+/* Operator styling (light mode) */
+[data-md-color-scheme="default"] .highlight .o {
+	color: rgba(255, 255, 255, 0.85);
 }
 
 [data-md-color-scheme="default"] .highlight .s,
@@ -248,26 +310,66 @@
 	position: relative;
 }
 
-/* Add terminal icon styling - dark mode */
-[data-md-color-scheme="slate"] .highlight .language-bash::before,
-[data-md-color-scheme="slate"] .highlight .language-sh::before,
-[data-md-color-scheme="slate"] .highlight .language-console::before {
-	content: "Terminal";
-	display: block;
-	color: rgba(255, 255, 255, 0.6);
-	font-size: 14px;
-	margin-bottom: 0.75rem;
+/* Terminal icon for bash/shell blocks with .filename (title attribute) - Dark Mode */
+[data-md-color-scheme="slate"] .language-bash .filename,
+[data-md-color-scheme="slate"] .language-sh .filename,
+[data-md-color-scheme="slate"] .language-console .filename {
+	background-image: url('/assets/icons/terminal.svg') !important;
+	background-repeat: no-repeat !important;
+	background-position: left center !important;
+	background-size: 16px 16px !important;
 }
 
-/* Add terminal icon styling - light mode */
-[data-md-color-scheme="default"] .highlight .language-bash::before,
-[data-md-color-scheme="default"] .highlight .language-sh::before,
-[data-md-color-scheme="default"] .highlight .language-console::before {
+/* Terminal icon for bash/shell blocks with .filename (title attribute) - Light Mode */
+[data-md-color-scheme="default"] .language-bash .filename,
+[data-md-color-scheme="default"] .language-sh .filename,
+[data-md-color-scheme="default"] .language-console .filename {
+	background-image: url('/assets/icons/terminal.svg') !important;
+	background-repeat: no-repeat !important;
+	background-position: left center !important;
+	background-size: 16px 16px !important;
+}
+
+/* Auto-add "Terminal" label for bash blocks without title - Dark Mode */
+[data-md-color-scheme="slate"] .highlight .language-bash:not(:has(.filename))::before,
+[data-md-color-scheme="slate"] .highlight .language-sh:not(:has(.filename))::before,
+[data-md-color-scheme="slate"] .highlight .language-console:not(:has(.filename))::before {
 	content: "Terminal";
-	display: block;
-	color: rgba(50, 48, 64, 0.6);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: rgba(255, 255, 255, 0.6);
+	font-family: Inter, sans-serif;
 	font-size: 14px;
+	font-weight: 400;
+	line-height: 22px;
 	margin-bottom: 0.75rem;
+	background-image: url('/assets/icons/terminal.svg');
+	background-repeat: no-repeat;
+	background-position: left center;
+	background-size: 16px 16px;
+	padding-left: 24px;
+}
+
+/* Auto-add "Terminal" label for bash blocks without title - Light Mode */
+[data-md-color-scheme="default"] .highlight .language-bash:not(:has(.filename))::before,
+[data-md-color-scheme="default"] .highlight .language-sh:not(:has(.filename))::before,
+[data-md-color-scheme="default"] .highlight .language-console:not(:has(.filename))::before {
+	content: "Terminal";
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: rgba(50, 48, 64, 0.6);
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 22px;
+	margin-bottom: 0.75rem;
+	background-image: url('/assets/icons/terminal.svg');
+	background-repeat: no-repeat;
+	background-position: left center;
+	background-size: 16px 16px;
+	padding-left: 24px;
 }
 
 /* Button styling */
