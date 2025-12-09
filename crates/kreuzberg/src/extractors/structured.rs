@@ -87,6 +87,7 @@ impl DocumentExtractor for StructuredExtractor {
         })
     }
 
+    #[cfg(feature = "tokio-runtime")]
     #[cfg_attr(feature = "otel", tracing::instrument(
         skip(self, path, config),
         fields(

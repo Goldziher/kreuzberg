@@ -139,6 +139,7 @@ jobs:
           name: napi-${{ matrix.target }}
           path: |
             crates/kreuzberg-node/*.node
+            crates/kreuzberg-node/index.js
             crates/kreuzberg-node/*.tgz
             crates/kreuzberg-node/artifacts/**
           retention-days: 7

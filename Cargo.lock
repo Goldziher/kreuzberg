@@ -2847,7 +2847,7 @@ dependencies = [
  "indexmap",
  "infer",
  "kamadak-exif",
- "kreuzberg-tesseract 1.0.0-rc.1",
+ "kreuzberg-tesseract",
  "lazy_static",
  "libc",
  "lopdf",
@@ -2978,20 +2978,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "kreuzberg-tesseract"
-version = "1.0.0-rc.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b30f3556047862787280ab85a021a387ff6cb6b8bf4ba3b33e4a2ceb70da948e"
-dependencies = [
- "cc",
- "cmake",
- "libc",
- "reqwest",
- "thiserror 2.0.17",
- "zip 6.0.0",
 ]
 
 [[package]]
@@ -3495,9 +3481,9 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.6.1"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3af30fe8e799dda3a555c496c59e960e4cff1e931b63acbaf3a3b25d9fad22b6"
+checksum = "f27a163b545fd2184d2efdccf3d3df56acdb63465f2fcfebcaee0463c1e91783"
 dependencies = [
  "bitflags 2.10.0",
  "ctor",

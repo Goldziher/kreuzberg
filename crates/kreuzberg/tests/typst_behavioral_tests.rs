@@ -13,33 +13,28 @@
 
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_bytes;
-use std::fs;
+use std::{fs, path::PathBuf};
+
+fn typst_doc_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test_documents/typst")
+}
 
 /// Load a test document from the test_documents/typst directory
 fn load_test_document(filename: &str) -> Vec<u8> {
-    let path = format!(
-        "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/{}",
-        filename
-    );
-    fs::read(&path).expect(&format!("Failed to read test document: {}", filename))
+    let path = typst_doc_root().join(filename);
+    fs::read(&path).unwrap_or_else(|_| panic!("Failed to read test document: {}", filename))
 }
 
 /// Load Pandoc baseline output for comparison
 fn load_pandoc_baseline(filename_base: &str) -> String {
-    let path = format!(
-        "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/{}_pandoc_baseline.txt",
-        filename_base
-    );
-    fs::read_to_string(&path).expect(&format!("Failed to read baseline: {}", filename_base))
+    let path = typst_doc_root().join(format!("{filename_base}_pandoc_baseline.txt"));
+    fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read baseline: {}", filename_base))
 }
 
 /// Load Pandoc metadata JSON for comparison
 fn load_pandoc_metadata(filename_base: &str) -> String {
-    let path = format!(
-        "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/{}_pandoc_meta.json",
-        filename_base
-    );
-    fs::read_to_string(&path).expect(&format!("Failed to read metadata: {}", filename_base))
+    let path = typst_doc_root().join(format!("{filename_base}_pandoc_meta.json"));
+    fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read metadata: {}", filename_base))
 }
 
 /// Count specific heading levels (= for level 1, == for level 2, etc.)

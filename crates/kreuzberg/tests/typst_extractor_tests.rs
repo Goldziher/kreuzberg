@@ -14,7 +14,13 @@
 
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_bytes;
-use std::fs;
+use std::{fs, path::PathBuf};
+
+fn typst_fixture(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../test_documents/typst")
+        .join(name)
+}
 
 /// Test simple.typ - Basic Typst document with fundamental formatting
 ///
@@ -33,7 +39,7 @@ use std::fs;
 async fn test_simple_typst_document_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/simple.typ";
+    let doc_path = typst_fixture("simple.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -122,7 +128,7 @@ async fn test_simple_typst_document_extraction() {
 async fn test_minimal_typst_document_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/minimal.typ";
+    let doc_path = typst_fixture("minimal.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -166,7 +172,7 @@ async fn test_minimal_typst_document_extraction() {
 async fn test_heading_hierarchy_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/headings.typ";
+    let doc_path = typst_fixture("headings.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -246,7 +252,7 @@ async fn test_heading_hierarchy_extraction() {
 async fn test_metadata_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/metadata.typ";
+    let doc_path = typst_fixture("metadata.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -307,7 +313,7 @@ async fn test_metadata_extraction() {
 async fn test_advanced_typst_document_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/advanced.typ";
+    let doc_path = typst_fixture("advanced.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -388,7 +394,7 @@ async fn test_advanced_typst_document_extraction() {
 async fn test_typst_reader_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/typst-reader.typ";
+    let doc_path = typst_fixture("typst-reader.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -431,7 +437,7 @@ async fn test_typst_reader_extraction() {
 async fn test_undergradmath_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/undergradmath.typ";
+    let doc_path = typst_fixture("undergradmath.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -475,7 +481,7 @@ async fn test_undergradmath_extraction() {
 async fn test_typst_mime_type_variants() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/simple.typ";
+    let doc_path = typst_fixture("simple.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -512,7 +518,7 @@ async fn test_typst_mime_type_variants() {
 async fn test_formatting_preservation() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/simple.typ";
+    let doc_path = typst_fixture("simple.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {
@@ -554,7 +560,7 @@ async fn test_formatting_preservation() {
 async fn test_large_document_extraction() {
     let config = ExtractionConfig::default();
 
-    let doc_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/typst/undergradmath.typ";
+    let doc_path = typst_fixture("undergradmath.typ");
     let content = match fs::read(doc_path) {
         Ok(c) => c,
         Err(e) => {

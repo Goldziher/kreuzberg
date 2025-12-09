@@ -196,7 +196,6 @@ tasks:
     desc: Update Python dependencies
     cmds:
       - echo "Updating Python dependencies..."
-      - uv run uv-bump
       - uv sync --all-packages --all-extras --upgrade --no-install-workspace --no-install-project
   ruby:install:
     desc: Install Ruby dependencies
@@ -576,7 +575,7 @@ tasks:
     cmds:
       - uv run mike deploy --push 4.0 latest
   update:
-    desc: Update all dependencies to latest versions (cargo upgrade, uv-bump, pnpm up --latest, etc.)
+    desc: Update all dependencies to latest versions (cargo upgrade, pnpm up --latest, etc.)
     cmds:
       - echo "Updating Rust dependencies..."
       - task: rust:update

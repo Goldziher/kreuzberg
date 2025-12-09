@@ -12,6 +12,14 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+try:
+    import maturin
+except ImportError as exc:  # pragma: no cover - build-time dependency check
+    raise ImportError(
+        "The maturin build backend is required to package kreuzberg. "
+        "Install it via `pip install maturin` and re-run the build."
+    ) from exc
+
 
 def build_cli_binary() -> None:
     """Build the kreuzberg-cli binary with all features and copy it to the package."""
@@ -50,8 +58,6 @@ def build_wheel(
     metadata_directory: str | None = None,
 ) -> str:
     """Build a wheel, ensuring CLI is built first."""
-    import maturin
-
     build_cli_binary()
 
     return maturin.build_wheel(wheel_directory, config_settings, metadata_directory)  # type: ignore
@@ -62,8 +68,6 @@ def build_sdist(
     config_settings: dict[str, Any] | None = None,
 ) -> str:
     """Build an sdist."""
-    import maturin
-
     build_cli_binary()
 
     return maturin.build_sdist(sdist_directory, config_settings)  # type: ignore
@@ -75,8 +79,6 @@ def build_editable(
     metadata_directory: str | None = None,
 ) -> str:
     """Build an editable wheel."""
-    import maturin
-
     build_cli_binary()
 
     return maturin.build_editable(wheel_directory, config_settings, metadata_directory)  # type: ignore

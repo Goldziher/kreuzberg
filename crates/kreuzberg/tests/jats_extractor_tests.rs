@@ -12,6 +12,13 @@ mod jats_extractor_tests {
     use kreuzberg::core::config::ExtractionConfig;
     use kreuzberg::extractors::JatsExtractor;
     use kreuzberg::plugins::{DocumentExtractor, Plugin};
+    use std::path::PathBuf;
+
+    fn jats_fixture(name: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../test_documents/jats")
+            .join(name)
+    }
 
     /// Test basic JATS article extraction with all key metadata fields
     #[tokio::test]
@@ -616,10 +623,10 @@ mod jats_extractor_tests {
         let extractor = JatsExtractor::new();
         let config = ExtractionConfig::default();
 
-        let test_file = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jats/sample_article.jats";
-        if std::path::Path::new(test_file).exists() {
+        let test_file = jats_fixture("sample_article.jats");
+        if test_file.exists() {
             let result = extractor
-                .extract_file(std::path::Path::new(test_file), "application/x-jats+xml", &config)
+                .extract_file(&test_file, "application/x-jats+xml", &config)
                 .await;
 
             assert!(result.is_ok());

@@ -232,6 +232,7 @@ impl DocumentExtractor for HtmlExtractor {
         })
     }
 
+    #[cfg(feature = "tokio-runtime")]
     #[cfg_attr(feature = "otel", tracing::instrument(
         skip(self, path, config),
         fields(

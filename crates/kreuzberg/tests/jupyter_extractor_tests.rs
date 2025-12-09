@@ -12,9 +12,15 @@
 
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_bytes;
-use std::fs;
+use std::{fs, path::PathBuf};
 
 mod helpers;
+
+fn jupyter_fixture(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../test_documents/jupyter")
+        .join(name)
+}
 
 /// Test simple.ipynb - Validates markdown cells, code cells, and HTML output.
 ///
@@ -39,7 +45,7 @@ mod helpers;
 async fn test_jupyter_simple_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/simple.ipynb";
+    let notebook_path = jupyter_fixture("simple.ipynb");
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
         Err(e) => {
@@ -134,7 +140,7 @@ async fn test_jupyter_simple_notebook_extraction() {
 async fn test_jupyter_mime_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/mime.ipynb";
+    let notebook_path = jupyter_fixture("mime.ipynb");
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
         Err(e) => {
@@ -239,7 +245,7 @@ async fn test_jupyter_mime_notebook_extraction() {
 async fn test_jupyter_mime_out_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/mime.out.ipynb";
+    let notebook_path = jupyter_fixture("mime.out.ipynb");
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
         Err(e) => {
@@ -329,7 +335,7 @@ async fn test_jupyter_mime_out_notebook_extraction() {
 async fn test_jupyter_rank_notebook_extraction() {
     let config = ExtractionConfig::default();
 
-    let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/rank.ipynb";
+    let notebook_path = jupyter_fixture("rank.ipynb");
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
         Err(e) => {
@@ -413,18 +419,9 @@ async fn test_jupyter_metadata_aggregation() {
     let config = ExtractionConfig::default();
 
     let notebooks = vec![
-        (
-            "simple.ipynb",
-            "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/simple.ipynb",
-        ),
-        (
-            "mime.ipynb",
-            "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/mime.ipynb",
-        ),
-        (
-            "rank.ipynb",
-            "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/rank.ipynb",
-        ),
+        ("simple.ipynb", jupyter_fixture("simple.ipynb")),
+        ("mime.ipynb", jupyter_fixture("mime.ipynb")),
+        ("rank.ipynb", jupyter_fixture("rank.ipynb")),
     ];
 
     for (name, path) in notebooks {
@@ -478,7 +475,7 @@ async fn test_jupyter_metadata_aggregation() {
 async fn test_jupyter_cell_content_aggregation() {
     let config = ExtractionConfig::default();
 
-    let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/mime.ipynb";
+    let notebook_path = jupyter_fixture("mime.ipynb");
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
         Err(e) => {
@@ -550,7 +547,7 @@ async fn test_jupyter_cell_content_aggregation() {
 async fn test_jupyter_mime_output_handling() {
     let config = ExtractionConfig::default();
 
-    let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/rank.ipynb";
+    let notebook_path = jupyter_fixture("rank.ipynb");
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
         Err(e) => {
@@ -607,7 +604,7 @@ async fn test_jupyter_mime_output_handling() {
 async fn test_jupyter_notebook_structure_preservation() {
     let config = ExtractionConfig::default();
 
-    let notebook_path = "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/simple.ipynb";
+    let notebook_path = jupyter_fixture("simple.ipynb");
     let notebook_content = match fs::read(notebook_path) {
         Ok(content) => content,
         Err(e) => {
@@ -656,10 +653,7 @@ async fn test_jupyter_pandoc_baseline_alignment() {
     let notebooks = vec!["simple.ipynb", "mime.ipynb", "mime.out.ipynb", "rank.ipynb"];
 
     for notebook_name in notebooks {
-        let notebook_path = format!(
-            "/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/jupyter/{}",
-            notebook_name
-        );
+        let notebook_path = jupyter_fixture(notebook_name);
         let notebook_content = match fs::read(&notebook_path) {
             Ok(content) => content,
             Err(e) => {

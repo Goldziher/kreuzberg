@@ -9,9 +9,22 @@
 
 #![cfg(feature = "office")]
 
+use std::path::PathBuf;
+
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::extractors::markdown::MarkdownExtractor;
 use kreuzberg::plugins::DocumentExtractor;
+
+fn markdown_fixture_path(relative: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../test_documents/markdown")
+        .join(relative)
+}
+
+fn read_markdown_fixture(relative: &str) -> Vec<u8> {
+    let path = markdown_fixture_path(relative);
+    std::fs::read(&path).unwrap_or_else(|err| panic!("Failed to read markdown fixture {}: {}", path.display(), err))
+}
 
 /// Test comprehensive YAML frontmatter with all Pandoc-recognized fields
 #[tokio::test]
@@ -222,9 +235,7 @@ async fn test_raw_content_extraction() {
 /// Test comprehensive.md from test_documents
 #[tokio::test]
 async fn test_comprehensive_md_extraction() {
-    let markdown =
-        std::fs::read("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/markdown/comprehensive.md")
-            .expect("Should read comprehensive.md test file");
+    let markdown = read_markdown_fixture("comprehensive.md");
 
     let extractor = MarkdownExtractor::new();
     let result = extractor
@@ -245,8 +256,7 @@ async fn test_comprehensive_md_extraction() {
 /// Test tables.markdown from test_documents
 #[tokio::test]
 async fn test_tables_markdown_extraction() {
-    let markdown = std::fs::read("/Users/naamanhirschfeld/workspace/kreuzberg/test_documents/markdown/tables.markdown")
-        .expect("Should read tables.markdown test file");
+    let markdown = read_markdown_fixture("tables.markdown");
 
     let extractor = MarkdownExtractor::new();
     let result = extractor

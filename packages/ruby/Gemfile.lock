@@ -140,7 +140,7 @@ PLATFORMS
   x64-mingw-ucrt
 
 DEPENDENCIES
-  bundler (~> 2.0)
+  bundler (~> 4.0)
   kreuzberg!
   pry (~> 0.14)
   pry-byebug (~> 3.10)
