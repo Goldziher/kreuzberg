@@ -1518,8 +1518,21 @@ jobs:
         if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: docker/setup-buildx-action@v3
 
+      - name: Check if version tag already published
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        id: docker_tag_check
+        run: |
+          set -euo pipefail
+          version_tag="${{ matrix.image }}:${{ needs.prepare.outputs.version }}${{ matrix.tag_suffix }}"
+          if docker manifest inspect "$version_tag" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Docker tag $version_tag already exists; skipping publish for ${{ matrix.variant }}." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build AMD64 test image
-        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && (needs.prepare.outputs.dry_run == 'true' || steps.docker_tag_check.outputs.exists != 'true') }}
         run: |
           docker build \
             -f ${{ matrix.dockerfile }} \
@@ -1528,7 +1541,7 @@ jobs:
             .
 
       - name: Run Docker feature tests
-        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && (needs.prepare.outputs.dry_run == 'true' || steps.docker_tag_check.outputs.exists != 'true') }}
         run: |
           ./scripts/test_docker.sh \
             --skip-build \
@@ -1537,14 +1550,14 @@ jobs:
             --verbose
 
       - name: Log in to Docker Hub
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && steps.docker_tag_check.outputs.exists != 'true' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && steps.docker_tag_check.outputs.exists != 'true' }}
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
@@ -1554,7 +1567,7 @@ jobs:
             type=raw,value=${{ matrix.extra_tag }}
 
       - name: Build and push multi-arch image
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && steps.docker_tag_check.outputs.exists != 'true' }}
         uses: docker/build-push-action@v6
         with:
           context: .
