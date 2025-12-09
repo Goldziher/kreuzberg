@@ -4,7 +4,7 @@
 //! allowing us to reuse the existing table reconstruction logic.
 
 use super::error::{PdfError, Result};
-use crate::ocr::table::HocrWord;
+use html_to_markdown_rs::hocr::HocrWord;
 use pdfium_render::prelude::*;
 
 /// Spacing threshold for word boundary detection (in PDF units).

@@ -148,7 +148,7 @@ tasks:
     desc: Install Python dependencies
     dir: packages/python
     cmds:
-      - uv sync --all-extras --no-install-workspace
+      - uv sync --all-extras --no-install-workspace --no-install-project
   python:setup:
     desc: Alias for python:install (idempotent)
     dir: packages/python

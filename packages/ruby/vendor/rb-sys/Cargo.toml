@@ -13,7 +13,7 @@
 edition = "2018"
 rust-version = "1.65"
 name = "rb-sys"
-version = "0.9.117"
+version = "4.0.0-rc.6"
 build = "build/main.rs"
 links = "rb"
 autolib = false
