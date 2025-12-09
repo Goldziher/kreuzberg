@@ -21,7 +21,7 @@
 				"gte": 2
 			},
 			"sheet_names": {
-				"contains": "Stanley Cups"
+				"contains": ["Stanley Cups"]
 			}
 		}
 	}

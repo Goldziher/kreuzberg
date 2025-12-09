@@ -17,7 +17,7 @@ Based on the original [tesseract-rs](https://github.com/cafercangundogdu/tessera
 - **Multiple linking options:**
   - **Static linking** (default): Built-in compilation with no runtime dependencies
   - **Dynamic linking**: Link to system-installed libraries for faster builds
-- Automatic download of Tesseract training data (English and Turkish)
+- Uses existing Tesseract training data (expects English data for tests)
 - High-level Rust API for common OCR tasks
 - Caching of compiled libraries for faster subsequent builds
 - Support for multiple operating systems (Linux, macOS, Windows)
@@ -58,7 +58,6 @@ For development and testing, you'll also need these dependencies:
 ```toml
 [dev-dependencies]
 image = "0.25.5"
-imageproc = "0.25.0"
 ```
 
 ## System Requirements
@@ -70,7 +69,7 @@ When building with static linking, the crate will compile Tesseract and Leptonic
 - Rust 1.85.0 or later
 - A C++ compiler (e.g., gcc, clang, MSVC on Windows)
 - CMake 3.x or later
-- Internet connection (for downloading Tesseract training data and source code)
+- Internet connection (for downloading Tesseract source code)
 
 ### For Dynamic Linking
 
@@ -78,7 +77,7 @@ When using dynamic linking with system-installed libraries, you need:
 
 - Rust 1.85.0 or later
 - Tesseract 5.x and Leptonica libraries installed on your system (see Installation section)
-- Internet connection (for downloading Tesseract training data)
+- Internet connection (for downloading Tesseract source code)
 
 No C++ compiler or CMake required for dynamic linking builds.
 
@@ -111,10 +110,9 @@ The crate uses the following directory structure based on your operating system:
 The cache includes:
 
 - Compiled Tesseract and Leptonica libraries
-- Downloaded training data (eng.traineddata, tur.traineddata) in the `tessdata` subdirectory
 - Third-party source code
 
-The training data files are automatically downloaded and placed in the appropriate `tessdata` subdirectory during the build process. You don't need to manually set up the tessdata directory unless you want to use a custom location.
+Training data is not downloaded during the build. Provide `eng.traineddata` (and any other languages you need) via `TESSDATA_PREFIX` or your system Tesseract installation.
 
 ## Testing
 
@@ -124,8 +122,7 @@ The project includes several integration tests that verify OCR functionality. To
 
    ```toml
    [dev-dependencies]
-   image = "0.25.5"
-   imageproc = "0.25.0"
+   image = "0.25.9"
    ```
 
 2. Run the tests:
@@ -133,7 +130,7 @@ The project includes several integration tests that verify OCR functionality. To
    cargo test
    ```
 
-Note: Setting `TESSDATA_PREFIX` is optional. If not set, the tests will use the default tessdata directory in the cache location. If you want to use a custom tessdata directory, you can set it:
+Note: Make sure `eng.traineddata` is available in your tessdata directory before running tests. If `TESSDATA_PREFIX` is not set, the tests look in the default cache location. You can point the tests at a custom tessdata directory by setting:
 
 ```bash
 # Linux/macOS
@@ -145,17 +142,13 @@ $env:TESSDATA_PREFIX="C:\path\to\custom\tessdata"
 
 Available test cases:
 
-- `test_multiple_languages_with_lstm`: Tests LSTM engine with multiple languages
-- `test_ocr_on_real_image`: Tests OCR on a sample English text image
-- `test_multiple_languages`: Tests recognition of mixed English and Turkish text
-- `test_digit_recognition`: Tests digit-only recognition with whitelist
-- `test_error_handling`: Tests error cases and invalid inputs
+- OCR on English sample images
+- Error handling and invalid input coverage
 
-Test images are located in the `tests/test_images/` directory:
+Test images are sourced from the shared `test_documents/` directory in the repository:
 
-- `sample_text.png`: English text sample
-- `multilang_sample.png`: Mixed English and Turkish text
-- Additional test images can be added to this directory
+- `images/test_hello_world.png`: Simple English text
+- `tables/simple_table.png`: Basic table with English headers
 
 ## Usage
 

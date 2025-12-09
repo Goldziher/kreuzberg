@@ -61,7 +61,7 @@ ensure_tessdata() {
 			if [ "$dir_real" = "$dest_real" ]; then
 				break
 			fi
-			for lang in eng osd deu tur; do
+			for lang in eng osd deu; do
 				if [ -f "$dir/$lang.traineddata" ]; then
 					cp -f "$dir/$lang.traineddata" "$dest/"
 				fi

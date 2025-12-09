@@ -281,6 +281,16 @@ jobs:
         shell: pwsh
         run: scripts/ci/ruby/configure-bindgen-windows.ps1
 
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage Pdfium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
+
       - name: Install gem
         shell: bash
         run: scripts/ci/ruby/install-gem.sh
@@ -301,16 +311,6 @@ jobs:
       - name: Run Ruby tests
         shell: bash
         run: scripts/ci/ruby/run-tests.sh
-
-      - name: Download PDFium
-        uses: ./.github/actions/download-pdfium
-        with:
-          pdfium-version: ${{ env.PDFIUM_VERSION }}
-
-      - name: Stage Pdfium runtime
-        uses: ./.github/actions/stage-pdfium-runtime
-        with:
-          destination: target/release
 
       - name: Install Task
         uses: ./.github/actions/install-task

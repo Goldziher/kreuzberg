@@ -16,6 +16,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Kreuzberg;
 using Xunit;
+using Xunit.Sdk;
+using SkipException = Xunit.SkipException;
 
 namespace Kreuzberg.E2E;
 
@@ -31,9 +33,21 @@ public static class TestHelpers
 
     private static string ResolveWorkspaceRoot()
     {
+        var dir = AppContext.BaseDirectory;
+        for (var i = 0; i < 8 && dir is not null; i++)
+        {
+            var candidate = dir!;
+            if (File.Exists(Path.Combine(candidate, "Cargo.toml")) &&
+                Directory.Exists(Path.Combine(candidate, "test_documents")))
+            {
+                return candidate;
+            }
+            dir = Directory.GetParent(candidate)?.FullName;
+        }
+
+        // Fallback to legacy two-levels-up resolution
         var cwd = Directory.GetCurrentDirectory();
-        var root = Path.GetFullPath(Path.Combine(cwd, "..", ".."));
-        return root;
+        return Path.GetFullPath(Path.Combine(cwd, "..", ".."));
     }
 
     private static void EnsureNativeLibraryLoaded()
@@ -53,7 +67,7 @@ public static class TestHelpers
             }
         }
 
-        Assert.Skip($"Native library not found. Expected at: {string.Join(", ", candidates)}");
+        throw new SkipException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
     }
 
     private static string LibraryFileName()
@@ -76,7 +90,7 @@ public static class TestHelpers
         {
             if (skipIfMissing)
             {
-                Assert.Skip($"Missing document {path}");
+                throw new SkipException($"Missing document {path}");
             }
             throw new FileNotFoundException($"Document unavailable: {path}");
         }
@@ -346,6 +360,19 @@ public static class TestHelpers
             {
                 return vStr.Contains(cStr, StringComparison.OrdinalIgnoreCase);
             }
+        }
+
+        if (value is JsonArray va && contains is JsonValue cs && cs.TryGetValue<string>(out var needle))
+        {
+            foreach (var vItem in va)
+            {
+                if (vItem is JsonValue vv && vv.TryGetValue<string>(out var vStr) &&
+                    vStr.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         if (value is JsonArray va && contains is JsonArray ca)

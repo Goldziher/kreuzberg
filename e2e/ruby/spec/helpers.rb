@@ -185,6 +185,8 @@ module E2ERuby
       contains = expectation[:contains]
       if value.is_a?(String) && contains.is_a?(String)
         expect(value.include?(contains)).to be(true)
+      elsif value.is_a?(Array) && contains.is_a?(String)
+        expect(value.include?(contains)).to be(true)
       elsif value.is_a?(Array) && contains.is_a?(Array)
         expect(contains.all? { |item| value.include?(item) }).to be(true)
       else

@@ -33,4 +33,4 @@ path = "src/main.rs"
 
 [dev-dependencies]
 ureq = { version = "3.1", features = ["json"] }
-tempfile = "3.23.0"
+tempfile = { workspace = true }

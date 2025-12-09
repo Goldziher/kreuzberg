@@ -595,7 +595,7 @@ jobs:
         run: cargo install cross --git https://github.com/cross-rs/cross --locked
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           check-latest: true
@@ -2027,7 +2027,7 @@ jobs:
           path: typescript-defs
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/

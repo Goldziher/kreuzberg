@@ -28,7 +28,7 @@ html-to-markdown-rs = { version = "2.12.0", default-features = false, optional =
 cbindgen = "0.29"
 
 [dev-dependencies]
-tempfile = "3.23"
+tempfile = { workspace = true }
 
 [features]
 default = ["html", "embeddings"]

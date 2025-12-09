@@ -2651,7 +2651,7 @@ wheels = [
 
 [[package]]
 name = "paddlex"
-version = "3.3.10"
+version = "3.3.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aistudio-sdk" },
@@ -2674,9 +2674,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "ujson" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/82/ce/98346ec88922b79fa944276ba09f84a50557c43905738aec385e8961b044/paddlex-3.3.10.tar.gz", hash = "sha256:059fbe2cc03a28739f76cd8326bb7591be693da32c60ac34971a3278459c8207", size = 3874993, upload-time = "2025-11-24T13:13:02.081Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/5c/0c0995a74d9fcbfd95f8543272d78516408834e05e7e36795d0ed56add71/paddlex-3.3.11.tar.gz", hash = "sha256:c12e7d58fccd071c3ca40d96c9f9940856eb1a340f299cdb79a6c089a3b7cea6", size = 3879088, upload-time = "2025-12-09T12:25:49.109Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/b1/efebff7a52824276d6e8b9a4ecea12e88a60686682dcb687ca9cb6438a49/paddlex-3.3.10-py3-none-any.whl", hash = "sha256:7b409944433a1aac8824e5bf0af10cfd4764df31402223e76ad2395d26a20295", size = 1849129, upload-time = "2025-11-24T13:12:58.317Z" },
+    { url = "https://files.pythonhosted.org/packages/96/6c/6565553892756ad81cfe11b7561291788f6453acfeae940bf4d8d3865b2d/paddlex-3.3.11-py3-none-any.whl", hash = "sha256:d8394711f74e063572856531e95b62f0ae22914412bea3bc895a5dde85a0e759", size = 1851049, upload-time = "2025-12-09T12:25:45.322Z" },
 ]
 
 [package.optional-dependencies]

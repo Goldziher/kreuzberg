@@ -17,17 +17,16 @@ links = "kreuzberg_tesseract"
 exclude = ["tessdata/*", "third_party/*"]
 
 [dependencies]
-libc = "0.2.178"
+libc = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-image = "0.25.9"
-imageproc = "0.25.0"
+image = { workspace = true }
 
 [build-dependencies]
 cc = { version = "1.2.49", optional = true }
 cmake = { version = "0.1.54", optional = true }
-reqwest = { version = "0.12.25", default-features = false, features = [
+reqwest = { workspace = true, default-features = false, features = [
     "blocking",
     "rustls-tls",
 ], optional = true }

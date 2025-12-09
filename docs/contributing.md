@@ -9,7 +9,7 @@ Thanks for helping improve Kreuzberg! This guide summarizes the workflow, toolin
 - Node.js 20+ with `pnpm`.
 - Ruby 3.3+ via `rbenv` (preferred) or `rvm`.
 - Go 1.25+ (install via `brew install go`, `asdf install golang`, or the official installer).
-- Java 25+ (required for FFM API bindings).
+- Java 24+ (required for FFM API bindings).
 - .NET 9+ (required for C# bindings).
 - Homebrew (macOS) or system equivalents for Tesseract/Pdfium dependencies.
 

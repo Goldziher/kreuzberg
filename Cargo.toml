@@ -39,6 +39,7 @@ serde_json = { version = "1.0.145" }
 # Error handling
 thiserror = "2.0.17"
 anyhow = "1.0"
+libc = "0.2.178"
 
 # Async utilities
 async-trait = "0.1.89"
@@ -51,6 +52,8 @@ ahash = "0.8.12"
 base64 = "0.22.1"
 hex = "0.4.3"
 num_cpus = "1.17.0"
+reqwest = { version = "0.12.25", default-features = false }
+image = { version = "0.25.9", default-features = false }
 
 # CLI
 clap = { version = "4.5", features = ["derive", "color", "suggestions"] }

@@ -46,9 +46,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>23</maven.compiler.source>
-        <maven.compiler.target>23</maven.compiler.target>
-        <maven.compiler.release>23</maven.compiler.release>
+        <maven.compiler.source>24</maven.compiler.source>
+        <maven.compiler.target>24</maven.compiler.target>
+        <maven.compiler.release>24</maven.compiler.release>
         <junit.version>5.11.4</junit.version>
         <maven.version>3.6.3</maven.version>
         <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -88,7 +88,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <release>23</release>
+                    <release>24</release>
                 </configuration>
                 <executions>
                     <!-- Compile benchmark helper script -->
@@ -249,13 +249,13 @@
             </plugin>
 
             <!-- PMD Plugin for code quality checks -->
-            <!-- NOTE: PMD doesn't support targetJdk 25 yet, using 23 as fallback -->
+            <!-- NOTE: targetJdk pinned to 24 to align with project toolchain -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>${maven-pmd-plugin.version}</version>
                 <configuration>
-                    <targetJdk>23</targetJdk>
+                    <targetJdk>24</targetJdk>
                     <typeResolution>false</typeResolution>
                     <rulesets>
                         <ruleset>/rulesets/java/quickstart.xml</ruleset>
@@ -342,7 +342,7 @@
             </plugin>
 
             <!-- Spotless Plugin for code formatting (google-java-format) -->
-            <!-- NOTE: Spotless has compatibility issues with Java 25; as workaround, use checkstyle:check + pmd:check -->
+            <!-- NOTE: Spotless currently skipped; rely on checkstyle:check + pmd:check -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>

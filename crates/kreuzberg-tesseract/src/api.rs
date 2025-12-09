@@ -61,7 +61,7 @@ impl TesseractAPI {
     /// # Arguments
     ///
     /// * `datapath` - Path to the directory containing Tesseract data files.
-    /// * `language` - Language code (e.g., "eng" for English, "tur" for Turkish).
+    /// * `language` - Language code (e.g., "eng" for English).
     ///
     /// # Returns
     ///

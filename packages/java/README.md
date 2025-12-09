@@ -11,11 +11,11 @@ High-performance document intelligence library for Java with native Rust binding
 - **Image Processing**: Extract and process embedded images
 - **Metadata**: Comprehensive metadata extraction
 - **Fast**: Native Rust implementation for maximum performance
-- **Modern Java**: Uses Java 25+ Foreign Function & Memory API (no JNI)
+- **Modern Java**: Uses Java 24+ Foreign Function & Memory API (no JNI)
 
 ## Requirements
 
-- Java 25 or higher
+- Java 24 or higher
 - Native libraries are bundled with the package
 
 ## Installation

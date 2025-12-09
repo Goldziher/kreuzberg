@@ -146,6 +146,9 @@ def assert_metadata_expectation(result: Any, path: str, expectation: dict[str, A
         if isinstance(value, str) and isinstance(expected_values, str):
             if expected_values not in value:
                 pytest.fail(f"Expected metadata '{path}' string to contain {expected_values!r}")
+        elif isinstance(value, (list, tuple, set)) and isinstance(expected_values, str):
+            if expected_values not in value:
+                pytest.fail(f"Expected metadata '{path}' to contain {expected_values!r}")
         elif isinstance(value, (list, tuple, set)):
             missing = [item for item in expected_values if item not in value]
             if missing:

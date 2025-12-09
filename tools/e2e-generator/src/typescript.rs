@@ -321,6 +321,8 @@ export const assertions = {
             const contains = expectation.contains;
             if (typeof value === "string" && typeof contains === "string") {
                 expect(value.includes(contains)).toBe(true);
+            } else if (Array.isArray(value) && typeof contains === "string") {
+                expect(value.includes(contains)).toBe(true);
             } else if (Array.isArray(value) && Array.isArray(contains)) {
                 expect(contains.every((item) => value.includes(item))).toBe(true);
             } else {

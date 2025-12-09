@@ -347,8 +347,6 @@ mod build_tesseract {
         println!("cargo:warning=Leptonica lib dir: {:?}", leptonica_lib_dir);
         println!("cargo:warning=Tesseract install dir: {:?}", tesseract_install_dir);
         println!("cargo:warning=Tessdata dir: {:?}", tessdata_prefix);
-
-        download_tessdata(&project_dir);
     }
 
     fn get_os_specific_config() -> (String, Vec<(String, String)>) {
@@ -552,34 +550,6 @@ mod build_tesseract {
 
     fn normalize_cmake_path(path: &Path) -> String {
         path.to_string_lossy().replace('\\', "/")
-    }
-
-    fn download_tessdata(project_dir: &Path) {
-        let tessdata_dir = project_dir.join("tessdata");
-        fs::create_dir_all(&tessdata_dir).expect("Failed to create Tessdata directory");
-
-        let languages = ["eng", "tur"];
-        let base_url = "https://github.com/tesseract-ocr/tessdata_best/raw/main/";
-        let client = reqwest::blocking::Client::new();
-
-        for lang in &languages {
-            let filename = format!("{}.traineddata", lang);
-            let file_path = tessdata_dir.join(&filename);
-
-            if !file_path.exists() {
-                let url = format!("{}{}", base_url, filename);
-                let response = client.get(&url).send().expect("Failed to download Tessdata");
-                let mut dest = fs::File::create(&file_path).expect("Failed to create file");
-                std::io::copy(
-                    &mut response.bytes().expect("Failed to get response bytes").as_ref(),
-                    &mut dest,
-                )
-                .expect("Failed to write Tessdata");
-                println!("cargo:warning={} downloaded", filename);
-            } else {
-                println!("cargo:warning={} already exists, skipping download", filename);
-            }
-        }
     }
 
     fn clean_cache(cache_dir: &Path) {

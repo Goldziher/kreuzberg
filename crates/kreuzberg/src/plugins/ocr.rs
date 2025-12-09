@@ -81,7 +81,8 @@ pub enum OcrBackendType {
 ///     }
 /// }
 /// ```
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait OcrBackend: Plugin {
     /// Process an image and extract text via OCR.
     ///

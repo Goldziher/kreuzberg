@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Prepare Tesseract language data for C# E2E tests.
-# Exports TESSDATA_PREFIX and ensures eng/osd (and optionally deu/tur) exist.
+# Exports TESSDATA_PREFIX and ensures eng/osd (and optionally deu) exist.
 #
 # Usage (source to keep env): source scripts/ci/csharp/setup-tessdata.sh
 
@@ -46,7 +46,7 @@ ensure_tessdata() {
 			if [ "$dir_real" = "$dest_real" ]; then
 				break
 			fi
-			for lang in eng osd deu tur; do
+			for lang in eng osd deu; do
 				if [ -f "$dir/$lang.traineddata" ]; then
 					# Skip copying if it's literally the same file (hardlink/symlink) to avoid cp errors
 					if [ -f "$dest/$lang.traineddata" ] && [ "$dir_real/$lang.traineddata" -ef "$dest/$lang.traineddata" ]; then

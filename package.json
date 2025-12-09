@@ -4,6 +4,7 @@
 	"packageManager": "pnpm@10.25.0+sha512.5e82639027af37cf832061bcc6d639c219634488e0f2baebe785028a793de7b525ffcd3f7ff574f5e9860654e098fe852ba8ac5dd5cefe1767d23a020a92f501",
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",
+		"@vitest/coverage-v8": "^4.0.15",
 		"vitest": "^4.0.15"
 	},
 	"pnpm": {

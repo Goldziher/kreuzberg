@@ -26,7 +26,7 @@ Document Extraction Engines
 
 This FFI layer is consumed by:
 
-- **Java** (packages/java): Using Java 25 Foreign Function & Memory API (Panama FFI)
+- **Java** (packages/java): Using Java 24 Foreign Function & Memory API (Panama FFI)
 - **Go** (packages/go): Using cgo wrapper bindings
 - **C#** (packages/csharp): Using P/Invoke interop
 - **Zig** and other C-compatible languages
@@ -581,7 +581,7 @@ export DYLD_LIBRARY_PATH=/path/to/kreuzberg/target/release:$DYLD_LIBRARY_PATH
 
 ### Java Integration (Panama FFI)
 
-The FFI is wrapped in Java 25's Foreign Function & Memory API:
+The FFI is wrapped in Java 24's Foreign Function & Memory API:
 
 ```java
 // Java code that calls FFI
