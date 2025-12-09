@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Changed download path from `target` to `.` to prevent double-nesting (target/target/...)
   - Linker can now find libkreuzberg_ffi.dll at correct location
   - Added debug logging to show directory structure after artifact download
+- Aligned all workflows to Java 24
+  - Updated from Java 23 to 24 across all CI and publish workflows
+  - Resolves "release version 25 not supported" compilation errors
+  - Affects ci-validate, ci-java, publish, and benchmarks workflows
 
 **Ruby Bindings**:
 - Fixed rb-sys links conflict in gem build
