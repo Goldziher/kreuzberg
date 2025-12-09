@@ -353,7 +353,7 @@ jobs:
             os: ubuntu-latest
             artifact: python-wheels-linux-x86_64
             rust_target: x86_64-unknown-linux-gnu
-            manylinux: off
+            manylinux: manylinux2014
             python: "3.10"
             needs_qemu: false
             extra_args: ""
@@ -470,7 +470,7 @@ jobs:
           command: build
           args: --release -i python${{ matrix.python }} --out ../../target/wheels ${{ matrix.extra_args }}
           target: ${{ matrix.rust_target }}
-          manylinux: off
+          manylinux: ${{ matrix.manylinux }}
           working-directory: packages/python
           sccache: ${{ steps.tesseract-cache.outputs.cache-enabled }}
           docker-options: ${{ steps.tesseract-cache.outputs.docker-options }}
