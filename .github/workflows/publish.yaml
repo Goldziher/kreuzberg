@@ -390,7 +390,7 @@ jobs:
               yum install -y openssl openssl-devel pkgconfig
             elif command -v apt-get >/dev/null 2>&1; then
               # Debian-based manylinux (pypa for ARM)
-              apt-get update && apt-get install -y pkg-config libssl-dev
+              sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
             fi
 
       - name: Build wheels (native)
@@ -610,6 +610,7 @@ jobs:
           target: ${{ matrix.settings.target }}
 
       - name: Install Node dependencies
+        shell: bash
         run: |
           unset RUSTC_WRAPPER
           corepack enable
@@ -1009,7 +1010,7 @@ jobs:
         shell: pwsh
         run: |
           $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
-          ridk exec bash -lc "cd $workspace/packages/ruby && bash scripts/ci/ruby/install-ruby-deps.sh ."
+          ridk exec bash -lc "cd $workspace && bash scripts/ci/ruby/install-ruby-deps.sh packages/ruby"
 
       - name: Vendor kreuzberg core crate
         shell: bash
@@ -1156,6 +1157,7 @@ jobs:
         run: |
           if ("${{ runner.os }}" -eq "Windows") {
             $env:RUSTC_WRAPPER = ""
+            $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
             cargo build -p kreuzberg-ffi --release --target x86_64-pc-windows-gnu --no-default-features --features core
             if (-not (Test-Path "target/release")) { New-Item -ItemType Directory -Path "target/release" }
             Copy-Item "target/x86_64-pc-windows-gnu/release/libkreuzberg_ffi.*" "target/release/" -Force
@@ -1289,10 +1291,15 @@ jobs:
         if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.x"
+
       - name: Free up disk space
         run: |
           echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
 
           echo "=== Cleaning apt cache ==="
@@ -1305,11 +1312,6 @@ jobs:
 
           echo "=== Available disk space after cleanup ==="
           df -h /
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.x"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
