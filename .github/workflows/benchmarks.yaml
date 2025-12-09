@@ -802,7 +802,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "23"
+          java-version: "24"
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
