@@ -2320,8 +2320,8 @@ jobs:
       - name: Setup Java
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
         env:
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
         uses: actions/setup-java@v4
         with:
@@ -2329,8 +2329,8 @@ jobs:
           java-version: "24"
           cache: maven
           server-id: central
-          server-username: NEXUS_USERNAME
-          server-password: NEXUS_PASSWORD
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
