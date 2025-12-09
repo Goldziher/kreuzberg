@@ -1,13 +1,14 @@
 /* Kreuzberg Custom Theme */
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap');
 
 /* Light Mode */
 :root > * {
-	/* Primary brand color (turquoise) */
-	--md-primary-fg-color: #58fbda;
-	--md-primary-fg-color--light: #affff0;
-	--md-primary-fg-color--dark: #2abfa1;
+	/* Primary brand color (dark gray) */
+	--md-primary-fg-color: #323040;
+	--md-primary-fg-color--light: #4a4858;
+	--md-primary-fg-color--dark: #1a1926;
 
-	/* Accent (purple) */
+	/* Accent */
 	--md-accent-fg-color: #da2ae0;
 
 	/* TEXT */
@@ -16,7 +17,7 @@
 	--md-default-fg-color--dark: #323040;
 
 	/* LINKS */
-	--md-typeset-a-color: #58fbda;
+	--md-typeset-a-color: #DA2AE0;
 	--md-typeset-a-hover-color: #da2ae0;
 
 	/* BACKGROUNDS */
@@ -31,10 +32,10 @@
 
 /* Dark Mode */
 :root[data-md-color-scheme="slate"] > * {
-	/* Primary brand color (turquoise) */
-	--md-primary-fg-color: #58fbda;
-	--md-primary-fg-color--light: #affff0;
-	--md-primary-fg-color--dark: #2abfa1;
+	/* Primary brand color (dark gray) */
+	--md-primary-fg-color: #323040;
+	--md-primary-fg-color--light: #4a4858;
+	--md-primary-fg-color--dark: #1a1926;
 
 	/* Accent (purple) */
 	--md-accent-fg-color: #da2ae0;
@@ -49,36 +50,65 @@
 	--md-typeset-a-hover-color: #58fbda;
 
 	/* BACKGROUNDS */
-	--md-default-bg-color: #1d1d21;
+	--md-default-bg-color: #23232C;
 	--md-default-bg-color--light: #2a2836;
-	--md-default-bg-color--dark: #1d1d21;
+	--md-default-bg-color--dark: #23232C;
 
 	/* SURFACES */
-	--md-primary-bg-color: #1d1d21;
+	--md-primary-bg-color: #23232C;
 	--md-shadow-z1: none;
 }
 
-/* Inline code styling */
-[data-md-color-scheme="slate"] code {
-	background-color: #3c3a4a;
-	color: #58fbda;
-	padding: 0.2em 0.4em;
-	border-radius: 4px;
+/* Dark mode - force background color on all elements */
+[data-md-color-scheme="slate"] {
+	background-color: #23232C;
 }
 
-[data-md-color-scheme="default"] code {
-	background-color: #f2f2f4;
-	color: #da2ae0;
-	padding: 0.2em 0.4em;
-	border-radius: 4px;
+[data-md-color-scheme="slate"] .md-main {
+	background-color: #23232C;
+}
+
+[data-md-color-scheme="slate"] .md-content {
+	background-color: #23232C;
+}
+
+[data-md-color-scheme="slate"] .md-sidebar {
+	background-color: #23232C;
+}
+
+[data-md-color-scheme="slate"] .md-container {
+	background-color: #23232C;
+}
+
+[data-md-color-scheme="slate"] body {
+	background-color: #23232C;
 }
 
 /* Code Block Styling - Dark Mode Code Card Style */
 [data-md-color-scheme="slate"] .highlight {
-	background-color: #f1fffc;
+	position: relative;
+	background: #f1fffc;
 	border-radius: 12px;
-	padding: 1rem;
+	padding: 16px 16px 0 16px;
 	margin-bottom: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+/* Code block title styling - Dark Mode */
+[data-md-color-scheme="slate"] .highlight .filename {
+	background: transparent;
+	color: rgba(50, 48, 64, 0.60);
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22px;
+	padding: 0;
+	margin: 0;
+	align-self: flex-start;
 }
 
 [data-md-color-scheme="slate"] .highlight pre {
@@ -96,23 +126,83 @@
 
 /* Code Block Styling - Light Mode Code Card Style */
 [data-md-color-scheme="default"] .highlight {
-	background-color: #323040;
+	position: relative;
+	background: #323040;
 	border-radius: 12px;
-	padding: 1rem;
-	margin-bottom: 2rem;
+	padding: 16px 16px 0 16px;
+	margin-bottom: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+/* Code block title styling - Light Mode */
+[data-md-color-scheme="default"] .highlight .filename {
+	background: transparent;
+	color: rgba(255, 255, 255, 0.60);
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22px;
+	padding: 0;
+	margin: 0;
+	align-self: flex-start;
 }
 
 [data-md-color-scheme="default"] .highlight pre {
 	background-color: transparent;
 	color: #ffffff;
 	margin: 0;
+	font-family: Inter, sans-serif;
 	font-size: 14px;
-	line-height: 1.6;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22.4px;
 }
 
 [data-md-color-scheme="default"] .highlight code {
 	background-color: transparent;
 	color: #ffffff;
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 22.4px;
+}
+
+/* Code block copy button styling - Light Mode */
+[data-md-color-scheme="default"] .md-clipboard {
+	background: transparent;
+	color: var(--md-accent-fg-color);
+	position: absolute;
+	right: 16px;
+	top: 16px;
+}
+
+/* Code block copy button styling - Dark Mode */
+[data-md-color-scheme="slate"] .md-clipboard {
+	background: transparent;
+	color: var(--md-accent-fg-color);
+	position: absolute;
+	right: 16px;
+	top: 16px;
+}
+
+/* Inline code styling */
+[data-md-color-scheme="slate"] code {
+	background-color: #3c3a4a;
+	color: #58fbda;
+	padding: 0.2em 0.4em;
+	border-radius: 4px;
+}
+
+[data-md-color-scheme="default"] code {
+	background-color: #f2f2f4;
+	color: #da2ae0;
+	padding: 0.2em 0.4em;
+	border-radius: 4px;
 }
 
 /* Syntax highlighting adjustments for dark mode */
@@ -235,10 +325,183 @@
 
 /* Search styling */
 .md-search__input {
-	border-radius: 8px;
+	display: flex;
+	padding: 6px 16px 6px 40px;
+	align-items: center;
+	border-radius: 4px;
+	background: #3D3A4D;
+	color: #99A1AF;
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
 }
 
 .md-search__input::placeholder {
-	color: var(--md-default-fg-color);
+	color: #99A1AF;
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+	opacity: 1;
+}
+
+/* Search icon - keep consistent color */
+.md-search__icon {
+	color: #99A1AF !important;
+}
+
+.md-search__icon[for="__search"] {
+	color: #99A1AF !important;
+}
+
+/* Header styling */
+.md-typeset h1 {
+	color: #323040;
+	font-family: Inter, sans-serif;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: 41.6px;
+}
+
+.md-typeset h2 {
+	color: #323040;
+	font-family: Inter, sans-serif;
+	font-size: 26px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: 33.8px;
+}
+
+.md-typeset h3 {
+	color: #323040;
+	font-family: Inter, sans-serif;
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: 27.2px;
+}
+
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+	color: #323040;
+}
+
+/* Paragraph styling */
+.md-typeset p,
+.md-typeset li {
+	color: #5B5966;
+	font-family: Inter, sans-serif;
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 26px;
+}
+
+/* Dark mode header styling */
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3,
+[data-md-color-scheme="slate"] .md-typeset h4,
+[data-md-color-scheme="slate"] .md-typeset h5,
+[data-md-color-scheme="slate"] .md-typeset h6 {
+	color: #ffffff;
+}
+
+/* Dark mode paragraph styling */
+[data-md-color-scheme="slate"] .md-typeset p,
+[data-md-color-scheme="slate"] .md-typeset li {
+	color: rgba(255, 255, 255, 0.8);
+}
+
+/* Link styling */
+.md-typeset a {
+	color: #DA2AE0;
+	font-family: Inter, sans-serif;
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 27.2px;
+	text-decoration-line: underline;
+	text-decoration-style: solid;
+	text-decoration-skip-ink: auto;
+	text-decoration-thickness: auto;
+	text-underline-offset: auto;
+	text-underline-position: from-font;
+}
+
+/* Site title styling - Exo 2 font */
+
+.md-header__title,
+.md-header__title *,
+.md-header__topic,
+.md-header__topic *,
+.md-header .md-ellipsis {
+	font-family: "Exo 2", sans-serif !important;
+	font-weight: 600 !important;
+}
+
+/* Reduce logo-title distance */
+.md-header__button.md-logo {
+	margin-right: -0.6rem;
+	padding: 0;
+}
+
+.md-header__title {
+	margin-left: 0;
+	padding-left: 0;
+}
+
+/* Navigation bar background */
+.md-tabs {
+	background-color: #3D3A4D;
+	width: 100%;
+}
+
+/* Navigation tab link styling */
+.md-tabs__link {
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 23.8px;
+}
+
+/* Navigation tab selection styling */
+.md-tabs__link--active,
+.md-tabs__link:hover,
+.md-tabs__link:focus,
+.md-tabs__item--active .md-tabs__link {
+	color: #58fbda !important;
+}
+
+/* Add underline indicator to active tab */
+.md-tabs__item {
+	position: relative;
+}
+
+.md-tabs__item--active::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background-color: #58fbda;
+}
+
+/* Hover underline effect */
+.md-tabs__item:hover::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background-color: #58fbda;
 	opacity: 0.5;
 }
