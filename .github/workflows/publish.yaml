@@ -213,6 +213,41 @@ jobs:
           output=$(bash scripts/publish/check_nuget.sh "${{ needs.prepare.outputs.version }}")
           echo "$output" >> "$GITHUB_OUTPUT"
 
+  check-docker:
+    name: Check if Docker image tag exists
+    needs: prepare
+    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_docker == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      core_exists: ${{ steps.core.outputs.exists }}
+      full_exists: ${{ steps.full.outputs.exists }}
+    steps:
+      - name: Check core image tag
+        id: core
+        run: |
+          set -euo pipefail
+          tag="${{ 'goldziher/kreuzberg' }}:${{ needs.prepare.outputs.version }}-core"
+          if docker manifest inspect "$tag" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Docker tag $tag already exists; core publish will be skipped." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check full image tag
+        id: full
+        run: |
+          set -euo pipefail
+          tag="${{ 'goldziher/kreuzberg' }}:${{ needs.prepare.outputs.version }}"
+          if docker manifest inspect "$tag" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Docker tag $tag already exists; full publish will be skipped." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
   check-cratesio:
     name: Check if Rust crate exists on crates.io
     needs: prepare
@@ -1459,6 +1494,7 @@ jobs:
     name: Publish Docker image (${{ matrix.variant }})
     needs:
       - prepare
+      - check-docker
     runs-on: ubuntu-latest
     timeout-minutes: 180
     permissions:
@@ -1478,6 +1514,7 @@ jobs:
             image: goldziher/kreuzberg
             tag_suffix: ""
             extra_tag: "latest"
+    if: ${{ needs.prepare.outputs.release_docker == 'true' }}
     steps:
       - name: Skip Docker release
         if: ${{ needs.prepare.outputs.release_docker != 'true' }}
@@ -1518,21 +1555,12 @@ jobs:
         if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: docker/setup-buildx-action@v3
 
-      - name: Check if version tag already published
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
-        id: docker_tag_check
-        run: |
-          set -euo pipefail
-          version_tag="${{ matrix.image }}:${{ needs.prepare.outputs.version }}${{ matrix.tag_suffix }}"
-          if docker manifest inspect "$version_tag" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Docker tag $version_tag already exists; skipping publish for ${{ matrix.variant }}." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Skip because tag already exists
+        if: ${{ (matrix.variant == 'core' && needs.check-docker.outputs.core_exists == 'true') || (matrix.variant == 'full' && needs.check-docker.outputs.full_exists == 'true') }}
+        run: echo "Docker tag already exists for variant ${{ matrix.variant }}; skipping publish." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build AMD64 test image
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && (needs.prepare.outputs.dry_run == 'true' || steps.docker_tag_check.outputs.exists != 'true') }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         run: |
           docker build \
             -f ${{ matrix.dockerfile }} \
@@ -1541,7 +1569,7 @@ jobs:
             .
 
       - name: Run Docker feature tests
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && (needs.prepare.outputs.dry_run == 'true' || steps.docker_tag_check.outputs.exists != 'true') }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         run: |
           ./scripts/test_docker.sh \
             --skip-build \
@@ -1550,14 +1578,14 @@ jobs:
             --verbose
 
       - name: Log in to Docker Hub
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && steps.docker_tag_check.outputs.exists != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && steps.docker_tag_check.outputs.exists != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
@@ -1567,7 +1595,7 @@ jobs:
             type=raw,value=${{ matrix.extra_tag }}
 
       - name: Build and push multi-arch image
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && steps.docker_tag_check.outputs.exists != 'true' }}
+        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         uses: docker/build-push-action@v6
         with:
           context: .
