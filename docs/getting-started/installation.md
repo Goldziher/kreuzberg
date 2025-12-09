@@ -11,7 +11,7 @@ Kreuzberg ships as a Rust crate plus native bindings for Python, TypeScript/Node
 
 ## Python
 
-```bash
+```bash title="Terminal"
 pip install kreuzberg
 ```
 
