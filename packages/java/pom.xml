@@ -33,17 +33,6 @@
         <url>https://github.com/kreuzberg-dev/kreuzberg</url>
     </scm>
 
-    <distributionManagement>
-        <repository>
-            <id>central</id>
-            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-        <snapshotRepository>
-            <id>central</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>24</maven.compiler.source>
@@ -64,6 +53,7 @@
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+        <central-publishing-plugin.version>0.9.0</central-publishing-plugin.version>
     </properties>
 
     <dependencies>
@@ -339,6 +329,19 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Sonatype Central Publishing plugin -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>${central-publishing-plugin.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                    <waitUntil>published</waitUntil>
+                </configuration>
             </plugin>
 
             <!-- Spotless Plugin for code formatting (google-java-format) -->
