@@ -29,12 +29,24 @@ if ($missing.Count -gt 0) {
   Write-Host "Attempting to install missing packages via pacman..."
 
   # Run pacman in MSYS2 shell to ensure packages are installed
-  $pacmanCmd = "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-nasm"
+  # Use --disable-download-timeout to avoid transient mirror issues on CI
+  $pacmanCmd = "pacman -S --needed --noconfirm --disable-download-timeout mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-nasm"
   Write-Host "Running: $pacmanCmd"
 
-  & $msys2BashExe -lc $pacmanCmd
-  if ($LASTEXITCODE -ne 0) {
-    throw "pacman failed with exit code $LASTEXITCODE"
+  # Retry pacman up to 3 times to handle flaky mirrors
+  $maxAttempts = 3
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    & $msys2BashExe -lc $pacmanCmd
+    if ($LASTEXITCODE -eq 0) {
+      break
+    }
+    if ($attempt -lt $maxAttempts) {
+      Write-Host "pacman failed with exit code $LASTEXITCODE on attempt $attempt/$maxAttempts. Retrying after mirror refresh..."
+      & $msys2BashExe -lc "pacman -Sy"
+      Start-Sleep -Seconds 5
+    } else {
+      throw "pacman failed with exit code $LASTEXITCODE after $maxAttempts attempts"
+    }
   }
 
   # Verify again
