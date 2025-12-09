@@ -21,8 +21,11 @@ cd "$artifacts_dir" || {
 	exit 1
 }
 
-# Ensure we're using latest RubyGems
-gem update --system
+# Ensure we're using latest RubyGems when possible.
+# Hosted runners install RubyGems via apt, which rejects in-place upgrades.
+if ! gem update --system; then
+	echo "::warning::Skipping RubyGems update; system RubyGems installation does not support self-update (apt-managed runner)." >&2
+fi
 
 # Find all gem files
 shopt -s nullglob

@@ -1321,6 +1321,19 @@ jobs:
         with:
           dotnet-version: "10.x"
 
+      - name: Ensure dotnet is available
+        run: |
+          set -euo pipefail
+          if ! command -v dotnet >/dev/null 2>&1; then
+            echo "dotnet not found on PATH; installing SDK from dotnet-install.sh (channel 10.0)"
+            curl -sSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
+            chmod +x dotnet-install.sh
+            ./dotnet-install.sh --channel 10.0 --quality ga --install-dir "$HOME/.dotnet"
+            echo "$HOME/.dotnet" >> "$GITHUB_PATH"
+            echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+          fi
+          dotnet --info
+
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
@@ -1931,7 +1944,9 @@ jobs:
           shopt -s nullglob
 
           # Ensure we're using latest RubyGems
-          gem update --system
+          if ! gem update --system; then
+            echo "::warning::Skipping RubyGems update; system RubyGems installation does not support self-update (apt-managed runner)." >&2
+          fi
 
           mapfile -t gems < <(printf '%s\n' kreuzberg-*.gem | sort)
           if [ ${#gems[@]} -eq 0 ]; then
@@ -2292,6 +2307,19 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.x"
+
+      - name: Ensure dotnet is available
+        run: |
+          set -euo pipefail
+          if ! command -v dotnet >/dev/null 2>&1; then
+            echo "dotnet not found on PATH; installing SDK from dotnet-install.sh (channel 10.0)"
+            curl -sSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
+            chmod +x dotnet-install.sh
+            ./dotnet-install.sh --channel 10.0 --quality ga --install-dir "$HOME/.dotnet"
+            echo "$HOME/.dotnet" >> "$GITHUB_PATH"
+            echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+          fi
+          dotnet --info
 
       - name: Publish to NuGet
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}

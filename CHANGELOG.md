@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Comprehensive lint cleanup across the crate and tests (clippy warnings resolved).
+- Publish workflow now tolerates apt-managed RubyGems installations by skipping unsupported `gem update --system` during gem rebuild and installs a fallback .NET SDK when the runner lacks `dotnet`.
 
 ## [4.0.0-rc.6] - 2025-12-07
 
