@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added preflight checks for CLI, Go, and Rust crates to skip build/publish when the release artifacts already exist.
 - Maven publishing now uses Sonatype Central’s `central-publishing-maven-plugin` with auto-publish/wait and Central user-token credentials, replacing the legacy OSSRH endpoint.
 - Python wheels are now built with `manylinux2014` compatibility for Linux, fixing PyPI upload rejection of `linux_x86_64` tags.
+- manylinux wheel builds now pin `OPENSSL_LIB_DIR`/`OPENSSL_INCLUDE_DIR` to the container defaults to avoid missing OpenSSL paths in maturin builds.
 
 ## [4.0.0-rc.6] - 2025-12-07
 

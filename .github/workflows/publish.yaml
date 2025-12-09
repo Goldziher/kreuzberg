@@ -483,6 +483,10 @@ jobs:
               # Debian-based manylinux (pypa for ARM)
               sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
             fi
+        env:
+          # manylinux2014 images install OpenSSL to /usr/lib64 and /usr/include
+          OPENSSL_LIB_DIR: /usr/lib64
+          OPENSSL_INCLUDE_DIR: /usr/include
 
       - name: Build wheels (native)
         if: matrix.os != 'ubuntu-latest'
