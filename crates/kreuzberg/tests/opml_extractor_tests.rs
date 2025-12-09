@@ -432,12 +432,12 @@ async fn test_opml_deep_nesting_hierarchy() {
         "Phases should appear in order in output"
     );
 
-    assert_contains_ci(&extracted, "Phase 1", "Phase 1 should be present");
-    assert_contains_ci(&extracted, "Phase 2", "Phase 2 should be present");
-    assert_contains_ci(&extracted, "Phase 3", "Phase 3 should be present");
-    assert_contains_ci(&extracted, "Phase 4", "Phase 4 should be present");
+    assert_contains_ci(extracted, "Phase 1", "Phase 1 should be present");
+    assert_contains_ci(extracted, "Phase 2", "Phase 2 should be present");
+    assert_contains_ci(extracted, "Phase 3", "Phase 3 should be present");
+    assert_contains_ci(extracted, "Phase 4", "Phase 4 should be present");
 
-    assert_contains_ci(&extracted, "Notes & Resources", "Notes section should be present");
+    assert_contains_ci(extracted, "Notes & Resources", "Notes section should be present");
 
     println!("✅ Deep nesting hierarchy test passed!");
     println!("   All phases and tasks extracted in correct order");
@@ -465,7 +465,7 @@ async fn test_opml_content_quality_all_files() {
         let content = std::fs::read(&test_file).expect("Should read OPML file");
         let result = extract_bytes(&content, "text/x-opml", &ExtractionConfig::default())
             .await
-            .expect(&format!("Should extract {}", opml_file));
+            .unwrap_or_else(|_| panic!("Should extract {}", opml_file));
 
         assert!(
             !result.content.is_empty(),
@@ -576,7 +576,7 @@ async fn test_opml_extraction_statistics() {
                     println!("  Metadata fields: {}", result.metadata.additional.len());
 
                     if !result.metadata.additional.is_empty() {
-                        let keys: Vec<String> = result.metadata.additional.keys().map(|k| k.clone()).collect();
+                        let keys: Vec<String> = result.metadata.additional.keys().cloned().collect();
                         println!("  Keys: {}", keys.join(", "));
                     }
 

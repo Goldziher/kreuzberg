@@ -253,12 +253,12 @@ async fn test_native_epub_no_content_loss() {
             continue;
         }
 
-        let bytes = std::fs::read(&test_file).expect(&format!("Failed to read {}", epub_file));
+        let bytes = std::fs::read(&test_file).unwrap_or_else(|_| panic!("Failed to read {}", epub_file));
 
         let result = extractor
             .extract_bytes(&bytes, "application/epub+zip", &config)
             .await
-            .expect(&format!("Should extract {}", epub_file));
+            .unwrap_or_else(|_| panic!("Should extract {}", epub_file));
 
         assert!(
             result.content.len() >= min_bytes,

@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_opml_extractor_default() {
-        let extractor = OpmlExtractor::default();
+        let extractor = OpmlExtractor;
         assert_eq!(extractor.name(), "opml-extractor");
     }
 

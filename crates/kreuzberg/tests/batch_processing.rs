@@ -13,7 +13,7 @@ mod helpers;
 use helpers::{get_test_documents_dir, get_test_file_path, skip_if_missing, test_documents_available};
 
 fn trim_trailing_newlines(value: &str) -> &str {
-    value.trim_end_matches(|c| c == '\n' || c == '\r')
+    value.trim_end_matches(['\n', '\r'])
 }
 
 fn assert_text_content(actual: &str, expected: &str) {

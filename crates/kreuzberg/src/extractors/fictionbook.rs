@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_fictionbook_extractor_default() {
-        let extractor = FictionBookExtractor::default();
+        let extractor = FictionBookExtractor;
         assert_eq!(extractor.name(), "fictionbook-extractor");
     }
 

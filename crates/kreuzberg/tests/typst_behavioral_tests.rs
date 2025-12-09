@@ -1,3 +1,4 @@
+#![allow(clippy::len_zero, clippy::unnecessary_get_then_check, clippy::single_match)]
 //! Comprehensive behavioral tests for Typst extractor against Pandoc baselines.
 //!
 //! These tests expose the critical bugs found in code review:
@@ -367,7 +368,7 @@ async fn test_typst_content_volume_parity_with_pandoc() {
 
         let result = extract_bytes(&content, "application/x-typst", &config)
             .await
-            .expect(&format!("Extraction failed for {}", doc_name));
+            .unwrap_or_else(|_| panic!("Extraction failed for {}", doc_name));
 
         let baseline_size = baseline.len();
         let extracted_size = result.content.len();

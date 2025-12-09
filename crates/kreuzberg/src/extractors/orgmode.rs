@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_orgmode_extractor_default() {
-        let extractor = OrgModeExtractor::default();
+        let extractor = OrgModeExtractor;
         assert_eq!(extractor.name(), "orgmode-extractor");
     }
 

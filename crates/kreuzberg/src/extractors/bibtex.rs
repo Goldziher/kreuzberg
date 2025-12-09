@@ -257,10 +257,10 @@ mod tests {
 
         assert_eq!(metadata.additional.get("entry_count"), Some(&serde_json::json!(3)));
 
-        if let Some(keys) = metadata.additional.get("citation_keys") {
-            if let Some(keys_array) = keys.as_array() {
-                assert_eq!(keys_array.len(), 3);
-            }
+        if let Some(keys) = metadata.additional.get("citation_keys")
+            && let Some(keys_array) = keys.as_array()
+        {
+            assert_eq!(keys_array.len(), 3);
         }
 
         if let Some(types) = metadata.additional.get("entry_types") {
@@ -296,11 +296,11 @@ mod tests {
         assert!(result.content.contains("Annalen der Physik"));
 
         let metadata = &result.metadata;
-        if let Some(authors) = metadata.additional.get("authors") {
-            if let Some(authors_array) = authors.as_array() {
-                assert!(authors_array.len() > 0);
-                assert!(authors_array[0].as_str().unwrap_or("").contains("Einstein"));
-            }
+        if let Some(authors) = metadata.additional.get("authors")
+            && let Some(authors_array) = authors.as_array()
+        {
+            assert!(!authors_array.is_empty());
+            assert!(authors_array[0].as_str().unwrap_or("").contains("Einstein"));
         }
     }
 
@@ -367,10 +367,10 @@ mod tests {
 
         assert_eq!(metadata.additional.get("entry_count"), Some(&serde_json::json!(3)));
 
-        if let Some(authors) = metadata.additional.get("authors") {
-            if let Some(authors_array) = authors.as_array() {
-                assert!(authors_array.len() >= 4);
-            }
+        if let Some(authors) = metadata.additional.get("authors")
+            && let Some(authors_array) = authors.as_array()
+        {
+            assert!(authors_array.len() >= 4);
         }
 
         if let Some(year_range) = metadata.additional.get("year_range") {
@@ -438,10 +438,10 @@ Some random text that's not valid BibTeX"#;
         let result = result.expect("Should extract multiple authors");
         let metadata = &result.metadata;
 
-        if let Some(authors) = metadata.additional.get("authors") {
-            if let Some(authors_array) = authors.as_array() {
-                assert!(authors_array.len() >= 3);
-            }
+        if let Some(authors) = metadata.additional.get("authors")
+            && let Some(authors_array) = authors.as_array()
+        {
+            assert!(authors_array.len() >= 3);
         }
     }
 
@@ -456,7 +456,7 @@ Some random text that's not valid BibTeX"#;
 
     #[test]
     fn test_bibtex_extractor_default() {
-        let extractor = BibtexExtractor::default();
+        let extractor = BibtexExtractor;
         assert_eq!(extractor.name(), "bibtex-extractor");
     }
 

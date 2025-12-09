@@ -61,12 +61,12 @@ async fn test_simple_typst_document_extraction() {
     assert!(!extraction.content.is_empty(), "Extracted content should not be empty");
 
     assert!(
-        extraction.metadata.additional.get("title").is_some(),
+        extraction.metadata.additional.contains_key("title"),
         "Document title should be extracted from #set document()"
     );
 
     assert!(
-        extraction.metadata.additional.get("author").is_some(),
+        extraction.metadata.additional.contains_key("author"),
         "Document author should be extracted"
     );
 
@@ -284,7 +284,7 @@ async fn test_metadata_extraction() {
     }
 
     if let Some(keywords) = extraction.metadata.additional.get("keywords") {
-        assert!(keywords.to_string().len() > 0, "Keywords should be present");
+        assert!(!keywords.to_string().is_empty(), "Keywords should be present");
     }
 
     assert!(!extraction.content.is_empty(), "Document should extract content");
@@ -331,7 +331,7 @@ async fn test_advanced_typst_document_extraction() {
     let extraction = result.unwrap();
 
     assert!(
-        extraction.metadata.additional.get("title").is_some(),
+        extraction.metadata.additional.contains_key("title"),
         "Title should be extracted"
     );
 
@@ -460,7 +460,7 @@ async fn test_undergradmath_extraction() {
     );
 
     if let Some(title) = extraction.metadata.additional.get("title") {
-        assert!(title.to_string().len() > 0, "Title should be extracted");
+        assert!(!title.to_string().is_empty(), "Title should be extracted");
     }
 
     assert!(
@@ -578,7 +578,7 @@ async fn test_large_document_extraction() {
     let extraction = result.unwrap();
 
     assert!(
-        extraction.content.len() > 0,
+        !extraction.content.is_empty(),
         "Should extract content from large document"
     );
 

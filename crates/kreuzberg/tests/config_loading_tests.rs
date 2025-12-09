@@ -209,15 +209,12 @@ fn test_from_file_unsupported_extension_fails() {
     let result = ExtractionConfig::from_file(&config_path);
     assert!(result.is_err(), "Should fail for unsupported extension: {:?}", result);
 
-    match result {
-        Err(KreuzbergError::Validation { message, .. }) => {
-            assert!(
-                message.contains("format") || message.contains("extension") || message.contains("Unsupported"),
-                "Error should mention format/extension: {}",
-                message
-            );
-        }
-        _ => {}
+    if let Err(KreuzbergError::Validation { message, .. }) = result {
+        assert!(
+            message.contains("format") || message.contains("extension") || message.contains("Unsupported"),
+            "Error should mention format/extension: {}",
+            message
+        );
     }
 }
 
@@ -410,9 +407,9 @@ max_overlap = -100
     fs::write(&config_path, toml_content).unwrap();
 
     let result = ExtractionConfig::from_file(&config_path);
-    if let Ok(config) = result {
-        if let Some(chunking) = config.chunking {
-            assert!(chunking.max_chars > 0, "max_chars should be positive");
-        }
+    if let Ok(config) = result
+        && let Some(chunking) = config.chunking
+    {
+        assert!(chunking.max_chars > 0, "max_chars should be positive");
     }
 }

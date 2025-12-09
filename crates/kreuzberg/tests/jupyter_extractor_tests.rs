@@ -493,7 +493,7 @@ async fn test_jupyter_cell_content_aggregation() {
 
     let extraction = result.unwrap();
 
-    let code_indicators = vec!["class", "def", "import", "from", "python"];
+    let code_indicators = ["class", "def", "import", "from", "python"];
     let code_count = code_indicators
         .iter()
         .filter(|&&indicator| extraction.content.contains(indicator))
@@ -504,7 +504,7 @@ async fn test_jupyter_cell_content_aggregation() {
         code_count
     );
 
-    let markdown_indicators = vec!["Supported", "IPython", "formatters"];
+    let markdown_indicators = ["Supported", "IPython", "formatters"];
     let markdown_count = markdown_indicators
         .iter()
         .filter(|&&indicator| extraction.content.contains(indicator))
@@ -577,7 +577,7 @@ async fn test_jupyter_mime_output_handling() {
         "Should preserve HTML and text representations"
     );
 
-    let output_type_markers = vec!["display_data", "execute_result", "stream", "output"];
+    let output_type_markers = ["display_data", "execute_result", "stream", "output"];
     let has_output_types = output_type_markers
         .iter()
         .any(|&marker| extraction.content.contains(marker));
@@ -622,7 +622,7 @@ async fn test_jupyter_notebook_structure_preservation() {
 
     let extraction = result.unwrap();
 
-    let cell_id_patterns = vec!["uid1", "uid2", "uid3", "uid4", "uid6"];
+    let cell_id_patterns = ["uid1", "uid2", "uid3", "uid4", "uid6"];
     let id_count = cell_id_patterns
         .iter()
         .filter(|&&id| extraction.content.contains(id))

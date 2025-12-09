@@ -248,7 +248,6 @@ mod tests {
         let english_text = "Natural language processing is a subfield of artificial intelligence.";
         let config = KeywordConfig::rake().with_language("fr");
         let keywords = extract_keywords_rake(english_text, &config).unwrap();
-        dbg!(&keywords);
         assert!(
             !keywords.is_empty(),
             "Should fall back to English stopwords and extract keywords"

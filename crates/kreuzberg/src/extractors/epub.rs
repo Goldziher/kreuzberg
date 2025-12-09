@@ -609,7 +609,7 @@ mod tests {
 
     #[test]
     fn test_epub_extractor_default() {
-        let extractor = EpubExtractor::default();
+        let extractor = EpubExtractor;
         assert_eq!(extractor.name(), "epub-extractor");
     }
 

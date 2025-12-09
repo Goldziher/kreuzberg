@@ -31,7 +31,7 @@ use tokio::time::timeout;
 mod helpers;
 
 fn trim_trailing_newlines(value: &str) -> &str {
-    value.trim_end_matches(|c| c == '\n' || c == '\r')
+    value.trim_end_matches(['\n', '\r'])
 }
 
 fn assert_text_content(actual: &str, expected: &str) {

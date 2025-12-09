@@ -474,7 +474,7 @@ mod tests {
 
         assert!(!result.tables.is_empty());
         let table = &result.tables[0];
-        assert!(table.cells.len() >= 1);
+        assert!(!table.cells.is_empty());
         assert_eq!(table.cells[0].len(), 2);
         assert!(!table.markdown.is_empty());
     }

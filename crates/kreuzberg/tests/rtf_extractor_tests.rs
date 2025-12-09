@@ -29,6 +29,7 @@
 //! Note: These tests require the `office` feature to be enabled.
 
 #![cfg(feature = "office")]
+#![allow(clippy::doc_suspicious_footnotes)]
 
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_file;
@@ -47,6 +48,16 @@ fn get_rtf_path(filename: &str) -> PathBuf {
         .join("test_documents")
         .join("rtf")
         .join(filename)
+}
+
+/// Helper for reaching the workspace root from the kreuzberg crate
+fn workspace_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("kreuzberg crate should have a parent")
+        .parent()
+        .expect("workspace root exists")
+        .to_path_buf()
 }
 
 /// Test extraction of RTF file with accent characters (accented vowels).
@@ -576,6 +587,190 @@ async fn test_rtf_mime_type_preservation() {
             extraction.mime_type, "application/rtf",
             "FAIL: MIME type not preserved for {}",
             filename
+        );
+    }
+}
+
+/// Parity check: RTF extracted from the DOCX `word_sample.docx` should
+/// carry the same content signals and metadata as the DOCX extractor.
+#[tokio::test]
+async fn test_rtf_word_sample_matches_docx_metadata_and_content() {
+    let root = workspace_root();
+    let rtf_path = root.join("test_documents/rtf/word_sample.rtf");
+    let docx_path = root.join("test_documents/documents/word_sample.docx");
+
+    if !rtf_path.exists() || !docx_path.exists() {
+        println!("Skipping word_sample parity test: fixtures missing");
+        return;
+    }
+
+    let config = ExtractionConfig::default();
+    let rtf_result = extract_file(&rtf_path, Some("application/rtf"), &config)
+        .await
+        .expect("RTF extraction should succeed for word_sample");
+    let docx_result = extract_file(&docx_path, None, &config)
+        .await
+        .expect("DOCX extraction should succeed for word_sample");
+
+    let rtf_content_lower = rtf_result.content.to_lowercase();
+    assert!(
+        rtf_content_lower.contains("swim"),
+        "RTF content should include the same body text as DOCX"
+    );
+
+    for key in ["created_by", "modified_by", "created_at", "revision"] {
+        assert_eq!(
+            rtf_result.metadata.additional.get(key).and_then(|v| v.as_str()),
+            docx_result.metadata.additional.get(key).and_then(|v| v.as_str()),
+            "Metadata field {} should align with DOCX",
+            key
+        );
+    }
+
+    for (key, expected) in [
+        ("page_count", 2),
+        ("word_count", 108),
+        ("character_count", 620),
+        ("line_count", 5),
+        ("paragraph_count", 1),
+    ] {
+        assert_eq!(
+            rtf_result.metadata.additional.get(key).and_then(|v| v.as_i64()),
+            Some(expected),
+            "Metadata field {} should match DOCX values",
+            key
+        );
+    }
+}
+
+/// RTF generated from lorem_ipsum.docx should expose the same document statistics
+/// we validate for the DOCX extractor.
+#[tokio::test]
+async fn test_rtf_lorem_ipsum_metadata_alignment() {
+    let root = workspace_root();
+    let rtf_path = root.join("test_documents/rtf/lorem_ipsum.rtf");
+
+    if !rtf_path.exists() {
+        println!("Skipping lorem_ipsum metadata test: fixture missing");
+        return;
+    }
+
+    let config = ExtractionConfig::default();
+    let result = extract_file(&rtf_path, Some("application/rtf"), &config)
+        .await
+        .expect("RTF extraction should succeed for lorem_ipsum");
+
+    assert!(
+        result.content.to_lowercase().contains("lorem ipsum"),
+        "Content should contain lorem ipsum text"
+    );
+
+    for (key, expected) in [
+        ("page_count", 1),
+        ("word_count", 520),
+        ("character_count", 2967),
+        ("line_count", 24),
+        ("paragraph_count", 6),
+    ] {
+        assert_eq!(
+            result.metadata.additional.get(key).and_then(|v| v.as_i64()),
+            Some(expected),
+            "Metadata field {} should match DOCX values",
+            key
+        );
+    }
+}
+
+/// The comprehensive extraction fixture should mirror the coverage of the ODT/DOCX variants:
+/// headings, section text, table content, and metadata fields should all be present.
+#[tokio::test]
+async fn test_rtf_comprehensive_extraction_alignment() {
+    let root = workspace_root();
+    let rtf_path = root.join("test_documents/rtf/extraction_test.rtf");
+    let docx_path = root.join("test_documents/extraction_test.docx");
+    let odt_path = root.join("test_documents/extraction_test.odt");
+
+    if !rtf_path.exists() {
+        println!("⚠️  Test document not found at {:?}, skipping", rtf_path);
+        return;
+    }
+    if !docx_path.exists() || !odt_path.exists() {
+        println!(
+            "⚠️  Companion DOCX/ODT documents missing (docx: {}, odt: {}), skipping",
+            docx_path.exists(),
+            odt_path.exists()
+        );
+        return;
+    }
+
+    let config = ExtractionConfig::default();
+    let rtf_result = extract_file(&rtf_path, Some("application/rtf"), &config)
+        .await
+        .expect("RTF extraction should succeed for extraction_test.rtf");
+    let docx_result = extract_file(&docx_path, None, &config)
+        .await
+        .expect("DOCX extraction should succeed for extraction_test.docx");
+    let odt_result = extract_file(&odt_path, None, &config)
+        .await
+        .expect("ODT extraction should succeed for extraction_test.odt");
+
+    assert!(
+        rtf_result.content.contains("Comprehensive Extraction Test Document"),
+        "Should include document heading"
+    );
+    assert!(
+        rtf_result.content.contains("First Section"),
+        "Should include first section heading"
+    );
+    assert!(
+        rtf_result.content.contains("Second Section"),
+        "Should include second section heading"
+    );
+    assert!(
+        rtf_result.content.contains("Third Section"),
+        "Should include third section heading"
+    );
+
+    // Table/text alignment with DOCX/ODT variants
+    for expected in ["Header 1", "Cell 1A", "Product", "Apple"] {
+        assert!(
+            rtf_result.content.contains(expected),
+            "Should include table content '{}'",
+            expected
+        );
+    }
+    assert!(
+        rtf_result.content.contains("|"),
+        "Should preserve table structure markers"
+    );
+    assert!(
+        !rtf_result.tables.is_empty(),
+        "Should extract structured tables from RTF"
+    );
+    assert!(
+        rtf_result
+            .tables
+            .iter()
+            .any(|t| t.markdown.contains("Header 1") || t.markdown.contains("Cell 1A")),
+        "Table markdown should include header/data cells"
+    );
+    assert!(
+        rtf_result.tables.len() >= docx_result.tables.len() && rtf_result.tables.len() >= odt_result.tables.len(),
+        "RTF should capture at least as many tables as DOCX/ODT"
+    );
+
+    for (key, expected) in [
+        ("page_count", 1),
+        ("word_count", 83),
+        ("character_count", 475),
+        ("line_count", 12),
+        ("paragraph_count", 8),
+    ] {
+        assert_eq!(
+            rtf_result.metadata.additional.get(key).and_then(|v| v.as_i64()),
+            Some(expected),
+            "Metadata field {} should be populated",
+            key
         );
     }
 }

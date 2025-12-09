@@ -47,7 +47,7 @@ async fn test_latex_minimal_extraction() {
         .expect("Should extract minimal LaTeX");
 
     assert!(
-        result.content.len() > 0,
+        !result.content.is_empty(),
         "FAIL: Extracted 0 bytes (current bug). Should extract content from minimal.tex"
     );
 
@@ -423,7 +423,7 @@ async fn test_latex_unicode_handling() {
     );
 
     assert!(
-        result.content.len() > 0,
+        !result.content.is_empty(),
         "FAIL: Should extract non-zero content from unicode.tex"
     );
 }
@@ -439,7 +439,7 @@ async fn test_latex_no_content_loss_bug() {
         .expect("Should extract minimal LaTeX");
 
     assert!(
-        result.content.len() > 0,
+        !result.content.is_empty(),
         "FAIL: CRITICAL BUG - Extracted 0 bytes from minimal.tex. Current LaTeX extractor is completely broken."
     );
 
@@ -489,7 +489,7 @@ async fn test_latex_empty_document_handling() {
         .expect("Should handle empty LaTeX without panicking");
 
     assert!(
-        result.content.trim().len() == 0,
+        result.content.trim().is_empty(),
         "Empty document should produce empty content (got: '{}')",
         result.content
     );

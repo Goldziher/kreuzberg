@@ -5,6 +5,15 @@ All notable changes to Kreuzberg will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- RTF extractor now builds structured tables (markdown + cells) and parses RTF `\info` metadata (authors, dates, counts), bringing parity with DOCX/ODT fixtures.
+- New pandoc-generated RTF fixtures with embedded metadata for `word_sample`, `lorem_ipsum`, and `extraction_test` to validate cross-format extraction.
+
+### Fixed
+- Comprehensive lint cleanup across the crate and tests (clippy warnings resolved).
+
 ## [4.0.0-rc.6] - 2025-12-07
 
 ### Release Candidate 6 - FFI Core Feature & CI/Build Improvements

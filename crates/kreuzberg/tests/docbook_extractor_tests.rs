@@ -119,7 +119,7 @@ async fn test_docbook_tables_extraction() {
 
     let result = result.unwrap();
     assert!(!result.content.is_empty(), "Content should not be empty");
-    assert!(result.tables.len() > 0, "Should extract tables from DocBook");
+    assert!(!result.tables.is_empty(), "Should extract tables from DocBook");
 }
 
 #[tokio::test]
@@ -129,7 +129,7 @@ async fn test_docbook5_tables_extraction() {
 
     let result = result.unwrap();
     assert!(!result.content.is_empty(), "Content should not be empty");
-    assert!(result.tables.len() > 0, "Should extract tables from DocBook 5");
+    assert!(!result.tables.is_empty(), "Should extract tables from DocBook 5");
 }
 
 #[tokio::test]

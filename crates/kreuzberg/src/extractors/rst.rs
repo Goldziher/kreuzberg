@@ -563,7 +563,7 @@ Second paragraph.
 
     #[test]
     fn test_rst_extractor_default() {
-        let extractor = RstExtractor::default();
+        let extractor = RstExtractor;
         assert_eq!(extractor.name(), "rst-extractor");
     }
 

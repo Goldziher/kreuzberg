@@ -640,7 +640,7 @@ mod tests {
     fn test_author_extraction() {
         let latex = r#"\author{John Doe}"#;
         let (_, metadata, _) = LatexExtractor::extract_from_latex(latex);
-        assert!(metadata.additional.get("author").is_some());
+        assert!(metadata.additional.contains_key("author"));
     }
 
     #[test]

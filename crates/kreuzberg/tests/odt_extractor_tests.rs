@@ -319,7 +319,7 @@ async fn test_odt_image_with_caption_extraction() {
                 content_lower.contains("image")
                     || content_lower.contains("caption")
                     || content_lower.contains("!")
-                    || !result.images.is_none(),
+                    || result.images.is_some(),
                 "Should reference image or caption or have extracted images"
             );
         }
@@ -456,7 +456,7 @@ async fn test_odt_unicode_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    assert!(result.content.len() > 0, "Should extract unicode content (not empty)");
+    assert!(!result.content.is_empty(), "Should extract unicode content (not empty)");
 
     println!("✅ ODT unicode extraction test passed!");
     println!("   Extracted unicode content: {:?}", result.content);
@@ -567,10 +567,10 @@ async fn test_odt_extraction_variety() {
             continue;
         }
 
-        if let Ok(result) = extract_file(&test_file, None, &config).await {
-            if !result.content.is_empty() {
-                successful_extractions += 1;
-            }
+        if let Ok(result) = extract_file(&test_file, None, &config).await
+            && !result.content.is_empty()
+        {
+            successful_extractions += 1;
         }
     }
 

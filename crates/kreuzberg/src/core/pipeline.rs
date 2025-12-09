@@ -435,6 +435,8 @@ mod tests {
         };
         let config = ExtractionConfig::default();
 
+        drop(_guard);
+
         let processed = run_pipeline(result, &config).await.unwrap();
         assert_eq!(processed.content, "");
     }
@@ -575,6 +577,8 @@ Natural language processing enables computers to understand human language.
             ..Default::default()
         };
 
+        drop(_guard);
+
         let processed = run_pipeline(result, &config).await.unwrap();
 
         assert!(!processed.metadata.additional.contains_key("keywords"));
@@ -696,6 +700,8 @@ Natural language processing enables computers to understand human language.
         );
 
         let config = ExtractionConfig::default();
+        drop(_guard);
+
         let processed = run_pipeline(result, &config).await;
 
         pp_registry.write().unwrap().shutdown_all().unwrap();
@@ -782,6 +788,8 @@ Natural language processing enables computers to understand human language.
             enable_quality_processing: true,
             ..Default::default()
         };
+
+        drop(_guard);
 
         let processed = run_pipeline(result, &config).await;
 
@@ -964,6 +972,8 @@ Natural language processing enables computers to understand human language.
         };
 
         let config = ExtractionConfig::default();
+        drop(_guard);
+
         let processed = run_pipeline(result, &config).await;
 
         pp_registry.write().unwrap().shutdown_all().unwrap();

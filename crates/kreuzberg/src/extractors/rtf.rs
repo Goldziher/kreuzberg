@@ -11,9 +11,12 @@
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
+use crate::extraction::cells_to_markdown;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::{ExtractionResult, Metadata};
+use crate::types::{ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
+use serde_json::Value;
+use std::collections::HashMap;
 
 /// Native Rust RTF extractor.
 ///
@@ -133,9 +136,62 @@ fn parse_rtf_control_word(chars: &mut std::iter::Peekable<std::str::Chars>) -> (
 /// 3. Extracting text while skipping formatting groups
 /// 4. Detecting and extracting image metadata (\pict sections)
 /// 5. Normalizing whitespace
-fn extract_text_from_rtf(content: &str) -> String {
+fn extract_text_from_rtf(content: &str) -> (String, Vec<Table>) {
+    struct TableState {
+        rows: Vec<Vec<String>>,
+        current_row: Vec<String>,
+        current_cell: String,
+        in_row: bool,
+    }
+
+    fn push_cell(state: &mut TableState) {
+        let cell = state.current_cell.trim().to_string();
+        state.current_row.push(cell);
+        state.current_cell.clear();
+    }
+
+    fn push_row(state: &mut TableState) {
+        if state.in_row || !state.current_cell.is_empty() {
+            push_cell(state);
+            state.in_row = false;
+        }
+        if !state.current_row.is_empty() {
+            state.rows.push(state.current_row.clone());
+            state.current_row.clear();
+        }
+    }
+
+    fn finalize_table(state_opt: &mut Option<TableState>, tables: &mut Vec<Table>) {
+        if let Some(mut state) = state_opt.take() {
+            if state.in_row || !state.current_cell.is_empty() || !state.current_row.is_empty() {
+                push_row(&mut state);
+            }
+            if !state.rows.is_empty() {
+                let markdown = cells_to_markdown(&state.rows);
+                tables.push(Table {
+                    cells: state.rows,
+                    markdown,
+                    page_number: 1,
+                });
+            }
+        }
+    }
+
     let mut result = String::new();
     let mut chars = content.chars().peekable();
+    let mut tables: Vec<Table> = Vec::new();
+    let mut table_state: Option<TableState> = None;
+
+    let ensure_table = |table_state: &mut Option<TableState>| {
+        if table_state.is_none() {
+            *table_state = Some(TableState {
+                rows: Vec::new(),
+                current_row: Vec::new(),
+                current_cell: String::new(),
+                in_row: false,
+            });
+        }
+    };
 
     while let Some(ch) = chars.next() {
         match ch {
@@ -189,6 +245,11 @@ fn extract_text_from_rtf(content: &str) -> String {
                                     _ => byte as char,
                                 };
                                 result.push(decoded);
+                                if let Some(state) = table_state.as_mut()
+                                    && state.in_row
+                                {
+                                    state.current_cell.push(decoded);
+                                }
                             }
                         }
                         'u' => {
@@ -210,6 +271,11 @@ fn extract_text_from_rtf(content: &str) -> String {
                                 };
                                 if let Some(c) = char::from_u32(code_u) {
                                     result.push(c);
+                                    if let Some(state) = table_state.as_mut()
+                                        && state.in_row
+                                    {
+                                        state.current_cell.push(c);
+                                    }
                                 }
                             }
                         }
@@ -228,9 +294,24 @@ fn extract_text_from_rtf(content: &str) -> String {
                                         result.push_str(&image_metadata);
                                         result.push(')');
                                         result.push(' ');
+                                        if let Some(state) = table_state.as_mut()
+                                            && state.in_row
+                                        {
+                                            state.current_cell.push('!');
+                                            state.current_cell.push('[');
+                                            state.current_cell.push_str("image");
+                                            state.current_cell.push(']');
+                                            state.current_cell.push('(');
+                                            state.current_cell.push_str(&image_metadata);
+                                            state.current_cell.push(')');
+                                            state.current_cell.push(' ');
+                                        }
                                     }
                                 }
                                 "par" => {
+                                    if table_state.is_some() {
+                                        finalize_table(&mut table_state, &mut tables);
+                                    }
                                     if !result.is_empty() && !result.ends_with('\n') {
                                         result.push('\n');
                                         result.push('\n');
@@ -238,6 +319,11 @@ fn extract_text_from_rtf(content: &str) -> String {
                                 }
                                 "tab" => {
                                     result.push('\t');
+                                    if let Some(state) = table_state.as_mut()
+                                        && state.in_row
+                                    {
+                                        state.current_cell.push('\t');
+                                    }
                                 }
                                 "bullet" => {
                                     result.push('•');
@@ -260,6 +346,55 @@ fn extract_text_from_rtf(content: &str) -> String {
                                 "emdash" => {
                                     result.push('\u{2014}');
                                 }
+                                "trowd" => {
+                                    ensure_table(&mut table_state);
+                                    if let Some(state) = table_state.as_mut() {
+                                        if state.in_row {
+                                            push_row(state);
+                                        }
+                                        state.in_row = true;
+                                        state.current_cell.clear();
+                                        state.current_row.clear();
+                                    }
+                                    if !result.is_empty() && !result.ends_with('\n') {
+                                        result.push('\n');
+                                    }
+                                    if !result.ends_with('|') {
+                                        result.push('|');
+                                        result.push(' ');
+                                    }
+                                }
+                                "cell" => {
+                                    if !result.ends_with('|') {
+                                        if !result.ends_with(' ') && !result.is_empty() {
+                                            result.push(' ');
+                                        }
+                                        result.push('|');
+                                    }
+                                    if !result.ends_with(' ') {
+                                        result.push(' ');
+                                    }
+                                }
+                                "row" => {
+                                    ensure_table(&mut table_state);
+                                    if let Some(state) = table_state.as_mut()
+                                        && (state.in_row || !state.current_cell.is_empty())
+                                    {
+                                        push_row(state);
+                                    }
+                                    if !result.ends_with('|') {
+                                        result.push('|');
+                                    }
+                                    if !result.ends_with('\n') {
+                                        result.push('\n');
+                                    }
+                                    if let Some(state) = table_state.as_ref()
+                                        && !state.in_row
+                                        && !state.rows.is_empty()
+                                    {
+                                        // We'll finalize once we see content outside the table
+                                    }
+                                }
                                 _ => {}
                             }
                         }
@@ -275,14 +410,35 @@ fn extract_text_from_rtf(content: &str) -> String {
                 if !result.is_empty() && !result.ends_with(' ') {
                     result.push(' ');
                 }
+                if let Some(state) = table_state.as_mut()
+                    && state.in_row
+                    && !state.current_cell.ends_with(' ')
+                {
+                    state.current_cell.push(' ');
+                }
             }
             _ => {
+                if let Some(state) = table_state.as_ref()
+                    && !state.in_row
+                    && !state.rows.is_empty()
+                {
+                    finalize_table(&mut table_state, &mut tables);
+                }
                 result.push(ch);
+                if let Some(state) = table_state.as_mut()
+                    && state.in_row
+                {
+                    state.current_cell.push(ch);
+                }
             }
         }
     }
 
-    normalize_whitespace(&result)
+    if table_state.is_some() {
+        finalize_table(&mut table_state, &mut tables);
+    }
+
+    (normalize_whitespace(&result), tables)
 }
 
 /// Normalize whitespace in a string using a single-pass algorithm.
@@ -306,6 +462,217 @@ fn normalize_whitespace(s: &str) -> String {
     }
 
     result.trim().to_string()
+}
+
+/// Parse a `{\\creatim ...}` or `{\\revtim ...}` RTF info block into ISO 8601 format.
+fn parse_rtf_datetime(segment: &str) -> Option<String> {
+    let mut year: Option<i32> = None;
+    let mut month: Option<i32> = None;
+    let mut day: Option<i32> = None;
+    let mut hour: Option<i32> = None;
+    let mut minute: Option<i32> = None;
+
+    let mut chars = segment.chars().peekable();
+    while let Some(&ch) = chars.peek() {
+        if ch != '\\' {
+            chars.next();
+            continue;
+        }
+        chars.next();
+        let (word, value) = parse_rtf_control_word(&mut chars);
+        if let Some(v) = value {
+            match word.as_str() {
+                "yr" => year = Some(v),
+                "mo" => month = Some(v),
+                "dy" => day = Some(v),
+                "hr" => hour = Some(v),
+                "min" => minute = Some(v),
+                _ => {}
+            }
+        }
+    }
+
+    let year = year?;
+    let month = month.unwrap_or(1).max(1) as u32;
+    let day = day.unwrap_or(1).max(1) as u32;
+    let hour = hour.unwrap_or(0).max(0) as u32;
+    let minute = minute.unwrap_or(0).max(0) as u32;
+
+    Some(format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:00Z",
+        year, month, day, hour, minute
+    ))
+}
+
+/// Extract metadata from the RTF `\\info` block and augment with computed statistics.
+fn extract_rtf_metadata(rtf_content: &str, extracted_text: &str) -> HashMap<String, Value> {
+    let mut metadata: HashMap<String, Value> = HashMap::new();
+
+    if let Some(start) = rtf_content.find("{\\info") {
+        let slice = &rtf_content[start..];
+        let mut depth = 0usize;
+        let mut end_offset: Option<usize> = None;
+
+        for (idx, ch) in slice.char_indices() {
+            match ch {
+                '{' => depth += 1,
+                '}' => {
+                    if depth == 0 {
+                        break;
+                    }
+                    depth -= 1;
+                    if depth == 0 {
+                        end_offset = Some(idx + 1);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let info_block = end_offset.map(|end| &slice[..end]).unwrap_or(slice);
+
+        let mut segments: Vec<String> = Vec::new();
+        let mut seg_depth = 0usize;
+        let mut current = String::new();
+        let mut in_segment = false;
+
+        for ch in info_block.chars() {
+            if ch == '{' {
+                seg_depth += 1;
+                if seg_depth == 2 {
+                    in_segment = true;
+                    current.clear();
+                    continue;
+                }
+            } else if ch == '}' {
+                if seg_depth == 2 && in_segment {
+                    segments.push(current.clone());
+                    in_segment = false;
+                }
+                seg_depth = seg_depth.saturating_sub(1);
+                continue;
+            }
+
+            if in_segment {
+                current.push(ch);
+            }
+        }
+
+        for segment in segments {
+            if !segment.starts_with('\\') {
+                continue;
+            }
+
+            let cleaned_segment = if segment.starts_with("\\*\\") {
+                segment.replacen("\\*\\", "\\", 1)
+            } else {
+                segment.clone()
+            };
+
+            let mut chars = cleaned_segment.chars().peekable();
+            chars.next(); // consume the leading backslash
+            let (keyword, numeric) = parse_rtf_control_word(&mut chars);
+            let remaining: String = chars.collect();
+            let trimmed = remaining.trim();
+
+            match keyword.as_str() {
+                "author" => {
+                    if !trimmed.is_empty() {
+                        let author = trimmed.to_string();
+                        metadata.insert("created_by".to_string(), Value::String(author.clone()));
+                        metadata.insert("authors".to_string(), Value::Array(vec![Value::String(author)]));
+                    }
+                }
+                "operator" => {
+                    if !trimmed.is_empty() {
+                        metadata.insert("modified_by".to_string(), Value::String(trimmed.to_string()));
+                    }
+                }
+                "title" => {
+                    if !trimmed.is_empty() {
+                        metadata.insert("title".to_string(), Value::String(trimmed.to_string()));
+                    }
+                }
+                "subject" => {
+                    if !trimmed.is_empty() {
+                        metadata.insert("subject".to_string(), Value::String(trimmed.to_string()));
+                    }
+                }
+                "generator" => {
+                    if !trimmed.is_empty() {
+                        metadata.insert("generator".to_string(), Value::String(trimmed.to_string()));
+                    }
+                }
+                "creatim" => {
+                    if let Some(dt) = parse_rtf_datetime(trimmed) {
+                        metadata.insert("created_at".to_string(), Value::String(dt));
+                    }
+                }
+                "revtim" => {
+                    if let Some(dt) = parse_rtf_datetime(trimmed) {
+                        metadata.insert("modified_at".to_string(), Value::String(dt));
+                    }
+                }
+                "version" => {
+                    if let Some(val) = numeric.or_else(|| trimmed.parse::<i32>().ok()) {
+                        metadata.insert("revision".to_string(), Value::String(val.to_string()));
+                    }
+                }
+                "nofpages" => {
+                    if let Some(val) = numeric.or_else(|| trimmed.parse::<i32>().ok()) {
+                        metadata.insert("page_count".to_string(), Value::Number(val.into()));
+                    }
+                }
+                "nofwords" => {
+                    if let Some(val) = numeric.or_else(|| trimmed.parse::<i32>().ok()) {
+                        metadata.insert("word_count".to_string(), Value::Number(val.into()));
+                    }
+                }
+                "nofchars" => {
+                    if let Some(val) = numeric.or_else(|| trimmed.parse::<i32>().ok()) {
+                        metadata.insert("character_count".to_string(), Value::Number(val.into()));
+                    }
+                }
+                "lines" => {
+                    if let Some(val) = numeric.or_else(|| trimmed.parse::<i32>().ok()) {
+                        metadata.insert("line_count".to_string(), Value::Number(val.into()));
+                    }
+                }
+                "paragraphs" => {
+                    if let Some(val) = numeric.or_else(|| trimmed.parse::<i32>().ok()) {
+                        metadata.insert("paragraph_count".to_string(), Value::Number(val.into()));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let cleaned_text = extracted_text.trim();
+    if !cleaned_text.is_empty() {
+        let word_count = cleaned_text.split_whitespace().count() as i64;
+        metadata
+            .entry("word_count".to_string())
+            .or_insert(Value::Number(word_count.into()));
+
+        let character_count = cleaned_text.chars().count() as i64;
+        metadata
+            .entry("character_count".to_string())
+            .or_insert(Value::Number(character_count.into()));
+
+        let line_count = cleaned_text.lines().count() as i64;
+        metadata
+            .entry("line_count".to_string())
+            .or_insert(Value::Number(line_count.into()));
+
+        let paragraph_count = cleaned_text.split("\n\n").filter(|p| !p.trim().is_empty()).count() as i64;
+        metadata
+            .entry("paragraph_count".to_string())
+            .or_insert(Value::Number(paragraph_count.into()));
+    }
+
+    metadata
 }
 
 /// Extract image metadata from within a \pict group.
@@ -394,13 +761,17 @@ impl DocumentExtractor for RtfExtractor {
     ) -> Result<ExtractionResult> {
         let rtf_content = String::from_utf8_lossy(content);
 
-        let extracted_text = extract_text_from_rtf(&rtf_content);
+        let (extracted_text, tables) = extract_text_from_rtf(&rtf_content);
+        let metadata_map = extract_rtf_metadata(&rtf_content, &extracted_text);
 
         Ok(ExtractionResult {
             content: extracted_text,
             mime_type: mime_type.to_string(),
-            metadata: Metadata::default(),
-            tables: vec![],
+            metadata: Metadata {
+                additional: metadata_map,
+                ..Default::default()
+            },
+            tables,
             detected_languages: None,
             chunks: None,
             images: None,
@@ -433,7 +804,7 @@ mod tests {
     fn test_simple_rtf_extraction() {
         let _extractor = RtfExtractor;
         let rtf_content = r#"{\rtf1 Hello World}"#;
-        let extracted = extract_text_from_rtf(rtf_content);
+        let (extracted, _) = extract_text_from_rtf(rtf_content);
         assert!(extracted.contains("Hello") || extracted.contains("World"));
     }
 }

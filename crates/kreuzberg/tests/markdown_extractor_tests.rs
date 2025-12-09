@@ -450,7 +450,7 @@ async fn test_supported_mime_types() {
         let result = extractor
             .extract_bytes(markdown, mime_type, &ExtractionConfig::default())
             .await
-            .expect(&format!("Should support {}", mime_type));
+            .unwrap_or_else(|_| panic!("Should support {}", mime_type));
 
         assert_eq!(result.mime_type, *mime_type);
         assert!(result.content.contains("Test"));

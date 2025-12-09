@@ -486,8 +486,8 @@ mod tests {
 
         let (_, metadata) = TypstExtractor::extract_from_typst(content);
 
-        assert!(metadata.additional.get("title").is_some());
-        assert!(metadata.additional.get("author").is_some());
+        assert!(metadata.additional.contains_key("title"));
+        assert!(metadata.additional.contains_key("author"));
     }
 
     #[test]
@@ -603,21 +603,18 @@ $ a^2 + b^2 = c^2 $"#;
 
         let (_, metadata) = TypstExtractor::extract_from_typst(content);
 
-        assert!(metadata.additional.get("title").is_some(), "Title should be extracted");
-        assert!(
-            metadata.additional.get("author").is_some(),
-            "Author should be extracted"
-        );
+        assert!(metadata.additional.contains_key("title"), "Title should be extracted");
+        assert!(metadata.additional.contains_key("author"), "Author should be extracted");
         assert!(metadata.date.is_some(), "Date should be extracted");
         assert!(
-            metadata.additional.get("subject").is_some(),
+            metadata.additional.contains_key("subject"),
             "Subject should be extracted"
         );
         assert!(
             metadata
                 .additional
                 .get("keywords")
-                .map(|v| v.to_string().len() > 0)
+                .map(|v| !v.to_string().is_empty())
                 .unwrap_or(false)
         );
     }
