@@ -197,7 +197,7 @@ tasks:
     cmds:
       - echo "Updating Python dependencies..."
       - uv run uv-bump
-      - uv sync --all-packages --all-extras --upgrade --no-install-workspace
+      - uv sync --all-packages --all-extras --upgrade --no-install-workspace --no-install-project
   ruby:install:
     desc: Install Ruby dependencies
     dir: packages/ruby
