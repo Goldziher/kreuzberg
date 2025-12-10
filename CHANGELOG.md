@@ -17,9 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker publish now skips pushing when the target version tag already exists, avoiding redundant builds for released images.
 - Docker tag existence is checked upfront before any publish work, and per-variant publish jobs are skipped early when the version is already present.
 - Added preflight checks for CLI, Go, and Rust crates to skip build/publish when the release artifacts already exist.
-- Maven publishing now uses Sonatype Central’s `central-publishing-maven-plugin` with auto-publish/wait and Central user-token credentials, replacing the legacy OSSRH endpoint.
+- Maven publishing now uses Sonatype Central's `central-publishing-maven-plugin` with auto-publish/wait and Central user-token credentials, replacing the legacy OSSRH endpoint.
+- Maven Central publish timeout increased from 30 minutes to 2 hours to accommodate slower validation/publishing process.
 - Python wheels are now built with `manylinux: auto` parameter (was incorrectly set to `manylinux2014` which is not a valid maturin-action value), fixing PyPI upload rejection of `linux_x86_64` platform tags.
 - manylinux wheel builds now detect container type (CentOS vs Debian) and set correct `OPENSSL_LIB_DIR` paths (`/usr/lib64` for CentOS, `/usr/lib/x86_64-linux-gnu` for Debian) to avoid openssl-sys build failures in maturin builds.
+- Ruby Gemfile.lock now includes x86_64-linux platform for CI compatibility on Linux runners.
+- Ruby gem corruption fixed by excluding .fastembed_cache (567MB of embedding models) and target directories from gemspec fallback path.
+- Java Panama FFM SIGSEGV crashes on macOS ARM64 fixed by adding explicit padding fields to FFI structs (CExtractionResult and CBatchResult) to ensure struct alignment matches between Rust and Java.
+- TypeScript E2E test type error fixed in smoke.spec.ts by using proper expectation object format.
+- Node.js benchmarks now have tsx as workspace dev dependency and root-level typecheck script.
+- C# compilation errors (CS0136, CS0128, CS0165) resolved by fixing variable shadowing in e2e/csharp/Helpers.cs.
+- Python CI timeout issues resolved by marking slow office document tests with @pytest.mark.slow and skipping them in CI.
+- Go CI tests enhanced with comprehensive verbose logging and platform-specific diagnostics for better debugging.
 
 ## [4.0.0-rc.6] - 2025-12-07
 
