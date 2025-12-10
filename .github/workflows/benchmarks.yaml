@@ -1165,8 +1165,8 @@ jobs:
           path: benchmark-results/
           retention-days: 30
 
-  bench-extractous-python:
-    name: extractous-python (${{ matrix.mode }})
+  bench-tika-sync:
+    name: tika-sync (${{ matrix.mode }})
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -1199,25 +1199,22 @@ jobs:
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
         with:
-          cache-key-prefix: benchmarks-extractous-python
+          cache-key-prefix: benchmarks-tika-sync
 
-      - name: Setup Python
-        uses: ./.github/actions/setup-python-env
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          python-version: "3.11"
-          cache-prefix: benchmark-python
+          distribution: temurin
+          java-version: "24"
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
-      - name: Sync benchmark dependencies
-        run: uv sync --group benchmark --no-install-workspace
-
       - name: Run benchmark
         env:
-          FRAMEWORK: extractous-python
+          FRAMEWORK: tika-sync
           MODE: ${{ matrix.mode }}
           ITERATIONS: ${{ env.ITERATIONS }}
           TIMEOUT: ${{ github.event.inputs.timeout }}
@@ -1227,6 +1224,69 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: benchmarks-extractous-python-${{ matrix.mode }}-${{ github.run_id }}
+          name: benchmarks-tika-sync-${{ matrix.mode }}-${{ github.run_id }}
+          path: benchmark-results/
+          retention-days: 30
+
+  bench-tika-batch:
+    name: tika-batch (${{ matrix.mode }})
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [single-file, batch]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ needs.setup.outputs.artifact-name }}
+          path: target/release
+
+      - name: Restore benchmark binary permissions
+        run: bash scripts/benchmarks/restore-binary-permissions.sh
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-tika-batch
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "24"
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Run benchmark
+        env:
+          FRAMEWORK: tika-batch
+          MODE: ${{ matrix.mode }}
+          ITERATIONS: ${{ env.ITERATIONS }}
+          TIMEOUT: ${{ github.event.inputs.timeout }}
+        run: bash scripts/benchmarks/run-benchmark.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks-tika-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
           retention-days: 30
