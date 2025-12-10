@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GutenOcrBackend } from "../../dist/index.js";
 
+// Valid minimal 1x1 PNG image for testing
+// This is a complete, valid PNG file that can be processed by image libraries
+const validMinimalPng = new Uint8Array([
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00,
+	0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0a, 0x49,
+	0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00,
+	0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+]);
+
 describe("GutenOcrBackend", () => {
 	describe("Constructor and basic properties", () => {
 		it("should create instance without options", () => {
@@ -197,8 +206,7 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			const result = await backend.processImage(imageBytes, "en");
+			const result = await backend.processImage(validMinimalPng, "en");
 
 			expect(result.content).toBe("Hello\nWorld");
 			expect(result.mime_type).toBe("text/plain");
@@ -216,8 +224,7 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			await backend.processImage(imageBytes, "en");
+			await backend.processImage(validMinimalPng, "en");
 
 			expect(mockOcrModule.create).toHaveBeenCalled();
 		});
@@ -230,8 +237,7 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			const result = await backend.processImage(imageBytes, "en");
+			const result = await backend.processImage(validMinimalPng, "en");
 
 			expect(result.content).toBe("");
 			expect(result.metadata.confidence).toBe(0);
@@ -277,8 +283,7 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			const result = await backend.processImage(imageBytes, "en");
+			const result = await backend.processImage(validMinimalPng, "en");
 
 			expect(result.metadata.confidence).toBeCloseTo(0.8333, 3);
 		});
@@ -290,8 +295,7 @@ describe("GutenOcrBackend", () => {
 				throw new Error("MODULE_NOT_FOUND");
 			});
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			await expect(backend.processImage(imageBytes, "en")).rejects.toThrow();
+			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow();
 		});
 
 		it("should throw error if OCR detection fails", async () => {
@@ -302,8 +306,7 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			await expect(backend.processImage(imageBytes, "en")).rejects.toThrow(/Guten OCR processing failed/);
+			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow(/Guten OCR processing failed/);
 		});
 
 		it("should continue if sharp processing fails", async () => {
@@ -316,8 +319,7 @@ describe("GutenOcrBackend", () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: failingSharp }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			const result = await backend.processImage(imageBytes, "en");
+			const result = await backend.processImage(validMinimalPng, "en");
 
 			expect(result.metadata.width).toBe(0);
 			expect(result.metadata.height).toBe(0);
@@ -333,13 +335,14 @@ describe("GutenOcrBackend", () => {
 
 			vi.doMock("@gutenye/ocr-node", () => ({ default: nullModule }));
 
-			const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-			await expect(backend.processImage(imageBytes, "en")).rejects.toThrow(/Guten OCR backend failed to initialize/);
+			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow(
+				/Guten OCR backend failed to initialize/,
+			);
 		});
 
 		it("should emit debug logs when KREUZBERG_DEBUG_GUTEN is enabled", async () => {
 			const backend = new GutenOcrBackend();
-			backend.ocr = {
+			(backend as any).ocr = {
 				detect: vi.fn().mockResolvedValue([
 					{
 						text: "debug",
