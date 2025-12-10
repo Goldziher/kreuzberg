@@ -338,7 +338,9 @@
                 <version>${central-publishing-plugin.version}</version>
                 <extensions>true</extensions>
                 <configuration>
-                    <publishingServerId>dev.kreuzberg</publishingServerId>
+                    <publishingServerId>central</publishingServerId>
+                    <namespace>dev.kreuzberg</namespace>
+                    <namespaceId>efc212c3-578c-4754-9046-3a1e3bf23e8d</namespaceId>
                     <autoPublish>true</autoPublish>
                     <waitUntil>published</waitUntil>
                 </configuration>
