@@ -15,17 +15,17 @@ Kreuzberg ships as a Rust crate plus native bindings for Python, TypeScript/Node
 pip install kreuzberg
 ```
 
-```bash
+```bash title="Terminal"
 uv pip install kreuzberg
 ```
 
 Optional extras:
 
-```bash
+```bash title="Terminal"
 pip install 'kreuzberg[easyocr]'
 ```
 
-```bash
+```bash title="Terminal"
 pip install 'kreuzberg[paddleocr]'
 ```
 
@@ -33,15 +33,15 @@ Next steps: [Python Quick Start](quickstart.md) • [Python API Reference](../re
 
 ## TypeScript / Node.js
 
-```bash
+```bash title="Terminal"
 npm install @kreuzberg/node
 ```
 
-```bash
+```bash title="Terminal"
 pnpm add @kreuzberg/node
 ```
 
-```bash
+```bash title="Terminal"
 yarn add @kreuzberg/node
 ```
 
@@ -51,13 +51,13 @@ Next steps: [TypeScript Quick Start](../guides/extraction.md#typescript-nodejs) 
 
 ## Ruby
 
-```bash
+```bash title="Terminal"
 gem install kreuzberg
 ```
 
 Bundler projects can add it to the Gemfile:
 
-```ruby
+```ruby title="Gemfile"
 gem 'kreuzberg', '~> 4.0'
 ```
 
@@ -67,20 +67,20 @@ Next steps: [Ruby Quick Start](../guides/extraction.md#ruby) • [Ruby API Refer
 
 ## Rust
 
-```bash
+```bash title="Terminal"
 cargo add kreuzberg
 ```
 
 Or edit `Cargo.toml` manually:
 
-```toml
+```toml title="Cargo.toml"
 [dependencies]
 kreuzberg = "4.0"
 ```
 
 Enable optional features as needed:
 
-```bash
+```bash title="Terminal"
 cargo add kreuzberg --features "excel stopwords ocr"
 ```
 
@@ -90,19 +90,19 @@ Next steps: [Rust API Reference](../reference/api-rust.md)
 
 Homebrew tap (macOS / Linux):
 
-```bash
+```bash title="Terminal"
 brew install goldziher/tap/kreuzberg
 ```
 
 Cargo install:
 
-```bash
+```bash title="Terminal"
 cargo install kreuzberg-cli
 ```
 
 Docker image:
 
-```bash
+```bash title="Terminal"
 docker pull goldziher/kreuzberg:latest       # core image
 docker pull goldziher/kreuzberg:latest-all   # full image with all extras
 ```
@@ -113,7 +113,7 @@ Next steps: [CLI Usage](../cli/usage.md) • [API Server Guide](../guides/api-se
 
 To work on the repository itself:
 
-```bash
+```bash title="Terminal"
 task setup      # installs Python, Node, Ruby deps plus Rust build
 task lint       # cross-language linting
 task dev:test   # full test matrix (Rust + Python + Ruby + TypeScript)
