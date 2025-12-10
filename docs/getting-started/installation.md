@@ -103,8 +103,8 @@ cargo install kreuzberg-cli
 Docker image:
 
 ```bash title="Terminal"
-docker pull goldziher/kreuzberg:latest       # core image
-docker pull goldziher/kreuzberg:latest-all   # full image with all extras
+docker pull goldziher/kreuzberg:latest       # Core image with essential features
+docker pull goldziher/kreuzberg:latest-all   # Full image with all extensions
 ```
 
 Next steps: [CLI Usage](../cli/usage.md) • [API Server Guide](../guides/api-server.md)
@@ -114,9 +114,9 @@ Next steps: [CLI Usage](../cli/usage.md) • [API Server Guide](../guides/api-se
 To work on the repository itself:
 
 ```bash title="Terminal"
-task setup      # installs Python, Node, Ruby deps plus Rust build
-task lint       # cross-language linting
-task dev:test   # full test matrix (Rust + Python + Ruby + TypeScript)
+task setup      # Install all dependencies (Python, Node.js, Ruby, Rust)
+task lint       # Run linters across all languages
+task dev:test   # Execute full test suite (Rust, Python, Ruby, TypeScript)
 ```
 
 See [Contributing](../contributing.md) for branch naming, coding conventions, and test expectations.
