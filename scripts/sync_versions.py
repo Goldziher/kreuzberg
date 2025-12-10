@@ -105,16 +105,16 @@ def update_ruby_version(file_path: Path, version: str) -> Tuple[bool, str, str]:
     Returns: (changed, old_version, new_version)
     """
     content = file_path.read_text()
-    match = re.search(r'VERSION\s*=\s*"([^"]+)"', content)
+    match = re.search(r'VERSION\s*=\s*["\']([^"\']+)["\']', content)
     old_version = match.group(1) if match else "NOT FOUND"
 
     if old_version == version:
         return False, old_version, version
 
     new_content = re.sub(
-        r'(VERSION\s*=\s*)"[^"]+"',
+        r'(VERSION\s*=\s*)["\'][^"\']+["\']',
         rf'\1"{version}"',
-        content
+        content,
     )
 
     file_path.write_text(new_content)
@@ -244,6 +244,11 @@ def main():
             f'kreuzberg-cli {version}',
         ),
         (
+            repo_root / "packages/ruby/Gemfile.lock",
+            r'(^\s{4}kreuzberg \()[^\)]+(\))',
+            rf"\g<1>{version}\g<2>",
+        ),
+        (
             repo_root / "crates/kreuzberg-node/tests/binding/cli.spec.ts",
             r'kreuzberg-cli ([0-9A-Za-z\.\-]+)',
             f'kreuzberg-cli {version}',
@@ -255,7 +260,7 @@ def main():
         ),
         (
             repo_root / "packages/java/pom.xml",
-            r'(<version>)([^<]+)(</version>)',
+            r'(<artifactId>kreuzberg</artifactId>\s*<version>)([^<]+)(</version>)',
             rf"\g<1>{version}\g<3>",
         ),
         (

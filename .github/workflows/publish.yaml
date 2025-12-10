@@ -1414,6 +1414,17 @@ jobs:
           echo "=== Available disk space after cleanup ==="
           df -h /
 
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-csharp
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -1431,17 +1442,6 @@ jobs:
             echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
           fi
           dotnet --info
-
-      - name: Install system dependencies
-        uses: ./.github/actions/install-system-deps
-
-      - name: Setup OpenSSL
-        uses: ./.github/actions/setup-openssl
-
-      - name: Setup Rust
-        uses: ./.github/actions/setup-rust
-        with:
-          cache-key-prefix: publish-csharp
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
