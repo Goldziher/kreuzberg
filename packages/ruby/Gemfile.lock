@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    kreuzberg (4.0.0.rc2)
+    kreuzberg (4.0.0.pre.rc.6)
 
 GEM
   remote: https://rubygems.org/
@@ -31,7 +31,6 @@ GEM
     drb (2.2.3)
     ffi (1.17.2)
     ffi (1.17.2-arm64-darwin)
-    ffi (1.17.2-x64-mingw-ucrt)
     fileutils (1.8.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
@@ -136,8 +135,6 @@ GEM
 
 PLATFORMS
   arm64-darwin-24
-  ruby
-  x64-mingw-ucrt
 
 DEPENDENCIES
   bundler (~> 4.0)
