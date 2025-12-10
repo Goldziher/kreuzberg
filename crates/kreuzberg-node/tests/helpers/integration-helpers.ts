@@ -1,8 +1,33 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import archiver from "archiver";
 import { expect } from "vitest";
 import type { ExtractionResult, Metadata } from "../../src/types.js";
+
+/**
+ * Resolve the workspace root robustly regardless of the current working directory.
+ */
+function resolveWorkspaceRoot(): string {
+	const envRoot = process.env.KREUZBERG_WORKSPACE_ROOT ?? process.env.GITHUB_WORKSPACE;
+	if (envRoot && existsSync(envRoot)) {
+		return envRoot;
+	}
+
+	let current = process.cwd();
+	while (true) {
+		if (existsSync(join(current, "Cargo.toml"))) {
+			return current;
+		}
+		const parent = dirname(current);
+		if (parent === current) {
+			break;
+		}
+		current = parent;
+	}
+
+	// Fallback to original behaviour (two levels up) to avoid breaking local runs
+	return join(process.cwd(), "../..");
+}
 
 /**
  * Get path to test document in the repository's test_documents directory.
@@ -11,7 +36,7 @@ import type { ExtractionResult, Metadata } from "../../src/types.js";
  * @returns Absolute path to the test document
  */
 export function getTestDocumentPath(relativePath: string): string {
-	const workspaceRoot = join(process.cwd(), "../..");
+	const workspaceRoot = resolveWorkspaceRoot();
 	return join(workspaceRoot, "test_documents", relativePath);
 }
 
@@ -21,7 +46,7 @@ export function getTestDocumentPath(relativePath: string): string {
  * @returns true if test_documents exists
  */
 export function testDocumentsAvailable(): boolean {
-	const workspaceRoot = join(process.cwd(), "../..");
+	const workspaceRoot = resolveWorkspaceRoot();
 	return existsSync(join(workspaceRoot, "test_documents"));
 }
 
