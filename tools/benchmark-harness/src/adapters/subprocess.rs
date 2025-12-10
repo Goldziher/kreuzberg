@@ -6,7 +6,7 @@
 
 use crate::adapter::FrameworkAdapter;
 use crate::monitoring::ResourceMonitor;
-use crate::types::{BenchmarkResult, PerformanceMetrics};
+use crate::types::{BenchmarkResult, FrameworkCapabilities, PerformanceMetrics};
 use crate::{Error, Result};
 use async_trait::async_trait;
 use std::path::{Path, PathBuf};
@@ -270,6 +270,13 @@ impl FrameworkAdapter for SubprocessAdapter {
                     iterations: vec![],
                     statistics: None,
                     cold_start_duration: None,
+                    file_extension: file_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("unknown")
+                        .to_lowercase(),
+                    framework_capabilities: FrameworkCapabilities::default(),
+                    pdf_metadata: None,
                 });
             }
         };
@@ -301,6 +308,13 @@ impl FrameworkAdapter for SubprocessAdapter {
                     iterations: vec![],
                     statistics: None,
                     cold_start_duration: None,
+                    file_extension: file_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("unknown")
+                        .to_lowercase(),
+                    framework_capabilities: FrameworkCapabilities::default(),
+                    pdf_metadata: None,
                 });
             }
         };
@@ -341,6 +355,13 @@ impl FrameworkAdapter for SubprocessAdapter {
             iterations: vec![],
             statistics: None,
             cold_start_duration: None,
+            file_extension: file_path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("unknown")
+                .to_lowercase(),
+            framework_capabilities: FrameworkCapabilities::default(),
+            pdf_metadata: None,
         })
     }
 
@@ -396,6 +417,9 @@ impl FrameworkAdapter for SubprocessAdapter {
                     iterations: vec![],
                     statistics: None,
                     cold_start_duration: None,
+                    file_extension: "batch".to_string(),
+                    framework_capabilities: FrameworkCapabilities::default(),
+                    pdf_metadata: None,
                 }]);
             }
         };
@@ -430,6 +454,9 @@ impl FrameworkAdapter for SubprocessAdapter {
             iterations: vec![],
             statistics: None,
             cold_start_duration: None,
+            file_extension: "batch".to_string(),
+            framework_capabilities: FrameworkCapabilities::default(),
+            pdf_metadata: None,
         }])
     }
 

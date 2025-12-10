@@ -318,7 +318,7 @@ async fn main() -> Result<()> {
             eprintln!("[adapter] Kreuzberg bindings: {}/11 available", kreuzberg_count);
 
             use benchmark_harness::adapters::external::{
-                create_docling_adapter, create_docling_batch_adapter, create_markitdown_adapter,
+                create_docling_adapter, create_docling_batch_adapter, create_markitdown_adapter, create_pandoc_adapter,
                 create_tika_batch_adapter, create_tika_sync_adapter, create_unstructured_adapter,
             };
 
@@ -357,6 +357,17 @@ async fn main() -> Result<()> {
                 eprintln!("[adapter] ✗ markitdown (initialization failed)");
             }
 
+            if let Ok(adapter) = create_pandoc_adapter() {
+                if let Ok(()) = registry.register(Arc::new(adapter)) {
+                    eprintln!("[adapter] ✓ pandoc (registered)");
+                    external_count += 1;
+                } else {
+                    eprintln!("[adapter] ✗ pandoc (registration failed)");
+                }
+            } else {
+                eprintln!("[adapter] ✗ pandoc (initialization failed)");
+            }
+
             if let Ok(adapter) = create_unstructured_adapter() {
                 if let Ok(()) = registry.register(Arc::new(adapter)) {
                     eprintln!("[adapter] ✓ unstructured (registered)");
@@ -391,7 +402,7 @@ async fn main() -> Result<()> {
             }
 
             eprintln!(
-                "[adapter] Open source extraction frameworks: {}/6 available",
+                "[adapter] Open source extraction frameworks: {}/7 available",
                 external_count
             );
             eprintln!(
@@ -432,10 +443,14 @@ async fn main() -> Result<()> {
             println!("  Failed: {}", failure_count);
             println!("  Total: {}", results.len());
 
-            use benchmark_harness::write_json;
+            use benchmark_harness::{write_by_extension_analysis, write_json};
             let output_file = output.join("results.json");
             write_json(&results, &output_file)?;
             println!("\nResults written to: {}", output_file.display());
+
+            let by_ext_file = output.join("by-extension.json");
+            write_by_extension_analysis(&results, &by_ext_file)?;
+            println!("Per-extension analysis written to: {}", by_ext_file.display());
 
             Ok(())
         }

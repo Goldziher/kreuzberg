@@ -52,6 +52,18 @@ pub struct BenchmarkResult {
     /// This is measured during the first warmup extraction and represents the
     /// initial framework load time (imports, initializations, etc.)
     pub cold_start_duration: Option<Duration>,
+
+    /// File extension without dot (e.g., "pdf", "docx")
+    /// Extracted from file_path for per-extension analysis
+    pub file_extension: String,
+
+    /// Framework capability metadata at time of extraction
+    /// Contains OCR support, batch support, async support flags
+    pub framework_capabilities: FrameworkCapabilities,
+
+    /// PDF-specific metadata (only present for PDF files)
+    /// Includes text layer detection results and OCR strategy
+    pub pdf_metadata: Option<PdfMetadata>,
 }
 
 /// Performance metrics collected during extraction
@@ -90,6 +102,57 @@ pub struct QualityMetrics {
 
     /// Overall text quality score (0.0-1.0)
     pub quality_score: f64,
+}
+
+/// Framework capability metadata
+///
+/// Records the capabilities of the framework at the time of extraction,
+/// enabling proper analysis and comparison of results based on framework features.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FrameworkCapabilities {
+    /// Extensions this framework supports (e.g., ["pdf", "docx"])
+    #[serde(default)]
+    pub supported_extensions: Vec<String>,
+
+    /// Whether framework supports OCR
+    #[serde(default)]
+    pub ocr_support: bool,
+
+    /// Whether framework supports batch processing
+    #[serde(default)]
+    pub batch_support: bool,
+
+    /// Whether framework supports async extraction
+    #[serde(default)]
+    pub async_support: bool,
+
+    /// Framework version
+    #[serde(default)]
+    pub version: String,
+}
+
+/// PDF-specific metadata
+///
+/// Contains PDF text layer detection results and OCR strategy used.
+/// Only populated for PDF documents.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PdfMetadata {
+    /// Whether PDF has a quality text layer
+    /// Detected via pdftotext/pdffonts/pypdf
+    pub has_text_layer: bool,
+
+    /// Detection method used ("pdftotext", "pdffonts", "pypdf", "fallback")
+    pub detection_method: String,
+
+    /// Number of pages in the PDF
+    pub page_count: Option<u32>,
+
+    /// Whether OCR was enabled for this extraction
+    pub ocr_enabled: bool,
+
+    /// Text extraction quality hint (0.0-1.0)
+    /// 0.0 = scanned image, 1.0 = native text
+    pub text_quality_score: Option<f64>,
 }
 
 /// Summary statistics for all extractions

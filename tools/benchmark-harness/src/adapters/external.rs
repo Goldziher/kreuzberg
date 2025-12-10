@@ -44,6 +44,22 @@ pub fn create_markitdown_adapter() -> Result<SubprocessAdapter> {
     Ok(SubprocessAdapter::new("markitdown", command, args, vec![]))
 }
 
+/// Creates a subprocess adapter for Pandoc (universal document converter)
+pub fn create_pandoc_adapter() -> Result<SubprocessAdapter> {
+    // Verify pandoc is installed
+    which::which("pandoc").map_err(|_| {
+        crate::Error::Config(
+            "pandoc not found. Install with: brew install pandoc (macOS) or apt install pandoc (Linux)".to_string(),
+        )
+    })?;
+
+    let script_path = get_script_path("pandoc_extract.sh")?;
+    let command = PathBuf::from("bash");
+    let args = vec![script_path.to_string_lossy().to_string()];
+
+    Ok(SubprocessAdapter::new("pandoc", command, args, vec![]))
+}
+
 /// Helper function to get the path to a wrapper script
 fn get_script_path(script_name: &str) -> Result<PathBuf> {
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
@@ -194,6 +210,7 @@ mod tests {
         let _ = create_docling_adapter();
         let _ = create_unstructured_adapter();
         let _ = create_markitdown_adapter();
+        let _ = create_pandoc_adapter();
         let _ = create_tika_sync_adapter();
         let _ = create_tika_batch_adapter();
     }

@@ -246,6 +246,9 @@ impl BenchmarkRunner {
             iterations,
             statistics: Some(statistics),
             cold_start_duration,
+            file_extension: first_result.file_extension.clone(),
+            framework_capabilities: first_result.framework_capabilities.clone(),
+            pdf_metadata: first_result.pdf_metadata.clone(),
         })
     }
 
@@ -330,6 +333,9 @@ impl BenchmarkRunner {
             iterations,
             statistics: Some(statistics),
             cold_start_duration,
+            file_extension: first_result.file_extension.clone(),
+            framework_capabilities: first_result.framework_capabilities.clone(),
+            pdf_metadata: first_result.pdf_metadata.clone(),
         }];
 
         Ok(aggregated_results)
