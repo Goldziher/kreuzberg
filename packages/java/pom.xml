@@ -48,7 +48,7 @@
         <maven.compiler.release>24</maven.compiler.release>
         <junit.version>5.11.4</junit.version>
         <maven.version>3.6.3</maven.version>
-        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>4.0.0-beta-3</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
         <maven-resources-plugin.version>3.4.0</maven-resources-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>

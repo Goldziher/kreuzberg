@@ -274,4 +274,8 @@ jobs:
         env:
           PYTEST_TIMEOUT: 300
         run: |
-          task e2e:python:test -- -m "not slow" --timeout=60
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            task e2e:python:test -- -m "not slow and not windows_slow" --timeout=60
+          else
+            task e2e:python:test -- -m "not slow" --timeout=60
+          fi

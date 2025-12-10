@@ -11,15 +11,15 @@ import (
 // It reads from the test_documents directory in the kreuzberg repo root.
 func getValidPDFBytes() ([]byte, error) {
 	// Find kreuzberg repo root
-	// When test runs from packages/go, working dir is packages/go
-	// packages/go (wd) -> .. = packages -> .. = repo root
+	// When test runs from packages/go/kreuzberg, working dir is packages/go/kreuzberg
+	// packages/go/kreuzberg (wd) -> .. = packages/go -> .. = packages -> .. = repo root
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	// Navigate from packages/go to repo root
-	repoRoot := filepath.Join(wd, "..", "..")
+	// Navigate from packages/go/kreuzberg to repo root
+	repoRoot := filepath.Join(wd, "..", "..", "..")
 	testPDF := filepath.Join(repoRoot, "test_documents", "pdfs_with_tables", "tiny.pdf")
 
 	// #nosec G304 -- Test fixture reads from known test_documents directory

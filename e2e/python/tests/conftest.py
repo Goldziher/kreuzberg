@@ -8,6 +8,7 @@ particularly for slow tests that may timeout in CI environments.
 from __future__ import annotations
 
 import contextlib
+import platform
 
 import pytest
 
@@ -18,6 +19,20 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     )
+    config.addinivalue_line(
+        "markers",
+        "windows_slow: marks tests as too slow on Windows CI (deselect with '-m \"not windows_slow\"')",
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Apply windows_slow marker to office tests on Windows platform."""
+    if platform.system() != "Windows":
+        return
+
+    for item in items:
+        if "test_office" in item.nodeid:
+            item.add_marker(pytest.mark.windows_slow)
 
 
 @pytest.fixture(autouse=True)

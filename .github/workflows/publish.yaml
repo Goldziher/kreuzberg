@@ -2019,30 +2019,8 @@ jobs:
           fi
           chmod 600 "$HOME/.gem/credentials"
 
-      - name: Check RubyGems version
-        id: rubygems_check
-        run: |
-          set -euo pipefail
-          export VERSION="${{ needs.prepare.outputs.version }}"
-          exists=$(python3 - <<'PY'
-          import json, os, sys, urllib.request
-          version = os.environ["VERSION"]
-          try:
-              with urllib.request.urlopen("https://rubygems.org/api/v1/versions/kreuzberg.json") as resp:
-                  data = json.load(resp)
-              print("true" if any(entry.get("number") == version for entry in data) else "false")
-          except urllib.error.HTTPError as e:
-              if e.code == 404:
-                  print("::notice::Gem kreuzberg not found on RubyGems (first publish)", file=sys.stderr)
-                  print("false")
-              else:
-                  raise
-          PY
-          )
-          echo "exists=$exists" >> "$GITHUB_OUTPUT"
-
       - name: Rebuild gems with latest RubyGems
-        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.rubygems_check.outputs.exists != 'true' }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         working-directory: dist
         run: |
           set -euo pipefail
@@ -2082,8 +2060,8 @@ jobs:
             echo "Rebuilt ${gem} successfully"
           done
 
-      - name: Publish gems
-        if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.rubygems_check.outputs.exists != 'true' }}
+      - name: Publish gems to RubyGems
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         working-directory: dist
         run: |
           set -euo pipefail
@@ -2093,14 +2071,36 @@ jobs:
             echo "No gem artifacts found" >&2
             exit 1
           fi
+
+          failed_gems=()
           for gem in "${gems[@]}"; do
-            echo "Pushing ${gem}"
-            gem push "$gem"
+            echo "Pushing ${gem} to RubyGems"
+            publish_log=$(mktemp)
+            set +e
+            gem push "$gem" 2>&1 | tee "$publish_log"
+            status=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$status" -ne 0 ]; then
+              if grep -qE "Repushing of gem versions is not allowed|already been pushed" "$publish_log"; then
+                echo "::notice::Gem $gem version already published on RubyGems; skipping."
+                echo "Gem $(basename "$gem") already published; skipping." >> "$GITHUB_STEP_SUMMARY"
+              else
+                failed_gems+=("$gem")
+              fi
+            fi
+            rm -f "$publish_log"
           done
 
-      - name: Ruby gem already published
-        if: ${{ steps.rubygems_check.outputs.exists == 'true' }}
-        run: echo "RubyGem version ${{ needs.prepare.outputs.version }} already published; skipping." >> "$GITHUB_STEP_SUMMARY"
+          if [ ${#failed_gems[@]} -gt 0 ]; then
+            echo "::error::Failed to publish the following gems:" >&2
+            for gem in "${failed_gems[@]}"; do
+              echo "  - $gem" >&2
+            done
+            exit 1
+          fi
+
+          echo "Successfully published kreuzberg version ${{ needs.prepare.outputs.version }} to RubyGems" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
