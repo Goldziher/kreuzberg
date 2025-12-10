@@ -16,8 +16,12 @@ if [ -z "$TARGET" ]; then
 	exit 1
 fi
 
+cd "$REPO_ROOT"
+# Install workspace dependencies with full support (including optional deps)
+# This is done at workspace root to maintain consistency with shared-workspace-lockfile
+pnpm install
+
 cd "$REPO_ROOT/crates/kreuzberg-node"
-pnpm install --no-optional
 # Build native bindings with napi (passing TARGET for Rust compilation)
 pnpm exec napi build --platform --release --target "${TARGET}"
 # Build TypeScript separately (no TARGET needed for tsup/esbuild)
