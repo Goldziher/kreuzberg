@@ -479,14 +479,16 @@ jobs:
             if command -v yum >/dev/null 2>&1; then
               # CentOS-based manylinux (rust-cross for x86_64)
               yum install -y openssl openssl-devel pkgconfig
+              # CentOS-based images install OpenSSL to /usr/lib64
+              export OPENSSL_LIB_DIR=/usr/lib64
+              export OPENSSL_INCLUDE_DIR=/usr/include
             elif command -v apt-get >/dev/null 2>&1; then
               # Debian-based manylinux (pypa for ARM)
-              sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+              apt-get update && apt-get install -y pkg-config libssl-dev
+              # Debian-based images install OpenSSL to /usr/lib/x86_64-linux-gnu
+              export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
+              export OPENSSL_INCLUDE_DIR=/usr/include
             fi
-        env:
-          # manylinux2014 images install OpenSSL to /usr/lib64 and /usr/include
-          OPENSSL_LIB_DIR: /usr/lib64
-          OPENSSL_INCLUDE_DIR: /usr/include
 
       - name: Build wheels (native)
         if: matrix.os != 'ubuntu-latest'
