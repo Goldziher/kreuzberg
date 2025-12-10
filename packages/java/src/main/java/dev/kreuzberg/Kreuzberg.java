@@ -382,10 +382,11 @@ public final class Kreuzberg {
             MemorySegment presetPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_GET_EMBEDDING_PRESET.invoke(nameSeg);
             if (presetPtr == null || presetPtr.address() == 0) {
                 String error = getLastError();
-                if (error.toLowerCase(Locale.ROOT).contains("unknown embedding preset")) {
+                if (error != null && error.toLowerCase(Locale.ROOT).contains("unknown embedding preset")) {
                     return Optional.empty();
                 }
-                throw new KreuzbergException("Failed to fetch embedding preset: " + error);
+                String errorMsg = error != null ? error : "Unknown error";
+                throw new KreuzbergException("Failed to fetch embedding preset: " + errorMsg);
             }
             try {
                 String json = KreuzbergFFI.readCString(presetPtr);
@@ -1185,13 +1186,12 @@ public final class Kreuzberg {
     /**
      * Gets the last error message from the native library.
      *
-     * @return the error message, or a default message if none available
+     * @return the error message, or null if none available
      */
     private static String getLastError() {
         try {
             MemorySegment errorPtr = (MemorySegment) KreuzbergFFI.KREUZBERG_LAST_ERROR.invoke();
-            String error = KreuzbergFFI.readCString(errorPtr);
-            return error != null ? error : "Unknown error";
+            return KreuzbergFFI.readCString(errorPtr);
         } catch (Throwable e) {
             return "Unknown error (failed to retrieve error message)";
         }
