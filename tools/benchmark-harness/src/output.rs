@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::time::Duration;
 
 /// Write benchmark results to JSON file
 ///
@@ -145,7 +144,7 @@ fn calculate_framework_stats(results: &[&BenchmarkResult]) -> FrameworkExtension
 
     let median_duration_ms = if !durations.is_empty() {
         let mid = durations.len() / 2;
-        if durations.len() % 2 == 0 {
+        if durations.len().is_multiple_of(2) {
             (durations[mid - 1] + durations[mid]) / 2.0
         } else {
             durations[mid]
