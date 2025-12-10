@@ -28,8 +28,9 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	export PATH="$ffiPathGnu:$ffiPathRelease:$PATH"
 	# Set CGO_LDFLAGS to help linker find the library
 	export CGO_LDFLAGS="-L$ffiPathGnu -L$ffiPathRelease"
+	# Skip -race on Windows: mingw + static CRT regularly fails to link race runtime
 	# -x to print the underlying compile/link commands for debugging toolchain issues
-	go test -v -race -x ./...
+	go test -v -x "${GO_TEST_FLAGS:-}" ./...
 else
 	# Unix paths (Linux/macOS)
 	workspace=$(cd ../.. && pwd)
@@ -38,5 +39,5 @@ else
 	export DYLD_LIBRARY_PATH="$ffiPath:${DYLD_LIBRARY_PATH:-}"
 	export CGO_LDFLAGS="-L$ffiPath"
 	export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
-	go test -v -race -x ./...
+	go test -v -race -x "${GO_TEST_FLAGS:-}" ./...
 fi
