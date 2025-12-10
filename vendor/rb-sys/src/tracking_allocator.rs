@@ -54,17 +54,18 @@ mod mri {
             #[cfg(target_pointer_width = "32")]
             let delta = delta as i32;
 
-            #[cfg(all(target_pointer_width = "64", target_env = "msvc"))]
-            let delta: i32 = delta
-                .try_into()
-                .unwrap_or_else(|_| if delta.is_positive() { i32::MAX } else { i32::MIN });
-
-            #[cfg(all(target_pointer_width = "64", not(target_env = "msvc")))]
+            #[cfg(target_pointer_width = "64")]
             let delta = delta as i64;
 
             unsafe {
                 if is_ruby_vm_started() {
+                    // On Windows, ssize_t is i32 even on 64-bit, so cast i64 to i32
+                    #[cfg(all(target_pointer_width = "64", target_os = "windows"))]
+                    rb_gc_adjust_memory_usage(delta as i32);
+
+                    #[cfg(not(all(target_pointer_width = "64", target_os = "windows")))]
                     rb_gc_adjust_memory_usage(delta);
+
                     delta as isize
                 } else {
                     0
