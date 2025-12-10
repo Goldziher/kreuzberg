@@ -358,7 +358,7 @@ public static class TestHelpers
         {
             foreach (var vItem in va)
             {
-                if (vItem is JsonValue vv && vv.TryGetValue<string>(out var vStr) &&
+                if (vItem is JsonValue vvItem && vvItem.TryGetValue<string>(out var vStr) &&
                     vStr.Contains(needle, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
@@ -367,12 +367,12 @@ public static class TestHelpers
             return false;
         }
 
-        if (value is JsonArray va && contains is JsonArray ca)
+        if (value is JsonArray va3 && contains is JsonArray ca)
         {
             foreach (var item in ca)
             {
                 bool found = false;
-                foreach (var vItem in va)
+                foreach (var vItem in va3)
                 {
                     if (JsonEquals(vItem!, item!))
                     {
