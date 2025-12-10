@@ -5,9 +5,7 @@ site_author: Na'aman Hirschfeld
 repo_name: kreuzberg-dev/kreuzberg
 repo_url: https://github.com/kreuzberg-dev/kreuzberg
 edit_uri: edit/main/docs/
-copyright: |
-  Copyright &copy; 2023-2025 Na'aman Hirschfeld<br>
-  <a href="#__consent">Change cookie settings</a>
+copyright: Copyright &copy; 2023-2025 Kreuzberg.dev
 
 theme:
   name: material
