@@ -607,3 +607,17 @@
 	background-color: #58fbda;
 	opacity: 0.5;
 }
+
+/* Hide footer navigation (prev/next links) */
+.md-footer__inner.md-grid {
+	display: none;
+}
+
+/* Style the copyright footer to match header */
+.md-footer-meta {
+	background-color: #323040;
+}
+
+.md-social {
+	padding: 0.4rem 0;
+}
