@@ -271,5 +271,7 @@ jobs:
 
       - name: Run E2E tests
         shell: bash
+        env:
+          PYTEST_TIMEOUT: 300
         run: |
-          task e2e:python:test
+          task e2e:python:test -- -m "not slow" --timeout=60

@@ -1,0 +1,8 @@
+{
+	"extends": "./crates/kreuzberg-node/tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true
+	},
+	"include": ["crates/*/typescript/**/*.ts", "crates/*/typescript/**/*.d.ts", "tools/**/scripts/**/*.ts"],
+	"exclude": ["node_modules", "**/dist", "**/*.spec.ts", "**/tests/**/*"]
+}

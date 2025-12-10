@@ -25,12 +25,18 @@ cd "$REPO_ROOT/packages/python"
 
 echo "=== Running Python tests ==="
 
+# Check if pytest-timeout should be used (environment variable or CI flag)
+TIMEOUT_ARGS=""
+if [ "${PYTEST_TIMEOUT:-}" != "" ]; then
+	TIMEOUT_ARGS="--timeout=${PYTEST_TIMEOUT}"
+fi
+
 if [ "$COVERAGE" = "true" ]; then
 	echo "Coverage enabled"
-	uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 "$@"
+	uv run pytest -vv --cov=kreuzberg --cov-report=lcov:coverage.lcov --cov-report=term --cov-config=pyproject.toml --reruns 1 --reruns-delay 1 "$TIMEOUT_ARGS" "$@"
 else
 	echo "Coverage disabled"
-	uv run pytest -vv --reruns 1 --reruns-delay 1 "$@"
+	uv run pytest -vv --reruns 1 --reruns-delay 1 "$TIMEOUT_ARGS" "$@"
 fi
 
 echo "Tests complete"

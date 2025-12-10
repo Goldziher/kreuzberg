@@ -92,7 +92,7 @@ describe("smoke fixtures", () => {
 				return;
 			}
 			assertions.assertExpectedMime(result, ["image/png"]);
-			assertions.assertMetadataExpectation(result, "format", "PNG");
+			assertions.assertMetadataExpectation(result, "format", { eq: "PNG" });
 		},
 		TEST_TIMEOUT_MS,
 	);

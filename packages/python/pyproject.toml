@@ -99,7 +99,11 @@ include = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+timeout = 60
+timeout_method = "thread"
 markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "integration: marks tests as integration tests (requires running services)",
 ]
+# Timeout exceptions are ignored by default, re-raise them
+timeout_func_only = true

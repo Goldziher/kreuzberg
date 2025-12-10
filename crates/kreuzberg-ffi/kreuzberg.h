@@ -20,6 +20,9 @@ typedef struct ExtractionConfig ExtractionConfig;
 
 /**
  * C-compatible extraction result structure
+ *
+ * Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
+ * Field order: 10 pointers (8 bytes each) + 1 bool + 7 bytes padding = 88 bytes total
  */
 typedef struct CExtractionResult {
   /**
@@ -66,10 +69,17 @@ typedef struct CExtractionResult {
    * Whether extraction was successful
    */
   bool success;
+  /**
+   * Padding to match Java MemoryLayout (7 bytes padding to align to 8-byte boundary)
+   */
+  uint8_t _padding1[7];
 } CExtractionResult;
 
 /**
  * C-compatible structure for batch extraction results
+ *
+ * Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
+ * Field order: 1 pointer (8 bytes) + 1 usize (8 bytes) + 1 bool + 7 bytes padding = 24 bytes total
  */
 typedef struct CBatchResult {
   /**
@@ -84,10 +94,17 @@ typedef struct CBatchResult {
    * Whether batch operation was successful
    */
   bool success;
+  /**
+   * Padding to match Java MemoryLayout (7 bytes padding to align to 8-byte boundary)
+   */
+  uint8_t _padding2[7];
 } CBatchResult;
 
 /**
  * C-compatible structure for passing byte array with MIME type in batch operations
+ *
+ * Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
+ * Field order: 1 pointer (8 bytes) + 1 usize (8 bytes) + 1 pointer (8 bytes) = 24 bytes total
  */
 typedef struct CBytesWithMime {
   /**

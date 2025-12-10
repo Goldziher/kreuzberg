@@ -444,6 +444,9 @@ impl Drop for CStringGuard {
 }
 
 /// C-compatible extraction result structure
+///
+/// Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
+/// Field order: 10 pointers (8 bytes each) + 1 bool + 7 bytes padding = 88 bytes total
 #[repr(C)]
 pub struct CExtractionResult {
     /// Extracted text content (null-terminated UTF-8 string, must be freed with kreuzberg_free_string)
@@ -468,6 +471,8 @@ pub struct CExtractionResult {
     pub images_json: *mut c_char,
     /// Whether extraction was successful
     pub success: bool,
+    /// Padding to match Java MemoryLayout (7 bytes padding to align to 8-byte boundary)
+    _padding1: [u8; 7],
 }
 
 /// Helper function to convert ExtractionResult to CExtractionResult
@@ -576,6 +581,7 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         chunks_json: chunks_json_guard.map_or(ptr::null_mut(), |g| g.into_raw()),
         images_json: images_json_guard.map_or(ptr::null_mut(), |g| g.into_raw()),
         success: true,
+        _padding1: [0u8; 7],
     })))
 }
 
@@ -1060,6 +1066,9 @@ pub unsafe extern "C" fn kreuzberg_extract_bytes_sync_with_config(
 }
 
 /// C-compatible structure for passing byte array with MIME type in batch operations
+///
+/// Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
+/// Field order: 1 pointer (8 bytes) + 1 usize (8 bytes) + 1 pointer (8 bytes) = 24 bytes total
 #[repr(C)]
 pub struct CBytesWithMime {
     /// Pointer to byte data
@@ -1071,6 +1080,9 @@ pub struct CBytesWithMime {
 }
 
 /// C-compatible structure for batch extraction results
+///
+/// Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
+/// Field order: 1 pointer (8 bytes) + 1 usize (8 bytes) + 1 bool + 7 bytes padding = 24 bytes total
 #[repr(C)]
 pub struct CBatchResult {
     /// Array of extraction results
@@ -1079,6 +1091,8 @@ pub struct CBatchResult {
     pub count: usize,
     /// Whether batch operation was successful
     pub success: bool,
+    /// Padding to match Java MemoryLayout (7 bytes padding to align to 8-byte boundary)
+    _padding2: [u8; 7],
 }
 
 /// Batch extract text and metadata from multiple files (synchronous).
@@ -1166,6 +1180,7 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_files_sync(
                     results: results_ptr,
                     count,
                     success: true,
+                    _padding2: [0u8; 7],
                 }))
             }
             Err(e) => {
@@ -1269,6 +1284,7 @@ pub unsafe extern "C" fn kreuzberg_batch_extract_bytes_sync(
                     results: results_ptr,
                     count,
                     success: true,
+                    _padding2: [0u8; 7],
                 }))
             }
             Err(e) => {
@@ -3501,6 +3517,54 @@ pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut c_char {
         }
     })
 }
+
+// Static assertions to verify FFI struct sizes match Java MemoryLayout definitions.
+// These assertions ensure that alignment and padding are correct for FFI interoperability.
+//
+// Expected sizes (on 64-bit systems):
+// - CExtractionResult: 88 bytes (10 pointers + 1 bool + 7 bytes padding)
+// - CBatchResult: 24 bytes (1 pointer + 1 usize + 1 bool + 7 bytes padding)
+// - CBytesWithMime: 24 bytes (1 pointer + 1 usize + 1 pointer, naturally aligned)
+
+#[allow(non_upper_case_globals)]
+const _: () = {
+    const fn assert_c_extraction_result_size() {
+        const SIZE: usize = std::mem::size_of::<CExtractionResult>();
+        const _: () = assert!(SIZE == 88, "CExtractionResult size must be 88 bytes");
+    }
+
+    const fn assert_c_extraction_result_alignment() {
+        const ALIGN: usize = std::mem::align_of::<CExtractionResult>();
+        const _: () = assert!(ALIGN == 8, "CExtractionResult alignment must be 8 bytes");
+    }
+
+    const fn assert_c_batch_result_size() {
+        const SIZE: usize = std::mem::size_of::<CBatchResult>();
+        const _: () = assert!(SIZE == 24, "CBatchResult size must be 24 bytes");
+    }
+
+    const fn assert_c_batch_result_alignment() {
+        const ALIGN: usize = std::mem::align_of::<CBatchResult>();
+        const _: () = assert!(ALIGN == 8, "CBatchResult alignment must be 8 bytes");
+    }
+
+    const fn assert_c_bytes_with_mime_size() {
+        const SIZE: usize = std::mem::size_of::<CBytesWithMime>();
+        const _: () = assert!(SIZE == 24, "CBytesWithMime size must be 24 bytes");
+    }
+
+    const fn assert_c_bytes_with_mime_alignment() {
+        const ALIGN: usize = std::mem::align_of::<CBytesWithMime>();
+        const _: () = assert!(ALIGN == 8, "CBytesWithMime alignment must be 8 bytes");
+    }
+
+    let _ = assert_c_extraction_result_size;
+    let _ = assert_c_extraction_result_alignment;
+    let _ = assert_c_batch_result_size;
+    let _ = assert_c_batch_result_alignment;
+    let _ = assert_c_bytes_with_mime_size;
+    let _ = assert_c_bytes_with_mime_alignment;
+};
 
 #[cfg(test)]
 mod tests {

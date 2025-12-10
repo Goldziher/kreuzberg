@@ -80,26 +80,24 @@ fn workspace_root() -> Result<PathBuf> {
     // Try CARGO_MANIFEST_DIR first (available during cargo run)
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
         let path = PathBuf::from(manifest_dir);
-        if let Some(root) = path.parent().and_then(|p| p.parent()) {
-            if root.exists() {
-                return Ok(root.to_path_buf());
-            }
+        if let Some(root) = path.parent().and_then(|p| p.parent())
+            && root.exists()
+        {
+            return Ok(root.to_path_buf());
         }
     }
 
     // Fallback: assume binary is in target/{release,debug} and work backwards
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(parent) = exe_path.parent() {
-            // Check if we're in target/release or target/debug
-            if let Some(target_dir) = parent.parent() {
-                if target_dir.file_name().map_or(false, |n| n == "target") {
-                    if let Some(workspace_dir) = target_dir.parent() {
-                        if workspace_dir.exists() {
-                            return Ok(workspace_dir.to_path_buf());
-                        }
-                    }
-                }
-            }
+    if let Ok(exe_path) = std::env::current_exe()
+        && let Some(parent) = exe_path.parent()
+    {
+        // Check if we're in target/release or target/debug
+        if let Some(target_dir) = parent.parent()
+            && target_dir.file_name().is_some_and(|n| n == "target")
+            && let Some(workspace_dir) = target_dir.parent()
+            && workspace_dir.exists()
+        {
+            return Ok(workspace_dir.to_path_buf());
         }
     }
 

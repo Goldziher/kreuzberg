@@ -18,7 +18,20 @@ if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
 	exit 1
 fi
 
+echo "=========================================="
+echo "Go Test Configuration and Diagnostics"
+echo "=========================================="
+echo "Script directory: $SCRIPT_DIR"
+echo "Repository root: $REPO_ROOT"
+echo "Operating system: $OSTYPE"
+echo "Go version: $(go version)"
+echo "Go environment:"
+go env
+echo
+
 cd "$REPO_ROOT/packages/go"
+echo "Working directory: $(pwd)"
+echo
 
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
 	# Windows path - handled via PowerShell wrapper
@@ -28,8 +41,38 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	export PATH="$ffiPathGnu:$ffiPathRelease:$PATH"
 	# Set CGO_LDFLAGS to help linker find the library
 	export CGO_LDFLAGS="-L$ffiPathGnu -L$ffiPathRelease"
+
+	echo "=========================================="
+	echo "Windows-specific Configuration"
+	echo "=========================================="
+	echo "Workspace root: $workspace"
+	echo "FFI path (GNU): $ffiPathGnu"
+	echo "FFI path (Release): $ffiPathRelease"
+	echo "PATH: $PATH"
+	echo "CGO_LDFLAGS: $CGO_LDFLAGS"
+	echo "CGO_CFLAGS: ${CGO_CFLAGS:-<not set>}"
+	echo "CC: ${CC:-<not set>}"
+	echo "CXX: ${CXX:-<not set>}"
+	echo
+
+	echo "=== FFI Library Files ==="
+	if [ -d "$ffiPathGnu" ]; then
+		echo "Contents of $ffiPathGnu:"
+		find "$ffiPathGnu" -type f \( -name "*.dll" -o -name "*.a" -o -name "*.lib" \) | head -20
+	else
+		echo "Directory not found: $ffiPathGnu"
+	fi
+	if [ -d "$ffiPathRelease" ]; then
+		echo "Contents of $ffiPathRelease:"
+		find "$ffiPathRelease" -type f \( -name "*.dll" -o -name "*.a" -o -name "*.lib" \) | head -20
+	else
+		echo "Directory not found: $ffiPathRelease"
+	fi
+	echo
+
 	# Skip -race on Windows: mingw + static CRT regularly fails to link race runtime
 	# -x to print the underlying compile/link commands for debugging toolchain issues
+	echo "Running Go tests with verbose output and compile command tracing..."
 	go test -v -x "${GO_TEST_FLAGS:-}" ./...
 else
 	# Unix paths (Linux/macOS)
@@ -39,5 +82,43 @@ else
 	export DYLD_LIBRARY_PATH="$ffiPath:${DYLD_LIBRARY_PATH:-}"
 	export CGO_LDFLAGS="-L$ffiPath"
 	export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+
+	echo "=========================================="
+	echo "Unix-specific Configuration"
+	echo "=========================================="
+	echo "Workspace root: $workspace"
+	echo "FFI library path: $ffiPath"
+	echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+	echo "DYLD_LIBRARY_PATH: $DYLD_LIBRARY_PATH"
+	echo "CGO_LDFLAGS: $CGO_LDFLAGS"
+	echo "CGO_CFLAGS: ${CGO_CFLAGS:-<not set>}"
+	echo "CC: ${CC:-<not set>}"
+	echo "CXX: ${CXX:-<not set>}"
+	echo "TESSDATA_PREFIX: $TESSDATA_PREFIX"
+	echo
+
+	echo "=== FFI Library Files ==="
+	if [ -d "$ffiPath" ]; then
+		echo "Contents of $ffiPath:"
+		find "$ffiPath" -type f \( -name "*.so" -o -name "*.dylib" -o -name "*.a" \) | head -20
+		echo
+		echo "File details:"
+		ls -lh "$ffiPath"/libkreuzberg_ffi.* 2>/dev/null || echo "No libkreuzberg_ffi files found"
+	else
+		echo "Directory not found: $ffiPath"
+	fi
+	echo
+
+	echo "=== Library dependencies ==="
+	if command -v pkg-config &>/dev/null; then
+		echo "pkg-config version:"
+		pkg-config --version
+	fi
+	echo
+
+	# Running Go tests with verbose output and race detector
+	# -x prints the underlying compile/link commands for debugging toolchain issues
+	# -race enables the race condition detector (not available on Windows)
+	echo "Running Go tests with verbose output, race detection, and compile command tracing..."
 	go test -v -race -x "${GO_TEST_FLAGS:-}" ./...
 fi

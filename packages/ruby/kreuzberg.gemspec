@@ -45,6 +45,10 @@ fallback_files = Dir.chdir(__dir__) do
   core_fallback = Dir.chdir(repo_root) do
     Dir.glob('crates/kreuzberg/**/*', File::FNM_DOTMATCH)
        .reject { |f| File.directory?(f) }
+       .reject { |f| f.include?('/.fastembed_cache/') }
+       .reject { |f| f.include?('/target/') }
+       .grep_v(/\.(swp|bak|tmp)$/)
+       .grep_v(/~$/)
        .map { |path| "vendor/#{path.delete_prefix('crates/')}" }
   end
 

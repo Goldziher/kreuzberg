@@ -346,20 +346,20 @@ public static class TestHelpers
 
     private static bool ValueContains(JsonNode value, JsonNode contains)
     {
-        if (value is JsonValue vv && contains is JsonValue cv)
+        if (value is JsonValue valueAsJsonValue && contains is JsonValue containsAsJsonValue)
         {
-            if (vv.TryGetValue<string>(out var vStr) && cv.TryGetValue<string>(out var cStr))
+            if (valueAsJsonValue.TryGetValue<string>(out var valueStr) && containsAsJsonValue.TryGetValue<string>(out var containsStr))
             {
-                return vStr.Contains(cStr, StringComparison.OrdinalIgnoreCase);
+                return valueStr.Contains(containsStr, StringComparison.OrdinalIgnoreCase);
             }
         }
 
-        if (value is JsonArray va && contains is JsonValue cs && cs.TryGetValue<string>(out var needle))
+        if (value is JsonArray valueArrayWithString && contains is JsonValue containsAsValueString && containsAsValueString.TryGetValue<string>(out var needle))
         {
-            foreach (var vItem in va)
+            foreach (var arrayItem in valueArrayWithString)
             {
-                if (vItem is JsonValue vvItem && vvItem.TryGetValue<string>(out var vStr) &&
-                    vStr.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                if (arrayItem is JsonValue arrayItemAsValue && arrayItemAsValue.TryGetValue<string>(out var arrayItemStr) &&
+                    arrayItemStr.Contains(needle, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
@@ -367,14 +367,14 @@ public static class TestHelpers
             return false;
         }
 
-        if (value is JsonArray va3 && contains is JsonArray ca)
+        if (value is JsonArray valueArrayWithArray && contains is JsonArray containsArray)
         {
-            foreach (var item in ca)
+            foreach (var containsItem in containsArray)
             {
                 bool found = false;
-                foreach (var vItem in va3)
+                foreach (var valueItem in valueArrayWithArray)
                 {
-                    if (JsonEquals(vItem!, item!))
+                    if (JsonEquals(valueItem!, containsItem!))
                     {
                         found = true;
                         break;
@@ -387,11 +387,11 @@ public static class TestHelpers
         }
 
         // Handle case where value is an array and contains is a single value
-        if (value is JsonArray va2)
+        if (value is JsonArray valueArraySingleItem)
         {
-            foreach (var vItem in va2)
+            foreach (var arrayItem in valueArraySingleItem)
             {
-                if (JsonEquals(vItem!, contains))
+                if (JsonEquals(arrayItem!, contains))
                 {
                     return true;
                 }
