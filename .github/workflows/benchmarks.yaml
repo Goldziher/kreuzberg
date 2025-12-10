@@ -534,6 +534,9 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Vendor kreuzberg core for Ruby
+        run: bash scripts/ci/ruby/vendor-kreuzberg-core.sh
+
       - name: Build Ruby native gem
         env:
           PLATFORM: x86_64-linux
@@ -600,6 +603,9 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Vendor kreuzberg core for Ruby
+        run: bash scripts/ci/ruby/vendor-kreuzberg-core.sh
 
       - name: Build Ruby native gem
         env:
@@ -681,6 +687,7 @@ jobs:
           FRAMEWORK: kreuzberg-go-sync
           MODE: ${{ matrix.mode }}
           ITERATIONS: ${{ env.ITERATIONS }}
+          KREUZBERG_BENCHMARK_DEBUG: "true"
           TIMEOUT: ${{ github.event.inputs.timeout }}
         run: bash scripts/benchmarks/run-benchmark.sh
 
@@ -751,6 +758,7 @@ jobs:
           FRAMEWORK: kreuzberg-go-batch
           MODE: ${{ matrix.mode }}
           ITERATIONS: ${{ env.ITERATIONS }}
+          KREUZBERG_BENCHMARK_DEBUG: "true"
           TIMEOUT: ${{ github.event.inputs.timeout }}
         run: bash scripts/benchmarks/run-benchmark.sh
 

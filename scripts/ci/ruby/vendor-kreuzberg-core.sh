@@ -43,6 +43,7 @@ sed -i.bak 's/^ahash = { workspace = true }/ahash = "0.8.12"/' "$REPO_ROOT/packa
 sed -i.bak 's/^async-trait = { workspace = true }/async-trait = "0.1.89"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^base64 = { workspace = true }/base64 = "0.22.1"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^hex = { workspace = true }/hex = "0.4.3"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^libc = { workspace = true }/libc = "0.2.178"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^num_cpus = { workspace = true }/num_cpus = "1.17.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^serde = { workspace = true }/serde = { version = "1.0.228", features = ["derive"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^serde_json = { workspace = true }/serde_json = "1.0.145"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
@@ -50,6 +51,9 @@ sed -i.bak 's/^thiserror = { workspace = true }/thiserror = "2.0.17"/' "$REPO_RO
 sed -i.bak 's/^tokio = { workspace = true }/tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^tracing = { workspace = true }/tracing = "0.1"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 sed -i.bak 's/^anyhow = { workspace = true }/anyhow = "1.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+sed -i.bak 's/^reqwest = { workspace = true, /reqwest = { version = "0.12.25", /' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+# Replace both base and dev image entries
+sed -i.bak 's/^image = { workspace = true, /image = { version = "0.25.9", /' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
 
 # Inline dev-dependencies
 sed -i.bak 's/^tempfile = { workspace = true }/tempfile = "3.23.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
@@ -84,6 +88,7 @@ anyhow = "1.0"
 
 # Async utilities
 async-trait = "0.1.89"
+libc = "0.2.178"
 
 # Tracing/observability
 tracing = "0.1"
@@ -93,6 +98,8 @@ ahash = "0.8.12"
 base64 = "0.22.1"
 hex = "0.4.3"
 num_cpus = "1.17.0"
+reqwest = { version = "0.12.25", default-features = false }
+image = { version = "0.25.9", default-features = false }
 
 # Testing (dev)
 tempfile = "3.23.0"
