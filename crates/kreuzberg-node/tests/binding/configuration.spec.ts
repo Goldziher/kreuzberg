@@ -67,7 +67,7 @@ describe("Configuration Options", () => {
 			expect(result.content).toBeTruthy();
 		});
 
-		it.skip("should handle forceOcr: true", () => {
+		it("should handle forceOcr: true", () => {
 			const config: ExtractionConfigType = {
 				forceOcr: true,
 				ocr: {
