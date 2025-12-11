@@ -533,7 +533,7 @@ Configuration for reducing token count in extracted text, useful for optimizing 
 
 ### TOML Format
 
-```toml
+```toml title="kreuzberg.toml"
 # kreuzberg.toml
 use_cache = true
 enable_quality_processing = true
@@ -585,7 +585,7 @@ enabled = true
 
 ### YAML Format
 
-```yaml
+```yaml title="kreuzberg.yaml"
 # kreuzberg.yaml
 use_cache: true
 enable_quality_processing: true
@@ -637,7 +637,7 @@ postprocessor:
 
 ### JSON Format
 
-```json
+```json title="kreuzberg.json"
 {
   "use_cache": true,
   "enable_quality_processing": true,
@@ -744,7 +744,7 @@ For complete working examples, see the [examples directory](https://github.com/k
 
 - Never commit config files containing API keys or passwords to version control
 - Use environment variables for sensitive data:
-  ```bash
+  ```bash title="Terminal"
   export KREUZBERG_OCR_API_KEY="your-key-here"
   ```
 - Add `kreuzberg.toml` to `.gitignore` if it contains secrets
@@ -755,7 +755,7 @@ For complete working examples, see the [examples directory](https://github.com/k
 - `passwords` field attempts passwords in order until one succeeds
 - Passwords are not logged or cached
 - Use environment variables for sensitive passwords:
-  ```python
+  ```python title="secure_config.py"
   import os
   config = PdfConfig(passwords=[os.getenv("PDF_PASSWORD")])
   ```

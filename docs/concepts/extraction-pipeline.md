@@ -87,8 +87,8 @@ See the [Configuration Guide](../guides/configuration.md) for MIME type configur
 
 The extractor registry maps MIME types to `DocumentExtractor` implementations:
 
-```rust
-// Registry maintains: MIME type → Extractor mapping
+```rust title="registry_lookup.rs"
+// Retrieve the global extractor registry and look up handler for PDF files
 let registry = get_document_extractor_registry();
 let extractor = registry.get("application/pdf")?;
 ```
@@ -156,8 +156,8 @@ After extraction, results pass through a configurable post-processing pipeline:
 
 Validators run first and can fail-fast if results don't meet requirements:
 
-```python
-# Example: Minimum text length validator
+```python title="min_length_validator.py"
+# Validator that enforces minimum content length requirement
 class MinLengthValidator:
     def validate(self, result: ExtractionResult, config: ExtractionConfig) -> None:
         if len(result.content) < 100:
@@ -181,7 +181,7 @@ Quality score added to `metadata.additional["quality_score"]`.
 
 If `chunking` config is provided, text is split into overlapping chunks:
 
-```python
+```python title="chunking_config_example.py"
 config = ExtractionConfig(
     chunking=ChunkingConfig(
         max_chars=1000,
@@ -196,8 +196,8 @@ Chunks added to `result.chunks` with start/end offsets.
 
 Post-processors run in order by stage (Early → Middle → Late):
 
-```python
-# Example: Custom post-processor
+```python title="redaction_processor.py"
+# Post-processor that masks redacted content with asterisks
 class RedactionProcessor:
     def process(self, result: ExtractionResult, config: ExtractionConfig) -> ExtractionResult:
         result.content = result.content.replace("[REDACTED]", "***")

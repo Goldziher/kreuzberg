@@ -121,7 +121,7 @@ Built-in async/await with Tokio enables efficient parallel processing:
 
 The Rust core (`crates/kreuzberg`) is a fully functional standalone library that can be used directly in Rust projects without any language bindings:
 
-```rust
+```rust title="main.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig};
 
 fn main() -> kreuzberg::Result<()> {

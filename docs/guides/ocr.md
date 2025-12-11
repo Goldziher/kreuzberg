@@ -101,19 +101,19 @@ Available on all platforms (Python, TypeScript, Rust, Ruby):
 
 === "macOS"
 
-    ```bash
+    ```bash title="Terminal"
     brew install tesseract
     ```
 
 === "Ubuntu/Debian"
 
-    ```bash
+    ```bash title="Terminal"
     sudo apt-get install tesseract-ocr
     ```
 
 === "RHEL/CentOS/Fedora"
 
-    ```bash
+    ```bash title="Terminal"
     sudo dnf install tesseract
     ```
 
@@ -123,7 +123,7 @@ Available on all platforms (Python, TypeScript, Rust, Ruby):
 
 ### Additional Languages
 
-```bash
+```bash title="Terminal"
 # macOS
 brew install tesseract-lang
 
@@ -140,7 +140,7 @@ tesseract --list-langs
 
 Available only in Python with deep learning models:
 
-```bash
+```bash title="Terminal"
 pip install "kreuzberg[easyocr]"
 ```
 
@@ -151,7 +151,7 @@ pip install "kreuzberg[easyocr]"
 
 Available only in Python with optimized deep learning:
 
-```bash
+```bash title="Terminal"
 pip install "kreuzberg[paddleocr]"
 ```
 
@@ -349,7 +349,7 @@ These are applied automatically and require no configuration.
 
     **Solution**: Install Tesseract OCR:
 
-    ```bash
+    ```bash title="Terminal"
     # macOS
     brew install tesseract
 
@@ -366,7 +366,7 @@ These are applied automatically and require no configuration.
 
     **Solution**: Install the language data:
 
-    ```bash
+    ```bash title="Terminal"
     # macOS
     brew install tesseract-lang
 
@@ -384,7 +384,7 @@ These are applied automatically and require no configuration.
     **Solutions**:
 
     1. **Increase DPI**: Try 600 DPI for better quality
-        ```python
+        ```python title="ocr_high_quality.py"
         config = ExtractionConfig(
             ocr=OcrConfig(backend="tesseract"),
             pdf=PdfConfig(dpi=600)
@@ -392,14 +392,14 @@ These are applied automatically and require no configuration.
         ```
 
     2. **Try different backend**: EasyOCR often has better accuracy
-        ```python
+        ```python title="ocr_easyocr.py"
         config = ExtractionConfig(
             ocr=OcrConfig(backend="easyocr", language="en")
         )
         ```
 
     3. **Specify correct language**: Use the document's language
-        ```python
+        ```python title="ocr_german.py"
         config = ExtractionConfig(
             ocr=OcrConfig(backend="tesseract", language="deu")
         )
@@ -412,7 +412,7 @@ These are applied automatically and require no configuration.
     **Solutions**:
 
     1. **Reduce DPI**: Use 150 DPI for faster processing
-        ```python
+        ```python title="ocr_fast.py"
         config = ExtractionConfig(
             ocr=OcrConfig(backend="tesseract"),
             pdf=PdfConfig(dpi=150)
@@ -420,14 +420,14 @@ These are applied automatically and require no configuration.
         ```
 
     2. **Use GPU acceleration** (EasyOCR/PaddleOCR):
-        ```python
+        ```python title="ocr_gpu.py"
         config = ExtractionConfig(
             ocr=OcrConfig(backend="paddleocr", use_gpu=True)
         )
         ```
 
     3. **Use batch processing**: Process multiple files concurrently
-        ```python
+        ```python title="batch_ocr.py"
         results = batch_extract_files_sync(files, config=config)
         ```
 
@@ -438,7 +438,7 @@ These are applied automatically and require no configuration.
     **Solutions**:
 
     1. **Reduce DPI**: Lower resolution uses less memory
-        ```python
+        ```python title="ocr_low_memory.py"
         config = ExtractionConfig(
             ocr=OcrConfig(backend="tesseract"),
             pdf=PdfConfig(dpi=150)
@@ -455,7 +455,7 @@ These are applied automatically and require no configuration.
 
     **Solution**: Use Python 3.10-3.13 or switch to Tesseract:
 
-    ```bash
+    ```bash title="Terminal"
     # Use Tesseract (works on all Python versions)
     pip install kreuzberg
     brew install tesseract  # or apt-get install tesseract-ocr
@@ -465,7 +465,7 @@ These are applied automatically and require no configuration.
 
 Extract with OCR using the command-line interface:
 
-```bash
+```bash title="Terminal"
 # Basic OCR extraction
 kreuzberg extract scanned.pdf --ocr
 
@@ -485,6 +485,5 @@ kreuzberg extract scanned.pdf --ocr --dpi 600
 ## Next Steps
 
 - [Configuration](configuration.md) - All configuration options
-- [Advanced Features](advanced.md) - Chunking, language detection
-- [Advanced Features](advanced.md) - Advanced Kreuzberg features
+- [Advanced Features](advanced.md) - Chunking, language detection, and more
 - [Extraction Basics](extraction.md) - Core extraction API

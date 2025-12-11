@@ -171,28 +171,30 @@ Kreuzberg uses Cargo feature flags to enable optional format support:
 
 To enable specific features:
 
-```toml
+```toml title="Cargo.toml"
 [dependencies]
+# Enable only PDF and Excel format support
 kreuzberg = { version = "4.0", features = ["pdf", "excel"] }
 ```
 
 To enable all features with `--all-features`:
 
-```bash
+```bash title="Terminal"
+# Build with all format extraction features enabled
 cargo build --all-features
 ```
 
 Or use the convenience bundles:
 
-```toml
+```toml title="Cargo.toml"
 [dependencies]
-# All format extraction features (no server)
+# All format extraction features (no server components)
 kreuzberg = { version = "4.0", features = ["full"] }
 
-# Server features (API, MCP) with common formats
+# Server features (API, MCP) with common format support
 kreuzberg = { version = "4.0", features = ["server"] }
 
-# CLI features with common formats
+# CLI features with commonly used formats
 kreuzberg = { version = "4.0", features = ["cli"] }
 ```
 
@@ -204,17 +206,17 @@ Some formats require external system tools:
 
 Required for OCR on images and PDFs:
 
-```bash
-# macOS
+```bash title="Terminal"
+# Install Tesseract OCR on macOS
 brew install tesseract
 
-# Ubuntu/Debian
+# Install Tesseract OCR on Ubuntu/Debian
 sudo apt-get install tesseract-ocr
 
-# RHEL/CentOS/Fedora
+# Install Tesseract OCR on RHEL/CentOS/Fedora
 sudo dnf install tesseract
 
-# Windows (Scoop)
+# Install Tesseract OCR on Windows (using Scoop)
 scoop install tesseract
 ```
 
@@ -223,18 +225,17 @@ scoop install tesseract
 
 Required for legacy Microsoft Office formats (`.doc`, `.ppt`):
 
-```bash
-# macOS
+```bash title="Terminal"
+# Install LibreOffice on macOS
 brew install libreoffice
 
-# Ubuntu/Debian
+# Install LibreOffice on Ubuntu/Debian
 sudo apt-get install libreoffice
 
-# RHEL/CentOS/Fedora
+# Install LibreOffice on RHEL/CentOS/Fedora
 sudo dnf install libreoffice
 
-# Windows
-# Download from https://www.libreoffice.org/download/
+# Windows: Download from https://www.libreoffice.org/download/
 ```
 
 **Docker Note**: All system dependencies are pre-installed in official Kreuzberg Docker images.
@@ -251,28 +252,28 @@ Example with manual override:
 
 === "C#"
 
-    ```csharp
+    ```csharp title="format_detection.cs"
     using Kreuzberg;
 
-    // Auto-detect from extension
+    // Automatic format detection from file extension
     var result = KreuzbergClient.ExtractFileSync("document.pdf");
 
-    // Manual MIME type override
+    // Manual MIME type override for files without extensions
     var result2 = KreuzbergClient.ExtractFileAsBytes(rawBytes, "application/pdf", null);
     ```
 
 === "Go"
 
-    ```go
+    ```go title="format_detection.go"
     import "kreuzberg"
 
-    // Auto-detect from extension
+    // Automatic format detection from file extension
     result, err := kreuzberg.ExtractFileSync("document.pdf", nil)
     if err != nil {
         log.Fatal(err)
     }
 
-    // Manual MIME type override
+    // Manual MIME type override for ambiguous files
     config := &kreuzberg.ExtractionConfig{}
     mimeBytes, _ := ioutil.ReadFile("document.dat")
     result2, err := kreuzberg.ExtractBytesSync(mimeBytes, "application/pdf", config)
@@ -280,56 +281,56 @@ Example with manual override:
 
 === "Java"
 
-    ```java
+    ```java title="FormatDetection.java"
     import dev.kreuzberg.Kreuzberg;
     import dev.kreuzberg.ExtractionResult;
 
-    // Auto-detect from extension
+    // Automatic format detection from file extension
     ExtractionResult result = Kreuzberg.extractFile("document.pdf");
 
-    // Manual MIME type override using detectMimeType
+    // Manual MIME type override using detectMimeType for byte arrays
     String mimeType = Kreuzberg.detectMimeType(new byte[]{/* PDF header bytes */});
     ExtractionResult result2 = Kreuzberg.extractFileAsBytes(rawBytes, mimeType, null);
     ```
 
 === "Python"
 
-    ```python
+    ```python title="format_detection.py"
     from kreuzberg import extract_file
 
-    # Auto-detect from extension
+    # Automatic format detection from file extension
     result = extract_file("document.pdf")
 
-    # Manual MIME type override
+    # Manual MIME type override for unknown extensions
     result = extract_file("document.dat", mime_type="application/pdf")
     ```
 
 === "Ruby"
 
-    ```ruby
+    ```ruby title="format_detection.rb"
     require 'kreuzberg'
 
-    # Auto-detect from extension
+    # Automatic format detection from file extension
     result = Kreuzberg.extract_file_sync('document.pdf')
 
-    # Manual MIME type override
+    # Manual MIME type override for files with ambiguous extensions
     config = Kreuzberg::Config::Extraction.new
     result = Kreuzberg.extract_file_sync('document.dat', mime_type: 'application/pdf', config: config)
     ```
 
 === "Rust"
 
-    ```rust
+    ```rust title="format_detection.rs"
     use kreuzberg::{extract_file, ExtractionConfig};
 
     #[tokio::main]
     async fn main() -> kreuzberg::Result<()> {
         let config = ExtractionConfig::default();
 
-        // Auto-detect from extension
+        // Automatic format detection from file extension
         let result = extract_file("document.pdf", None, &config).await?;
 
-        // Manual MIME type override
+        // Manual MIME type override for extensionless files
         let result = extract_file("document.dat", Some("application/pdf"), &config).await?;
 
         Ok(())
@@ -338,13 +339,13 @@ Example with manual override:
 
 === "TypeScript"
 
-    ```typescript
+    ```typescript title="format_detection.ts"
     import { extractFile } from '@kreuzberg/node';
 
-    // Auto-detect from extension
+    // Automatic format detection from file extension
     const result = await extractFile('document.pdf');
 
-    // Manual MIME type override
+    // Manual MIME type override for files with no extension
     const result2 = await extractFile('document.dat', { mimeType: 'application/pdf' });
     ```
 
@@ -358,18 +359,19 @@ OCR is available for:
 
 ### Configuration
 
-```python
+```python title="ocr_configuration.py"
 from kreuzberg import extract_file, ExtractionConfig, OcrConfig, TesseractConfig
 
+# Configure OCR with multi-language support and custom Tesseract settings
 config = ExtractionConfig(
     ocr=OcrConfig(
         tesseract_config=TesseractConfig(
-            lang="eng+deu",  # Multiple languages
-            psm=3,           # Page segmentation mode
-            oem=1            # OCR Engine mode
+            lang="eng+deu",  # Multiple languages: English and German
+            psm=3,           # Page segmentation mode: Auto
+            oem=1            # OCR Engine mode: LSTM neural net
         )
     ),
-    force_ocr=False  # Only use OCR when native text is insufficient
+    force_ocr=False  # Only use OCR when native text extraction is insufficient
 )
 
 result = extract_file("scanned_document.pdf", config=config)
@@ -404,9 +406,10 @@ Override with `force_ocr=True` to always use OCR regardless of native text quali
 
 All formats support concurrent batch processing:
 
-```python
+```python title="batch_processing.py"
 from kreuzberg import batch_extract_file, ExtractionConfig
 
+# Process multiple files concurrently for better throughput
 paths = ["file1.pdf", "file2.docx", "file3.xlsx"]
 config = ExtractionConfig(max_concurrent_extractions=8)
 
@@ -437,10 +440,11 @@ Kreuzberg's plugin system allows adding custom format extractors:
 
 === "C#"
 
-    ```csharp
+    ```csharp title="CustomExtractor.cs"
     using Kreuzberg;
     using Kreuzberg.Plugins;
 
+    // Custom document extractor for proprietary format support
     public class CustomExtractor : IDocumentExtractor
     {
         public string Name => "custom-format-extractor";
@@ -449,7 +453,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
 
         public ExtractionResult ExtractBytes(byte[] content, string mimeType, ExtractionConfig config)
         {
-            // Your extraction logic here
+            // Implement custom extraction logic for your format
             var text = ParseCustomFormat(content);
             return new ExtractionResult
             {
@@ -460,13 +464,13 @@ Kreuzberg's plugin system allows adding custom format extractors:
         }
     }
 
-    // Register plugin
+    // Register the custom extractor with Kreuzberg
     KreuzbergClient.RegisterDocumentExtractor(new CustomExtractor());
     ```
 
 === "Go"
 
-    ```go
+    ```go title="custom_extractor.go"
     package main
 
     import (
@@ -474,7 +478,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
         "log"
     )
 
-    // DocumentExtractor implementation
+    // CustomExtractor implements DocumentExtractor for proprietary formats
     type CustomExtractor struct{}
 
     func (e *CustomExtractor) Name() string {
@@ -486,7 +490,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
     }
 
     func (e *CustomExtractor) ExtractBytes(content []byte, mimeType string, config *kreuzberg.ExtractionConfig) (*kreuzberg.ExtractionResult, error) {
-        // Your extraction logic here
+        // Implement custom parsing logic for your file format
         text := parseCustomFormat(content)
         return &kreuzberg.ExtractionResult{
             Content:  text,
@@ -495,7 +499,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
         }, nil
     }
 
-    // Register plugin
+    // Register the custom extractor during package initialization
     func init() {
         if err := kreuzberg.RegisterDocumentExtractor("custom-format-extractor", &CustomExtractor{}); err != nil {
             log.Fatal(err)
@@ -505,12 +509,13 @@ Kreuzberg's plugin system allows adding custom format extractors:
 
 === "Java"
 
-    ```java
+    ```java title="CustomExtractor.java"
     import dev.kreuzberg.Kreuzberg;
     import dev.kreuzberg.DocumentExtractorProtocol;
     import dev.kreuzberg.ExtractionResult;
     import dev.kreuzberg.config.ExtractionConfig;
 
+    // Custom document extractor for unsupported file formats
     public class CustomExtractor implements DocumentExtractorProtocol {
         @Override
         public String name() {
@@ -527,21 +532,22 @@ Kreuzberg's plugin system allows adding custom format extractors:
             byte[] content,
             String mimeType,
             ExtractionConfig config) throws Exception {
-            // Your extraction logic here
+            // Implement format-specific extraction logic
             String text = parseCustomFormat(content);
             return new ExtractionResult(text, mimeType, true, null);
         }
     }
 
-    // Register plugin
+    // Register the custom extractor
     Kreuzberg.registerDocumentExtractor(new CustomExtractor());
     ```
 
 === "Python"
 
-    ```python
+    ```python title="custom_extractor.py"
     from kreuzberg import DocumentExtractor, ExtractionResult, Metadata
 
+    # Custom extractor for proprietary or unsupported file formats
     class CustomExtractor(DocumentExtractor):
         def name(self) -> str:
             return "custom-format-extractor"
@@ -550,7 +556,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
             return ["application/x-custom"]
 
         def extract_bytes(self, content: bytes, mime_type: str, config) -> ExtractionResult:
-            # Your extraction logic here
+            # Implement parsing logic specific to your format
             text = parse_custom_format(content)
             return ExtractionResult(
                 content=text,
@@ -558,7 +564,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
                 metadata=Metadata()
             )
 
-    # Register plugin
+    # Register the custom extractor with Kreuzberg's registry
     from kreuzberg import get_document_extractor_registry
     registry = get_document_extractor_registry()
     registry.register(CustomExtractor())
@@ -566,9 +572,10 @@ Kreuzberg's plugin system allows adding custom format extractors:
 
 === "Ruby"
 
-    ```ruby
+    ```ruby title="custom_extractor.rb"
     require 'kreuzberg'
 
+    # Custom document extractor for new file format support
     class CustomExtractor
       def name
         'custom-format-extractor'
@@ -579,7 +586,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
       end
 
       def extract_bytes(content, mime_type, config)
-        # Your extraction logic here
+        # Implement your custom format parsing logic
         text = parse_custom_format(content)
         Kreuzberg::Result.new(
           content: text,
@@ -589,17 +596,18 @@ Kreuzberg's plugin system allows adding custom format extractors:
       end
     end
 
-    # Register plugin
+    # Register the custom extractor
     Kreuzberg.register_document_extractor(CustomExtractor.new)
     ```
 
 === "Rust"
 
-    ```rust
+    ```rust title="custom_extractor.rs"
     use kreuzberg::plugins::{DocumentExtractor, Plugin};
     use kreuzberg::types::ExtractionResult;
     use async_trait::async_trait;
 
+    // Custom document extractor for proprietary file formats
     pub struct CustomExtractor;
 
     impl Plugin for CustomExtractor {
@@ -620,7 +628,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
             mime_type: &str,
             config: &ExtractionConfig,
         ) -> kreuzberg::Result<ExtractionResult> {
-            // Your extraction logic here
+            // Implement format-specific parsing logic
             let text = parse_custom_format(content)?;
             Ok(ExtractionResult {
                 content: text,
@@ -634,7 +642,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
         }
     }
 
-    // Register plugin
+    // Register the custom extractor with Kreuzberg's plugin registry
     use kreuzberg::plugins::registry::get_document_extractor_registry;
     use std::sync::Arc;
 
@@ -644,9 +652,10 @@ Kreuzberg's plugin system allows adding custom format extractors:
 
 === "TypeScript"
 
-    ```typescript
+    ```typescript title="custom_extractor.ts"
     import { registerDocumentExtractor, type DocumentExtractorProtocol } from '@kreuzberg/node';
 
+    // Custom document extractor for new or proprietary file formats
     class CustomExtractor implements DocumentExtractorProtocol {
         name(): string {
             return "custom-format-extractor";
@@ -657,7 +666,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
         }
 
         async extractBytes(content: Uint8Array, mimeType: string, config?: ExtractionConfig): Promise<ExtractionResult> {
-            // Your extraction logic here
+            // Implement custom parsing logic for your format
             const text = parseCustomFormat(content);
             return {
                 content: text,
@@ -668,7 +677,7 @@ Kreuzberg's plugin system allows adding custom format extractors:
         }
     }
 
-    // Register plugin
+    // Register the custom extractor
     registerDocumentExtractor(new CustomExtractor());
     ```
 

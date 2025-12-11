@@ -84,12 +84,12 @@ Kreuzberg Docker images use a flexible `ENTRYPOINT` pattern that supports three 
 The default mode starts an HTTP REST API server.
 
 **Default Behavior:**
-```bash
+```bash title="Terminal"
 docker run -p 8000:8000 goldziher/kreuzberg:latest
 ```
 
 **Custom Configuration:**
-```bash
+```bash title="Terminal"
 # Change host and port
 docker run -p 9000:9000 goldziher/kreuzberg:latest \
   serve --host 0.0.0.0 --port 9000
@@ -114,7 +114,7 @@ See [API Server Guide](api-server.md) for complete API documentation.
 Run Kreuzberg as a command-line tool for file processing.
 
 **Extract Files:**
-```bash
+```bash title="Terminal"
 # Mount directory and extract file
 docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   extract /data/document.pdf
@@ -129,7 +129,7 @@ docker run -v $(pwd):/data goldziher/kreuzberg:latest \
 ```
 
 **Batch Processing:**
-```bash
+```bash title="Terminal"
 # Process multiple files
 docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   batch /data/*.pdf --output-format json
@@ -140,13 +140,13 @@ docker run -v $(pwd):/data goldziher/kreuzberg:latest \
 ```
 
 **MIME Detection:**
-```bash
+```bash title="Terminal"
 docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   detect /data/unknown-file.bin
 ```
 
 **Cache Management:**
-```bash
+```bash title="Terminal"
 # View cache statistics
 docker run goldziher/kreuzberg:latest cache stats
 
@@ -161,12 +161,12 @@ See [CLI Usage Guide](../cli/usage.md) for complete CLI documentation.
 Run Kreuzberg as a Model Context Protocol server for AI agent integration.
 
 **Start MCP Server:**
-```bash
+```bash title="Terminal"
 docker run goldziher/kreuzberg:latest mcp
 ```
 
 **With Configuration:**
-```bash
+```bash title="Terminal"
 docker run \
   -v $(pwd)/kreuzberg.toml:/config/kreuzberg.toml \
   goldziher/kreuzberg:latest \
@@ -209,13 +209,13 @@ Architecture-specific binaries are automatically selected during build.
 ### Security Features
 
 **Non-Root User:**
-```dockerfile
+```dockerfile title="Dockerfile"
 # Images run as unprivileged 'kreuzberg' user
 USER kreuzberg
 ```
 
 **Security Options:**
-```bash
+```bash title="Terminal"
 # Run with additional security constraints
 docker run --security-opt no-new-privileges \
   --read-only \
@@ -230,7 +230,7 @@ docker run --security-opt no-new-privileges \
 
 **Basic Configuration:**
 
-```yaml
+```yaml title="docker-compose.yaml"
 version: '3.8'
 
 services:
@@ -260,7 +260,7 @@ volumes:
 
 **With LibreOffice (Full Image):**
 
-```yaml
+```yaml title="docker-compose.yaml"
 services:
   kreuzberg-full:
     image: goldziher/kreuzberg:latest-all
@@ -274,7 +274,7 @@ services:
 ```
 
 **Start Services:**
-```bash
+```bash title="Terminal"
 docker-compose up -d
 ```
 
@@ -282,7 +282,7 @@ docker-compose up -d
 
 **Deployment Manifest:**
 
-```yaml
+```yaml title="kubernetes-deployment.yaml"
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -355,7 +355,7 @@ spec:
 ```
 
 **Apply Configuration:**
-```bash
+```bash title="Terminal"
 kubectl apply -f kreuzberg-deployment.yaml
 ```
 
@@ -364,36 +364,36 @@ kubectl apply -f kreuzberg-deployment.yaml
 Configure Docker containers via environment variables:
 
 **Server Binding:**
-```bash
+```bash title="Terminal"
 KREUZBERG_HOST=0.0.0.0          # Listen address (default: 127.0.0.1)
 KREUZBERG_PORT=8000              # Port number (default: 8000)
 ```
 
 **Upload Limits:**
-```bash
+```bash title="Terminal"
 KREUZBERG_MAX_UPLOAD_SIZE_MB=200  # Max upload size in MB (default: 100)
 ```
 
 **CORS Configuration:**
-```bash
+```bash title="Terminal"
 # Comma-separated list of allowed origins
 KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 ```
 
 **Logging:**
-```bash
+```bash title="Terminal"
 RUST_LOG=info                    # Logging level (error, warn, info, debug, trace)
 ```
 
 **Cache Configuration:**
-```bash
+```bash title="Terminal"
 KREUZBERG_CACHE_DIR=/app/.kreuzberg  # Cache directory (default)
 ```
 
 ### Volume Mounts
 
 **Cache Persistence:**
-```bash
+```bash title="Terminal"
 # Mount cache directory for persistence
 docker run -p 8000:8000 \
   -v kreuzberg-cache:/app/.kreuzberg \
@@ -401,7 +401,7 @@ docker run -p 8000:8000 \
 ```
 
 **Configuration Files:**
-```bash
+```bash title="Terminal"
 # Mount configuration file
 docker run -p 8000:8000 \
   -v $(pwd)/kreuzberg.toml:/config/kreuzberg.toml \
@@ -410,7 +410,7 @@ docker run -p 8000:8000 \
 ```
 
 **File Processing:**
-```bash
+```bash title="Terminal"
 # Mount documents directory (read-only)
 docker run -v $(pwd)/documents:/data:ro \
   goldziher/kreuzberg:latest \
@@ -448,7 +448,7 @@ Clone the repository and build:
 
 Create a custom Dockerfile based on official images:
 
-```dockerfile
+```dockerfile title="Dockerfile"
 FROM goldziher/kreuzberg:latest
 
 # Install additional system dependencies
@@ -482,7 +482,7 @@ CMD ["serve", "--config", "/app/kreuzberg.toml"]
 | Heavy | 2GB+ | 2+ cores | Large documents, OCR, high concurrency |
 
 **Docker Run:**
-```bash
+```bash title="Terminal"
 docker run -p 8000:8000 \
   --memory=1g \
   --cpus=1 \
@@ -490,7 +490,7 @@ docker run -p 8000:8000 \
 ```
 
 **Docker Compose:**
-```yaml
+```yaml title="docker-compose.yaml"
 services:
   kreuzberg:
     image: goldziher/kreuzberg:latest
@@ -507,7 +507,7 @@ services:
 ### Scaling
 
 **Horizontal Scaling:**
-```bash
+```bash title="Terminal"
 # Scale to 5 replicas
 docker-compose up -d --scale kreuzberg-api=5
 
@@ -525,7 +525,7 @@ kubectl scale deployment kreuzberg-api --replicas=5
 ### Container Won't Start
 
 **Check logs:**
-```bash
+```bash title="Terminal"
 docker logs <container-id>
 ```
 
@@ -538,7 +538,7 @@ docker logs <container-id>
 
 Images run as non-root user `kreuzberg` (UID 1000). Ensure mounted volumes have correct permissions:
 
-```bash
+```bash title="Terminal"
 # Fix permissions on mounted directory
 chown -R 1000:1000 /path/to/mounted/directory
 ```
@@ -546,14 +546,14 @@ chown -R 1000:1000 /path/to/mounted/directory
 ### Large File Processing
 
 **Increase memory limit:**
-```bash
+```bash title="Terminal"
 docker run -p 8000:8000 \
   --memory=4g \
   goldziher/kreuzberg:latest
 ```
 
 **Increase upload size:**
-```bash
+```bash title="Terminal"
 docker run -p 8000:8000 \
   -e KREUZBERG_MAX_UPLOAD_SIZE_MB=1000 \
   goldziher/kreuzberg:latest
@@ -563,7 +563,7 @@ docker run -p 8000:8000 \
 
 LibreOffice is only available in the **Full** image variant. If you need legacy Office format support:
 
-```bash
+```bash title="Terminal"
 # Switch to full image
 docker pull goldziher/kreuzberg:latest-all
 docker run -p 8000:8000 goldziher/kreuzberg:latest-all

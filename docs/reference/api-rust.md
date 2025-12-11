@@ -6,7 +6,7 @@ Complete reference for the Kreuzberg Rust API.
 
 Add to your `Cargo.toml`:
 
-```toml
+```toml title="Cargo.toml"
 [dependencies]
 kreuzberg = "4.0"
 tokio = { version = "1", features = ["rt", "macros"] }
@@ -14,7 +14,7 @@ tokio = { version = "1", features = ["rt", "macros"] }
 
 **With specific features:**
 
-```toml
+```toml title="Cargo.toml"
 [dependencies]
 kreuzberg = { version = "4.0", features = ["pdf", "ocr", "chunking", "api"] }
 ```
@@ -38,7 +38,7 @@ Extract content from a file (synchronous, blocking).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub fn extract_file_sync(
     file_path: impl AsRef<Path>,
     mime_type: Option<&str>,
@@ -66,10 +66,11 @@ pub fn extract_file_sync(
 
 **Examples:**
 
-```rust
+```rust title="basic_extraction.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig};
 
 fn main() -> kreuzberg::Result<()> {
+    // Extract a document synchronously with default configuration
     let config = ExtractionConfig::default();
     let result = extract_file_sync("document.pdf", None, &config)?;
 
@@ -80,10 +81,11 @@ fn main() -> kreuzberg::Result<()> {
 }
 ```
 
-```rust
+```rust title="with_ocr.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig};
 
 fn main() -> kreuzberg::Result<()> {
+    // Configure OCR for scanned documents
     let config = ExtractionConfig {
         ocr: Some(OcrConfig::default()),
         force_ocr: false,
@@ -105,7 +107,7 @@ Extract content from a file (asynchronous).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub async fn extract_file(
     file_path: impl AsRef<Path>,
     mime_type: Option<&str>,
@@ -123,11 +125,12 @@ Same as [`extract_file_sync()`](#extract_file_sync).
 
 **Examples:**
 
-```rust
+```rust title="async_extraction.rs"
 use kreuzberg::{extract_file, ExtractionConfig};
 
 #[tokio::main]
 async fn main() -> kreuzberg::Result<()> {
+    // Extract a document asynchronously
     let config = ExtractionConfig::default();
     let result = extract_file("document.pdf", None, &config).await?;
 
@@ -144,7 +147,7 @@ Extract content from bytes (synchronous, blocking).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub fn extract_bytes_sync(
     data: &[u8],
     mime_type: &str,
@@ -164,11 +167,12 @@ pub fn extract_bytes_sync(
 
 **Examples:**
 
-```rust
+```rust title="byte_extraction.rs"
 use kreuzberg::{extract_bytes_sync, ExtractionConfig};
 use std::fs;
 
 fn main() -> kreuzberg::Result<()> {
+    // Extract from in-memory byte array
     let data = fs::read("document.pdf")?;
     let config = ExtractionConfig::default();
     let result = extract_bytes_sync(&data, "application/pdf", &config)?;
@@ -186,7 +190,7 @@ Extract content from bytes (asynchronous).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub async fn extract_bytes(
     data: &[u8],
     mime_type: &str,
@@ -210,7 +214,7 @@ Extract content from multiple files in parallel (synchronous, blocking).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub fn batch_extract_file_sync(
     paths: &[impl AsRef<Path>],
     mime_types: Option<&[&str]>,
@@ -230,14 +234,16 @@ pub fn batch_extract_file_sync(
 
 **Examples:**
 
-```rust
+```rust title="batch_processing.rs"
 use kreuzberg::{batch_extract_file_sync, ExtractionConfig};
 
 fn main() -> kreuzberg::Result<()> {
+    // Process multiple files in parallel for better performance
     let paths = ["doc1.pdf", "doc2.docx", "doc3.xlsx"];
     let config = ExtractionConfig::default();
     let results = batch_extract_file_sync(&paths, None, &config)?;
 
+    // Display results for each file
     for (i, result) in results.iter().enumerate() {
         println!("{}: {} characters", paths[i], result.content.len());
     }
@@ -254,7 +260,7 @@ Extract content from multiple files in parallel (asynchronous).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub async fn batch_extract_file(
     paths: &[impl AsRef<Path>],
     mime_types: Option<&[&str]>,
@@ -272,15 +278,17 @@ Same as [`batch_extract_file_sync()`](#batch_extract_file_sync).
 
 **Examples:**
 
-```rust
+```rust title="async_batch_processing.rs"
 use kreuzberg::{batch_extract_file, ExtractionConfig};
 
 #[tokio::main]
 async fn main() -> kreuzberg::Result<()> {
+    // Process multiple files asynchronously in parallel
     let files = ["doc1.pdf", "doc2.docx", "doc3.xlsx"];
     let config = ExtractionConfig::default();
     let results = batch_extract_file(&files, None, &config).await?;
 
+    // Print extracted content from each file
     for result in results {
         println!("{}", result.content);
     }
@@ -297,7 +305,7 @@ Extract content from multiple byte arrays in parallel (synchronous, blocking).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub fn batch_extract_bytes_sync(
     data_list: &[&[u8]],
     mime_types: &[&str],
@@ -323,7 +331,7 @@ Extract content from multiple byte arrays in parallel (asynchronous).
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub async fn batch_extract_bytes(
     data_list: &[&[u8]],
     mime_types: &[&str],
@@ -349,7 +357,7 @@ Main configuration struct for extraction operations.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone, Default)]
 pub struct ExtractionConfig {
     pub ocr: Option<OcrConfig>,
@@ -376,9 +384,10 @@ pub struct ExtractionConfig {
 
 **Example:**
 
-```rust
+```rust title="advanced_config.rs"
 use kreuzberg::{ExtractionConfig, OcrConfig, PdfConfig};
 
+// Configure extraction with OCR and PDF-specific options
 let config = ExtractionConfig {
     ocr: Some(OcrConfig::default()),
     force_ocr: false,
@@ -399,7 +408,7 @@ OCR processing configuration.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone)]
 pub struct OcrConfig {
     pub backend: String,
@@ -416,9 +425,10 @@ pub struct OcrConfig {
 
 **Example:**
 
-```rust
+```rust title="ocr_config.rs"
 use kreuzberg::OcrConfig;
 
+// Configure OCR backend and language settings
 let ocr_config = OcrConfig {
     backend: "tesseract".to_string(),
     language: "eng".to_string(),
@@ -434,7 +444,7 @@ Tesseract OCR backend configuration.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone)]
 pub struct TesseractConfig {
     pub psm: i32,
@@ -455,18 +465,19 @@ pub struct TesseractConfig {
 
 **Example:**
 
-```rust
+```rust title="tesseract_config.rs"
 use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig};
 
+// Configure Tesseract with custom settings for numeric extraction
 let config = ExtractionConfig {
     ocr: Some(OcrConfig {
         backend: "tesseract".to_string(),
         language: "eng".to_string(),
         tesseract_config: Some(TesseractConfig {
-            psm: 6,
-            oem: 3,
+            psm: 6,                                              // Assume uniform block of text
+            oem: 3,                                              // LSTM neural net mode
             enable_table_detection: true,
-            tessedit_char_whitelist: Some("0123456789".to_string()),
+            tessedit_char_whitelist: Some("0123456789".to_string()),  // Only recognize digits
             tessedit_char_blacklist: None,
         }),
     }),
@@ -482,7 +493,7 @@ PDF-specific configuration.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone, Default)]
 pub struct PdfConfig {
     pub passwords: Option<Vec<String>>,
@@ -499,9 +510,10 @@ pub struct PdfConfig {
 
 **Example:**
 
-```rust
+```rust title="pdf_config.rs"
 use kreuzberg::PdfConfig;
 
+// Configure PDF extraction with passwords and image settings
 let pdf_config = PdfConfig {
     passwords: Some(vec!["password1".to_string(), "password2".to_string()]),
     extract_images: true,
@@ -517,7 +529,7 @@ Text chunking configuration for splitting long documents.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone)]
 pub struct ChunkingConfig {
     pub chunk_size: usize,
@@ -540,7 +552,7 @@ Language detection configuration.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone)]
 pub struct LanguageDetectionConfig {
     pub enabled: bool,
@@ -563,7 +575,7 @@ Result struct returned by all extraction functions.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone)]
 pub struct ExtractionResult {
     pub content: String,
@@ -584,17 +596,19 @@ pub struct ExtractionResult {
 
 **Example:**
 
-```rust
+```rust title="result_access.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig};
 
 fn main() -> kreuzberg::Result<()> {
     let config = ExtractionConfig::default();
     let result = extract_file_sync("document.pdf", None, &config)?;
 
+    // Access extraction result fields
     println!("Content: {}", result.content);
     println!("MIME type: {}", result.mime_type);
     println!("Tables: {}", result.tables.len());
 
+    // Display detected languages if available
     if let Some(langs) = result.detected_languages {
         println!("Languages: {}", langs.join(", "));
     }
@@ -611,7 +625,7 @@ Document metadata with format-specific fields.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone, Default)]
 pub struct Metadata {
     // Common fields
@@ -637,10 +651,11 @@ pub struct Metadata {
 
 **Example:**
 
-```rust
+```rust title="metadata_access.rs"
 let result = extract_file_sync("document.pdf", None, &config)?;
 let metadata = &result.metadata;
 
+// Access PDF-specific metadata fields
 if metadata.format_type.as_deref() == Some("pdf") {
     if let Some(title) = &metadata.title {
         println!("Title: {}", title);
@@ -661,7 +676,7 @@ Extracted table structure.
 
 **Definition:**
 
-```rust
+```rust title="Rust"
 #[derive(Debug, Clone)]
 pub struct Table {
     pub cells: Vec<Vec<String>>,
@@ -678,9 +693,10 @@ pub struct Table {
 
 **Example:**
 
-```rust
+```rust title="table_processing.rs"
 let result = extract_file_sync("invoice.pdf", None, &config)?;
 
+// Process all extracted tables
 for table in &result.tables {
     println!("Table on page {}:", table.page_number);
     println!("{}", table.markdown);
@@ -698,7 +714,7 @@ All errors are returned as `KreuzbergError` enum.
 
 **Definition:**
 
-```rust
+```rust title="error_handling.rs"
 #[derive(Debug, thiserror::Error)]
 pub enum KreuzbergError {
     #[error("IO error: {0}")]
@@ -722,12 +738,13 @@ pub enum KreuzbergError {
 
 **Error Handling:**
 
-```rust
+```rust title="error_handling.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
 
 fn process_file(path: &str) -> kreuzberg::Result<String> {
     let config = ExtractionConfig::default();
 
+    // Pattern match on specific error types for custom handling
     match extract_file_sync(path, None, &config) {
         Ok(result) => Ok(result.content),
         Err(KreuzbergError::Io(e)) => {
@@ -749,8 +766,9 @@ fn process_file(path: &str) -> kreuzberg::Result<String> {
 
 **Using the `?` operator:**
 
-```rust
+```rust title="simple_error_handling.rs"
 fn main() -> kreuzberg::Result<()> {
+    // Use ? operator for simple error propagation
     let config = ExtractionConfig::default();
     let result = extract_file_sync("document.pdf", None, &config)?;
     println!("{}", result.content);
@@ -770,7 +788,7 @@ Register custom document extractors for new file formats.
 
 **Trait:**
 
-```rust
+```rust title="Rust"
 #[async_trait]
 pub trait DocumentExtractor: Send + Sync {
     fn name(&self) -> &str;
@@ -788,10 +806,11 @@ pub trait DocumentExtractor: Send + Sync {
 
 **Registration:**
 
-```rust
+```rust title="plugin_registration.rs"
 use kreuzberg::plugins::registry::get_document_extractor_registry;
 use std::sync::Arc;
 
+// Register a custom document extractor for new file formats
 let registry = get_document_extractor_registry();
 registry.register("custom", Arc::new(MyCustomExtractor))?;
 ```
@@ -806,15 +825,16 @@ Detect MIME type from file path.
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub fn detect_mime_type(file_path: impl AsRef<Path>) -> Result<String>
 ```
 
 **Example:**
 
-```rust
+```rust title="mime_detection.rs"
 use kreuzberg::detect_mime_type;
 
+// Detect MIME type from file path
 let mime_type = detect_mime_type("document.pdf")?;
 println!("MIME type: {}", mime_type); // "application/pdf"
 ```
@@ -827,15 +847,16 @@ Validate if a MIME type is supported.
 
 **Signature:**
 
-```rust
+```rust title="Rust"
 pub fn validate_mime_type(mime_type: &str) -> bool
 ```
 
 **Example:**
 
-```rust
+```rust title="mime_validation.rs"
 use kreuzberg::validate_mime_type;
 
+// Check if a MIME type is supported by Kreuzberg
 if validate_mime_type("application/pdf") {
     println!("PDF is supported");
 }
@@ -847,7 +868,7 @@ if validate_mime_type("application/pdf") {
 
 For complete Rust API documentation with all types, traits, and functions:
 
-```bash
+```bash title="Terminal"
 cargo doc --open --no-deps
 ```
 

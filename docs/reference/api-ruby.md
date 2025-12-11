@@ -6,13 +6,13 @@ Complete reference for the Kreuzberg Ruby API.
 
 Add to your `Gemfile`:
 
-```ruby
+```ruby title="Terminal"
 gem 'kreuzberg'
 ```
 
 Or install directly:
 
-```bash
+```bash title="Terminal"
 gem install kreuzberg
 ```
 
@@ -24,7 +24,7 @@ Extract content from a file (synchronous).
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.extract_file_sync(path, mime_type: nil, config: nil) -> Kreuzberg::Result
 ```
 
@@ -44,7 +44,7 @@ Kreuzberg.extract_file_sync(path, mime_type: nil, config: nil) -> Kreuzberg::Res
 
 **Example - Basic usage:**
 
-```ruby
+```ruby title="error_handling.rb"
 require 'kreuzberg'
 
 result = Kreuzberg.extract_file_sync("document.pdf")
@@ -54,7 +54,7 @@ puts "Pages: #{result.metadata['page_count']}"
 
 **Example - With configuration hash:**
 
-```ruby
+```ruby title="config.rb"
 require 'kreuzberg'
 
 config = {
@@ -68,7 +68,7 @@ result = Kreuzberg.extract_file_sync("scanned.pdf", config: config)
 
 **Example - With config object:**
 
-```ruby
+```ruby title="config.rb"
 require 'kreuzberg'
 
 config = Kreuzberg::Config::Extraction.new(force_ocr: true)
@@ -77,7 +77,7 @@ result = Kreuzberg.extract_file_sync("document.pdf", config: config)
 
 **Example - With explicit MIME type:**
 
-```ruby
+```ruby title="config.rb"
 require 'kreuzberg'
 
 result = Kreuzberg.extract_file_sync("document.pdf", mime_type: "application/pdf")
@@ -93,7 +93,7 @@ Extract content from a file (asynchronous via Tokio runtime).
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.extract_file(path, mime_type: nil, config: nil) -> Kreuzberg::Result
 ```
 
@@ -107,7 +107,7 @@ Same as [`extract_file_sync()`](#kreuzbergextract_file_sync).
 
 **Examples:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 # Equivalent to extract_file_sync in Ruby
 result = Kreuzberg.extract_file("document.pdf")
 puts result.content
@@ -121,7 +121,7 @@ Extract content from bytes (synchronous).
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.extract_bytes_sync(data, mime_type, config: nil) -> Kreuzberg::Result
 ```
 
@@ -137,7 +137,7 @@ Kreuzberg.extract_bytes_sync(data, mime_type, config: nil) -> Kreuzberg::Result
 
 **Examples:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 data = File.binread("document.pdf")
 result = Kreuzberg.extract_bytes_sync(data, "application/pdf")
 puts result.content
@@ -151,7 +151,7 @@ Extract content from bytes (asynchronous via Tokio runtime).
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.extract_bytes(data, mime_type, config: nil) -> Kreuzberg::Result
 ```
 
@@ -171,7 +171,7 @@ Extract content from multiple files in parallel (synchronous).
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.batch_extract_files_sync(paths, config: nil) -> Array<Kreuzberg::Result>
 ```
 
@@ -186,7 +186,7 @@ Kreuzberg.batch_extract_files_sync(paths, config: nil) -> Array<Kreuzberg::Resul
 
 **Examples:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 paths = ["doc1.pdf", "doc2.docx", "doc3.xlsx"]
 results = Kreuzberg.batch_extract_files_sync(paths)
 
@@ -203,7 +203,7 @@ Extract content from multiple files in parallel (asynchronous via Tokio runtime)
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.batch_extract_files(paths, config: nil) -> Array<Kreuzberg::Result>
 ```
 
@@ -225,7 +225,7 @@ The simplest way to configure extraction is using a Hash:
 
 **Example:**
 
-```ruby
+```ruby title="config.rb"
 config = {
   ocr: {
     backend: 'tesseract',
@@ -286,7 +286,7 @@ Object-oriented configuration using Ruby classes.
 
 **Example:**
 
-```ruby
+```ruby title="config.rb"
 config = Kreuzberg::Config::Extraction.new(
   force_ocr: true,
   ocr: Kreuzberg::Config::Ocr.new(
@@ -316,7 +316,7 @@ Result object returned by all extraction functions.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 result = Kreuzberg.extract_file_sync("document.pdf")
 
 puts "Content: #{result.content}"
@@ -370,7 +370,7 @@ Document metadata with format-specific fields.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 result = Kreuzberg.extract_file_sync("document.pdf")
 metadata = result.metadata
 
@@ -397,7 +397,7 @@ Extracted table structure.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 result = Kreuzberg.extract_file_sync("invoice.pdf")
 
 result.tables.each do |table|
@@ -415,7 +415,7 @@ All errors are raised as `StandardError` with descriptive messages.
 
 **Example:**
 
-```ruby
+```ruby title="error_handling.rb"
 begin
   result = Kreuzberg.extract_file_sync("document.pdf")
   puts result.content
@@ -446,13 +446,13 @@ Clear the extraction cache.
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.clear_cache() -> nil
 ```
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 Kreuzberg.clear_cache
 ```
 
@@ -466,7 +466,7 @@ Get cache statistics.
 
 **Signature:**
 
-```ruby
+```ruby title="Ruby"
 Kreuzberg.cache_stats() -> Hash
 ```
 
@@ -476,7 +476,7 @@ Kreuzberg.cache_stats() -> Hash
 
 **Example:**
 
-```ruby
+```ruby title="extract_from_bytes.rb"
 stats = Kreuzberg.cache_stats
 puts "Cache entries: #{stats[:total_entries]}"
 puts "Cache size: #{stats[:total_size_bytes]} bytes"
@@ -494,7 +494,7 @@ Wrapper for running the Kreuzberg CLI from Ruby.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 cli = Kreuzberg::CLIProxy.new
 
 # Extract a file
@@ -520,7 +520,7 @@ Wrapper for running the Kreuzberg API server from Ruby.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 api = Kreuzberg::APIProxy.new
 
 # Start server (blocks)
@@ -545,7 +545,7 @@ Wrapper for running the Kreuzberg MCP server from Ruby.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 mcp = Kreuzberg::MCPProxy.new
 
 # Start MCP server (blocks)
@@ -577,7 +577,7 @@ All Kreuzberg functions are thread-safe and can be called from multiple threads 
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 threads = []
 
 files = ["doc1.pdf", "doc2.pdf", "doc3.pdf"]
@@ -593,7 +593,7 @@ threads.each(&:join)
 
 However, for better performance, use the batch API instead:
 
-```ruby
+```ruby title="batch_processing.rb"
 # Better approach
 results = Kreuzberg.batch_extract_files_sync(files)
 results.each_with_index do |result, i|
@@ -616,7 +616,7 @@ Extract text from multiple byte arrays synchronously.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 require 'kreuzberg'
 
 # Read multiple files into memory
@@ -642,7 +642,7 @@ end
 
 **With OCR Configuration:**
 
-```ruby
+```ruby title="with_ocr.rb"
 config = {
   ocr: {
     backend: 'tesseract',
@@ -663,7 +663,7 @@ Extract text from multiple byte arrays asynchronously.
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 require 'kreuzberg'
 
 # Asynchronous batch extraction from bytes
@@ -695,7 +695,7 @@ Post-processors modify extraction results after document processing. They can en
 
 **Interface:**
 
-```ruby
+```ruby title="Ruby"
 class CustomPostProcessor
   def call(result)
     # Modify result and return it
@@ -712,7 +712,7 @@ end
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 require 'kreuzberg'
 
 class WordCountProcessor
@@ -750,7 +750,7 @@ Kreuzberg.unregister_post_processor('word_count')
 
 **Stateful Processor Example:**
 
-```ruby
+```ruby title="custom_post_processor.rb"
 class PdfMetadataExtractor
   def initialize
     @processed_count = 0
@@ -796,7 +796,7 @@ Validators check extraction results and raise errors if validation fails.
 
 **Interface:**
 
-```ruby
+```ruby title="Ruby"
 class CustomValidator
   def call(result)
     # Check result
@@ -808,7 +808,7 @@ end
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 require 'kreuzberg'
 
 class MinimumLengthValidator
@@ -840,7 +840,7 @@ end
 
 **Quality Score Validator:**
 
-```ruby
+```ruby title="custom_validator.rb"
 class QualityScoreValidator
   def call(result)
     metadata = result[:metadata] || {}
@@ -863,7 +863,7 @@ Implement custom OCR backends for specialized OCR engines or cloud services.
 
 **Interface:**
 
-```ruby
+```ruby title="Ruby"
 class CustomOcrBackend
   def name
     'custom-ocr'
@@ -883,7 +883,7 @@ end
 
 **Example:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 require 'kreuzberg'
 require 'net/http'
 require 'json'
@@ -944,7 +944,7 @@ result = Kreuzberg.extract_file_sync('scanned.pdf', config)
 
 **Listing Plugins:**
 
-```ruby
+```ruby title="basic_extraction.rb"
 # List all registered plugins
 post_processors = Kreuzberg.list_post_processors
 validators = Kreuzberg.list_validators
@@ -957,7 +957,7 @@ puts "OCR backends: #{ocr_backends.join(', ')}"
 
 **Clearing Plugins:**
 
-```ruby
+```ruby title="with_ocr.rb"
 # Clear all post-processors
 Kreuzberg.clear_post_processors
 
@@ -967,7 +967,7 @@ Kreuzberg.clear_validators
 
 **Unregistering Specific Plugins:**
 
-```ruby
+```ruby title="custom_validator.rb"
 # Unregister by name
 Kreuzberg.unregister_post_processor('word_count')
 Kreuzberg.unregister_validator('min_length')

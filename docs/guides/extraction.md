@@ -121,9 +121,10 @@ flowchart TD
 
 All TypeScript/Node.js examples in this guide use the `kreuzberg` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
 
-```typescript
+```typescript title="basic_extraction.ts"
 import { extractFileSync, ExtractionConfig } from '@kreuzberg/node';
 
+// Extract a document using synchronous API
 const result = extractFileSync('document.pdf', null, new ExtractionConfig());
 console.log(result.content);
 ```
@@ -132,9 +133,10 @@ console.log(result.content);
 
 Ruby bindings mirror the same function names (`extract_file_sync`, `extract_bytes`, `batch_extract_files`, etc.) under the `Kreuzberg` module. Configuration objects live under `Kreuzberg::Config`. See the [Ruby API Reference](../reference/api-ruby.md) for details.
 
-```ruby
+```ruby title="basic_extraction.rb"
 require 'kreuzberg'
 
+# Extract a document with OCR enabled
 config = Kreuzberg::Config::Extraction.new(force_ocr: true)
 result = Kreuzberg.extract_file_sync('document.pdf', config: config)
 puts result.content

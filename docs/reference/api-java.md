@@ -6,7 +6,7 @@ Complete reference for the Kreuzberg Java bindings using Java 22+ Foreign Functi
 
 Add the dependency to your Maven `pom.xml`:
 
-```xml
+```xml title="pom.xml"
 <dependency>
     <groupId>dev.kreuzberg</groupId>
     <artifactId>kreuzberg</artifactId>
@@ -16,7 +16,7 @@ Add the dependency to your Maven `pom.xml`:
 
 Or with Gradle:
 
-```gradle
+```gradle title="build.gradle"
 dependencies {
     implementation 'dev.kreuzberg:kreuzberg:4.0.0-rc.1'
 }
@@ -37,7 +37,7 @@ Extract content from a file (synchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static ExtractionResult extractFile(String path) throws IOException, KreuzbergException
 public static ExtractionResult extractFile(Path path) throws IOException, KreuzbergException
 public static ExtractionResult extractFile(Path path, ExtractionConfig config) throws IOException, KreuzbergException
@@ -59,11 +59,12 @@ public static ExtractionResult extractFile(Path path, ExtractionConfig config) t
 
 **Example - Basic usage:**
 
-```java
+```java title="BasicExtraction.java"
 import dev.kreuzberg.Kreuzberg;
 import dev.kreuzberg.ExtractionResult;
 
 try {
+    // Extract content from a PDF file
     ExtractionResult result = Kreuzberg.extractFile("document.pdf");
     System.out.println(result.getContent());
     System.out.println("MIME Type: " + result.getMimeType());
@@ -76,10 +77,11 @@ try {
 
 **Example - With OCR:**
 
-```java
+```java title="WithOcr.java"
 import dev.kreuzberg.*;
 import dev.kreuzberg.config.*;
 
+// Configure OCR for scanned documents
 ExtractionConfig config = ExtractionConfig.builder()
     .ocr(OcrConfig.builder()
         .backend("tesseract")
@@ -93,7 +95,8 @@ System.out.println(result.getContent());
 
 **Example - With multiple options:**
 
-```java
+```java title="AdvancedExtraction.java"
+// Configure extraction with multiple options for comprehensive processing
 ExtractionConfig config = ExtractionConfig.builder()
     .useCache(true)
     .forceOcr(false)
@@ -123,7 +126,7 @@ Extract content from byte array (synchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static ExtractionResult extractBytes(byte[] data, String mimeType, ExtractionConfig config)
     throws KreuzbergException
 ```
@@ -144,9 +147,10 @@ public static ExtractionResult extractBytes(byte[] data, String mimeType, Extrac
 
 **Example - Basic usage:**
 
-```java
+```java title="ByteExtraction.java"
 import dev.kreuzberg.Kreuzberg;
 
+// Extract from in-memory byte array
 byte[] pdfBytes = /* read from file or stream */;
 ExtractionResult result = Kreuzberg.extractBytes(pdfBytes, "application/pdf", null);
 System.out.println(result.getContent());
@@ -154,7 +158,8 @@ System.out.println(result.getContent());
 
 **Example - With configuration:**
 
-```java
+```java title="ByteExtraction.java"
+// Extract from bytes with quality processing enabled
 ExtractionConfig config = ExtractionConfig.builder()
     .enableQualityProcessing(true)
     .build();
@@ -171,7 +176,7 @@ Extract content from multiple files in parallel (synchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static List<ExtractionResult> batchExtractFiles(List<String> paths, ExtractionConfig config)
     throws KreuzbergException
 ```
@@ -191,10 +196,11 @@ public static List<ExtractionResult> batchExtractFiles(List<String> paths, Extra
 
 **Example:**
 
-```java
+```java title="BatchProcessing.java"
 import dev.kreuzberg.Kreuzberg;
 import java.util.List;
 
+// Process multiple files in parallel for better performance
 List<String> filePaths = List.of(
     "doc1.pdf",
     "doc2.docx",
@@ -203,6 +209,7 @@ List<String> filePaths = List.of(
 
 List<ExtractionResult> results = Kreuzberg.batchExtractFiles(filePaths, null);
 
+// Display extraction results for each file
 for (int i = 0; i < filePaths.size(); i++) {
     System.out.println(filePaths.get(i) + ": " + results.get(i).getContent().length() + " characters");
 }
@@ -216,7 +223,7 @@ Extract content from multiple byte arrays in parallel (synchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static List<ExtractionResult> batchExtractBytes(List<BytesWithMime> items, ExtractionConfig config)
     throws KreuzbergException
 ```
@@ -236,11 +243,12 @@ public static List<ExtractionResult> batchExtractBytes(List<BytesWithMime> items
 
 **Example:**
 
-```java
+```java title="BatchProcessing.java"
 import dev.kreuzberg.Kreuzberg;
 import dev.kreuzberg.BytesWithMime;
 import java.util.List;
 
+// Process multiple in-memory documents in parallel
 List<BytesWithMime> items = List.of(
     new BytesWithMime(pdfBytes, "application/pdf"),
     new BytesWithMime(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
@@ -257,7 +265,7 @@ Extract content from a file (asynchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static CompletableFuture<ExtractionResult> extractFileAsync(Path path, ExtractionConfig config)
 ```
 
@@ -272,7 +280,8 @@ public static CompletableFuture<ExtractionResult> extractFileAsync(Path path, Ex
 
 **Example:**
 
-```java
+```java title="AsyncExtraction.java"
+// Asynchronous extraction with error handling
 Kreuzberg.extractFileAsync(Path.of("document.pdf"), null)
     .thenAccept(result -> System.out.println(result.getContent()))
     .exceptionally(e -> {
@@ -289,7 +298,7 @@ Extract content from bytes (asynchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static CompletableFuture<ExtractionResult> extractBytesAsync(
     byte[] data,
     String mimeType,
@@ -309,7 +318,7 @@ Extract multiple files in parallel (asynchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static CompletableFuture<List<ExtractionResult>> batchExtractFilesAsync(
     List<String> paths,
     ExtractionConfig config
@@ -328,7 +337,7 @@ Extract multiple byte arrays in parallel (asynchronous).
 
 **Signature:**
 
-```java
+```java title="Java"
 public static CompletableFuture<List<ExtractionResult>> batchExtractBytesAsync(
     List<BytesWithMime> items,
     ExtractionConfig config
@@ -349,7 +358,8 @@ Main extraction configuration using builder pattern.
 
 **Builder Methods:**
 
-```java
+```java title="ExtractionConfig.java"
+// Build extraction configuration with all available options
 ExtractionConfig config = ExtractionConfig.builder()
     .useCache(true)                                    // Enable caching (default: true)
     .enableQualityProcessing(false)                    // Enable quality processing (default: false)
@@ -370,11 +380,11 @@ ExtractionConfig config = ExtractionConfig.builder()
 
 **Static Methods:**
 
-```java
-// Load from file (TOML, YAML, or JSON)
+```java title="ConfigLoading.java"
+// Load configuration from file (TOML, YAML, or JSON)
 ExtractionConfig config = ExtractionConfig.fromFile("kreuzberg.toml");
 
-// Discover from current/parent directories
+// Automatically discover configuration file in current/parent directories
 ExtractionConfig config = ExtractionConfig.discover(); // Returns null if not found
 ```
 
@@ -386,7 +396,8 @@ OCR configuration for text extraction from images.
 
 **Builder Methods:**
 
-```java
+```java title="OcrConfiguration.java"
+// Configure OCR backend and language settings
 OcrConfig ocr = OcrConfig.builder()
     .backend("tesseract")          // "tesseract", "easyocr", "paddleocr", etc.
     .language("eng")               // Language code(s), comma-separated for multiple
@@ -396,7 +407,8 @@ OcrConfig ocr = OcrConfig.builder()
 
 **Example - Multi-language OCR:**
 
-```java
+```java title="MultiLanguageOcr.java"
+// Configure OCR to support multiple languages simultaneously
 OcrConfig ocr = OcrConfig.builder()
     .backend("tesseract")
     .language("eng+fra+deu")       // English, French, and German
@@ -411,7 +423,7 @@ Custom OCR backend implementation for cloud-based or specialized OCR.
 
 **Interface:**
 
-```java
+```java title="Java"
 public interface OcrBackend {
     /**
      * Process image and extract text.
@@ -433,11 +445,12 @@ public interface OcrBackend {
 
 **Example - Custom OCR Backend:**
 
-```java
+```java title="CustomOcrBackend.java"
+// Implement custom OCR backend for cloud-based or specialized OCR services
 class CustomOcrBackend implements OcrBackend {
     @Override
     public String processImage(byte[] imageData, String configJson) throws Exception {
-        // Call custom OCR service
+        // Call custom OCR service (e.g., Google Cloud Vision, AWS Textract)
         return callCustomOcrService(imageData);
     }
 
@@ -447,7 +460,7 @@ class CustomOcrBackend implements OcrBackend {
     }
 }
 
-// Register backend
+// Register the custom backend with Kreuzberg
 OcrBackend backend = new CustomOcrBackend();
 Kreuzberg.registerOcrBackend("custom-ocr", backend);
 ```
@@ -460,7 +473,8 @@ Configuration for splitting extracted text into chunks.
 
 **Builder Methods:**
 
-```java
+```java title="ChunkingConfiguration.java"
+// Configure text chunking for RAG and embedding workflows
 ChunkingConfig chunking = ChunkingConfig.builder()
     .maxChars(1000)              // Maximum characters per chunk
     .maxOverlap(200)             // Character overlap between chunks
@@ -478,7 +492,8 @@ Configuration for automatic language detection.
 
 **Builder Methods:**
 
-```java
+```java title="LanguageDetection.java"
+// Configure automatic language detection with confidence threshold
 LanguageDetectionConfig langDetect = LanguageDetectionConfig.builder()
     .enabled(true)               // Enable language detection
     .minConfidence(0.8)          // Minimum confidence threshold (0.0-1.0)
@@ -493,7 +508,8 @@ PDF-specific extraction options.
 
 **Builder Methods:**
 
-```java
+```java title="PdfConfiguration.java"
+// Configure PDF-specific extraction options
 PdfConfig pdf = PdfConfig.builder()
     .extractImages(true)         // Extract images from PDF
     .extractMetadata(true)       // Extract PDF metadata
@@ -509,7 +525,8 @@ Configuration for image extraction from documents.
 
 **Builder Methods:**
 
-```java
+```java title="ImageExtraction.java"
+// Configure image extraction settings
 ImageExtractionConfig images = ImageExtractionConfig.builder()
     .extractImages(true)         // Enable image extraction
     .targetDpi(150)              // Target DPI for extraction
@@ -525,7 +542,8 @@ Configuration for preprocessing images before OCR.
 
 **Builder Methods:**
 
-```java
+```java title="ImagePreprocessing.java"
+// Configure image preprocessing to improve OCR accuracy
 ImagePreprocessingConfig preproc = ImagePreprocessingConfig.builder()
     .targetDpi(300)              // Target DPI for OCR
     .denoise(true)               // Apply denoising
@@ -542,7 +560,8 @@ Configuration for token reduction (reducing extracted text size).
 
 **Builder Methods:**
 
-```java
+```java title="TokenReduction.java"
+// Configure token reduction to minimize extracted text size
 TokenReductionConfig tokenReduce = TokenReductionConfig.builder()
     .mode("moderate")            // Mode: "none", "light", "moderate", "aggressive"
     .preserveImportantWords(true) // Preserve important words
@@ -557,7 +576,8 @@ Configuration for post-processing.
 
 **Builder Methods:**
 
-```java
+```java title="PostProcessor.java"
+// Configure post-processing for extraction results
 PostProcessorConfig postproc = PostProcessorConfig.builder()
     .enabled(true)               // Enable post-processing
     .build();
@@ -571,7 +591,8 @@ Configuration for HTML to Markdown conversion.
 
 **Builder Methods:**
 
-```java
+```java title="HtmlConfiguration.java"
+// Configure HTML to Markdown conversion options
 HtmlOptions html = HtmlOptions.builder()
     .headingStyle("atx")         // "atx", "underlined", "atx_closed"
     .codeBlockStyle("backticks") // "indented", "backticks", "tildes"
@@ -586,7 +607,8 @@ Configuration for keyword extraction.
 
 **Builder Methods:**
 
-```java
+```java title="KeywordExtraction.java"
+// Configure automatic keyword extraction from content
 KeywordConfig keywords = KeywordConfig.builder()
     .enabled(true)
     .maxKeywords(10)
@@ -604,7 +626,8 @@ Result of a document extraction operation.
 
 **Accessors:**
 
-```java
+```java title="ResultAccess.java"
+// Access extracted content and metadata
 String content = result.getContent();                    // Extracted text content
 String mimeType = result.getMimeType();                  // Detected MIME type
 Map<String, Object> metadata = result.getMetadata();    // Document metadata
@@ -614,7 +637,7 @@ List<Chunk> chunks = result.getChunks();                // Text chunks
 List<ExtractedImage> images = result.getImages();       // Extracted images
 boolean success = result.isSuccess();                    // Extraction success flag
 
-// Common metadata fields
+// Access common metadata fields
 Optional<String> language = result.getLanguage();       // Primary language
 Optional<String> date = result.getDate();               // Document date
 Optional<String> subject = result.getSubject();         // Document subject
@@ -622,19 +645,20 @@ Optional<String> subject = result.getSubject();         // Document subject
 
 **Example - Accessing results:**
 
-```java
+```java title="ResultProcessing.java"
 ExtractionResult result = Kreuzberg.extractFile("document.pdf");
 
+// Display basic extraction statistics
 System.out.println("Content length: " + result.getContent().length());
 System.out.println("MIME: " + result.getMimeType());
 System.out.println("Tables: " + result.getTables().size());
 System.out.println("Languages: " + result.getDetectedLanguages());
 
-// Access metadata
+// Extract specific metadata fields
 Object pageCount = result.getMetadata().get("page_count");
 Object author = result.getMetadata().get("author");
 
-// Access chunks for RAG
+// Process chunks for RAG workflows
 for (Chunk chunk : result.getChunks()) {
     System.out.println("Chunk " + chunk.getIndex() + ": " + chunk.getContent());
 }
@@ -648,12 +672,13 @@ Represents a table extracted from a document.
 
 **Accessors:**
 
-```java
+```java title="TableAccess.java"
+// Access table data in various formats
 List<List<String>> cells = table.getCells();           // 2D list of cell values
 String markdown = table.getMarkdown();                 // Markdown representation
 int pageNumber = table.getPageNumber();                // Page number (1-indexed)
 
-// Helper methods
+// Helper methods for table navigation
 int rows = table.getRowCount();                        // Number of rows
 int cols = table.getColumnCount();                     // Number of columns
 String cell = table.getCell(row, col);                // Get cell value
@@ -662,15 +687,16 @@ List<String> row = table.getRow(rowIndex);            // Get row
 
 **Example:**
 
-```java
+```java title="TableProcessing.java"
 List<Table> tables = result.getTables();
 
+// Process all extracted tables
 for (Table table : tables) {
     System.out.println("Table on page " + table.getPageNumber() + ":");
     System.out.println("Size: " + table.getRowCount() + " x " + table.getColumnCount());
     System.out.println(table.getMarkdown());
 
-    // Iterate cells
+    // Iterate through all cells in the table
     for (int r = 0; r < table.getRowCount(); r++) {
         for (int c = 0; c < table.getColumnCount(); c++) {
             System.out.print(table.getCell(r, c) + " | ");
@@ -688,7 +714,8 @@ Represents a chunk of extracted text (for RAG/embeddings).
 
 **Accessors:**
 
-```java
+```java title="ChunkAccess.java"
+// Access chunk data for RAG and embedding workflows
 String content = chunk.getContent();                   // Chunk text
 int index = chunk.getIndex();                          // Chunk index
 Optional<Map<String, Object>> metadata = chunk.getMetadata(); // Chunk metadata
@@ -696,7 +723,8 @@ Optional<Map<String, Object>> metadata = chunk.getMetadata(); // Chunk metadata
 
 **Example:**
 
-```java
+```java title="ChunkProcessing.java"
+// Configure chunking for RAG workflow
 ExtractionConfig config = ExtractionConfig.builder()
     .chunking(ChunkingConfig.builder()
         .maxChars(1000)
@@ -706,6 +734,7 @@ ExtractionConfig config = ExtractionConfig.builder()
 
 ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
 
+// Process each chunk (e.g., for embedding generation)
 for (Chunk chunk : result.getChunks()) {
     System.out.println("Chunk " + chunk.getIndex() + ": " + chunk.getContent().substring(0, 50) + "...");
 }
@@ -719,7 +748,8 @@ Represents an image extracted from a document.
 
 **Accessors:**
 
-```java
+```java title="ImageAccess.java"
+// Access extracted image data and metadata
 byte[] data = image.getData();                         // Image binary data
 String format = image.getFormat();                     // Image format (png, jpg, etc.)
 String mimeType = image.getMimeType();                 // MIME type
@@ -737,7 +767,7 @@ Post-processors enrich extraction results by transforming content or adding meta
 
 **Interface:**
 
-```java
+```java title="Java"
 @FunctionalInterface
 public interface PostProcessor {
     /**
@@ -780,9 +810,10 @@ public interface PostProcessor {
 
 **Example - Word count processor:**
 
-```java
+```java title="CustomPostProcessor.java"
 import dev.kreuzberg.*;
 
+// Create a post-processor that adds word count to metadata
 PostProcessor wordCount = result -> {
     long count = result.getContent().split("\\s+").length;
 
@@ -801,17 +832,18 @@ PostProcessor wordCount = result -> {
     );
 };
 
-// Register processor
+// Register the processor with priority 50 in MIDDLE stage
 Kreuzberg.registerPostProcessor("word-count", wordCount, 50, ProcessingStage.MIDDLE);
 
-// Use in extraction
+// Extract file and access the word count metadata
 ExtractionResult result = Kreuzberg.extractFile("document.pdf");
 System.out.println("Word count: " + result.getMetadata().get("word_count"));
 ```
 
 **Example - Uppercase transformer:**
 
-```java
+```java title="CustomPostProcessor.java"
+// Create a post-processor that transforms content to uppercase
 PostProcessor uppercase = result -> {
     return new ExtractionResult(
         result.getContent().toUpperCase(),
@@ -825,6 +857,7 @@ PostProcessor uppercase = result -> {
     );
 };
 
+// Register the uppercase transformer
 Kreuzberg.registerPostProcessor("uppercase", uppercase);
 ```
 
@@ -836,7 +869,7 @@ Validators check extraction results for quality or completeness.
 
 **Interface:**
 
-```java
+```java title="Java"
 @FunctionalInterface
 public interface Validator {
     /**
@@ -873,7 +906,8 @@ public interface Validator {
 
 **Example - Minimum content length validator:**
 
-```java
+```java title="CustomValidator.java"
+// Create a validator that ensures minimum content length
 Validator minLength = result -> {
     if (result.getContent().length() < 100) {
         throw new ValidationException(
@@ -882,12 +916,14 @@ Validator minLength = result -> {
     }
 };
 
+// Register the validator
 Kreuzberg.registerValidator("min-length", minLength);
 ```
 
 **Example - Quality score validator:**
 
-```java
+```java title="CustomValidator.java"
+// Create a validator that checks extraction quality score
 Validator qualityValidator = result -> {
     double score = result.getMetadata().containsKey("quality_score")
         ? ((Number) result.getMetadata().get("quality_score")).doubleValue()
@@ -900,6 +936,7 @@ Validator qualityValidator = result -> {
     }
 };
 
+// Register the quality validator
 Kreuzberg.registerValidator("quality", qualityValidator);
 ```
 
@@ -911,58 +948,58 @@ Register, list, and unregister plugins.
 
 **Post-Processor Management:**
 
-```java
-// Register with defaults
+```java title="PluginManagement.java"
+// Register post-processor with default settings
 Kreuzberg.registerPostProcessor("processor-name", processor);
 
-// Register with custom priority and stage
+// Register with custom priority and execution stage
 Kreuzberg.registerPostProcessor("processor-name", processor, 100, ProcessingStage.EARLY);
 
-// Unregister specific processor
+// Unregister a specific processor
 Kreuzberg.unregisterPostProcessor("processor-name");
 
-// List all registered processors
+// List all registered post-processors
 List<String> processors = Kreuzberg.listPostProcessors();
 
-// Clear all processors
+// Remove all post-processors
 Kreuzberg.clearPostProcessors();
 ```
 
 **Validator Management:**
 
-```java
-// Register with defaults
+```java title="PluginManagement.java"
+// Register validator with default priority
 Kreuzberg.registerValidator("validator-name", validator);
 
-// Register with custom priority
+// Register with custom priority (higher = earlier execution)
 Kreuzberg.registerValidator("validator-name", validator, 100);
 
-// Unregister specific validator
+// Unregister a specific validator
 Kreuzberg.unregisterValidator("validator-name");
 
 // List all registered validators
 List<String> validators = Kreuzberg.listValidators();
 
-// Clear all validators
+// Remove all validators
 Kreuzberg.clearValidators();
 ```
 
 **OCR Backend Management:**
 
-```java
-// Register backend
+```java title="OcrBackendManagement.java"
+// Register custom OCR backend
 Kreuzberg.registerOcrBackend("backend-name", backend);
 
-// Register with language filtering
+// Register with supported language filtering
 Kreuzberg.registerOcrBackend("backend-name", backend, List.of("eng", "fra", "deu"));
 
-// Unregister backend
+// Unregister a specific OCR backend
 Kreuzberg.unregisterOCRBackend("backend-name");
 
-// List registered backends
+// List all registered OCR backends
 List<String> backends = Kreuzberg.listOCRBackends();
 
-// Clear all backends
+// Remove all custom OCR backends
 Kreuzberg.clearOCRBackends();
 ```
 
@@ -976,7 +1013,7 @@ Detect MIME type from file or bytes.
 
 **Signatures:**
 
-```java
+```java title="Java"
 public static String detectMimeType(String path) throws KreuzbergException
 public static String detectMimeType(String path, boolean checkExists) throws KreuzbergException
 public static String detectMimeType(byte[] data) throws KreuzbergException
@@ -985,14 +1022,14 @@ public static String detectMimeTypeFromPath(String path) throws KreuzbergExcepti
 
 **Example:**
 
-```java
-// From file path
+```java title="MimeTypeDetection.java"
+// Detect MIME type from file path
 String mimeType = Kreuzberg.detectMimeType("document.pdf");
 
-// From file path without checking existence
+// Detect from path without checking file existence
 String mimeType = Kreuzberg.detectMimeType("document.pdf", false);
 
-// From raw bytes
+// Detect from raw byte array
 byte[] data = /* ... */;
 String mimeType = Kreuzberg.detectMimeType(data);
 ```
@@ -1005,13 +1042,14 @@ Validate and normalize a MIME type string.
 
 **Signature:**
 
-```java
+```java title="Java"
 public static String validateMimeType(String mimeType) throws KreuzbergException
 ```
 
 **Example:**
 
-```java
+```java title="MimeTypeValidation.java"
+// Validate and normalize a MIME type string
 String validated = Kreuzberg.validateMimeType("application/pdf");
 System.out.println(validated); // "application/pdf"
 ```
@@ -1024,16 +1062,18 @@ Get file extensions for a given MIME type.
 
 **Signature:**
 
-```java
+```java title="Java"
 public static List<String> getExtensionsForMime(String mimeType) throws KreuzbergException
 ```
 
 **Example:**
 
-```java
+```java title="MimeExtensions.java"
+// Get file extensions for PDF files
 List<String> extensions = Kreuzberg.getExtensionsForMime("application/pdf");
 System.out.println(extensions); // ["pdf"]
 
+// Get file extensions for JPEG images (multiple extensions possible)
 List<String> extensions = Kreuzberg.getExtensionsForMime("image/jpeg");
 System.out.println(extensions); // ["jpg", "jpeg"]
 ```
@@ -1048,13 +1088,14 @@ Get embedding preset configuration by name.
 
 **Signature:**
 
-```java
+```java title="Java"
 public static Optional<EmbeddingPreset> getEmbeddingPreset(String name) throws KreuzbergException
 ```
 
 **Example:**
 
-```java
+```java title="EmbeddingPresets.java"
+// Retrieve an embedding preset configuration by name
 Optional<EmbeddingPreset> preset = Kreuzberg.getEmbeddingPreset("default");
 if (preset.isPresent()) {
     EmbeddingPreset p = preset.get();
@@ -1071,13 +1112,14 @@ List all available embedding presets.
 
 **Signature:**
 
-```java
+```java title="Java"
 public static List<String> listEmbeddingPresets() throws KreuzbergException
 ```
 
 **Example:**
 
-```java
+```java title="EmbeddingPresets.java"
+// List all available embedding presets
 List<String> presets = Kreuzberg.listEmbeddingPresets();
 for (String preset : presets) {
     System.out.println("Available: " + preset);
@@ -1109,7 +1151,8 @@ Exception
 
 **KreuzbergException** - Base exception for all Kreuzberg errors.
 
-```java
+```java title="ErrorHandling.java"
+// Handle general Kreuzberg exceptions
 try {
     ExtractionResult result = Kreuzberg.extractFile("document.pdf");
 } catch (KreuzbergException e) {
@@ -1122,7 +1165,8 @@ try {
 
 **ParsingException** - Document parsing failure.
 
-```java
+```java title="ErrorHandling.java"
+// Handle document parsing errors (e.g., corrupted files)
 try {
     ExtractionResult result = Kreuzberg.extractFile("corrupted.pdf");
 } catch (ParsingException e) {
@@ -1132,7 +1176,8 @@ try {
 
 **OcrException** - OCR processing failure.
 
-```java
+```java title="OcrErrorHandling.java"
+// Handle OCR-specific errors
 try {
     ExtractionConfig config = ExtractionConfig.builder()
         .forceOcr(true)
@@ -1145,7 +1190,8 @@ try {
 
 **MissingDependencyException** - Required system dependency not found.
 
-```java
+```java title="DependencyErrorHandling.java"
+// Handle missing system dependencies (e.g., Tesseract not installed)
 try {
     ExtractionResult result = Kreuzberg.extractFile("document.pdf");
 } catch (MissingDependencyException e) {
@@ -1156,7 +1202,8 @@ try {
 
 **ValidationException** - Configuration or validation failure.
 
-```java
+```java title="ValidationErrorHandling.java"
+// Handle validation errors from custom validators
 try {
     validator.validate(result);
 } catch (ValidationException e) {
@@ -1166,7 +1213,8 @@ try {
 
 ### Comprehensive Error Handling
 
-```java
+```java title="ComprehensiveErrorHandling.java"
+// Comprehensive error handling for all exception types
 try {
     ExtractionConfig config = ExtractionConfig.builder()
         .ocr(OcrConfig.builder().backend("tesseract").language("eng").build())
@@ -1191,7 +1239,7 @@ try {
 } catch (KreuzbergException e) {
     System.err.println("Extraction failed: " + e.getMessage());
 } finally {
-    // Clean up if needed
+    // Clean up resources if needed
 }
 ```
 
@@ -1205,13 +1253,14 @@ Get the Kreuzberg library version.
 
 **Signature:**
 
-```java
+```java title="Java"
 public static String getVersion()
 ```
 
 **Example:**
 
-```java
+```java title="VersionInfo.java"
+// Get the Kreuzberg library version
 String version = Kreuzberg.getVersion();
 System.out.println("Kreuzberg version: " + version);
 ```
@@ -1224,7 +1273,8 @@ System.out.println("Kreuzberg version: " + version);
 
 Automatically discover configuration from kreuzberg.toml, kreuzberg.yaml, or kreuzberg.json in the current or parent directories.
 
-```java
+```java title="ConfigDiscovery.java"
+// Automatically discover configuration file in directory tree
 ExtractionConfig config = ExtractionConfig.discover();
 
 if (config != null) {
@@ -1241,7 +1291,8 @@ if (config != null) {
 
 Load configuration from a file explicitly.
 
-```java
+```java title="ConfigLoading.java"
+// Load configuration from a specific file
 ExtractionConfig config = ExtractionConfig.fromFile("kreuzberg.toml");
 ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
 ```
@@ -1250,32 +1301,32 @@ ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
 
 ### Complex Configuration Example
 
-```java
+```java title="ComplexConfiguration.java"
 import dev.kreuzberg.*;
 import dev.kreuzberg.config.*;
 import java.nio.file.Path;
 
 public class ComplexExample {
     public static void main(String[] args) throws Exception {
-        // Configure everything
+        // Build comprehensive extraction configuration with all options
         ExtractionConfig config = ExtractionConfig.builder()
             .useCache(true)
             .enableQualityProcessing(true)
             .forceOcr(false)
 
-            // OCR settings
+            // Configure OCR for multi-language support
             .ocr(OcrConfig.builder()
                 .backend("tesseract")
                 .language("eng+fra")
                 .build())
 
-            // PDF settings
+            // Configure PDF extraction options
             .pdfOptions(PdfConfig.builder()
                 .extractImages(true)
                 .extractMetadata(true)
                 .build())
 
-            // Image processing
+            // Configure image preprocessing for better OCR results
             .imagePreprocessing(ImagePreprocessingConfig.builder()
                 .targetDpi(300)
                 .denoise(true)
@@ -1283,14 +1334,14 @@ public class ComplexExample {
                 .contrastEnhance(true)
                 .build())
 
-            // Chunking for RAG
+            // Configure chunking for RAG workflows
             .chunking(ChunkingConfig.builder()
                 .maxChars(1000)
                 .maxOverlap(200)
                 .enabled(true)
                 .build())
 
-            // Language detection
+            // Configure automatic language detection
             .languageDetection(LanguageDetectionConfig.builder()
                 .enabled(true)
                 .minConfidence(0.8)
@@ -1298,7 +1349,7 @@ public class ComplexExample {
 
             .build();
 
-        // Register custom plugins
+        // Register custom post-processor for content transformation
         PostProcessor uppercaser = result -> new ExtractionResult(
             result.getContent().toUpperCase(),
             result.getMimeType(),
@@ -1310,6 +1361,7 @@ public class ComplexExample {
             result.isSuccess()
         );
 
+        // Register custom validator for quality checks
         Validator minLength = result -> {
             if (result.getContent().length() < 100) {
                 throw new ValidationException("Content too short");
@@ -1319,10 +1371,10 @@ public class ComplexExample {
         Kreuzberg.registerPostProcessor("uppercase", uppercaser, 100, ProcessingStage.EARLY);
         Kreuzberg.registerValidator("min-length", minLength);
 
-        // Extract
+        // Extract document with all configurations applied
         ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
 
-        // Process results
+        // Display extraction results
         System.out.println("Content: " + result.getContent().substring(0, 100));
         System.out.println("Tables: " + result.getTables().size());
         System.out.println("Images: " + result.getImages().size());
@@ -1337,7 +1389,7 @@ public class ComplexExample {
 
 ### Batch Processing with Error Handling
 
-```java
+```java title="BatchProcessing.java"
 import dev.kreuzberg.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -1346,22 +1398,27 @@ import java.util.List;
 
 public class BatchProcessor {
     public static void main(String[] args) throws Exception {
+        // Find all PDF files in the documents directory
         List<Path> files = Files.list(Path.of("documents/"))
             .filter(p -> p.toString().endsWith(".pdf"))
             .toList();
 
+        // Convert Path objects to String paths
         List<String> filePaths = new ArrayList<>();
         for (Path file : files) {
             filePaths.add(file.toString());
         }
 
+        // Configure extraction with caching enabled
         ExtractionConfig config = ExtractionConfig.builder()
             .useCache(true)
             .build();
 
         try {
+            // Process all files in parallel
             List<ExtractionResult> results = Kreuzberg.batchExtractFiles(filePaths, config);
 
+            // Check results for each file
             for (int i = 0; i < filePaths.size(); i++) {
                 ExtractionResult result = results.get(i);
                 Path file = files.get(i);
@@ -1407,11 +1464,12 @@ The Kreuzberg Java bindings use Java's Foreign Function & Memory (FFM) API for d
 
 **Memory Management:**
 
-```java
+```java title="FfmMemoryManagement.java"
+// FFM API uses Arena for automatic memory management
 try (Arena arena = Arena.ofConfined()) {
     // FFI operations use arena for memory management
     ExtractionResult result = Kreuzberg.extractFile("document.pdf");
-} // Arena automatically cleaned up
+} // Arena automatically cleaned up when try block exits
 ```
 
 **Arena Types:**
@@ -1425,7 +1483,7 @@ try (Arena arena = Arena.ofConfined()) {
 
 **"Failed to load native library"** - Ensure libkreuzberg_ffi is in system library path.
 
-```bash
+```bash title="Terminal"
 export LD_LIBRARY_PATH=/path/to/libkreuzberg_ffi:$LD_LIBRARY_PATH  # Linux/Unix
 export DYLD_LIBRARY_PATH=/path/to/libkreuzberg_ffi:$DYLD_LIBRARY_PATH  # macOS
 set PATH=C:\path\to\libkreuzberg_ffi;%PATH%  # Windows
@@ -1433,7 +1491,7 @@ set PATH=C:\path\to\libkreuzberg_ffi;%PATH%  # Windows
 
 **"Tesseract not found"** - Install Tesseract OCR:
 
-```bash
+```bash title="Terminal"
 # Ubuntu/Debian
 sudo apt-get install tesseract-ocr
 

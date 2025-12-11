@@ -74,15 +74,15 @@ Extract text from uploaded files via multipart form data.
 
 **Example:**
 
-```bash
-# Single file
+```bash title="Terminal"
+# Extract a single file via HTTP POST
 curl -F "files=@document.pdf" http://localhost:8000/extract
 
-# Multiple files
+# Extract multiple files in a single request
 curl -F "files=@doc1.pdf" -F "files=@doc2.docx" \
   http://localhost:8000/extract
 
-# With configuration override
+# Extract with custom OCR configuration override
 curl -F "files=@scanned.pdf" \
      -F 'config={"ocr":{"language":"eng"},"force_ocr":true}' \
   http://localhost:8000/extract
@@ -90,7 +90,7 @@ curl -F "files=@scanned.pdf" \
 
 **Response Schema:**
 
-```json
+```json title="Response"
 [
   {
     "content": "Extracted text content...",
@@ -113,13 +113,14 @@ Health check endpoint for monitoring and load balancers.
 
 **Example:**
 
-```bash
+```bash title="Terminal"
+# Check server health status
 curl http://localhost:8000/health
 ```
 
 **Response:**
 
-```json
+```json title="Response"
 {
   "status": "healthy",
   "version": "4.0.0-rc.1"
@@ -132,13 +133,14 @@ Server information and capabilities.
 
 **Example:**
 
-```bash
+```bash title="Terminal"
+# Get server version and capabilities
 curl http://localhost:8000/info
 ```
 
 **Response:**
 
-```json
+```json title="Response"
 {
   "version": "4.0.0-rc.1",
   "rust_backend": true
@@ -151,13 +153,14 @@ Get cache statistics.
 
 **Example:**
 
-```bash
+```bash title="Terminal"
+# Retrieve cache statistics and storage usage
 curl http://localhost:8000/cache/stats
 ```
 
 **Response:**
 
-```json
+```json title="Response"
 {
   "directory": "/home/user/.cache/kreuzberg",
   "total_files": 42,
@@ -174,13 +177,14 @@ Clear all cached files.
 
 **Example:**
 
-```bash
+```bash title="Terminal"
+# Clear all cached extraction results
 curl -X DELETE http://localhost:8000/cache/clear
 ```
 
 **Response:**
 
-```json
+```json title="Response"
 {
   "directory": "/home/user/.cache/kreuzberg",
   "removed_files": 42,
@@ -202,17 +206,17 @@ The server automatically discovers configuration files in this order:
 
 **Example kreuzberg.toml:**
 
-```toml
-# OCR settings
+```toml title="kreuzberg.toml"
+# Configure OCR backend and language settings
 [ocr]
 backend = "tesseract"
 language = "eng"
 
-# Features
+# Enable quality processing and caching
 enable_quality_processing = true
 use_cache = true
 
-# Token reduction
+# Configure token reduction for LLM optimization
 [token_reduction]
 enabled = true
 target_reduction = 0.3
@@ -224,21 +228,23 @@ See [Configuration Guide](configuration.md) for all options.
 
 **Server Binding:**
 
-```bash
+```bash title="Terminal"
+# Configure server listen address and port
 KREUZBERG_HOST=0.0.0.0          # Listen address (default: 127.0.0.1)
 KREUZBERG_PORT=8000              # Port number (default: 8000)
 ```
 
 **Upload Limits:**
 
-```bash
+```bash title="Terminal"
+# Set maximum file upload size in megabytes
 KREUZBERG_MAX_UPLOAD_SIZE_MB=200  # Max upload size in MB (default: 100)
 ```
 
 **CORS Configuration:**
 
-```bash
-# Comma-separated list of allowed origins
+```bash title="Terminal"
+# Configure allowed origins for cross-origin requests (production security)
 KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 ```
 
@@ -252,16 +258,16 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 
 === "cURL"
 
-    ```bash
-    # Extract single file
+    ```bash title="Terminal"
+    # Extract content from a single document
     curl -F "files=@document.pdf" http://localhost:8000/extract | jq .
 
-    # Extract with OCR
+    # Extract with OCR enabled for scanned documents
     curl -F "files=@scanned.pdf" \
          -F 'config={"ocr":{"language":"eng"}}' \
          http://localhost:8000/extract | jq .
 
-    # Multiple files
+    # Batch extract multiple files in parallel
     curl -F "files=@doc1.pdf" \
          -F "files=@doc2.docx" \
          http://localhost:8000/extract | jq .
@@ -295,7 +301,7 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 
 **Error Response Format:**
 
-```json
+```json title="Error Response"
 {
   "error_type": "ValidationError",
   "message": "Invalid file format",
@@ -350,11 +356,11 @@ The Model Context Protocol (MCP) server exposes Kreuzberg as tools for AI agents
 
 === "CLI"
 
-    ```bash
-    # Start MCP server (stdio transport)
+    ```bash title="Terminal"
+    # Start MCP server using stdio transport for AI agents
     kreuzberg mcp
 
-    # With configuration file
+    # Start MCP server with custom configuration file
     kreuzberg mcp --config kreuzberg.toml
     ```
 
@@ -406,7 +412,7 @@ Extract content from a file path.
 
 **Example MCP Request:**
 
-```json
+```json title="MCP Request"
 {
   "method": "tools/call",
   "params": {
@@ -498,7 +504,7 @@ Clear all cached files.
 
     Add to Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
-    ```json
+    ```json title="claude_desktop_config.json"
     {
       "mcpServers": {
         "kreuzberg": {
@@ -508,6 +514,8 @@ Clear all cached files.
       }
     }
     ```
+
+    After adding the configuration, restart Claude Desktop to load the Kreuzberg MCP server.
 
 === "C#"
 
@@ -547,7 +555,7 @@ Clear all cached files.
 
 **Docker Compose Example:**
 
-```yaml
+```yaml title="docker-compose.yaml"
 version: '3.8'
 
 services:
@@ -556,14 +564,18 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # Configure CORS for production security
       - KREUZBERG_CORS_ORIGINS=https://myapp.com,https://api.myapp.com
+      # Set maximum upload size for large documents
       - KREUZBERG_MAX_UPLOAD_SIZE_MB=500
     volumes:
+      # Mount configuration and cache directories
       - ./config:/config
       - ./cache:/root/.cache/kreuzberg
     command: serve -H 0.0.0.0 -p 8000 --config /config/kreuzberg.toml
     restart: unless-stopped
     healthcheck:
+      # Health check for container orchestration
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
@@ -572,7 +584,8 @@ services:
 
 **Run:**
 
-```bash
+```bash title="Terminal"
+# Start the Kreuzberg API server in detached mode
 docker-compose up -d
 ```
 
@@ -580,13 +593,13 @@ docker-compose up -d
 
 **Deployment Manifest:**
 
-```yaml
+```yaml title="kubernetes-deployment.yaml"
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kreuzberg-api
 spec:
-  replicas: 3
+  replicas: 3  # Deploy 3 replicas for high availability
   selector:
     matchLabels:
       app: kreuzberg-api
@@ -601,24 +614,28 @@ spec:
         ports:
         - containerPort: 8000
         env:
+        # Production environment configuration
         - name: KREUZBERG_CORS_ORIGINS
           value: "https://myapp.com"
         - name: KREUZBERG_MAX_UPLOAD_SIZE_MB
           value: "500"
         command: ["kreuzberg", "serve", "-H", "0.0.0.0", "-p", "8000"]
         livenessProbe:
+          # Check if container is alive and healthy
           httpGet:
             path: /health
             port: 8000
           initialDelaySeconds: 10
           periodSeconds: 30
         readinessProbe:
+          # Check if container is ready to accept traffic
           httpGet:
             path: /health
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
+          # Resource limits for optimal performance
           requests:
             memory: "512Mi"
             cpu: "500m"
@@ -637,14 +654,15 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 8000
-  type: LoadBalancer
+  type: LoadBalancer  # Expose service via load balancer
 ```
 
 ### Reverse Proxy Configuration
 
 **Nginx:**
 
-```nginx
+```nginx title="nginx.conf"
+# Load balance across multiple Kreuzberg instances
 upstream kreuzberg {
     server 127.0.0.1:8000;
     server 127.0.0.1:8001;
@@ -655,42 +673,45 @@ server {
     listen 443 ssl http2;
     server_name api.example.com;
 
+    # SSL/TLS configuration
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
 
-    # Increase upload size limit
+    # Increase upload size limit for large documents
     client_max_body_size 500M;
 
     location / {
         proxy_pass http://kreuzberg;
+        # Forward client headers
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # Timeouts for large files
+        # Extended timeouts for large file processing
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
     }
 
     location /health {
         proxy_pass http://kreuzberg;
-        access_log off;
+        access_log off;  # Disable logging for health checks
     }
 }
 ```
 
 **Caddy:**
 
-```caddy
+```caddy title="Caddyfile"
 api.example.com {
+    # Load balance with automatic health checks
     reverse_proxy localhost:8000 localhost:8001 localhost:8002 {
         lb_policy round_robin
         health_uri /health
         health_interval 10s
     }
 
-    # Increase upload size
+    # Increase maximum upload size for large documents
     request_body {
         max_size 500MB
     }
@@ -716,18 +737,18 @@ api.example.com {
 
 **Health Check Endpoint:**
 
-```bash
-# Simple check
+```bash title="Terminal"
+# Simple health check for manual verification
 curl http://localhost:8000/health
 
-# With monitoring script
+# Continuous monitoring script for production
 #!/bin/bash
 while true; do
   if curl -f http://localhost:8000/health > /dev/null 2>&1; then
     echo "$(date): Server healthy"
   else
     echo "$(date): Server unhealthy"
-    # Send alert
+    # Send alert to monitoring system
   fi
   sleep 30
 done
@@ -735,11 +756,11 @@ done
 
 **Cache Monitoring:**
 
-```bash
-# Check cache size
+```bash title="Terminal"
+# Retrieve cache statistics and usage metrics
 curl http://localhost:8000/cache/stats | jq .
 
-# Clear cache if too large
+# Automatic cache clearing when size exceeds threshold
 CACHE_SIZE=$(curl -s http://localhost:8000/cache/stats | jq .total_size_mb)
 if (( $(echo "$CACHE_SIZE > 1000" | bc -l) )); then
   curl -X DELETE http://localhost:8000/cache/clear
@@ -748,14 +769,14 @@ fi
 
 **Logging:**
 
-```bash
-# Run with debug logging
+```bash title="Terminal"
+# Run with debug logging for development and troubleshooting
 RUST_LOG=debug kreuzberg serve -H 0.0.0.0 -p 8000
 
-# Production logging (info level)
+# Production logging with info level (recommended)
 RUST_LOG=info kreuzberg serve -H 0.0.0.0 -p 8000
 
-# JSON structured logging
+# JSON structured logging for log aggregation systems
 RUST_LOG=info RUST_LOG_FORMAT=json kreuzberg serve -H 0.0.0.0 -p 8000
 ```
 
@@ -765,14 +786,14 @@ RUST_LOG=info RUST_LOG_FORMAT=json kreuzberg serve -H 0.0.0.0 -p 8000
 
 Configure based on expected document sizes:
 
-```bash
-# For small documents (< 10 MB)
+```bash title="Terminal"
+# Configuration for small documents (PDFs, images under 10 MB)
 export KREUZBERG_MAX_UPLOAD_SIZE_MB=50
 
-# For typical documents (< 50 MB)
+# Configuration for typical business documents (under 50 MB)
 export KREUZBERG_MAX_UPLOAD_SIZE_MB=200
 
-# For large scans and archives
+# Configuration for large scans, archives, and high-resolution images
 export KREUZBERG_MAX_UPLOAD_SIZE_MB=1000
 ```
 
@@ -788,18 +809,19 @@ The server handles concurrent requests efficiently using Tokio's async runtime. 
 
 Configure cache behavior via `kreuzberg.toml`:
 
-```toml
+```toml title="kreuzberg.toml"
+# Enable caching for faster repeated extractions
 use_cache = true
-cache_dir = "/var/cache/kreuzberg"  # Custom cache location
+cache_dir = "/var/cache/kreuzberg"  # Custom cache location for production
 ```
 
 **Cache clearing strategies:**
 
-```bash
-# Periodic clearing (cron job)
+```bash title="Terminal"
+# Periodic cache clearing via cron job (daily at 2 AM)
 0 2 * * * curl -X DELETE http://localhost:8000/cache/clear
 
-# Size-based clearing
+# Size-based cache clearing when threshold is exceeded
 CACHE_SIZE=$(curl -s http://localhost:8000/cache/stats | jq .total_size_mb)
 if [ "$CACHE_SIZE" -gt 1000 ]; then
   curl -X DELETE http://localhost:8000/cache/clear

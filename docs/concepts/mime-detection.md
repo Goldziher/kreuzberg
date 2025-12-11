@@ -36,14 +36,14 @@ flowchart TD
 
 When no explicit MIME type is provided, Kreuzberg extracts the file extension and looks it up in an internal mapping table:
 
-```rust
-// Extract extension
+```rust title="mime_detection.rs"
+// Extract and normalize file extension to lowercase
 let extension = path.extension()
     .and_then(|e| e.to_str())
     .unwrap_or("")
     .to_lowercase();
 
-// Lookup MIME type
+// Look up MIME type in extension mapping table
 let mime_type = EXT_TO_MIME.get(extension.as_str())
     .ok_or(UnsupportedFormat)?;
 ```
@@ -58,7 +58,7 @@ let mime_type = EXT_TO_MIME.get(extension.as_str())
 
 Whether the MIME type was detected or explicitly provided, it must be supported:
 
-```rust
+```rust title="mime_detection.rs"
 pub fn validate_mime_type(mime_type: &str) -> Result<()> {
     if SUPPORTED_TYPES.contains(mime_type) {
         Ok(())
@@ -155,8 +155,8 @@ Kreuzberg supports multiple file formats across many categories:
 
 Users can override auto-detection by providing explicit MIME type:
 
-```python
-# Force treating .txt file as markdown
+```python title="mime_detection_example.py"
+# Override auto-detection to treat text file as Markdown
 result = extract_file("notes.txt", mime_type="text/markdown", config=config)
 ```
 
@@ -164,7 +164,7 @@ result = extract_file("notes.txt", mime_type="text/markdown", config=config)
 
 Kreuzberg exports commonly used MIME types as constants:
 
-```rust
+```rust title="mime_detection.rs"
 pub const PDF_MIME_TYPE: &str = "application/pdf";
 pub const HTML_MIME_TYPE: &str = "text/html";
 pub const MARKDOWN_MIME_TYPE: &str = "text/markdown";
@@ -178,7 +178,7 @@ pub const XML_MIME_TYPE: &str = "application/xml";
 
 **Usage:**
 
-```python
+```python title="mime_detection_example.py"
 from kreuzberg import extract_file, PDF_MIME_TYPE
 
 result = extract_file("document.pdf", mime_type=PDF_MIME_TYPE, config=config)
@@ -188,14 +188,14 @@ result = extract_file("document.pdf", mime_type=PDF_MIME_TYPE, config=config)
 
 Kreuzberg provides utility functions for MIME type operations:
 
-```rust
-// Detect MIME type from file path
+```rust title="mime_detection.rs"
+// Automatically detect MIME type from file path extension
 pub fn detect_mime_type(path: impl AsRef<Path>) -> Result<String>
 
-// Validate MIME type is supported
+// Verify that a MIME type is supported by Kreuzberg
 pub fn validate_mime_type(mime_type: &str) -> Result<()>
 
-// Detect or validate (if provided)
+// Auto-detect MIME type or validate explicit type if provided
 pub fn detect_or_validate(
     path: impl AsRef<Path>,
     mime_type: Option<&str>
@@ -204,14 +204,14 @@ pub fn detect_or_validate(
 
 **Python Example:**
 
-```python
+```python title="mime_detection_example.py"
 from kreuzberg import detect_mime_type, validate_mime_type
 
-# Auto-detect from path
+# Automatically detect MIME type from file extension
 mime = detect_mime_type("document.pdf")
 print(mime)  # "application/pdf"
 
-# Validate MIME type
+# Verify MIME type is supported
 validate_mime_type("application/pdf")  # OK
 validate_mime_type("invalid/type")     # Raises UnsupportedFormat
 ```
@@ -222,7 +222,7 @@ validate_mime_type("invalid/type")     # Raises UnsupportedFormat
 
 For files with multiple extensions (e.g., `archive.tar.gz`), only the last extension is used:
 
-```python
+```python title="mime_detection_example.py"
 detect_mime_type("file.tar.gz")  # Returns "application/gzip" (from .gz)
 detect_mime_type("file.json.txt") # Returns "text/plain" (from .txt)
 ```
@@ -231,13 +231,13 @@ detect_mime_type("file.json.txt") # Returns "text/plain" (from .txt)
 
 Files without extensions default to `application/octet-stream` (binary data):
 
-```python
+```python title="mime_detection_example.py"
 detect_mime_type("Makefile")  # Returns "application/octet-stream"
 ```
 
 Users must provide explicit MIME type for extensionless files:
 
-```python
+```python title="mime_detection_example.py"
 result = extract_file("Makefile", mime_type="text/plain", config=config)
 ```
 
@@ -245,7 +245,7 @@ result = extract_file("Makefile", mime_type="text/plain", config=config)
 
 Extensions are case-insensitive:
 
-```python
+```python title="mime_detection_example.py"
 detect_mime_type("file.PDF")  # Returns "application/pdf"
 detect_mime_type("file.Pdf")  # Returns "application/pdf"
 detect_mime_type("file.pdf")  # Returns "application/pdf"

@@ -4,31 +4,31 @@ Complete reference for the Kreuzberg Python API.
 
 ## Installation
 
-```bash
+```bash title="Terminal"
 pip install kreuzberg
 ```
 
 **With EasyOCR:**
 
-```bash
+```bash title="Terminal"
 pip install "kreuzberg[easyocr]"
 ```
 
 **With PaddleOCR:**
 
-```bash
+```bash title="Terminal"
 pip install "kreuzberg[paddleocr]"
 ```
 
 **With API server:**
 
-```bash
+```bash title="Terminal"
 pip install "kreuzberg[api]"
 ```
 
 **With all features:**
 
-```bash
+```bash title="Terminal"
 pip install "kreuzberg[all]"
 ```
 
@@ -40,7 +40,7 @@ Extract content from a file (synchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 def extract_file_sync(
     file_path: str | Path,
     mime_type: str | None = None,
@@ -73,7 +73,7 @@ def extract_file_sync(
 
 **Example - Basic usage:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import extract_file_sync
 
 result = extract_file_sync("document.pdf")
@@ -83,7 +83,7 @@ print(f"Pages: {result.metadata['page_count']}")
 
 **Example - With OCR:**
 
-```python
+```python title="with_ocr.py"
 from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
 
 config = ExtractionConfig(
@@ -94,7 +94,7 @@ result = extract_file_sync("scanned.pdf", config=config)
 
 **Example - With EasyOCR custom options:**
 
-```python
+```python title="easyocr_custom.py"
 from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig
 
 config = ExtractionConfig(
@@ -115,7 +115,7 @@ Extract content from a file (asynchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 async def extract_file(
     file_path: str | Path,
     mime_type: str | None = None,
@@ -136,7 +136,7 @@ Same as [`extract_file_sync()`](#extract_file_sync).
 
 **Examples:**
 
-```python
+```python title="basic_extraction.py"
 import asyncio
 from kreuzberg import extract_file
 
@@ -155,7 +155,7 @@ Extract content from bytes (synchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 def extract_bytes_sync(
     data: bytes | bytearray,
     mime_type: str,
@@ -180,7 +180,7 @@ def extract_bytes_sync(
 
 **Examples:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import extract_bytes_sync
 
 with open("document.pdf", "rb") as f:
@@ -198,7 +198,7 @@ Extract content from bytes (asynchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 async def extract_bytes(
     data: bytes | bytearray,
     mime_type: str,
@@ -225,7 +225,7 @@ Extract content from multiple files in parallel (synchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 def batch_extract_files_sync(
     paths: list[str | Path],
     config: ExtractionConfig | None = None,
@@ -248,7 +248,7 @@ def batch_extract_files_sync(
 
 **Examples:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import batch_extract_files_sync
 
 paths = ["doc1.pdf", "doc2.docx", "doc3.xlsx"]
@@ -266,7 +266,7 @@ Extract content from multiple files in parallel (asynchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 async def batch_extract_files(
     paths: list[str | Path],
     config: ExtractionConfig | None = None,
@@ -292,7 +292,7 @@ Extract content from multiple byte arrays in parallel (synchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 def batch_extract_bytes_sync(
     data_list: list[bytes | bytearray],
     mime_types: list[str],
@@ -323,7 +323,7 @@ Extract content from multiple byte arrays in parallel (asynchronous).
 
 **Signature:**
 
-```python
+```python title="Python"
 async def batch_extract_bytes(
     data_list: list[bytes | bytearray],
     mime_types: list[str],
@@ -363,7 +363,7 @@ Main configuration class for extraction operations.
 
 **Example:**
 
-```python
+```python title="config.py"
 from kreuzberg import ExtractionConfig, OcrConfig, PdfConfig
 
 config = ExtractionConfig(
@@ -392,7 +392,7 @@ OCR processing configuration.
 
 **Example - Basic OCR:**
 
-```python
+```python title="with_ocr.py"
 from kreuzberg import OcrConfig
 
 ocr_config = OcrConfig(backend="tesseract", language="eng")
@@ -400,7 +400,7 @@ ocr_config = OcrConfig(backend="tesseract", language="eng")
 
 **Example - With EasyOCR:**
 
-```python
+```python title="with_ocr.py"
 from kreuzberg import OcrConfig
 
 ocr_config = OcrConfig(backend="easyocr", language="en")
@@ -422,7 +422,7 @@ Tesseract OCR backend configuration.
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import OcrConfig, TesseractConfig
 
 config = ExtractionConfig(
@@ -452,7 +452,7 @@ PDF-specific configuration.
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import PdfConfig
 
 pdf_config = PdfConfig(
@@ -476,7 +476,7 @@ Text chunking configuration for splitting long documents.
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import ChunkingConfig
 
 chunking_config = ChunkingConfig(
@@ -499,7 +499,7 @@ Language detection configuration.
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import LanguageDetectionConfig
 
 lang_config = LanguageDetectionConfig(
@@ -564,7 +564,7 @@ Result object returned by all extraction functions.
 
 **Type Definition:**
 
-```python
+```python title="Python"
 class ExtractionResult(TypedDict):
     content: str
     mime_type: str
@@ -583,7 +583,7 @@ class ExtractionResult(TypedDict):
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 result = extract_file_sync("document.pdf")
 
 print(f"Content: {result.content}")
@@ -637,7 +637,7 @@ Strongly-typed metadata dictionary. Fields vary by document format.
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 result = extract_file_sync("document.pdf")
 metadata = result.metadata
 
@@ -657,7 +657,7 @@ Extracted table structure.
 
 **Type Definition:**
 
-```python
+```python title="Python"
 class Table(TypedDict):
     cells: list[list[str]]
     markdown: str
@@ -672,7 +672,7 @@ class Table(TypedDict):
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 result = extract_file_sync("invoice.pdf")
 
 for table in result.tables:
@@ -697,7 +697,7 @@ Create custom post-processors to add processing logic to the extraction pipeline
 
 **Protocol:**
 
-```python
+```python title="Python"
 from kreuzberg import PostProcessorProtocol, ExtractionResult
 
 class PostProcessorProtocol:
@@ -716,7 +716,7 @@ class PostProcessorProtocol:
 
 **Example:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import (
     PostProcessorProtocol,
     ExtractionResult,
@@ -745,7 +745,7 @@ print(result.metadata["custom_field"])  # "custom_value"
 
 **Managing Processors:**
 
-```python
+```python title="basic_extraction.py"
 from kreuzberg import (
     register_post_processor,
     unregister_post_processor,
@@ -770,7 +770,7 @@ Create custom validators to validate extraction results.
 
 **Functions:**
 
-```python
+```python title="custom_validator.py"
 from kreuzberg import register_validator, unregister_validator, clear_validators
 
 # Register a validator
@@ -787,21 +787,19 @@ clear_validators()
 
 ## Error Handling
 
-All errors inherit from `KreuzbergError`. See [Error Handling Reference](errors.md) for complete documentation.
+All errors inherit from **`KreuzbergError`**. See [Error Handling Reference](errors.md) for complete documentation.
 
 **Exception Hierarchy:**
 
-```
-KreuzbergError (base)
-   ValidationError (invalid configuration/input)
-   ParsingError (document parsing failure)
-   OCRError (OCR processing failure)
-   MissingDependencyError (missing optional dependency)
-```
+- **`KreuzbergError`** — Base exception for all extraction errors
+  - `ValidationError` — Invalid configuration or input
+  - `ParsingError` — Document parsing failure
+  - `OCRError` — OCR processing failure
+  - `MissingDependencyError` — Missing optional dependency
 
 **Example:**
 
-```python
+```python title="error_handling.py"
 from kreuzberg import (
     extract_file_sync,
     KreuzbergError,
@@ -829,7 +827,7 @@ See [Error Handling Reference](errors.md) for detailed error documentation and b
 
 ## Version Information
 
-```python
+```python title="basic_extraction.py"
 import kreuzberg
 
 print(kreuzberg.__version__)

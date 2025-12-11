@@ -15,7 +15,7 @@ Thanks for helping improve Kreuzberg! This guide summarizes the workflow, toolin
 
 Install all project dependencies in one shot:
 
-```bash
+```bash title="Terminal"
 task setup
 ```
 
@@ -32,7 +32,7 @@ Kreuzberg uses pure Rust dependencies and requires no system libraries beyond st
 ### Platform-Specific Requirements
 
 **Linux**:
-```bash
+```bash title="Terminal"
 # Ubuntu/Debian
 sudo apt-get install build-essential libssl-dev pkg-config
 
@@ -42,9 +42,11 @@ sudo dnf install openssl-devel pkg-config
 ```
 
 **macOS**:
-```bash
+```bash title="Terminal"
+# Install OpenSSL 3.x
 brew install openssl@3
-# Ensure Xcode Command Line Tools are installed
+
+# Install Xcode Command Line Tools (required for compilation)
 xcode-select --install
 ```
 
@@ -54,7 +56,7 @@ xcode-select --install
 
 ### Building the Rust Core
 
-```bash
+```bash title="Terminal"
 # Build all workspace crates
 cargo build --workspace
 
@@ -68,64 +70,89 @@ cargo build --release --workspace
 ### Building Language Bindings
 
 **Python** (PyO3):
-```bash
+```bash title="Terminal"
 cd packages/python
-maturin develop  # Development build
-maturin build    # Wheel for distribution
+
+# Build and install in development mode (editable install)
+maturin develop
+
+# Build wheel package for distribution
+maturin build
 ```
 
 **TypeScript** (NAPI-RS):
-```bash
+```bash title="Terminal"
 cd packages/typescript
-pnpm build       # Builds native module + TypeScript declarations
+
+# Build native module and generate TypeScript declarations
+pnpm build
 ```
 
 **Ruby** (Magnus):
-```bash
+```bash title="Terminal"
 cd packages/ruby
-bundle exec rake compile  # Compiles native extension
-bundle exec rake native:gem  # Builds platform gem
+
+# Compile native extension
+bundle exec rake compile
+
+# Build platform-specific gem
+bundle exec rake native:gem
 ```
 
 **Go** (cgo):
-```bash
-# Linux/macOS - Build FFI with full features
+```bash title="Terminal"
+# Build FFI library with full features (Linux/macOS)
 cargo build -p kreuzberg-ffi --release
 
-# Windows - Build FFI with core feature (MinGW cannot link ONNX Runtime)
+# Build FFI library for Windows (MinGW cannot link ONNX Runtime, so use core features only)
 cargo build -p kreuzberg-ffi --release --target x86_64-pc-windows-gnu --no-default-features --features core
 
-# Set library path before running Go commands
+# Set library paths for Go to find the FFI library
 export DYLD_FALLBACK_LIBRARY_PATH=$PWD/target/release  # macOS
 export LD_LIBRARY_PATH=$PWD/target/release             # Linux
-# Windows: add target\release to PATH
+# Windows: Add target\release to PATH environment variable
 
-task go:install        # Installs golangci-lint and downloads modules
-task go:lint           # gofmt + golangci-lint
-task go:test           # go test ./... (requires libkreuzberg_ffi in target/release)
-task e2e:go:verify     # Regenerates fixtures and runs e2e/go tests with LD_LIBRARY_PATH set
+# Install Go development tools (golangci-lint) and download modules
+task go:install
+
+# Run code formatters and linters (gofmt + golangci-lint)
+task go:lint
+
+# Run Go tests (requires libkreuzberg_ffi in target/release)
+task go:test
+
+# Regenerate test fixtures and run end-to-end Go tests
+task e2e:go:verify
 ```
 
 **Note:** Windows Go builds use MinGW (GNU toolchain) which cannot link MSVC-only ONNX Runtime. The `core` feature excludes embeddings but includes all other functionality.
 
 **Java** (FFM API):
-```bash
+```bash title="Terminal"
 cd packages/java
-mvn clean compile test  # Build and run tests
-mvn checkstyle:check    # Code quality checks
+
+# Clean, compile, and run tests
+mvn clean compile test
+
+# Run code quality checks (Checkstyle)
+mvn checkstyle:check
 ```
 
 **C#** (.NET):
-```bash
+```bash title="Terminal"
 cd packages/csharp
-dotnet build            # Build the project
-dotnet test             # Run tests
+
+# Build the C# project
+dotnet build
+
+# Run all tests
+dotnet test
 ```
 
 ### Common Build Issues
 
 **Cross-compilation**:
-```bash
+```bash title="Terminal"
 # Install target
 rustup target add x86_64-unknown-linux-musl
 
@@ -136,7 +163,7 @@ cross build --target x86_64-unknown-linux-musl
 
 **Linker errors on Linux**:
 Ensure you have `gcc` and `binutils` installed:
-```bash
+```bash title="Terminal"
 sudo apt-get install build-essential
 ```
 

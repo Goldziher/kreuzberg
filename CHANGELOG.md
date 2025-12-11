@@ -466,41 +466,44 @@ v4 introduces native metadata extraction across all major document formats:
 #### Core Extraction Functions
 
 **Async-First Design**:
-```python
-# Async (primary API)
+```python title="Python"
+# Asynchronous extraction (recommended for I/O-bound operations)
 result = await extract_file("document.pdf")
 result = await extract_bytes(data, "application/pdf")
 results = await batch_extract_files(["doc1.pdf", "doc2.pdf"])
 
-# Sync variants available
+# Synchronous variants (for simple scripts or non-async contexts)
 result = extract_file_sync("document.pdf")
 result = extract_bytes_sync(data, "application/pdf")
 results = batch_extract_files_sync(["doc1.pdf", "doc2.pdf"])
 ```
 
 **New TypeScript/Node.js API**:
-```typescript
+```typescript title="TypeScript"
 import { extractFile, extractFileSync, ExtractionConfig } from 'kreuzberg';
 
-// Async
+// Asynchronous extraction
 const result = await extractFile('document.pdf');
 
-// Sync
+// Synchronous extraction
 const result = extractFileSync('document.pdf');
 
-// With configuration
+// Extraction with custom configuration (quality processing enabled)
 const config = new ExtractionConfig({ enableQualityProcessing: true });
 const result = await extractFile('document.pdf', null, config);
 ```
 
 **Rust API**:
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_file, ExtractionConfig};
 
 #[tokio::main]
 async fn main() -> kreuzberg::Result<()> {
+    // Initialize configuration with default settings
     let config = ExtractionConfig::default();
+    // Perform asynchronous file extraction
     let result = extract_file("document.pdf", None, &config).await?;
+    // Display extracted content
     println!("Extracted: {}", result.content);
     Ok(())
 }
@@ -523,14 +526,14 @@ async fn main() -> kreuzberg::Result<()> {
 #### Result Types
 
 **Enhanced ExtractionResult**:
-```python
+```python title="Python"
 @dataclass
 class ExtractionResult:
     content: str
     mime_type: str
-    metadata: Metadata  # Strongly-typed metadata
+    metadata: Metadata  # Format-specific strongly-typed metadata
     tables: List[ExtractedTable]
-    detected_languages: Optional[List[str]]  # NEW in v4
+    detected_languages: Optional[List[str]]  # Language detection results (v4 feature)
     chunks: Optional[List[str]]
 ```
 
@@ -542,7 +545,7 @@ class ExtractionResult:
 ### Plugin System
 
 #### PostProcessors
-```python
+```python title="Python"
 from kreuzberg import register_post_processor, ExtractionResult
 
 class MyPostProcessor:
@@ -550,14 +553,14 @@ class MyPostProcessor:
         return "my_processor"
 
     def process(self, result: ExtractionResult) -> ExtractionResult:
-        # Transform result
+        # Apply custom transformations to extraction result
         return result
 
 register_post_processor(MyPostProcessor())
 ```
 
 #### Validators
-```python
+```python title="Python"
 from kreuzberg import register_validator, ExtractionResult
 
 class MyValidator:
@@ -565,6 +568,7 @@ class MyValidator:
         return "my_validator"
 
     def validate(self, result: ExtractionResult) -> None:
+        # Enforce minimum content length requirement
         if len(result.content) < 10:
             raise ValidationError("Content too short")
 
@@ -572,7 +576,7 @@ register_validator(MyValidator())
 ```
 
 #### Custom OCR Backends
-```python
+```python title="Python"
 from kreuzberg import register_ocr_backend
 
 class CloudOCR:
@@ -580,7 +584,7 @@ class CloudOCR:
         return "cloud_ocr"
 
     def extract_text(self, image_bytes: bytes, language: str) -> str:
-        # Call cloud OCR API
+        # Send image to cloud OCR service and return extracted text
         return extracted_text
 
 register_ocr_backend(CloudOCR())
@@ -607,7 +611,7 @@ All Docker images include LibreOffice and Tesseract by default:
 ### Installation
 
 **Python**:
-```bash
+```bash title="Terminal"
 pip install kreuzberg               # Core functionality
 pip install "kreuzberg[api]"        # With API server
 pip install "kreuzberg[easyocr]"    # With EasyOCR
@@ -615,25 +619,25 @@ pip install "kreuzberg[all]"        # All features
 ```
 
 **TypeScript/Node.js**:
-```bash
+```bash title="Terminal"
 npm install @kreuzberg/node
 # or
 pnpm add @kreuzberg/node
 ```
 
 **Rust**:
-```toml
+```toml title="Cargo.toml"
 [dependencies]
 kreuzberg = "4.0"
 ```
 
 **CLI** (Homebrew):
-```bash
+```bash title="Terminal"
 brew install goldziher/tap/kreuzberg
 ```
 
 **CLI** (Cargo):
-```bash
+```bash title="Terminal"
 cargo install kreuzberg-cli
 ```
 
@@ -1468,12 +1472,12 @@ This release introduces **Kreuzberg v4**, a complete rewrite with Rust core, pol
 
 ---
 
-## Migration Resources
+## See Also
 
-- **Documentation**: https://docs.kreuzberg.dev
-- **Migration Guide**: https://docs.kreuzberg.dev/migration/v3-to-v4/
-- **Examples**: https://github.com/kreuzberg-dev/kreuzberg/tree/v4-dev/examples
-- **Support**: https://github.com/kreuzberg-dev/kreuzberg/issues
+- [Configuration Reference](reference/configuration.md) - Detailed configuration options
+- [Migration Guide](migration/v3-to-v4.md) - v3 to v4 migration instructions
+- [Format Support](reference/formats.md) - Supported file formats
+- [Extraction Guide](guides/extraction.md) - Extraction examples
 
 [4.0.0-rc.6]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.5...v4.0.0-rc.6
 [4.0.0-rc.5]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.4...v4.0.0-rc.5

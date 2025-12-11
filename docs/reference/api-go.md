@@ -17,13 +17,13 @@ The Go binding exposes the same extraction capabilities as the other languages t
 
 Add the package to your `go.mod`:
 
-```bash
+```bash title="Terminal"
 go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
 ```
 
 Build the FFI library and set library paths:
 
-```bash
+```bash title="Terminal"
 # Build the FFI crate
 cargo build -p kreuzberg-ffi --release
 
@@ -43,7 +43,7 @@ set PATH=%CD%\target\release;%PATH%
 
 ### Basic file extraction (synchronous)
 
-```go
+```go title="main.go"
 package main
 
 import (
@@ -67,7 +67,7 @@ func main() {
 
 ### Async extraction with timeout
 
-```go
+```go title="async_extraction.go"
 package main
 
 import (
@@ -106,7 +106,7 @@ Extract content and metadata from a file synchronously.
 
 **Signature:**
 
-```go
+```go title="Go"
 func ExtractFileSync(path string, config *ExtractionConfig) (*ExtractionResult, error)
 ```
 
@@ -130,7 +130,7 @@ func ExtractFileSync(path string, config *ExtractionConfig) (*ExtractionResult, 
 
 **Example - Extract PDF:**
 
-```go
+```go title="extract_pdf.go"
 result, err := kreuzberg.ExtractFileSync("report.pdf", nil)
 if err != nil {
 	log.Fatalf("extraction failed: %v", err)
@@ -143,7 +143,7 @@ fmt.Printf("Content preview: %s...\n", result.Content[:100])
 
 **Example - Extract with configuration:**
 
-```go
+```go title="extract_with_config.go"
 cfg := &kreuzberg.ExtractionConfig{
 	UseCache: boolPtr(true),
 	OCR: &kreuzberg.OCRConfig{
@@ -166,7 +166,7 @@ Extract content from a file asynchronously with context support.
 
 **Signature:**
 
-```go
+```go title="Go"
 func ExtractFile(ctx context.Context, path string, config *ExtractionConfig) (*ExtractionResult, error)
 ```
 
@@ -185,7 +185,7 @@ func ExtractFile(ctx context.Context, path string, config *ExtractionConfig) (*E
 
 **Example - With deadline:**
 
-```go
+```go title="extract_with_deadline.go"
 ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
 defer cancel()
 
@@ -207,7 +207,7 @@ Extract content from an in-memory byte slice with specified MIME type.
 
 **Signature:**
 
-```go
+```go title="Go"
 func ExtractBytesSync(data []byte, mimeType string, config *ExtractionConfig) (*ExtractionResult, error)
 ```
 
@@ -224,7 +224,7 @@ func ExtractBytesSync(data []byte, mimeType string, config *ExtractionConfig) (*
 
 **Example - Extract from downloaded PDF:**
 
-```go
+```go title="extract_from_http.go"
 httpResp, err := http.Get("https://example.com/document.pdf")
 if err != nil {
 	log.Fatal(err)
@@ -252,7 +252,7 @@ Extract content from in-memory bytes asynchronously.
 
 **Signature:**
 
-```go
+```go title="Go"
 func ExtractBytes(ctx context.Context, data []byte, mimeType string, config *ExtractionConfig) (*ExtractionResult, error)
 ```
 
@@ -270,7 +270,7 @@ func ExtractBytes(ctx context.Context, data []byte, mimeType string, config *Ext
 
 **Example:**
 
-```go
+```go title="extract_bytes_async.go"
 ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 defer cancel()
 
@@ -288,7 +288,7 @@ Extract multiple files sequentially using the optimized batch pipeline.
 
 **Signature:**
 
-```go
+```go title="Go"
 func BatchExtractFilesSync(paths []string, config *ExtractionConfig) ([]*ExtractionResult, error)
 ```
 
@@ -304,7 +304,7 @@ func BatchExtractFilesSync(paths []string, config *ExtractionConfig) ([]*Extract
 
 **Example - Batch extract multiple PDFs:**
 
-```go
+```go title="batch_extract_pdfs.go"
 files := []string{"doc1.pdf", "doc2.pdf", "doc3.pdf"}
 
 results, err := kreuzberg.BatchExtractFilesSync(files, nil)
@@ -335,7 +335,7 @@ Batch extract multiple files asynchronously.
 
 **Signature:**
 
-```go
+```go title="Go"
 func BatchExtractFiles(ctx context.Context, paths []string, config *ExtractionConfig) ([]*ExtractionResult, error)
 ```
 
@@ -358,7 +358,7 @@ Extract multiple in-memory documents in a single batch operation.
 
 **Signature:**
 
-```go
+```go title="Go"
 func BatchExtractBytesSync(items []BytesWithMime, config *ExtractionConfig) ([]*ExtractionResult, error)
 ```
 
@@ -374,7 +374,7 @@ func BatchExtractBytesSync(items []BytesWithMime, config *ExtractionConfig) ([]*
 
 **BytesWithMime structure:**
 
-```go
+```go title="Go"
 type BytesWithMime struct {
 	Data     []byte
 	MimeType string
@@ -383,7 +383,7 @@ type BytesWithMime struct {
 
 **Example - Batch extract multiple formats:**
 
-```go
+```go title="batch_extract_bytes.go"
 items := []kreuzberg.BytesWithMime{
 	{Data: pdfData, MimeType: "application/pdf"},
 	{Data: docxData, MimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
@@ -412,7 +412,7 @@ Batch extract in-memory documents asynchronously.
 
 **Signature:**
 
-```go
+```go title="Go"
 func BatchExtractBytes(ctx context.Context, items []BytesWithMime, config *ExtractionConfig) ([]*ExtractionResult, error)
 ```
 
@@ -435,7 +435,7 @@ Get the version of the underlying Rust library.
 
 **Signature:**
 
-```go
+```go title="Go"
 func LibraryVersion() string
 ```
 
@@ -445,7 +445,7 @@ func LibraryVersion() string
 
 **Example:**
 
-```go
+```go title="check_version.go"
 fmt.Printf("Kreuzberg version: %s\n", kreuzberg.LibraryVersion())
 ```
 
@@ -459,21 +459,21 @@ Root configuration struct for all extraction operations. All fields are optional
 
 **Signature:**
 
-```go
+```go title="Go"
 type ExtractionConfig struct {
-	UseCache                 *bool                    // Enable result caching
-	EnableQualityProcessing  *bool                    // Run quality improvements
-	OCR                      *OCRConfig               // OCR backend and settings
-	ForceOCR                 *bool                    // Force OCR even for text-extractable docs
-	Chunking                 *ChunkingConfig          // Text chunking and embeddings
-	Images                   *ImageExtractionConfig   // Image extraction from docs
-	PdfOptions               *PdfConfig               // PDF-specific options
-	TokenReduction           *TokenReductionConfig    // Token pruning before embeddings
-	LanguageDetection        *LanguageDetectionConfig // Language detection settings
-	Keywords                 *KeywordConfig           // Keyword extraction
-	Postprocessor            *PostProcessorConfig     // Post-processor selection
-	HTMLOptions              *HTMLConversionOptions   // HTML-to-Markdown conversion
-	MaxConcurrentExtractions *int                     // Batch concurrency limit
+	UseCache                 *bool                          // Enable result caching
+	EnableQualityProcessing  *bool                          // Run quality improvements
+	OCR                      *OCRConfig                     // OCR backend and settings
+	ForceOCR                 *bool                          // Force OCR even for text-extractable docs
+	Chunking                 *ChunkingConfig                // Text chunking and embeddings
+	Images                   *ImageExtractionConfig         // Image extraction from docs
+	PdfOptions               *PdfConfig                     // PDF-specific options
+	TokenReduction           *TokenReductionConfig          // Token pruning before embeddings
+	LanguageDetection        *LanguageDetectionConfig       // Language detection settings
+	Keywords                 *KeywordConfig                 // Keyword extraction
+	Postprocessor            *PostProcessorConfig           // Post-processor selection
+	HTMLOptions              *HTMLConversionOptions         // HTML-to-Markdown conversion
+	MaxConcurrentExtractions *int                           // Batch concurrency limit
 }
 ```
 
@@ -485,7 +485,7 @@ Configure OCR backend selection and language.
 
 **Signature:**
 
-```go
+```go title="Go"
 type OCRConfig struct {
 	Backend   string           // OCR backend name: "tesseract", "easyocr", "paddle", etc.
 	Language  *string          // Language code (e.g., "eng", "deu", "fra")
@@ -495,13 +495,13 @@ type OCRConfig struct {
 
 **Example:**
 
-```go
+```go title="ocr_config.go"
 cfg := &kreuzberg.ExtractionConfig{
 	OCR: &kreuzberg.OCRConfig{
 		Backend:  "tesseract",
 		Language: stringPtr("eng"),
 		Tesseract: &kreuzberg.TesseractConfig{
-			PSM: intPtr(3),
+			PSM:           intPtr(3),
 			MinConfidence: float64Ptr(0.5),
 		},
 	},
@@ -516,7 +516,7 @@ Fine-grained Tesseract OCR tuning.
 
 **Signature:**
 
-```go
+```go title="Go"
 type TesseractConfig struct {
 	Language                       string                    // Language code
 	PSM                            *int                      // Page segmentation mode (0-13)
@@ -543,7 +543,7 @@ Configure OCR image preprocessing (DPI normalization, rotation, denoising, etc.)
 
 **Signature:**
 
-```go
+```go title="Go"
 type ImagePreprocessingConfig struct {
 	TargetDPI        *int   // Target DPI for OCR (typically 300)
 	AutoRotate       *bool  // Auto-detect and correct image rotation
@@ -563,7 +563,7 @@ Configure text chunking for RAG and retrieval workloads.
 
 **Signature:**
 
-```go
+```go title="Go"
 type ChunkingConfig struct {
 	MaxChars     *int             // Maximum characters per chunk
 	MaxOverlap   *int             // Overlap between chunks
@@ -583,7 +583,7 @@ Configure image extraction from documents.
 
 **Signature:**
 
-```go
+```go title="Go"
 type ImageExtractionConfig struct {
 	ExtractImages     *bool // Extract embedded images
 	TargetDPI         *int  // Target DPI for extraction
@@ -602,7 +602,7 @@ PDF-specific extraction options.
 
 **Signature:**
 
-```go
+```go title="Go"
 type PdfConfig struct {
 	ExtractImages   *bool    // Extract embedded images
 	Passwords       []string // List of passwords for encrypted PDFs
@@ -618,7 +618,7 @@ Configure embedding generation for chunks.
 
 **Signature:**
 
-```go
+```go title="Go"
 type EmbeddingConfig struct {
 	Model                *EmbeddingModelType // Model selection
 	Normalize            *bool               // L2 normalization
@@ -644,7 +644,7 @@ Configure keyword extraction.
 
 **Signature:**
 
-```go
+```go title="Go"
 type KeywordConfig struct {
 	Algorithm   string      // "yake" or "rake"
 	MaxKeywords *int        // Maximum keywords to extract
@@ -673,7 +673,7 @@ Configure post-processing steps.
 
 **Signature:**
 
-```go
+```go title="Go"
 type PostProcessorConfig struct {
 	Enabled            *bool    // Enable post-processing
 	EnabledProcessors  []string // Specific processors to run
@@ -691,7 +691,7 @@ The main result struct containing all extracted data.
 
 **Signature:**
 
-```go
+```go title="Go"
 type ExtractionResult struct {
 	Content           string           // Extracted text content
 	MimeType          string           // Detected MIME type
@@ -706,7 +706,7 @@ type ExtractionResult struct {
 
 **Example - Accessing results:**
 
-```go
+```go title="inspect_extraction_result.go"
 result, err := kreuzberg.ExtractFileSync("report.pdf", nil)
 if err != nil || !result.Success {
 	log.Fatal("extraction failed")
@@ -728,7 +728,7 @@ Aggregated document metadata with format-specific fields.
 
 **Signature:**
 
-```go
+```go title="Go"
 type Metadata struct {
 	Language           *string                     // Detected language code
 	Date               *string                     // Extracted document date
@@ -743,11 +743,9 @@ type Metadata struct {
 
 **Access format-specific metadata:**
 
-```go
-// Type discriminator
+```go title="inspect_format_metadata.go"
 fmt.Println("Format type:", result.Metadata.FormatType())
 
-// Type-safe accessors
 if pdfMeta, ok := result.Metadata.PdfMetadata(); ok {
 	fmt.Printf("Title: %s\n", *pdfMeta.Title)
 	fmt.Printf("Pages: %d\n", *pdfMeta.PageCount)
@@ -773,7 +771,7 @@ Extracted table structure.
 
 **Signature:**
 
-```go
+```go title="Go"
 type Table struct {
 	Cells      [][]string // 2D cell array [row][col]
 	Markdown   string     // Markdown representation
@@ -783,7 +781,7 @@ type Table struct {
 
 **Example:**
 
-```go
+```go title="extract_tables.go"
 for tableIdx, table := range result.Tables {
 	fmt.Printf("Table %d (page %d):\n", tableIdx, table.PageNumber)
 	for _, row := range table.Cells {
@@ -801,7 +799,7 @@ Text chunk with optional embeddings and metadata.
 
 **Signature:**
 
-```go
+```go title="Go"
 type Chunk struct {
 	Content   string        // Chunk text
 	Embedding []float32     // Embedding vector (if enabled)
@@ -819,7 +817,7 @@ type ChunkMetadata struct {
 
 **Example:**
 
-```go
+```go title="inspect_chunks.go"
 for _, chunk := range result.Chunks {
 	fmt.Printf("Chunk %d/%d\n", chunk.Metadata.ChunkIndex, chunk.Metadata.TotalChunks)
 	fmt.Printf("Content: %s...\n", chunk.Content[:min(50, len(chunk.Content))])
@@ -839,7 +837,7 @@ Image extracted from document with optional OCR results.
 
 **Signature:**
 
-```go
+```go title="Go"
 type ExtractedImage struct {
 	Data             []byte            // Raw image bytes
 	Format           string            // Image format: "jpeg", "png", "webp"
@@ -857,15 +855,13 @@ type ExtractedImage struct {
 
 **Example:**
 
-```go
+```go title="extract_images.go"
 for imgIdx, img := range result.Images {
 	fmt.Printf("Image %d: %s, %dx%d\n", imgIdx, img.Format, *img.Width, *img.Height)
 
-	// Save image
 	filename := fmt.Sprintf("image_%d.%s", imgIdx, img.Format)
 	os.WriteFile(filename, img.Data, 0644)
 
-	// OCR if available
 	if img.OCRResult != nil {
 		fmt.Printf("Image %d OCR: %s\n", imgIdx, img.OCRResult.Content)
 	}
@@ -880,7 +876,7 @@ for imgIdx, img := range result.Images {
 
 Kreuzberg defines a type hierarchy of errors via the `KreuzbergError` interface:
 
-```go
+```go title="Go"
 type KreuzbergError interface {
 	error
 	Kind() ErrorKind
@@ -924,7 +920,7 @@ const (
 
 Errors are automatically classified based on native error messages. Use `errors.As()` and `errors.Is()` to handle specific error types:
 
-```go
+```go title="error_classification.go"
 import (
 	"errors"
 	"log"
@@ -934,7 +930,6 @@ import (
 
 result, err := kreuzberg.ExtractFileSync("document.pdf", nil)
 if err != nil {
-	// Check specific error type
 	var parsingErr *kreuzberg.ParsingError
 	if errors.As(err, &parsingErr) {
 		log.Printf("Parsing failed: %v\n", parsingErr)
@@ -947,7 +942,6 @@ if err != nil {
 		return
 	}
 
-	// Generic error handling
 	log.Printf("Extraction failed: %v\n", err)
 }
 ```
@@ -958,16 +952,14 @@ if err != nil {
 
 All Kreuzberg errors support error unwrapping via `errors.Unwrap()`:
 
-```go
+```go title="error_unwrapping.go"
 result, err := kreuzberg.ExtractFileSync("doc.pdf", nil)
 if err != nil {
-	// Check root cause
 	rootErr := errors.Unwrap(err)
 	if rootErr != nil {
 		log.Printf("Root cause: %v\n", rootErr)
 	}
 
-	// Check error kind
 	if krErr, ok := err.(kreuzberg.KreuzbergError); ok {
 		log.Printf("Error kind: %v\n", krErr.Kind())
 	}
@@ -980,7 +972,7 @@ if err != nil {
 
 **Handle file not found:**
 
-```go
+```go title="handle_file_not_found.go"
 result, err := kreuzberg.ExtractFileSync("missing.pdf", nil)
 if err != nil {
 	var ioErr *kreuzberg.IOError
@@ -994,7 +986,7 @@ if err != nil {
 
 **Handle missing OCR dependency:**
 
-```go
+```go title="handle_missing_ocr.go"
 cfg := &kreuzberg.ExtractionConfig{
 	OCR: &kreuzberg.OCRConfig{
 		Backend:  "tesseract",
@@ -1015,7 +1007,7 @@ if err != nil {
 
 **Batch error handling:**
 
-```go
+```go title="batch_error_handling.go"
 results, err := kreuzberg.BatchExtractFilesSync(files, nil)
 if err != nil {
 	log.Fatalf("batch setup failed: %v\n", err)
@@ -1027,7 +1019,6 @@ for i, result := range results {
 		continue
 	}
 
-	// Check for per-file errors
 	if result.Metadata.Error != nil {
 		log.Printf("File %d: %s - %s\n", i, result.Metadata.Error.ErrorType, result.Metadata.Error.Message)
 		continue
@@ -1050,10 +1041,8 @@ for i, result := range results {
 
 Detect MIME type from file extension or content:
 
-```go
-// Detect from filename (requires kreuzberg-ffi binding support)
-// Use system tools or your own MIME database
-mimeType := "application/pdf" // e.g., use mime.TypeByExtension(".pdf")
+```go title="mime_detection.go"
+mimeType := "application/pdf"
 ```
 
 ---
@@ -1064,11 +1053,9 @@ mimeType := "application/pdf" // e.g., use mime.TypeByExtension(".pdf")
 
 Go's cgo automatically manages C memory for simple types. Kreuzberg handles C pointer cleanup internally via `defer` statements:
 
-```go
-// Safe: strings are copied to Go memory, C strings freed internally
+```go title="memory_safety.go"
 result, err := kreuzberg.ExtractFileSync("doc.pdf", nil)
 
-// Safe: byte slices are copied, C buffers freed internally
 result, err := kreuzberg.ExtractBytesSync(data, "application/pdf", nil)
 ```
 
@@ -1078,21 +1065,21 @@ Set library paths before running your program:
 
 **Linux:**
 
-```bash
+```bash title="Terminal"
 export LD_LIBRARY_PATH=$PWD/target/release:$LD_LIBRARY_PATH
 go run main.go
 ```
 
 **macOS:**
 
-```bash
+```bash title="Terminal"
 export DYLD_FALLBACK_LIBRARY_PATH=$PWD/target/release:$DYLD_FALLBACK_LIBRARY_PATH
 go run main.go
 ```
 
 **Windows:**
 
-```cmd
+```cmd title="Terminal"
 set PATH=%CD%\target\release;%PATH%
 go run main.go
 ```
@@ -1101,16 +1088,7 @@ go run main.go
 
 Internally, ExtractionConfig is serialized to JSON and passed to the C FFI:
 
-```go
-// This internally becomes:
-// {
-//   "use_cache": true,
-//   "ocr": {
-//     "backend": "tesseract",
-//     "language": "eng"
-//   }
-// }
-
+```go title="json_serialization.go"
 cfg := &kreuzberg.ExtractionConfig{
 	UseCache: boolPtr(true),
 	OCR: &kreuzberg.OCRConfig{
@@ -1128,7 +1106,7 @@ result, err := kreuzberg.ExtractFileSync("doc.pdf", cfg)
 
 Register custom post-processing logic in Go:
 
-```go
+```go title="custom_post_processor.go"
 package main
 
 import (
@@ -1141,19 +1119,15 @@ import (
 
 //export myCustomProcessor
 func myCustomProcessor(resultJSON *C.char) *C.char {
-	// Parse JSON result
 	jsonStr := C.GoString(resultJSON)
 	var result kreuzberg.ExtractionResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		// Return error as C string (Rust will free it)
 		errMsg := C.CString("failed to parse JSON")
 		return errMsg
 	}
 
-	// Modify content
 	result.Content = strings.ToUpper(result.Content)
 
-	// Serialize back to JSON
 	modified, _ := json.Marshal(result)
 	return C.CString(string(modified))
 }
@@ -1177,7 +1151,6 @@ func main() {
 	}
 
 	result, _ := kreuzberg.ExtractFileSync("doc.pdf", cfg)
-	// Content is now uppercase
 }
 ```
 
@@ -1187,20 +1160,18 @@ func main() {
 
 Validate extraction results:
 
-```go
+```go title="custom_validator.go"
 //export myValidator
 func myValidator(resultJSON *C.char) *C.char {
 	jsonStr := C.GoString(resultJSON)
 	var result kreuzberg.ExtractionResult
 	json.Unmarshal([]byte(jsonStr), &result)
 
-	// Validation logic
 	if len(result.Content) == 0 {
 		errMsg := C.CString("content is empty")
 		return errMsg
 	}
 
-	// NULL means validation passed
 	return nil
 }
 
@@ -1219,11 +1190,9 @@ func init() {
 
 Register a custom OCR backend:
 
-```go
+```go title="custom_ocr_backend.go"
 //export customOCR
 func customOCR(imageData *C.uint8_t, width C.uint32_t, height C.uint32_t, lang *C.char) *C.char {
-	// Call your OCR library
-	// Return JSON-encoded ExtractionResult
 	result := kreuzberg.ExtractionResult{
 		Content:  "extracted text from custom OCR",
 		MimeType: "text/plain",
@@ -1247,31 +1216,26 @@ func init() {
 
 List and manage registered plugins:
 
-```go
-// List validators
+```go title="plugin_management.go"
 validators, err := kreuzberg.ListValidators()
 if err == nil {
 	fmt.Printf("Validators: %v\n", validators)
 }
 
-// List post-processors
 processors, err := kreuzberg.ListPostProcessors()
 if err == nil {
 	fmt.Printf("Post-processors: %v\n", processors)
 }
 
-// List OCR backends
 backends, err := kreuzberg.ListOCRBackends()
 if err == nil {
 	fmt.Printf("OCR backends: %v\n", backends)
 }
 
-// Clear all validators
 if err := kreuzberg.ClearValidators(); err != nil {
 	log.Fatalf("failed to clear validators: %v\n", err)
 }
 
-// Unregister specific validator
 if err := kreuzberg.UnregisterValidator("my-validator"); err != nil {
 	log.Fatalf("failed to unregister: %v\n", err)
 }
@@ -1298,7 +1262,7 @@ if err := kreuzberg.UnregisterValidator("my-validator"); err != nil {
 
 **Solution:**
 
-```bash
+```bash title="Terminal"
 # Verify library exists
 ls -la target/release/libkreuzberg_ffi.*
 
@@ -1319,7 +1283,7 @@ ldd target/release/libkreuzberg_ffi.so
 
 Ensure kreuzberg-ffi is built before building your Go module:
 
-```bash
+```bash title="Terminal"
 cargo build -p kreuzberg-ffi --release
 go build ./...
 ```
@@ -1334,7 +1298,7 @@ go build ./...
 
 Install Tesseract or use a different OCR backend:
 
-```bash
+```bash title="Terminal"
 # macOS
 brew install tesseract
 
@@ -1354,12 +1318,12 @@ apt-get install tesseract-ocr
 
 Increase timeout or disable OCR for large documents:
 
-```go
+```go title="handle_large_documents.go"
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 defer cancel()
 
 cfg := &kreuzberg.ExtractionConfig{
-	ForceOCR: boolPtr(false), // Disable OCR if not needed
+	ForceOCR: boolPtr(false),
 }
 
 result, err := kreuzberg.ExtractFile(ctx, "large.pdf", cfg)
@@ -1371,7 +1335,7 @@ result, err := kreuzberg.ExtractFile(ctx, "large.pdf", cfg)
 
 Run the test suite:
 
-```bash
+```bash title="Terminal"
 # Unit tests (from packages/go)
 task go:test
 
@@ -1392,7 +1356,7 @@ go test -v ./packages/go/kreuzberg
 
 Add these utility functions to your code:
 
-```go
+```go title="Go"
 func stringPtr(s string) *string {
 	return &s
 }
@@ -1418,8 +1382,8 @@ func uint32Ptr(u uint32) *uint32 {
 
 ## Related Resources
 
-- **Source:** `packages/go/kreuzberg/` (Go binding implementation)
-- **FFI Bridge:** `crates/kreuzberg-ffi/` (C FFI layer)
-- **Rust Core:** `crates/kreuzberg/` (extraction logic)
-- **E2E Tests:** `e2e/go/` (auto-generated test fixtures)
-- **CI:** `.github/workflows/go-test.yml` (test pipeline)
+- **Source:** [packages/go/kreuzberg/](https://github.com/kreuzberg-dev/kreuzberg/tree/main/packages/go/kreuzberg) (Go binding implementation)
+- **FFI Bridge:** [crates/kreuzberg-ffi/](https://github.com/kreuzberg-dev/kreuzberg/tree/main/crates/kreuzberg-ffi) (C FFI layer)
+- **Rust Core:** [crates/kreuzberg/](https://github.com/kreuzberg-dev/kreuzberg/tree/main/crates/kreuzberg) (extraction logic)
+- **E2E Tests:** [e2e/go/](https://github.com/kreuzberg-dev/kreuzberg/tree/main/e2e/go) (auto-generated test fixtures)
+- **CI:** [.github/workflows/go-test.yml](https://github.com/kreuzberg-dev/kreuzberg/blob/main/.github/workflows/go-test.yml) (test pipeline)

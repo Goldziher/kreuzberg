@@ -4,13 +4,13 @@ Complete reference for the Kreuzberg TypeScript/Node.js API.
 
 ## Installation
 
-```bash
+```bash title="Terminal"
 npm install @kreuzberg/node
 ```
 
 **Or with other package managers:**
 
-```bash
+```bash title="Terminal"
 # Yarn
 yarn add @kreuzberg/node
 
@@ -26,7 +26,7 @@ Extract content from a file (synchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 function extractFileSync(
   filePath: string,
   mimeType: string | null = null,
@@ -50,7 +50,7 @@ function extractFileSync(
 
 **Example - Basic usage:**
 
-```typescript
+```typescript title="basic_pdf_extraction.ts"
 import { extractFileSync } from '@kreuzberg/node';
 
 const result = extractFileSync('document.pdf');
@@ -60,7 +60,7 @@ console.log(`Pages: ${result.metadata.pageCount}`);
 
 **Example - With OCR:**
 
-```typescript
+```typescript title="ocr_extraction.ts"
 import { extractFileSync } from '@kreuzberg/node';
 
 const config = {
@@ -74,7 +74,7 @@ const result = extractFileSync('scanned.pdf', null, config);
 
 **Example - With explicit MIME type:**
 
-```typescript
+```typescript title="mime_type_override.ts"
 import { extractFileSync } from '@kreuzberg/node';
 
 const result = extractFileSync('document.pdf', 'application/pdf');
@@ -88,7 +88,7 @@ Extract content from a file (asynchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 async function extractFile(
   filePath: string,
   mimeType: string | null = null,
@@ -106,7 +106,7 @@ Same as [`extractFileSync()`](#extractfilesync).
 
 **Examples:**
 
-```typescript
+```typescript title="async_extraction.ts"
 import { extractFile } from '@kreuzberg/node';
 
 async function main() {
@@ -125,7 +125,7 @@ Extract content from bytes (synchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 function extractBytesSync(
   data: Uint8Array,
   mimeType: string,
@@ -145,7 +145,7 @@ function extractBytesSync(
 
 **Examples:**
 
-```typescript
+```typescript title="extract_from_buffer.ts"
 import { extractBytesSync } from '@kreuzberg/node';
 import { readFileSync } from 'fs';
 
@@ -162,7 +162,7 @@ Extract content from bytes (asynchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 async function extractBytes(
   data: Uint8Array,
   mimeType: string,
@@ -186,7 +186,7 @@ Extract content from multiple files in parallel (synchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 function batchExtractFilesSync(
   paths: string[],
   config: ExtractionConfig | null = null
@@ -204,7 +204,7 @@ function batchExtractFilesSync(
 
 **Examples:**
 
-```typescript
+```typescript title="parallel_batch_extraction.ts"
 import { batchExtractFilesSync } from '@kreuzberg/node';
 
 const paths = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
@@ -223,7 +223,7 @@ Extract content from multiple files in parallel (asynchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 async function batchExtractFiles(
   paths: string[],
   config: ExtractionConfig | null = null
@@ -240,7 +240,7 @@ Same as [`batchExtractFilesSync()`](#batchextractfilessync).
 
 **Examples:**
 
-```typescript
+```typescript title="async_batch_extraction.ts"
 import { batchExtractFiles } from '@kreuzberg/node';
 
 const files = ['doc1.pdf', 'doc2.docx', 'doc3.xlsx'];
@@ -259,7 +259,7 @@ Extract content from multiple byte arrays in parallel (synchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 function batchExtractBytesSync(
   dataList: Uint8Array[],
   mimeTypes: string[],
@@ -285,7 +285,7 @@ Extract content from multiple byte arrays in parallel (asynchronous).
 
 **Signature:**
 
-```typescript
+```typescript title="TypeScript"
 async function batchExtractBytes(
   dataList: Uint8Array[],
   mimeTypes: string[],
@@ -311,7 +311,7 @@ Main configuration interface for extraction operations.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface ExtractionConfig {
   ocr?: OcrConfig | null;
   forceOcr?: boolean;
@@ -337,7 +337,7 @@ interface ExtractionConfig {
 
 **Example:**
 
-```typescript
+```typescript title="extraction_config.ts"
 import { extractFileSync, ExtractionConfig } from '@kreuzberg/node';
 
 const config: ExtractionConfig = {
@@ -363,7 +363,7 @@ OCR processing configuration.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface OcrConfig {
   backend: string;
   language: string;
@@ -379,7 +379,7 @@ interface OcrConfig {
 
 **Example:**
 
-```typescript
+```typescript title="ocr_config.ts"
 const ocrConfig: OcrConfig = {
   backend: 'tesseract',
   language: 'eng'
@@ -394,7 +394,7 @@ Tesseract OCR backend configuration.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface TesseractConfig {
   psm?: number;
   oem?: number;
@@ -414,7 +414,7 @@ interface TesseractConfig {
 
 **Example:**
 
-```typescript
+```typescript title="tesseract_config.ts"
 const config: ExtractionConfig = {
   ocr: {
     backend: 'tesseract',
@@ -436,7 +436,7 @@ PDF-specific configuration.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface PdfConfig {
   passwords?: string[] | null;
   extractImages?: boolean;
@@ -452,7 +452,7 @@ interface PdfConfig {
 
 **Example:**
 
-```typescript
+```typescript title="pdf_config.ts"
 const pdfConfig: PdfConfig = {
   passwords: ['password1', 'password2'],
   extractImages: true,
@@ -468,7 +468,7 @@ Text chunking configuration for splitting long documents.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface ChunkingConfig {
   chunkSize?: number;
   chunkOverlap?: number;
@@ -490,7 +490,7 @@ Language detection configuration.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface LanguageDetectionConfig {
   enabled?: boolean;
   confidenceThreshold?: number;
@@ -510,7 +510,7 @@ Image extraction configuration.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface ImageExtractionConfig {
   enabled?: boolean;
   minWidth?: number;
@@ -532,7 +532,7 @@ Token reduction configuration for compressing extracted text.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface TokenReductionConfig {
   enabled?: boolean;
   strategy?: string;
@@ -552,7 +552,7 @@ Post-processing configuration.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface PostProcessorConfig {
   enabled?: boolean;
   processors?: string[] | null;
@@ -574,7 +574,7 @@ Result object returned by all extraction functions.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface ExtractionResult {
   content: string;
   mimeType: string;
@@ -594,7 +594,7 @@ interface ExtractionResult {
 
 **Example:**
 
-```typescript
+```typescript title="inspect_extraction_result.ts"
 const result = extractFileSync('document.pdf');
 
 console.log(`Content: ${result.content}`);
@@ -615,7 +615,7 @@ Document metadata with format-specific fields.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface Metadata {
   // Common fields
   language?: string;
@@ -671,7 +671,7 @@ interface Metadata {
 
 **Example:**
 
-```typescript
+```typescript title="inspect_pdf_metadata.ts"
 const result = extractFileSync('document.pdf');
 const metadata = result.metadata;
 
@@ -692,7 +692,7 @@ Extracted table structure.
 
 **Type Definition:**
 
-```typescript
+```typescript title="TypeScript"
 interface Table {
   cells: string[][];
   markdown: string;
@@ -708,7 +708,7 @@ interface Table {
 
 **Example:**
 
-```typescript
+```typescript title="extract_tables.ts"
 const result = extractFileSync('invoice.pdf');
 
 for (const table of result.tables) {
@@ -728,7 +728,7 @@ Create custom post-processors to add processing logic to the extraction pipeline
 
 **Protocol:**
 
-```typescript
+```typescript title="TypeScript"
 interface PostProcessorProtocol {
   name(): string;
   process(result: ExtractionResult): ExtractionResult;
@@ -738,7 +738,7 @@ interface PostProcessorProtocol {
 
 **Example:**
 
-```typescript
+```typescript title="custom_post_processor.ts"
 import { registerPostProcessor, extractFileSync } from '@kreuzberg/node';
 
 class CustomProcessor implements PostProcessorProtocol {
@@ -747,7 +747,6 @@ class CustomProcessor implements PostProcessorProtocol {
   }
 
   process(result: ExtractionResult): ExtractionResult {
-    // Add custom field to metadata
     result.metadata.customField = 'custom_value';
     return result;
   }
@@ -757,30 +756,25 @@ class CustomProcessor implements PostProcessorProtocol {
   }
 }
 
-// Register the processor
 registerPostProcessor(new CustomProcessor());
 
-// Now all extractions will use this processor
 const result = extractFileSync('document.pdf');
-console.log(result.metadata.customField); // "custom_value"
+console.log(result.metadata.customField);
 ```
 
 **Managing Processors:**
 
-```typescript
+```typescript title="manage_post_processors.ts"
 import {
   registerPostProcessor,
   unregisterPostProcessor,
   clearPostProcessors
 } from '@kreuzberg/node';
 
-// Register
 registerPostProcessor(new CustomProcessor());
 
-// Unregister by name
 unregisterPostProcessor('custom_processor');
 
-// Clear all processors
 clearPostProcessors();
 ```
 
@@ -792,7 +786,7 @@ Create custom validators to validate extraction results.
 
 **Protocol:**
 
-```typescript
+```typescript title="TypeScript"
 interface ValidatorProtocol {
   name(): string;
   validate(result: ExtractionResult): void;
@@ -801,20 +795,17 @@ interface ValidatorProtocol {
 
 **Functions:**
 
-```typescript
+```typescript title="manage_validators.ts"
 import {
   registerValidator,
   unregisterValidator,
   clearValidators
 } from '@kreuzberg/node';
 
-// Register a validator
 registerValidator(validator);
 
-// Unregister by name
 unregisterValidator('validator_name');
 
-// Clear all validators
 clearValidators();
 ```
 
@@ -826,14 +817,12 @@ Register custom OCR backends for image and PDF processing.
 
 **Example with Guten-OCR:**
 
-```typescript
+```typescript title="register_guten_ocr.ts"
 import { GutenOcrBackend, registerOcrBackend } from '@kreuzberg/node';
 
-// Register Guten-OCR backend
 const gutenOcr = new GutenOcrBackend();
 registerOcrBackend(gutenOcr);
 
-// Now you can use it in config
 const config = {
   ocr: {
     backend: 'guten-ocr',
@@ -850,7 +839,7 @@ All errors are thrown as standard JavaScript `Error` objects with descriptive me
 
 **Example:**
 
-```typescript
+```typescript title="error_handling.ts"
 import { extractFileSync } from '@kreuzberg/node';
 
 try {
@@ -859,7 +848,6 @@ try {
 } catch (error) {
   console.error(`Extraction failed: ${error.message}`);
 
-  // Check error details
   if (error.message.includes('file not found')) {
     console.error('File does not exist');
   } else if (error.message.includes('parsing')) {
@@ -878,7 +866,7 @@ See [Error Handling Reference](errors.md) for detailed error documentation.
 
 All types are exported for use in your TypeScript code:
 
-```typescript
+```typescript title="type_imports.ts"
 import type {
   ExtractionConfig,
   ExtractionResult,
@@ -906,14 +894,14 @@ import type {
 
 For processing multiple documents, **always use batch APIs**:
 
-```typescript
-//  Good - Uses batch API
-const results = await batchExtractFiles(['doc1.pdf', 'doc2.pdf', 'doc3.pdf']);
+```typescript title="batch_processing_comparison.ts"
+// Good - Uses batch API
+const batchResults = await batchExtractFiles(['doc1.pdf', 'doc2.pdf', 'doc3.pdf']);
 
-// L Bad - Multiple individual calls
-const results = [];
+// Bad - Multiple individual calls
+const individualResults = [];
 for (const file of files) {
-  results.push(await extractFile(file));
+  individualResults.push(await extractFile(file));
 }
 ```
 

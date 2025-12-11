@@ -43,13 +43,13 @@ flowchart LR
 
 Rust's ownership model enables zero-copy string slicing and byte buffer handling:
 
-```python
-# Python: String slicing creates a new object
+```python title="performance_example.py"
+# Python string slicing always allocates a new object due to immutability
 text = content[100:500]  # New string object created (immutable)
 ```
 
-```rust
-// Rust: Zero-copy slice with no allocation
+```rust title="performance_example.rs"
+// Rust borrows a string slice without allocating new memory
 let text: &str = &content[100..500];  // Borrows slice, no allocation
 ```
 
@@ -64,8 +64,8 @@ let text: &str = &content[100..500];  // Borrows slice, no allocation
 
 Text processing hot paths use SIMD for parallel operations:
 
-```rust
-// Process 16 characters at once
+```rust title="performance_example.rs"
+// SIMD instruction processes 16 characters simultaneously
 let chunk = unsafe { _mm_loadu_si128(ptr as *const __m128i) };
 let spaces = _mm_cmpeq_epi8(chunk, space_vec);
 ```
@@ -80,12 +80,12 @@ let spaces = _mm_cmpeq_epi8(chunk, space_vec);
 
 Tokio's work-stealing scheduler enables true parallelism:
 
-```python
-# Python: GIL prevents true parallelism
+```python title="performance_example.py"
+# Python GIL limits concurrency to single-threaded execution
 with ThreadPoolExecutor() as executor:
     results = executor.map(extract_file, files)  # Only one thread executes Python at a time
 
-# Rust: True parallel execution
+# Rust async runtime enables true multi-core parallelism
 let results = batch_extract_file(&files, None, &config).await?;  // All cores utilized
 ```
 
@@ -194,7 +194,7 @@ To measure Kreuzberg's performance for your specific use case, we recommend:
     ```
 
 === "TypeScript"
-    ```typescript
+    ```typescript title="performance_example.ts"
     import { extractFile, batchExtractFiles } from '@kreuzberg/node';
 
     // Single file timing
@@ -210,7 +210,7 @@ To measure Kreuzberg's performance for your specific use case, we recommend:
     ```
 
 === "Rust"
-    ```rust
+    ```rust title="performance_example.rs"
     use kreuzberg::{extract_file_sync, batch_extract_files_sync};
     use std::time::Instant;
 
@@ -234,7 +234,7 @@ Kreuzberg employs several optimization strategies:
 
 Expensive resources initialized only when needed:
 
-```rust
+```rust title="performance_example.rs"
 static GLOBAL_RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -255,12 +255,12 @@ OCR results and extraction results cached by content hash:
 
 Process multiple files concurrently with `batch_extract_*`:
 
-```python
-# Sequential: ~5 seconds for 10 files
+```python title="performance_example.py"
+# Sequential processing extracts one file at a time (~5 seconds for 10 files)
 for file in files:
     result = extract_file(file, config=config)
 
-# Parallel: ~0.8 seconds for 10 files (6.25x faster)
+# Batch processing uses parallel extraction (~0.8 seconds for 10 files, 6.25x faster)
 results = batch_extract_file(files, config=config)
 ```
 
@@ -276,8 +276,8 @@ Uses `ahash` instead of `std::collections::HashMap`:
 
 Uses `&str` (string slices) over `String` where possible:
 
-```rust
-// Avoids allocation
+```rust title="performance_example.rs"
+// Returns string slices to avoid allocating owned strings
 pub fn supported_mime_types(&self) -> Vec<&str> {
     vec!["application/pdf", "application/xml"]
 }
