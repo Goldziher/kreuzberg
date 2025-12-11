@@ -19,7 +19,7 @@ Kreuzberg is a document intelligence platform with a high‑performance Rust cor
 - **[Reference](reference/api-python.md)** – Detailed API references (Python, TypeScript, Ruby, Rust), configuration schema, supported formats, types, and errors.
 - **[CLI](cli/usage.md)** – Command syntax, flags, exit codes, and automation tips.
 - **[API Server](guides/api-server.md)** – Running the REST service and integrating with MCP.
-- **[Migration](migration/v3-to-v4.md)** and **[Changelog](changelog.md)** – Track breaking changes and release history.
+- **[Migration](migration/v3-to-v4.md)** and **[Changelog](CHANGELOG.md)** – Track breaking changes and release history.
 
 ## Supported Platforms
 

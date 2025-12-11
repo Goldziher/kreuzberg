@@ -269,27 +269,27 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 
 === "Go"
 
-    --8<-- "snippets/go/client_extract_single_file.md"
+    --8<-- "snippets/go/api/client_extract_single_file.md"
 
 === "Java"
 
-    --8<-- "snippets/java/client_extract_single_file.md"
+    --8<-- "snippets/java/api/client_extract_single_file.md"
 
 === "Python"
 
-    --8<-- "snippets/python/client_extract_single_file.md"
+    --8<-- "snippets/python/api/client_extract_single_file.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/client_extract_single_file.md"
+    --8<-- "snippets/ruby/api/client_extract_single_file.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/client_extract_single_file.md"
+    --8<-- "snippets/rust/api/client_extract_single_file.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/client_extract_single_file.md"
+    --8<-- "snippets/typescript/getting-started/client_extract_single_file.md"
 
 ### Error Handling
 
@@ -320,27 +320,27 @@ KREUZBERG_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 
 === "Go"
 
-    --8<-- "snippets/go/error_handling_extract.md"
+    --8<-- "snippets/go/api/error_handling_extract.md"
 
 === "Java"
 
-    --8<-- "snippets/java/error_handling_extract.md"
+    --8<-- "snippets/java/api/error_handling_extract.md"
 
 === "Python"
 
-    --8<-- "snippets/python/error_handling_extract.md"
+    --8<-- "snippets/python/utils/error_handling_extract.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/error_handling_extract.md"
+    --8<-- "snippets/ruby/api/error_handling_extract.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/error_handling_extract.md"
+    --8<-- "snippets/rust/api/error_handling_extract.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/error_handling_extract.md"
+    --8<-- "snippets/typescript/api/error_handling_extract.md"
 
 ## MCP Server
 
@@ -364,27 +364,27 @@ The Model Context Protocol (MCP) server exposes Kreuzberg as tools for AI agents
 
 === "Go"
 
-    --8<-- "snippets/go/mcp_server_start.md"
+    --8<-- "snippets/go/mcp/mcp_server_start.md"
 
 === "Java"
 
-    --8<-- "snippets/java/mcp_server_start.md"
+    --8<-- "snippets/java/mcp/mcp_server_start.md"
 
 === "Python"
 
-    --8<-- "snippets/python/mcp_server_start.md"
+    --8<-- "snippets/python/mcp/mcp_server_start.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/mcp_server_start.md"
+    --8<-- "snippets/ruby/mcp/mcp_server_start.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/mcp_server_start.md"
+    --8<-- "snippets/rust/mcp/mcp_server_start.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/mcp_server_start.md"
+    --8<-- "snippets/typescript/mcp/mcp_server_start.md"
 
 ### MCP Tools
 
@@ -515,31 +515,31 @@ Clear all cached files.
 
 === "Go"
 
-    --8<-- "snippets/go/mcp_custom_client.md"
+    --8<-- "snippets/go/mcp/mcp_custom_client.md"
 
 === "Java"
 
-    --8<-- "snippets/java/mcp_client.md"
+    --8<-- "snippets/java/mcp/mcp_client.md"
 
 === "LangChain"
 
-    --8<-- "snippets/python/mcp_langchain_integration.md"
+    --8<-- "snippets/python/mcp/mcp_langchain_integration.md"
 
 === "Python"
 
-    --8<-- "snippets/python/mcp_custom_client.md"
+    --8<-- "snippets/python/mcp/mcp_custom_client.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/mcp_custom_client.md"
+    --8<-- "snippets/ruby/mcp/mcp_custom_client.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/mcp_custom_client.md"
+    --8<-- "snippets/rust/mcp/mcp_custom_client.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/mcp_custom_client.md"
+    --8<-- "snippets/typescript/mcp/mcp_custom_client.md"
 
 ## Production Deployment
 

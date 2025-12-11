@@ -60,27 +60,27 @@ Main extraction configuration controlling all aspects of document processing.
 
 === "Go"
 
-    --8<-- "snippets/go/config_basic.md"
+    --8<-- "snippets/go/config/config_basic.md"
 
 === "Java"
 
-    --8<-- "snippets/java/config_basic.md"
+    --8<-- "snippets/java/config/config_basic.md"
 
 === "Python"
 
-    --8<-- "snippets/python/config_basic.md"
+    --8<-- "snippets/python/config/config_basic.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/config_basic.md"
+    --8<-- "snippets/ruby/config/config_basic.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/config_basic.md"
+    --8<-- "snippets/rust/config/config_basic.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/config_basic.md"
+    --8<-- "snippets/typescript/config/config_basic.md"
 
 ---
 
@@ -102,27 +102,27 @@ Configuration for OCR (Optical Character Recognition) processing on images and s
 
 === "Go"
 
-    --8<-- "snippets/go/config_ocr.md"
+    --8<-- "snippets/go/config/config_ocr.md"
 
 === "Java"
 
-    --8<-- "snippets/java/config_ocr.md"
+    --8<-- "snippets/java/config/config_ocr.md"
 
 === "Python"
 
-    --8<-- "snippets/python/config_ocr.md"
+    --8<-- "snippets/python/config/config_ocr.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/config_ocr.md"
+    --8<-- "snippets/ruby/config/config_ocr.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/config_ocr.md"
+    --8<-- "snippets/rust/ocr/ocr_multi_language.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/config_ocr.md"
+    --8<-- "snippets/typescript/config/config_ocr.md"
 
 ---
 
@@ -186,27 +186,27 @@ Tesseract OCR engine configuration with fine-grained control over recognition pa
 
 === "Go"
 
-    --8<-- "snippets/go/tesseract_config.md"
+    --8<-- "snippets/go/config/tesseract_config.md"
 
 === "Java"
 
-    --8<-- "snippets/java/tesseract_config.md"
+    --8<-- "snippets/java/config/tesseract_config.md"
 
 === "Python"
 
-    --8<-- "snippets/python/tesseract_config.md"
+    --8<-- "snippets/python/config/tesseract_config.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/tesseract_config.md"
+    --8<-- "snippets/ruby/config/tesseract_config.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/tesseract_config.md"
+    --8<-- "snippets/rust/ocr/tesseract_config.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/tesseract_config.md"
+    --8<-- "snippets/typescript/config/tesseract_config.md"
 
 
 ---
@@ -226,31 +226,31 @@ Configuration for splitting extracted text into overlapping chunks, useful for v
 
 === "C#"
 
-    --8<-- "snippets/csharp/chunking.md"
+    --8<-- "snippets/csharp/advanced/chunking_config.cs"
 
 === "Go"
 
-    --8<-- "snippets/go/chunking.md"
+    --8<-- "snippets/go/config/chunking_config.md"
 
 === "Java"
 
-    --8<-- "snippets/java/chunking.md"
+    --8<-- "snippets/java/config/chunking_config.md"
 
 === "Python"
 
-    --8<-- "snippets/python/chunking.md"
+    --8<-- "snippets/python/config/chunking_config.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/chunking.md"
+    --8<-- "snippets/ruby/config/chunking_config.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/chunking.md"
+    --8<-- "snippets/rust/advanced/chunking_config.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/chunking.md"
+    --8<-- "snippets/typescript/config/chunking_config.md"
 
 ---
 
@@ -272,27 +272,27 @@ Configuration for automatic language detection in extracted text.
 
 === "Go"
 
-    --8<-- "snippets/go/language_detection.md"
+    --8<-- "snippets/go/config/language_detection_config.md"
 
 === "Java"
 
-    --8<-- "snippets/java/language_detection.md"
+    --8<-- "snippets/java/config/language_detection_config.md"
 
 === "Python"
 
-    --8<-- "snippets/python/language_detection.md"
+    --8<-- "snippets/python/config/language_detection_config.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/language_detection.md"
+    --8<-- "snippets/ruby/config/language_detection_config.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/language_detection.md"
+    --8<-- "snippets/rust/advanced/language_detection_config.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/language_detection.md"
+    --8<-- "snippets/typescript/config/language_detection_config.md"
 
 
 ---
@@ -315,27 +315,27 @@ PDF-specific extraction configuration.
 
 === "Go"
 
-    --8<-- "snippets/go/pdf_config.md"
+    --8<-- "snippets/go/config/pdf_config.md"
 
 === "Java"
 
-    --8<-- "snippets/java/pdf_config.md"
+    --8<-- "snippets/java/config/pdf_config.md"
 
 === "Python"
 
-    --8<-- "snippets/python/pdf_config.md"
+    --8<-- "snippets/python/config/pdf_config.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/pdf_config.md"
+    --8<-- "snippets/ruby/config/pdf_config.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/pdf_config.md"
+    --8<-- "snippets/rust/ocr/pdf_config.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/pdf_config.md"
+    --8<-- "snippets/typescript/config/pdf_config.md"
 
 
 ---
@@ -361,27 +361,27 @@ Configuration for extracting and processing images from documents.
 
 === "Go"
 
-    --8<-- "snippets/go/image_extraction.md"
+    --8<-- "snippets/go/ocr/image_extraction.md"
 
 === "Java"
 
-    --8<-- "snippets/java/image_extraction.md"
+    --8<-- "snippets/java/ocr/image_extraction.md"
 
 === "Python"
 
-    --8<-- "snippets/python/image_extraction.md"
+    --8<-- "snippets/python/utils/image_extraction.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/image_extraction.md"
+    --8<-- "snippets/ruby/ocr/image_extraction.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/image_extraction.md"
+    --8<-- "snippets/rust/metadata/image_extraction.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/image_extraction.md"
+    --8<-- "snippets/typescript/api/image_extraction.md"
 
 ---
 
@@ -407,27 +407,27 @@ Image preprocessing configuration for improving OCR quality on scanned documents
 
 === "Go"
 
-    --8<-- "snippets/go/image_preprocessing.md"
+    --8<-- "snippets/go/ocr/image_preprocessing.md"
 
 === "Java"
 
-    --8<-- "snippets/java/image_preprocessing.md"
+    --8<-- "snippets/java/ocr/image_preprocessing.md"
 
 === "Python"
 
-    --8<-- "snippets/python/image_preprocessing.md"
+    --8<-- "snippets/python/utils/image_preprocessing.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/image_preprocessing.md"
+    --8<-- "snippets/ruby/ocr/image_preprocessing.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/image_preprocessing.md"
+    --8<-- "snippets/rust/metadata/image_preprocessing.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/image_preprocessing.md"
+    --8<-- "snippets/typescript/api/image_preprocessing.md"
 
 ---
 
@@ -456,27 +456,27 @@ Built-in post-processors include:
 
 === "Go"
 
-    --8<-- "snippets/go/postprocessor_config.md"
+    --8<-- "snippets/go/config/postprocessor_config.md"
 
 === "Java"
 
-    --8<-- "snippets/java/postprocessor_config.md"
+    --8<-- "snippets/java/config/postprocessor_config.md"
 
 === "Python"
 
-    --8<-- "snippets/python/postprocessor_config.md"
+    --8<-- "snippets/python/config/postprocessor_config.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/postprocessor_config.md"
+    --8<-- "snippets/ruby/config/postprocessor_config.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/postprocessor_config.md"
+    --8<-- "snippets/rust/advanced/postprocessor_config.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/postprocessor_config.md"
+    --8<-- "snippets/typescript/config/postprocessor_config.md"
 
 ---
 
@@ -505,27 +505,27 @@ Configuration for reducing token count in extracted text, useful for optimizing 
 
 === "Go"
 
-    --8<-- "snippets/go/token_reduction.md"
+    --8<-- "snippets/go/config/token_reduction_config.md"
 
 === "Java"
 
-    --8<-- "snippets/java/token_reduction.md"
+    --8<-- "snippets/java/config/token_reduction_config.md"
 
 === "Python"
 
-    --8<-- "snippets/python/token_reduction.md"
+    --8<-- "snippets/python/config/token_reduction_config.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/token_reduction.md"
+    --8<-- "snippets/ruby/config/token_reduction_config.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/token_reduction.md"
+    --8<-- "snippets/rust/advanced/token_reduction_config.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/token_reduction.md"
+    --8<-- "snippets/typescript/config/token_reduction_config.md"
 
 ---
 

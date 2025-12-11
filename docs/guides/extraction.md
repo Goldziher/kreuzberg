@@ -34,27 +34,27 @@ Extract text, tables, and metadata from a file on disk.
 
 === "Python"
 
-    --8<-- "snippets/python/extract_file_sync.md"
+    --8<-- "snippets/python/api/extract_file_sync.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/extract_file_sync.md"
+    --8<-- "snippets/typescript/getting-started/extract_file_sync.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/extract_file_sync.md"
+    --8<-- "snippets/rust/api/extract_file_sync.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/extract_file_sync.md"
+    --8<-- "snippets/ruby/api/extract_file_sync.md"
 
 === "Java"
 
-    --8<-- "snippets/java/extract_file_sync.md"
+    --8<-- "snippets/java/api/extract_file_sync.md"
 
 === "Go"
 
-    --8<-- "snippets/go/extract_file_sync.md"
+    --8<-- "snippets/go/api/extract_file_sync.md"
 
 === "C#"
 
@@ -64,27 +64,27 @@ Extract text, tables, and metadata from a file on disk.
 
 === "Python"
 
-    --8<-- "snippets/python/extract_file_async.md"
+    --8<-- "snippets/python/api/extract_file_async.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/extract_file_async.md"
+    --8<-- "snippets/typescript/getting-started/extract_file_async.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/extract_file_async.md"
+    --8<-- "snippets/rust/api/extract_file_async.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/extract_file_async.md"
+    --8<-- "snippets/ruby/api/extract_file_async.md"
 
 === "Java"
 
-    --8<-- "snippets/java/extract_file_async.md"
+    --8<-- "snippets/java/api/extract_file_async.md"
 
 === "Go"
 
-    --8<-- "snippets/go/extract_file_async.md"
+    --8<-- "snippets/go/api/extract_file_async.md"
 
 === "C#"
 
@@ -151,27 +151,27 @@ Extract from data already loaded in memory.
 
 === "Python"
 
-    --8<-- "snippets/python/extract_bytes_sync.md"
+    --8<-- "snippets/python/api/extract_bytes_sync.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/extract_bytes_sync.md"
+    --8<-- "snippets/typescript/getting-started/extract_bytes_sync.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/extract_bytes_sync.md"
+    --8<-- "snippets/rust/api/extract_bytes_sync.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/extract_bytes_sync.md"
+    --8<-- "snippets/ruby/api/extract_bytes_sync.md"
 
 === "Java"
 
-    --8<-- "snippets/java/extract_bytes_sync.md"
+    --8<-- "snippets/java/api/extract_bytes_sync.md"
 
 === "Go"
 
-    --8<-- "snippets/go/extract_bytes_sync.md"
+    --8<-- "snippets/go/api/extract_bytes_sync.md"
 
 === "C#"
 
@@ -181,27 +181,27 @@ Extract from data already loaded in memory.
 
 === "Python"
 
-    --8<-- "snippets/python/extract_bytes_async.md"
+    --8<-- "snippets/python/api/extract_bytes_async.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/extract_bytes_async.md"
+    --8<-- "snippets/typescript/getting-started/extract_bytes_async.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/extract_bytes_async.md"
+    --8<-- "snippets/rust/api/extract_bytes_async.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/extract_bytes_async.md"
+    --8<-- "snippets/ruby/api/extract_bytes_async.md"
 
 === "Java"
 
-    --8<-- "snippets/java/extract_bytes_async.md"
+    --8<-- "snippets/java/api/extract_bytes_async.md"
 
 === "Go"
 
-    --8<-- "snippets/go/extract_bytes_async.md"
+    --8<-- "snippets/go/api/extract_bytes_async.md"
 
 === "C#"
 
@@ -218,27 +218,27 @@ Process multiple files concurrently for better performance.
 
 === "Python"
 
-    --8<-- "snippets/python/batch_extract_files_sync.md"
+    --8<-- "snippets/python/api/batch_extract_files_sync.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/batch_extract_files_sync.md"
+    --8<-- "snippets/typescript/getting-started/batch_extract_files_sync.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/batch_extract_files_sync.md"
+    --8<-- "snippets/rust/api/batch_extract_files_sync.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/batch_extract_files_sync.md"
+    --8<-- "snippets/ruby/api/batch_extract_files_sync.md"
 
 === "Java"
 
-    --8<-- "snippets/java/batch_extract_files_sync.md"
+    --8<-- "snippets/java/api/batch_extract_files_sync.md"
 
 === "Go"
 
-    --8<-- "snippets/go/batch_extract_files_sync.md"
+    --8<-- "snippets/go/api/batch_extract_files_sync.md"
 
 === "C#"
 
@@ -248,27 +248,27 @@ Process multiple files concurrently for better performance.
 
 === "Python"
 
-    --8<-- "snippets/python/batch_extract_bytes_sync.md"
+    --8<-- "snippets/python/api/batch_extract_bytes_sync.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/batch_extract_bytes_sync.md"
+    --8<-- "snippets/typescript/getting-started/batch_extract_bytes_sync.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/batch_extract_bytes_sync.md"
+    --8<-- "snippets/rust/api/batch_extract_bytes_sync.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/batch_extract_bytes_sync.md"
+    --8<-- "snippets/ruby/api/batch_extract_bytes_sync.md"
 
 === "Java"
 
-    --8<-- "snippets/java/batch_extract_bytes_sync.md"
+    --8<-- "snippets/java/api/batch_extract_bytes_sync.md"
 
 === "Go"
 
-    --8<-- "snippets/go/batch_extract_bytes_sync.md"
+    --8<-- "snippets/go/api/batch_extract_bytes_sync.md"
 
 === "C#"
 
@@ -333,27 +333,27 @@ All extraction functions raise exceptions on failure:
 
 === "Python"
 
-    --8<-- "snippets/python/error_handling.md"
+    --8<-- "snippets/python/utils/error_handling.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/error_handling.md"
+    --8<-- "snippets/typescript/api/error_handling.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/error_handling.md"
+    --8<-- "snippets/rust/api/error_handling.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/error_handling.md"
+    --8<-- "snippets/ruby/api/error_handling.md"
 
 === "Java"
 
-    --8<-- "snippets/java/error_handling.md"
+    --8<-- "snippets/java/api/error_handling.md"
 
 === "Go"
 
-    --8<-- "snippets/go/error_handling.md"
+    --8<-- "snippets/go/api/error_handling.md"
 
 === "C#"
 

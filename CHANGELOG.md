@@ -229,7 +229,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform-specific packages now use `@kreuzberg/{platform}` naming scheme
 - TypeScript source consolidated into `crates/kreuzberg-node` (merged with native bindings)
 - Migration: Replace `import { ... } from 'kreuzberg'` with `import { ... } from '@kreuzberg/node'`
-- See [Migration Guide](docs/migration/v4-npm-scoped-packages.md) for details
+- See [Migration Guide](migration/v3-to-v4.md) for details
 
 #### New Features
 

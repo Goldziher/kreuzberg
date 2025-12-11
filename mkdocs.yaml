@@ -191,5 +191,5 @@ nav:
       - Types: reference/types.md
       - Errors: reference/errors.md
   - Migration Guide: migration/v3-to-v4.md
-  - Changelog: ../CHANGELOG.md
+  - Changelog: CHANGELOG.md
   - Contributing: contributing.md

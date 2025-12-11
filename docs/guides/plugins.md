@@ -29,13 +29,13 @@ Extract content from custom file formats or override built-in extractors.
 
 === "Rust"
 
-    --8<-- "snippets/rust/plugin_extractor.md"
+    --8<-- "snippets/rust/plugins/plugin_extractor.md"
 
 ### Python Implementation
 
 === "Python"
 
-    --8<-- "snippets/python/plugin_extractor.md"
+    --8<-- "snippets/python/plugins/plugin_extractor.md"
 
 ### Registration
 
@@ -45,27 +45,27 @@ Extract content from custom file formats or override built-in extractors.
 
 === "Go"
 
-    --8<-- "snippets/go/extractor_registration.md"
+    --8<-- "snippets/go/plugins/extractor_registration.md"
 
 === "Java"
 
-    --8<-- "snippets/java/extractor_registration.md"
+    --8<-- "snippets/java/plugins/extractor_registration.md"
 
 === "Python"
 
-    --8<-- "snippets/python/extractor_registration.md"
+    --8<-- "snippets/python/plugins/extractor_registration.md"
 
 === "Ruby"
 
-    --8<-- "snippets/ruby/extractor_registration.md"
+    --8<-- "snippets/ruby/plugins/extractor_registration.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/extractor_registration.md"
+    --8<-- "snippets/rust/plugins/extractor_registration.md"
 
 === "TypeScript"
 
-    --8<-- "snippets/typescript/extractor_registration.md"
+    --8<-- "snippets/typescript/plugins/custom_extractor_plugin.md"
 
 ### Priority System
 
@@ -93,13 +93,13 @@ Post-processors execute in three stages:
 
 === "Rust"
 
-    --8<-- "snippets/rust/word_count_processor.md"
+    --8<-- "snippets/rust/plugins/word_count_processor.md"
 
 ### Python Implementation
 
 === "Python"
 
-    --8<-- "snippets/python/word_count_processor.md"
+    --8<-- "snippets/python/plugins/word_count_processor.md"
 
 ### Conditional Processing
 
@@ -107,17 +107,21 @@ Post-processors execute in three stages:
 
     --8<-- "snippets/csharp/pdf_only_processor.md"
 
+=== "Go"
+
+    --8<-- "snippets/go/plugins/pdf_only_processor.md"
+
 === "Java"
 
-    --8<-- "snippets/java/pdf_only_processor.md"
+    --8<-- "snippets/java/plugins/pdf_only_processor.md"
 
 === "Python"
 
-    --8<-- "snippets/python/pdf_only_processor.md"
+    --8<-- "snippets/python/plugins/pdf_only_processor.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/pdf_only_processor.md"
+    --8<-- "snippets/rust/metadata/pdf_only_processor.md"
 
 ## OCR Backends
 
@@ -127,7 +131,7 @@ Integrate custom OCR engines or cloud services.
 
 === "Rust"
 
-    --8<-- "snippets/rust/cloud_ocr_backend.md"
+    --8<-- "snippets/rust/ocr/cloud_ocr_backend.md"
 
 ### Python Implementation
 
@@ -137,11 +141,15 @@ Integrate custom OCR engines or cloud services.
 
 === "Java"
 
-    --8<-- "snippets/java/cloud_ocr_backend.md"
+    --8<-- "snippets/java/ocr/cloud_ocr_backend.md"
 
 === "Python"
 
-    --8<-- "snippets/python/cloud_ocr_backend.md"
+    --8<-- "snippets/python/ocr/cloud_ocr_backend.md"
+
+=== "Ruby"
+
+    --8<-- "snippets/ruby/ocr/cloud_ocr_backend.md"
 
 ## Validators
 
@@ -154,7 +162,7 @@ Enforce quality requirements on extraction results.
 
 === "Rust"
 
-    --8<-- "snippets/rust/min_length_validator.md"
+    --8<-- "snippets/rust/plugins/min_length_validator.md"
 
 ### Python Implementation
 
@@ -164,11 +172,11 @@ Enforce quality requirements on extraction results.
 
 === "Java"
 
-    --8<-- "snippets/java/min_length_validator.md"
+    --8<-- "snippets/java/plugins/min_length_validator.md"
 
 === "Python"
 
-    --8<-- "snippets/python/min_length_validator.md"
+    --8<-- "snippets/python/plugins/min_length_validator.md"
 
 ### Quality Score Validator
 
@@ -178,15 +186,15 @@ Enforce quality requirements on extraction results.
 
 === "Java"
 
-    --8<-- "snippets/java/quality_score_validator.md"
+    --8<-- "snippets/java/plugins/quality_score_validator.md"
 
 === "Python"
 
-    --8<-- "snippets/python/quality_score_validator.md"
+    --8<-- "snippets/python/plugins/quality_score_validator.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/quality_score_validator.md"
+    --8<-- "snippets/rust/plugins/quality_score_validator.md"
 
 ## Plugin Management
 
@@ -198,15 +206,15 @@ Enforce quality requirements on extraction results.
 
 === "Java"
 
-    --8<-- "snippets/java/list_plugins.md"
+    --8<-- "snippets/java/plugins/list_plugins.md"
 
 === "Python"
 
-    --8<-- "snippets/python/list_plugins.md"
+    --8<-- "snippets/python/plugins/list_plugins.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/list_plugins.md"
+    --8<-- "snippets/rust/plugins/list_plugins.md"
 
 ### Unregistering Plugins
 
@@ -216,15 +224,15 @@ Enforce quality requirements on extraction results.
 
 === "Java"
 
-    --8<-- "snippets/java/unregister_plugins.md"
+    --8<-- "snippets/java/plugins/unregister_plugins.md"
 
 === "Python"
 
-    --8<-- "snippets/python/unregister_plugins.md"
+    --8<-- "snippets/python/plugins/unregister_plugins.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/unregister_plugins.md"
+    --8<-- "snippets/rust/plugins/unregister_plugins.md"
 
 ### Clearing All Plugins
 
@@ -234,15 +242,15 @@ Enforce quality requirements on extraction results.
 
 === "Java"
 
-    --8<-- "snippets/java/clear_plugins.md"
+    --8<-- "snippets/java/plugins/clear_plugins.md"
 
 === "Python"
 
-    --8<-- "snippets/python/clear_plugins.md"
+    --8<-- "snippets/python/plugins/clear_plugins.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/clear_plugins.md"
+    --8<-- "snippets/rust/plugins/clear_plugins.md"
 
 ## Thread Safety
 
@@ -252,7 +260,7 @@ All plugins must be thread-safe:
 
 === "Rust"
 
-    --8<-- "snippets/rust/stateful_plugin.md"
+    --8<-- "snippets/rust/plugins/stateful_plugin.md"
 
 ### Python Thread Safety
 
@@ -262,11 +270,11 @@ All plugins must be thread-safe:
 
 === "Java"
 
-    --8<-- "snippets/java/stateful_plugin.md"
+    --8<-- "snippets/java/plugins/stateful_plugin.md"
 
 === "Python"
 
-    --8<-- "snippets/python/stateful_plugin.md"
+    --8<-- "snippets/python/plugins/stateful_plugin.md"
 
 ## Best Practices
 
@@ -282,17 +290,13 @@ All plugins must be thread-safe:
 
     --8<-- "snippets/csharp/error_handling.md"
 
-=== "Java"
+=== "Go"
 
-    --8<-- "snippets/java/error_handling.md"
+    --8<-- "snippets/go/plugins/plugin_validator.md"
 
-=== "Python"
+=== "Ruby"
 
-    --8<-- "snippets/python/error_handling.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/error_handling.md"
+    --8<-- "snippets/ruby/plugins/plugin_validator.md"
 
 ### Logging
 
@@ -302,15 +306,15 @@ All plugins must be thread-safe:
 
 === "Java"
 
-    --8<-- "snippets/java/plugin_logging.md"
+    --8<-- "snippets/java/plugins/plugin_logging.md"
 
 === "Python"
 
-    --8<-- "snippets/python/plugin_logging.md"
+    --8<-- "snippets/python/plugins/plugin_logging.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/plugin_logging.md"
+    --8<-- "snippets/rust/plugins/plugin_logging.md"
 
 ### Testing
 
@@ -320,15 +324,15 @@ All plugins must be thread-safe:
 
 === "Java"
 
-    --8<-- "snippets/java/plugin_testing.md"
+    --8<-- "snippets/java/plugins/plugin_testing.md"
 
 === "Python"
 
-    --8<-- "snippets/python/plugin_testing.md"
+    --8<-- "snippets/python/plugins/plugin_testing.md"
 
 === "Rust"
 
-    --8<-- "snippets/rust/plugin_testing.md"
+    --8<-- "snippets/rust/plugins/plugin_testing.md"
 
 ## Complete Example: PDF Metadata Extractor
 
@@ -336,14 +340,14 @@ All plugins must be thread-safe:
 
     --8<-- "snippets/csharp/pdf_metadata_extractor.md"
 
+=== "Go"
+
+    --8<-- "snippets/go/plugins/pdf_metadata_extractor.md"
+
 === "Java"
 
-    --8<-- "snippets/java/pdf_metadata_extractor.md"
+    --8<-- "snippets/java/plugins/pdf_metadata_extractor.md"
 
-=== "Python"
+=== "Ruby"
 
-    --8<-- "snippets/python/pdf_metadata_extractor.md"
-
-=== "Rust"
-
-    --8<-- "snippets/rust/pdf_metadata_extractor.md"
+    --8<-- "snippets/ruby/plugins/pdf_metadata_extractor.md"
