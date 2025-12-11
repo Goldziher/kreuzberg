@@ -344,6 +344,10 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
         || metadata.twitter_card.is_some();
 
     if has_metadata {
+        metadata.title = title;
+        metadata.description = description;
+        metadata.keywords = keywords.map(|kws| kws.join(", "));
+        metadata.author = author;
         Ok((Some(metadata), remaining_content.to_string()))
     } else {
         Ok((None, remaining_content.to_string()))

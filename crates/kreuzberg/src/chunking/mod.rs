@@ -187,7 +187,7 @@ pub fn chunk_text(
         .enumerate()
         .map(|(index, chunk_text)| {
             let char_start = char_offset;
-            let chunk_length = chunk_text.chars().count();
+            let chunk_length = chunk_text.len();
             let char_end = char_start + chunk_length;
 
             let overlap_chars = if index < total_chunks - 1 {
@@ -602,7 +602,7 @@ mod tests {
 
             assert_eq!(
                 metadata.char_end - metadata.char_start,
-                chunk.content.chars().count(),
+                chunk.content.len(),
                 "Chunk {} offset range doesn't match content length",
                 i
             );
@@ -718,7 +718,7 @@ mod tests {
 
             for chunk in &result.chunks {
                 assert!(
-                    chunk.metadata.char_start < text.chars().count(),
+                    chunk.metadata.char_start < text.len(),
                     "char_start with overlap {} is out of bounds: {}",
                     overlap,
                     chunk.metadata.char_start
@@ -748,7 +748,7 @@ mod tests {
             "Last chunk should overlap with previous chunk"
         );
 
-        let expected_end = text.chars().count();
+        let expected_end = text.len();
         let last_chunk_covers_end =
             last_chunk.content.trim_end() == text.trim_end() || last_chunk.metadata.char_end >= expected_end - 5;
         assert!(last_chunk_covers_end, "Last chunk should cover the end of the text");

@@ -330,6 +330,7 @@ impl DocumentExtractor for PdfExtractor {
         let (pdf_metadata, native_text, tables, page_contents) = if crate::core::batch_mode::is_batch_mode() {
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
+            let pages_config = config.pages.clone();
             tokio::task::spawn_blocking(move || {
                 let _guard = span.entered();
                 let bindings = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
@@ -348,9 +349,8 @@ impl DocumentExtractor for PdfExtractor {
                 })?;
 
                 // Extract text with page tracking
-                let (native_text, boundaries, page_contents) = crate::pdf::text::extract_text_from_pdf_document(
-                    &document, None, // Don't pass page config in batch mode
-                )?;
+                let (native_text, boundaries, page_contents) =
+                    crate::pdf::text::extract_text_from_pdf_document(&document, pages_config.as_ref())?;
 
                 // Extract metadata with boundaries for PageStructure
                 let pdf_metadata =

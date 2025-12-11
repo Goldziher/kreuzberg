@@ -183,15 +183,16 @@ pub enum PageUnitType {
     Sheet,
 }
 
-/// Character offset boundary for a page.
+/// Byte offset boundary for a page.
 ///
 /// Tracks where a specific page's content starts and ends in the main content string,
-/// enabling mapping from character positions to page numbers.
+/// enabling mapping from byte positions to page numbers. Offsets are guaranteed to be
+/// at valid UTF-8 character boundaries when using standard String methods (push_str, push, etc.).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageBoundary {
-    /// Starting character offset (inclusive)
+    /// Byte offset where this page starts in the content string (UTF-8 valid boundary, inclusive)
     pub char_start: usize,
-    /// Ending character offset (exclusive)
+    /// Byte offset where this page ends in the content string (UTF-8 valid boundary, exclusive)
     pub char_end: usize,
     /// Page number (1-indexed)
     pub page_number: usize,
@@ -494,10 +495,10 @@ pub struct Chunk {
 /// Metadata about a chunk's position in the original document.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChunkMetadata {
-    /// Character offset where this chunk starts in the original text.
+    /// Byte offset where this chunk starts in the original text (UTF-8 valid boundary).
     pub char_start: usize,
 
-    /// Character offset where this chunk ends in the original text.
+    /// Byte offset where this chunk ends in the original text (UTF-8 valid boundary).
     pub char_end: usize,
 
     /// Number of tokens in this chunk (if available).

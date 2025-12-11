@@ -113,7 +113,7 @@ pub fn extract_text_from_pdf_with_passwords(pdf_bytes: &[u8], passwords: &[&str]
 /// # Implementation Details
 ///
 /// When page_config is None, returns fast path with (content, None, None).
-/// When page_config is Some, tracks character offsets using .chars().count() for Unicode correctness.
+/// When page_config is Some, tracks byte offsets using .len() for O(1) performance (UTF-8 valid boundaries).
 pub fn extract_text_from_pdf_document(
     document: &PdfDocument<'_>,
     page_config: Option<&PageConfig>,
@@ -172,14 +172,14 @@ pub fn extract_text_from_pdf_document(
             content.push_str("\n\n");
         }
 
-        // Track character offset before this page (using .chars().count() for Unicode correctness)
-        let char_start = content.chars().count();
+        // Track character offset before this page (using .len() for byte offsets, UTF-8 valid boundaries)
+        let char_start = content.len();
 
         // Add page text
         content.push_str(&page_text);
 
         // Track character offset after this page
-        let char_end = content.chars().count();
+        let char_end = content.len();
 
         // Record boundary
         boundaries.push(PageBoundary {
