@@ -172,19 +172,19 @@ pub fn extract_text_from_pdf_document(
             content.push_str("\n\n");
         }
 
-        // Track character offset before this page (using .len() for byte offsets, UTF-8 valid boundaries)
-        let char_start = content.len();
+        // Track byte offset before this page (using .len() for byte offsets, UTF-8 valid boundaries)
+        let byte_start = content.len();
 
         // Add page text
         content.push_str(&page_text);
 
-        // Track character offset after this page
-        let char_end = content.len();
+        // Track byte offset after this page
+        let byte_end = content.len();
 
         // Record boundary
         boundaries.push(PageBoundary {
-            char_start,
-            char_end,
+            byte_start,
+            byte_end,
             page_number,
         });
 

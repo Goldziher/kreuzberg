@@ -1121,8 +1121,8 @@ pub struct JsExtractedImage {
 #[napi(object)]
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct JsChunkMetadata {
-    pub char_start: u32,
-    pub char_end: u32,
+    pub byte_start: u32,
+    pub byte_end: u32,
     pub token_count: Option<u32>,
     pub chunk_index: u32,
     pub total_chunks: u32,
@@ -1227,8 +1227,8 @@ impl TryFrom<RustExtractionResult> for JsExtractionResult {
                 let mut js_chunks = Vec::with_capacity(chunks.len());
                 for chunk in chunks {
                     let metadata = JsChunkMetadata {
-                        char_start: usize_to_u32(chunk.metadata.char_start, "chunks[].metadata.char_start")?,
-                        char_end: usize_to_u32(chunk.metadata.char_end, "chunks[].metadata.char_end")?,
+                        byte_start: usize_to_u32(chunk.metadata.byte_start, "chunks[].metadata.byte_start")?,
+                        byte_end: usize_to_u32(chunk.metadata.byte_end, "chunks[].metadata.byte_end")?,
                         token_count: match chunk.metadata.token_count {
                             Some(tokens) => Some(usize_to_u32(tokens, "chunks[].metadata.token_count")?),
                             None => None,
@@ -1442,8 +1442,8 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                     content: chunk.content,
                     embedding,
                     metadata: RustChunkMetadata {
-                        char_start: chunk.metadata.char_start as usize,
-                        char_end: chunk.metadata.char_end as usize,
+                        byte_start: chunk.metadata.byte_start as usize,
+                        byte_end: chunk.metadata.byte_end as usize,
                         token_count: chunk.metadata.token_count.map(|v| v as usize),
                         chunk_index: chunk.metadata.chunk_index as usize,
                         total_chunks: chunk.metadata.total_chunks as usize,

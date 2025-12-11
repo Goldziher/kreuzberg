@@ -1532,8 +1532,8 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         for chunk in chunks {
             let chunk_hash = ruby.hash_new();
             chunk_hash.aset("content", chunk.content)?;
-            chunk_hash.aset("char_start", chunk.metadata.char_start)?;
-            chunk_hash.aset("char_end", chunk.metadata.char_end)?;
+            chunk_hash.aset("char_start", chunk.metadata.byte_start)?;
+            chunk_hash.aset("char_end", chunk.metadata.byte_end)?;
             if let Some(token_count) = chunk.metadata.token_count {
                 chunk_hash.aset("token_count", token_count)?;
             } else {

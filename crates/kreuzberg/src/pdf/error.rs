@@ -10,6 +10,7 @@ pub enum PdfError {
     TextExtractionFailed(String),
     RenderingFailed(String),
     MetadataExtractionFailed(String),
+    ExtractionFailed(String),
     IOError(String),
 }
 
@@ -28,6 +29,7 @@ impl fmt::Display for PdfError {
             PdfError::MetadataExtractionFailed(msg) => {
                 write!(f, "Metadata extraction failed: {}", msg)
             }
+            PdfError::ExtractionFailed(msg) => write!(f, "Extraction failed: {}", msg),
             PdfError::IOError(msg) => write!(f, "I/O error: {}", msg),
         }
     }
@@ -118,5 +120,11 @@ mod tests {
         let err1 = PdfError::PageNotFound(3);
         let err2 = err1.clone();
         assert_eq!(err1.to_string(), err2.to_string());
+    }
+
+    #[test]
+    fn test_extraction_failed_error() {
+        let err = PdfError::ExtractionFailed("page data mismatch".to_string());
+        assert_eq!(err.to_string(), "Extraction failed: page data mismatch");
     }
 }

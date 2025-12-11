@@ -11,6 +11,9 @@ use std::path::Path;
 ///
 /// Controls how pages are extracted, tracked, and represented in the extraction results.
 /// When `None`, page tracking is disabled.
+///
+/// Page range tracking in chunk metadata (first_page/last_page) is automatically enabled
+/// when page boundaries are available and chunking is configured.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PageConfig {
@@ -26,10 +29,6 @@ pub struct PageConfig {
     /// Default: "\n\n<!-- PAGE {page_num} -->\n\n"
     #[serde(default = "default_page_marker_format")]
     pub marker_format: String,
-
-    /// Track page ranges in chunk metadata
-    #[serde(default)]
-    pub track_page_ranges: bool,
 }
 
 impl Default for PageConfig {
@@ -38,7 +37,6 @@ impl Default for PageConfig {
             extract_pages: false,
             insert_page_markers: false,
             marker_format: "\n\n<!-- PAGE {page_num} -->\n\n".to_string(),
-            track_page_ranges: false,
         }
     }
 }

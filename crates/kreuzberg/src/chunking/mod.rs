@@ -88,6 +88,68 @@ fn build_chunk_config(max_characters: usize, overlap: usize, trim: bool) -> Resu
         .map_err(|e| KreuzbergError::validation(format!("Invalid chunking configuration: {}", e)))
 }
 
+/// Validates that byte offsets in page boundaries fall on valid UTF-8 character boundaries.
+///
+/// This function ensures that all page boundary positions are at valid UTF-8 character
+/// boundaries within the text. This is CRITICAL to prevent text corruption when boundaries
+/// are created from language bindings or external sources, particularly with multibyte
+/// UTF-8 characters (emoji, CJK characters, combining marks, etc.).
+///
+/// # Arguments
+///
+/// * `text` - The text being chunked
+/// * `boundaries` - Page boundary markers to validate
+///
+/// # Returns
+///
+/// Returns `Ok(())` if all boundaries are at valid UTF-8 character boundaries.
+/// Returns `KreuzbergError::Validation` if any boundary is at an invalid position.
+///
+/// # UTF-8 Boundary Safety
+///
+/// Rust strings use UTF-8 encoding where characters can be 1-4 bytes. For example:
+/// - ASCII letters: 1 byte each
+/// - Emoji (🌍): 4 bytes but 1 character
+/// - CJK characters (中): 3 bytes but 1 character
+///
+/// This function checks that all byte_start and byte_end values are at character
+/// boundaries using Rust's `is_char_boundary()` method.
+fn validate_utf8_boundaries(text: &str, boundaries: &[PageBoundary]) -> Result<()> {
+    for (idx, boundary) in boundaries.iter().enumerate() {
+        // Check byte_start
+        if boundary.byte_start > 0 && boundary.byte_start <= text.len() {
+            if !text.is_char_boundary(boundary.byte_start) {
+                return Err(KreuzbergError::validation(format!(
+                    "Page boundary {} has byte_start={} which is not a valid UTF-8 character boundary (text length={}). This may indicate corrupted multibyte characters (emoji, CJK, etc.)",
+                    idx, boundary.byte_start, text.len()
+                )));
+            }
+        } else if boundary.byte_start > text.len() {
+            return Err(KreuzbergError::validation(format!(
+                "Page boundary {} has byte_start={} which exceeds text length {}",
+                idx, boundary.byte_start, text.len()
+            )));
+        }
+
+        // Check byte_end
+        if boundary.byte_end > 0 && boundary.byte_end <= text.len() {
+            if !text.is_char_boundary(boundary.byte_end) {
+                return Err(KreuzbergError::validation(format!(
+                    "Page boundary {} has byte_end={} which is not a valid UTF-8 character boundary (text length={}). This may indicate corrupted multibyte characters (emoji, CJK, etc.)",
+                    idx, boundary.byte_end, text.len()
+                )));
+            }
+        } else if boundary.byte_end > text.len() {
+            return Err(KreuzbergError::validation(format!(
+                "Page boundary {} has byte_end={} which exceeds text length {}",
+                idx, boundary.byte_end, text.len()
+            )));
+        }
+    }
+
+    Ok(())
+}
+
 /// Calculate which pages a character range spans.
 ///
 /// # Arguments
@@ -118,11 +180,11 @@ fn validate_page_boundaries(boundaries: &[PageBoundary]) -> Result<()> {
 
     // Check each boundary individually
     for (idx, boundary) in boundaries.iter().enumerate() {
-        // Validate range: char_start < char_end
-        if boundary.char_start >= boundary.char_end {
+        // Validate range: byte_start < byte_end
+        if boundary.byte_start >= boundary.byte_end {
             return Err(KreuzbergError::validation(format!(
-                "Invalid boundary range at index {}: char_start ({}) must be < char_end ({})",
-                idx, boundary.char_start, boundary.char_end
+                "Invalid boundary range at index {}: byte_start ({}) must be < byte_end ({})",
+                idx, boundary.byte_start, boundary.byte_end
             )));
         }
     }
@@ -133,24 +195,24 @@ fn validate_page_boundaries(boundaries: &[PageBoundary]) -> Result<()> {
         let next = &boundaries[i + 1];
 
         // Check monotonic ordering
-        if current.char_start > next.char_start {
+        if current.byte_start > next.byte_start {
             return Err(KreuzbergError::validation(format!(
-                "Page boundaries not sorted: boundary at index {} (char_start={}) comes after boundary at index {} (char_start={})",
+                "Page boundaries not sorted: boundary at index {} (byte_start={}) comes after boundary at index {} (byte_start={})",
                 i,
-                current.char_start,
+                current.byte_start,
                 i + 1,
-                next.char_start
+                next.byte_start
             )));
         }
 
         // Check for overlap
-        if current.char_end > next.char_start {
+        if current.byte_end > next.byte_start {
             return Err(KreuzbergError::validation(format!(
                 "Overlapping page boundaries: boundary {} ends at {} but boundary {} starts at {}",
                 i,
-                current.char_end,
+                current.byte_end,
                 i + 1,
-                next.char_start
+                next.byte_start
             )));
         }
     }
@@ -158,12 +220,12 @@ fn validate_page_boundaries(boundaries: &[PageBoundary]) -> Result<()> {
     Ok(())
 }
 
-/// Calculate which pages a character range spans.
+/// Calculate which pages a byte range spans.
 ///
 /// # Arguments
 ///
-/// * `char_start` - Starting character offset of the chunk
-/// * `char_end` - Ending character offset of the chunk
+/// * `byte_start` - Starting byte offset of the chunk
+/// * `byte_end` - Ending byte offset of the chunk
 /// * `boundaries` - Page boundary markers from the document
 ///
 /// # Returns
@@ -175,8 +237,8 @@ fn validate_page_boundaries(boundaries: &[PageBoundary]) -> Result<()> {
 ///
 /// Returns `KreuzbergError::Validation` if boundaries are invalid.
 fn calculate_page_range(
-    char_start: usize,
-    char_end: usize,
+    byte_start: usize,
+    byte_end: usize,
     boundaries: &[PageBoundary],
 ) -> Result<(Option<usize>, Option<usize>)> {
     if boundaries.is_empty() {
@@ -191,7 +253,7 @@ fn calculate_page_range(
 
     for boundary in boundaries {
         // Check if chunk overlaps this page
-        if char_start < boundary.char_end && char_end > boundary.char_start {
+        if byte_start < boundary.byte_end && byte_end > boundary.byte_start {
             if first_page.is_none() {
                 first_page = Some(boundary.page_number);
             }
@@ -243,6 +305,11 @@ pub fn chunk_text(
         });
     }
 
+    // Validate UTF-8 boundaries if provided - critical to prevent text corruption
+    if let Some(boundaries) = page_boundaries {
+        validate_utf8_boundaries(text, boundaries)?;
+    }
+
     let chunk_config = build_chunk_config(config.max_characters, config.overlap, config.trim)?;
 
     let text_chunks: Vec<&str> = match config.chunker_type {
@@ -257,25 +324,25 @@ pub fn chunk_text(
     };
 
     let total_chunks = text_chunks.len();
-    let mut char_offset = 0;
+    let mut byte_offset = 0;
 
     let mut chunks: Vec<Chunk> = Vec::new();
 
     for (index, chunk_text) in text_chunks.into_iter().enumerate() {
-        let char_start = char_offset;
+        let byte_start = byte_offset;
         let chunk_length = chunk_text.len();
-        let char_end = char_start + chunk_length;
+        let byte_end = byte_start + chunk_length;
 
         let overlap_chars = if index < total_chunks - 1 {
             config.overlap.min(chunk_length)
         } else {
             0
         };
-        char_offset = char_end - overlap_chars;
+        byte_offset = byte_end - overlap_chars;
 
         // Calculate page range for this chunk
         let (first_page, last_page) = if let Some(boundaries) = page_boundaries {
-            calculate_page_range(char_start, char_end, boundaries)?
+            calculate_page_range(byte_start, byte_end, boundaries)?
         } else {
             (None, None)
         };
@@ -284,8 +351,8 @@ pub fn chunk_text(
             content: chunk_text.to_string(),
             embedding: None,
             metadata: ChunkMetadata {
-                char_start,
-                char_end,
+                byte_start,
+                byte_end,
                 token_count: None,
                 chunk_index: index,
                 total_chunks,
@@ -676,7 +743,7 @@ mod tests {
             let metadata = &chunk.metadata;
 
             assert_eq!(
-                metadata.char_end - metadata.char_start,
+                metadata.byte_end - metadata.byte_start,
                 chunk.content.len(),
                 "Chunk {} offset range doesn't match content length",
                 i
@@ -691,15 +758,15 @@ mod tests {
             let next_chunk = &result.chunks[i + 1];
 
             assert!(
-                next_chunk.metadata.char_start < current_chunk.metadata.char_end,
+                next_chunk.metadata.byte_start < current_chunk.metadata.byte_end,
                 "Chunk {} and {} don't overlap: next starts at {} but current ends at {}",
                 i,
                 i + 1,
-                next_chunk.metadata.char_start,
-                current_chunk.metadata.char_end
+                next_chunk.metadata.byte_start,
+                current_chunk.metadata.byte_end
             );
 
-            let overlap_size = current_chunk.metadata.char_end - next_chunk.metadata.char_start;
+            let overlap_size = current_chunk.metadata.byte_end - next_chunk.metadata.byte_start;
             assert!(
                 overlap_size <= config.overlap + 10,
                 "Overlap between chunks {} and {} is too large: {}",
@@ -726,12 +793,12 @@ mod tests {
             let next_chunk = &result.chunks[i + 1];
 
             assert!(
-                next_chunk.metadata.char_start >= current_chunk.metadata.char_end,
+                next_chunk.metadata.byte_start >= current_chunk.metadata.byte_end,
                 "Chunk {} and {} overlap when they shouldn't: next starts at {} but current ends at {}",
                 i,
                 i + 1,
-                next_chunk.metadata.char_start,
-                current_chunk.metadata.char_end
+                next_chunk.metadata.byte_start,
+                current_chunk.metadata.byte_end
             );
         }
     }
@@ -750,7 +817,7 @@ mod tests {
         assert!(result.chunks.len() >= 2, "Expected multiple chunks");
 
         assert_eq!(
-            result.chunks[0].metadata.char_start, 0,
+            result.chunks[0].metadata.byte_start, 0,
             "First chunk should start at position 0"
         );
 
@@ -759,12 +826,12 @@ mod tests {
             let next_chunk = &result.chunks[i + 1];
 
             assert!(
-                next_chunk.metadata.char_start <= current_chunk.metadata.char_end,
+                next_chunk.metadata.byte_start <= current_chunk.metadata.byte_end,
                 "Gap detected between chunk {} (ends at {}) and chunk {} (starts at {})",
                 i,
-                current_chunk.metadata.char_end,
+                current_chunk.metadata.byte_end,
                 i + 1,
-                next_chunk.metadata.char_start
+                next_chunk.metadata.byte_start
             );
         }
     }
@@ -783,20 +850,20 @@ mod tests {
 
             for chunk in &result.chunks {
                 assert!(
-                    chunk.metadata.char_end > chunk.metadata.char_start,
+                    chunk.metadata.byte_end > chunk.metadata.byte_start,
                     "Invalid offset range for overlap {}: start={}, end={}",
                     overlap,
-                    chunk.metadata.char_start,
-                    chunk.metadata.char_end
+                    chunk.metadata.byte_start,
+                    chunk.metadata.byte_end
                 );
             }
 
             for chunk in &result.chunks {
                 assert!(
-                    chunk.metadata.char_start < text.len(),
+                    chunk.metadata.byte_start < text.len(),
                     "char_start with overlap {} is out of bounds: {}",
                     overlap,
-                    chunk.metadata.char_start
+                    chunk.metadata.byte_start
                 );
             }
         }
@@ -819,13 +886,13 @@ mod tests {
         let second_to_last = &result.chunks[result.chunks.len() - 2];
 
         assert!(
-            last_chunk.metadata.char_start < second_to_last.metadata.char_end,
+            last_chunk.metadata.byte_start < second_to_last.metadata.byte_end,
             "Last chunk should overlap with previous chunk"
         );
 
         let expected_end = text.len();
         let last_chunk_covers_end =
-            last_chunk.content.trim_end() == text.trim_end() || last_chunk.metadata.char_end >= expected_end - 5;
+            last_chunk.content.trim_end() == text.trim_end() || last_chunk.metadata.byte_end >= expected_end - 5;
         assert!(last_chunk_covers_end, "Last chunk should cover the end of the text");
     }
 
@@ -841,16 +908,16 @@ mod tests {
         };
         let text = "Page one content here. Page two starts here and continues.";
 
-        // Define page boundaries: page 1 is chars 0-21, page 2 is chars 22-58
+        // Define page boundaries: page 1 is bytes 0-21, page 2 is bytes 22-58
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 21,
+                byte_start: 0,
+                byte_end: 21,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 22,
-                char_end: 58,
+                byte_start: 22,
+                byte_end: 58,
                 page_number: 2,
             },
         ];
@@ -919,18 +986,18 @@ mod tests {
 
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 20,
+                byte_start: 0,
+                byte_end: 20,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 20,
-                char_end: 40,
+                byte_start: 20,
+                byte_end: 40,
                 page_number: 2,
             },
             PageBoundary {
-                char_start: 40,
-                char_end: 56,
+                byte_start: 40,
+                byte_end: 54,
                 page_number: 3,
             },
         ];
@@ -957,10 +1024,10 @@ mod tests {
         };
         let text = "Page one content here. Page two content.";
 
-        // Invalid: char_start >= char_end
+        // Invalid: byte_start >= byte_end
         let boundaries = vec![PageBoundary {
-            char_start: 10,
-            char_end: 5, // Invalid: end < start
+            byte_start: 10,
+            byte_end: 5, // Invalid: end < start
             page_number: 1,
         }];
 
@@ -968,7 +1035,7 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Invalid boundary range"));
-        assert!(err.to_string().contains("char_start"));
+        assert!(err.to_string().contains("byte_start"));
     }
 
     #[test]
@@ -986,13 +1053,13 @@ mod tests {
         // Invalid: boundaries not sorted by char_start
         let boundaries = vec![
             PageBoundary {
-                char_start: 22,
-                char_end: 40,
+                byte_start: 22,
+                byte_end: 40,
                 page_number: 2,
             },
             PageBoundary {
-                char_start: 0,
-                char_end: 21,
+                byte_start: 0,
+                byte_end: 21,
                 page_number: 1,
             },
         ];
@@ -1019,13 +1086,13 @@ mod tests {
         // Invalid: overlapping boundaries
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 25, // Overlaps with next boundary start
+                byte_start: 0,
+                byte_end: 25, // Overlaps with next boundary start
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 20, // Starts before previous ends
-                char_end: 40,
+                byte_start: 20, // Starts before previous ends
+                byte_end: 40,
                 page_number: 2,
             },
         ];
@@ -1041,10 +1108,10 @@ mod tests {
     fn test_calculate_page_range_with_invalid_boundaries() {
         use crate::types::PageBoundary;
 
-        // Invalid: char_start >= char_end
+        // Invalid: byte_start >= byte_end
         let boundaries = vec![PageBoundary {
-            char_start: 15,
-            char_end: 10,
+            byte_start: 15,
+            byte_end: 10,
             page_number: 1,
         }];
 
@@ -1060,18 +1127,18 @@ mod tests {
 
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 20,
+                byte_start: 0,
+                byte_end: 20,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 20,
-                char_end: 40,
+                byte_start: 20,
+                byte_end: 40,
                 page_number: 2,
             },
             PageBoundary {
-                char_start: 40,
-                char_end: 60,
+                byte_start: 40,
+                byte_end: 60,
                 page_number: 3,
             },
         ];
@@ -1114,13 +1181,13 @@ mod tests {
         // Valid: boundaries with gaps are allowed
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 10,
+                byte_start: 0,
+                byte_end: 10,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 15, // Gap from 10 to 15
-                char_end: 25,
+                byte_start: 15, // Gap from 10 to 15
+                byte_end: 25,
                 page_number: 2,
             },
         ];
@@ -1143,10 +1210,10 @@ mod tests {
     fn test_chunk_with_same_start_and_end() {
         use crate::types::PageBoundary;
 
-        // Invalid: char_start == char_end
+        // Invalid: byte_start == byte_end
         let boundaries = vec![PageBoundary {
-            char_start: 10,
-            char_end: 10,
+            byte_start: 10,
+            byte_end: 10,
             page_number: 1,
         }];
 
@@ -1170,21 +1237,22 @@ mod tests {
         use crate::types::PageBoundary;
 
         // Multiple errors: both unsorted AND overlapping
+        let text = "This is a longer test content string that spans more bytes";
         let boundaries = vec![
             PageBoundary {
-                char_start: 20,
-                char_end: 30,
+                byte_start: 20,
+                byte_end: 40,
                 page_number: 2,
             },
             PageBoundary {
-                char_start: 10, // Not sorted
-                char_end: 25,   // Also overlaps with previous
+                byte_start: 10, // Not sorted
+                byte_end: 35,   // Also overlaps with previous
                 page_number: 1,
             },
         ];
 
         let result = chunk_text(
-            "test content",
+            text,
             &ChunkingConfig {
                 max_characters: 30,
                 overlap: 5,
@@ -1212,18 +1280,18 @@ mod tests {
 
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 24,
+                byte_start: 0,
+                byte_end: 24,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 24,
-                char_end: 50,
+                byte_start: 24,
+                byte_end: 50,
                 page_number: 2,
             },
             PageBoundary {
-                char_start: 50,
-                char_end: 61,
+                byte_start: 50,
+                byte_end: 60,
                 page_number: 3,
             },
         ];
@@ -1249,8 +1317,8 @@ mod tests {
         let text = "All content on single page fits in one chunk.";
 
         let boundaries = vec![PageBoundary {
-            char_start: 0,
-            char_end: 45,
+            byte_start: 0,
+            byte_end: 45,
             page_number: 1,
         }];
 
@@ -1274,13 +1342,13 @@ mod tests {
 
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 11,
+                byte_start: 0,
+                byte_end: 11,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 11,
-                char_end: 24,
+                byte_start: 11,
+                byte_end: 23,
                 page_number: 2,
             },
         ];
@@ -1300,13 +1368,13 @@ mod tests {
     fn test_calculate_page_range_within_page() {
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 100,
+                byte_start: 0,
+                byte_end: 100,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 100,
-                char_end: 200,
+                byte_start: 100,
+                byte_end: 200,
                 page_number: 2,
             },
         ];
@@ -1320,13 +1388,13 @@ mod tests {
     fn test_calculate_page_range_spanning_pages() {
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 100,
+                byte_start: 0,
+                byte_end: 100,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 100,
-                char_end: 200,
+                byte_start: 100,
+                byte_end: 200,
                 page_number: 2,
             },
         ];
@@ -1349,13 +1417,13 @@ mod tests {
     fn test_calculate_page_range_no_overlap() {
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 100,
+                byte_start: 0,
+                byte_end: 100,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 100,
-                char_end: 200,
+                byte_start: 100,
+                byte_end: 200,
                 page_number: 2,
             },
         ];
@@ -1370,18 +1438,18 @@ mod tests {
     fn test_calculate_page_range_three_pages() {
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 100,
+                byte_start: 0,
+                byte_end: 100,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 100,
-                char_end: 200,
+                byte_start: 100,
+                byte_end: 200,
                 page_number: 2,
             },
             PageBoundary {
-                char_start: 200,
-                char_end: 300,
+                byte_start: 200,
+                byte_end: 300,
                 page_number: 3,
             },
         ];
@@ -1405,13 +1473,13 @@ mod tests {
 
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 21,
+                byte_start: 0,
+                byte_end: 21,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 21,
-                char_end: 32,
+                byte_start: 21,
+                byte_end: 31, // Text is 31 bytes, not 32
                 page_number: 2,
             },
         ];
@@ -1419,8 +1487,8 @@ mod tests {
         let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
 
         for chunk in &result.chunks {
-            // Verify char offsets match content length
-            assert_eq!(chunk.metadata.char_end - chunk.metadata.char_start, chunk.content.len());
+            // Verify byte offsets match content length
+            assert_eq!(chunk.metadata.byte_end - chunk.metadata.byte_start, chunk.content.len());
         }
     }
 
@@ -1438,13 +1506,13 @@ mod tests {
 
         let boundaries = vec![
             PageBoundary {
-                char_start: 0,
-                char_end: 10,
+                byte_start: 0,
+                byte_end: 10,
                 page_number: 1,
             },
             PageBoundary {
-                char_start: 10,
-                char_end: 20,
+                byte_start: 10,
+                byte_end: 20,
                 page_number: 2,
             },
         ];
@@ -1453,8 +1521,8 @@ mod tests {
 
         // Check chunks at boundary edges
         for chunk in &result.chunks {
-            let on_page1 = chunk.metadata.char_start < 10;
-            let on_page2 = chunk.metadata.char_end > 10;
+            let on_page1 = chunk.metadata.byte_start < 10;
+            let on_page2 = chunk.metadata.byte_end > 10;
 
             if on_page1 && on_page2 {
                 // Spanning boundary
@@ -1466,5 +1534,363 @@ mod tests {
                 assert_eq!(chunk.metadata.first_page, Some(2));
             }
         }
+    }
+
+    // ========== UTF-8 Boundary Validation Tests ==========
+
+    #[test]
+    fn test_validate_utf8_boundaries_valid_ascii() {
+        use crate::types::PageBoundary;
+
+        let text = "This is ASCII text.";
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 10,
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: 10,
+                byte_end: 19,
+                page_number: 2,
+            },
+        ];
+
+        // Should not error with valid ASCII boundaries
+        let result = chunk_text(text, &ChunkingConfig::default(), Some(&boundaries));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_valid_emoji() {
+        use crate::types::PageBoundary;
+
+        // Emoji 👋 is 4 bytes at position 6-9, 🌍 is 4 bytes at position 17-20
+        // Text: "Hello 👋 World 🌍 End" = 25 bytes total
+        let text = "Hello 👋 World 🌍 End";
+        let config = ChunkingConfig::default();
+
+        // Valid boundaries on character boundaries
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 11, // "Hello 👋 " (H-o=5, space=1, emoji=4, space=1)
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: 11,
+                byte_end: 25, // "World 🌍 End" (rest of text)
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_valid_cjk() {
+        use crate::types::PageBoundary;
+
+        // CJK characters are 3 bytes each
+        // "你好世界 こんにちは 안녕하세요" = 44 bytes total
+        let text = "你好世界 こんにちは 안녕하세요";
+        let config = ChunkingConfig::default();
+
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 13, // "你好世界 " = 4*3 bytes + 1 space
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: 13,
+                byte_end: 44, // Rest of text
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_invalid_mid_emoji() {
+        use crate::types::PageBoundary;
+
+        let text = "Hello 👋 World";
+        // Emoji 👋 starts at byte 6 and ends at byte 10
+        // Trying to set boundary at byte 7, 8, or 9 is invalid
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 7, // Mid-emoji (between byte 6 and 10)
+                page_number: 1,
+            },
+        ];
+
+        let config = ChunkingConfig::default();
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("UTF-8 character boundary"));
+        assert!(err.to_string().contains("byte_end=7"));
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_invalid_mid_multibyte_cjk() {
+        use crate::types::PageBoundary;
+
+        // Chinese character 中 is E4 B8 AD (3 bytes)
+        let text = "中文文本";
+        // Character 中 is at bytes 0-2, 文 is at 3-5, etc.
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 1, // Mid-character (in the middle of 中)
+                page_number: 1,
+            },
+        ];
+
+        let config = ChunkingConfig::default();
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("UTF-8 character boundary"));
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_byte_start_exceeds_length() {
+        use crate::types::PageBoundary;
+
+        let text = "Short";
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 3,
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: 10, // Exceeds text byte length
+                byte_end: 15,
+                page_number: 2,
+            },
+        ];
+
+        let config = ChunkingConfig::default();
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("exceeds text length"));
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_byte_end_exceeds_length() {
+        use crate::types::PageBoundary;
+
+        let text = "Short";
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 100, // Way exceeds text length
+                page_number: 1,
+            },
+        ];
+
+        let config = ChunkingConfig::default();
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("exceeds text length"));
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_empty_boundaries() {
+        use crate::types::PageBoundary;
+
+        let text = "Some text";
+        let boundaries: Vec<PageBoundary> = vec![];
+
+        let config = ChunkingConfig::default();
+        let result = chunk_text(text, &config, Some(&boundaries));
+        // Empty boundaries should be valid
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_at_text_boundaries() {
+        use crate::types::PageBoundary;
+
+        let text = "Exact boundary test";
+        let text_len = text.len();
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: text_len, // Exactly at end
+                page_number: 1,
+            },
+        ];
+
+        let config = ChunkingConfig::default();
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_mixed_languages() {
+        use crate::types::PageBoundary;
+
+        let text = "English text mixed with 中文 and français";
+        let config = ChunkingConfig::default();
+
+        // Boundaries at valid character positions
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 24, // "English text mixed with "
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: 24,
+                byte_end: text.len(),
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_chunk_text_rejects_invalid_utf8_boundaries() {
+        use crate::types::PageBoundary;
+
+        let text = "🌍🌎🌏 Three emoji planets";
+        let config = ChunkingConfig::default();
+
+        // Set boundary way out of bounds
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 1000, // Way out of bounds
+                page_number: 1,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_combining_diacriticals() {
+        use crate::types::PageBoundary;
+
+        // Text with combining diacritical marks: "café" with combining acute
+        let text = "café"; // Normally precomposed, but test the concept
+        let config = ChunkingConfig::default();
+
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 2,
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: 2,
+                byte_end: text.len(),
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_error_messages_are_clear() {
+        use crate::types::PageBoundary;
+
+        let text = "Test 👋 text";
+        let config = ChunkingConfig::default();
+
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 6, // Mid-emoji
+                page_number: 1,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        let err_msg = err.to_string();
+        // Check that error message is descriptive
+        assert!(err_msg.contains("UTF-8"));
+        assert!(err_msg.contains("boundary"));
+        assert!(err_msg.contains("6")); // The invalid offset
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_multiple_valid_boundaries() {
+        use crate::types::PageBoundary;
+
+        let text = "First👋Second🌍Third";
+        let config = ChunkingConfig::default();
+
+        // Multiple valid boundaries
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 5, // "First"
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: 5,
+                byte_end: 9, // "👋" (4 bytes)
+                page_number: 2,
+            },
+            PageBoundary {
+                byte_start: 9,
+                byte_end: 15, // "Second"
+                page_number: 3,
+            },
+            PageBoundary {
+                byte_start: 15,
+                byte_end: 19, // "🌍" (4 bytes)
+                page_number: 4,
+            },
+            PageBoundary {
+                byte_start: 19,
+                byte_end: text.len(), // "Third"
+                page_number: 5,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_utf8_boundaries_zero_start_and_end() {
+        use crate::types::PageBoundary;
+
+        let text = "Text";
+        let config = ChunkingConfig::default();
+
+        // Valid boundaries with 0 values
+        let boundaries = vec![
+            PageBoundary {
+                byte_start: 0,
+                byte_end: 0,
+                page_number: 1,
+            },
+        ];
+
+        // Zero-length boundary should fail validation from page_boundaries
+        // but UTF-8 validation should pass (0 is always valid)
+        let result = chunk_text(text, &config, Some(&boundaries));
+        // This should fail due to page boundary validation, not UTF-8
+        assert!(result.is_err());
     }
 }

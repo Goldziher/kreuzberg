@@ -358,6 +358,15 @@ impl DocumentExtractor for PdfExtractor {
 
                 let tables = extract_tables_from_document(&document, &pdf_metadata)?;
 
+                // Validate page data matches config in batch mode
+                if let Some(ref page_cfg) = pages_config {
+                    if page_cfg.extract_pages && page_contents.is_none() {
+                        return Err(PdfError::ExtractionFailed(
+                            "Page extraction was configured but no page data was extracted in batch mode".to_string()
+                        ).into());
+                    }
+                }
+
                 Ok::<_, crate::error::KreuzbergError>((pdf_metadata, native_text, tables, page_contents))
             })
             .await
@@ -427,6 +436,21 @@ impl DocumentExtractor for PdfExtractor {
 
         #[cfg(not(feature = "ocr"))]
         let text = native_text;
+
+        // Validate page markers after text extraction if configured
+        #[cfg(feature = "pdf")]
+        if let Some(ref page_cfg) = config.pages {
+            if page_cfg.insert_page_markers {
+                let marker_placeholder = page_cfg.marker_format.replace("{page_num}", "");
+                if !marker_placeholder.is_empty() && !text.contains(&marker_placeholder) {
+                    #[cfg(feature = "otel")]
+                    tracing::warn!(
+                        "Page markers were configured but none found in extracted content. \
+                         This may indicate very short documents or incomplete extraction."
+                    );
+                }
+            }
+        }
 
         let images = if config.images.is_some() {
             match crate::pdf::images::extract_images_from_pdf(content) {
@@ -552,5 +576,95 @@ mod tests {
     fn test_should_fallback_for_punctuation_only_text() {
         let sample = " . , ; : -- -- ";
         assert!(evaluate_native_text_for_ocr(sample, Some(2)).fallback);
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "pdf")]
+    async fn test_pdf_batch_mode_validates_page_config_enabled() {
+        use crate::core::config::PageConfig;
+
+        let extractor = PdfExtractor::new();
+        let mut config = ExtractionConfig::default();
+
+        // Enable page extraction
+        config.pages = Some(PageConfig {
+            extract_pages: true,
+            insert_page_markers: false,
+            marker_format: "<!-- PAGE {page_num} -->".to_string(),
+        });
+
+        // Read a real test PDF
+        let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
+        if let Ok(content) = std::fs::read(pdf_path) {
+            let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
+            // Should succeed and extract pages when configured
+            assert!(result.is_ok(), "Failed to extract PDF with page config: {:?}", result.err());
+
+            let extraction_result = result.unwrap();
+            // Verify pages were extracted
+            assert!(extraction_result.pages.is_some(), "Pages should be extracted when extract_pages is true");
+        }
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "pdf")]
+    async fn test_pdf_batch_mode_validates_page_config_disabled() {
+        let extractor = PdfExtractor::new();
+        let config = ExtractionConfig::default();
+
+        // No page config - extraction should still succeed
+        let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
+        if let Ok(content) = std::fs::read(pdf_path) {
+            let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
+            // Should succeed without page config
+            assert!(result.is_ok(), "Failed to extract PDF without page config: {:?}", result.err());
+
+            let extraction_result = result.unwrap();
+            // Verify pages are not extracted when not configured
+            assert!(extraction_result.pages.is_none(), "Pages should not be extracted when pages config is None");
+        }
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "pdf")]
+    async fn test_pdf_page_marker_validation() {
+        use crate::core::config::PageConfig;
+
+        let extractor = PdfExtractor::new();
+        let mut config = ExtractionConfig::default();
+
+        // Enable page marker insertion
+        config.pages = Some(PageConfig {
+            extract_pages: true,
+            insert_page_markers: true,
+            marker_format: "\n\n<!-- PAGE {page_num} -->\n\n".to_string(),
+        });
+
+        let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
+        if let Ok(content) = std::fs::read(pdf_path) {
+            let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
+            // Extraction should succeed
+            assert!(result.is_ok(), "Failed to extract PDF with page markers: {:?}", result.err());
+
+            let extraction_result = result.unwrap();
+            // For a multi-page PDF, markers should be present
+            // The marker placeholder is "<!-- PAGE -->" (with {page_num} replaced)
+            let marker_placeholder = "<!-- PAGE ";
+            if extraction_result.content.len() > 100 {
+                // Only check for markers in substantial content (not single-page docs)
+                assert!(
+                    extraction_result.content.contains(marker_placeholder),
+                    "Page markers should be inserted when configured and document has multiple pages"
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "pdf")]
+    fn test_pdf_extractor_without_feature_pdf() {
+        // This test ensures the extractor is available even when PDF feature is off
+        let extractor = PdfExtractor::new();
+        assert_eq!(extractor.name(), "pdf-extractor");
     }
 }

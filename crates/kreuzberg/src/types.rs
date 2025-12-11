@@ -191,9 +191,9 @@ pub enum PageUnitType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageBoundary {
     /// Byte offset where this page starts in the content string (UTF-8 valid boundary, inclusive)
-    pub char_start: usize,
+    pub byte_start: usize,
     /// Byte offset where this page ends in the content string (UTF-8 valid boundary, exclusive)
-    pub char_end: usize,
+    pub byte_end: usize,
     /// Page number (1-indexed)
     pub page_number: usize,
 }
@@ -496,10 +496,10 @@ pub struct Chunk {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChunkMetadata {
     /// Byte offset where this chunk starts in the original text (UTF-8 valid boundary).
-    pub char_start: usize,
+    pub byte_start: usize,
 
     /// Byte offset where this chunk ends in the original text (UTF-8 valid boundary).
-    pub char_end: usize,
+    pub byte_end: usize,
 
     /// Number of tokens in this chunk (if available).
     ///
