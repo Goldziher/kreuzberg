@@ -100,14 +100,91 @@ fn build_chunk_config(max_characters: usize, overlap: usize, trim: bool) -> Resu
 ///
 /// A tuple of (first_page, last_page) where page numbers are 1-indexed.
 /// Returns (None, None) if boundaries are empty or chunk doesn't overlap any page.
+/// Validates page boundaries for consistency and correctness.
+///
+/// # Validation Rules
+///
+/// 1. Boundaries must be sorted by char_start (monotonically increasing)
+/// 2. Boundaries must not overlap (char_end[i] <= char_start[i+1])
+/// 3. Each boundary must have char_start < char_end
+///
+/// # Errors
+///
+/// Returns `KreuzbergError::Validation` if any boundary is invalid.
+fn validate_page_boundaries(boundaries: &[PageBoundary]) -> Result<()> {
+    if boundaries.is_empty() {
+        return Ok(());
+    }
+
+    // Check each boundary individually
+    for (idx, boundary) in boundaries.iter().enumerate() {
+        // Validate range: char_start < char_end
+        if boundary.char_start >= boundary.char_end {
+            return Err(KreuzbergError::validation(format!(
+                "Invalid boundary range at index {}: char_start ({}) must be < char_end ({})",
+                idx, boundary.char_start, boundary.char_end
+            )));
+        }
+    }
+
+    // Check ordering and overlap
+    for i in 0..boundaries.len() - 1 {
+        let current = &boundaries[i];
+        let next = &boundaries[i + 1];
+
+        // Check monotonic ordering
+        if current.char_start > next.char_start {
+            return Err(KreuzbergError::validation(format!(
+                "Page boundaries not sorted: boundary at index {} (char_start={}) comes after boundary at index {} (char_start={})",
+                i,
+                current.char_start,
+                i + 1,
+                next.char_start
+            )));
+        }
+
+        // Check for overlap
+        if current.char_end > next.char_start {
+            return Err(KreuzbergError::validation(format!(
+                "Overlapping page boundaries: boundary {} ends at {} but boundary {} starts at {}",
+                i,
+                current.char_end,
+                i + 1,
+                next.char_start
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+/// Calculate which pages a character range spans.
+///
+/// # Arguments
+///
+/// * `char_start` - Starting character offset of the chunk
+/// * `char_end` - Ending character offset of the chunk
+/// * `boundaries` - Page boundary markers from the document
+///
+/// # Returns
+///
+/// A tuple of (first_page, last_page) where page numbers are 1-indexed.
+/// Returns (None, None) if boundaries are empty or chunk doesn't overlap any page.
+///
+/// # Errors
+///
+/// Returns `KreuzbergError::Validation` if boundaries are invalid.
 fn calculate_page_range(
     char_start: usize,
     char_end: usize,
     boundaries: &[PageBoundary],
-) -> (Option<usize>, Option<usize>) {
+) -> Result<(Option<usize>, Option<usize>)> {
     if boundaries.is_empty() {
-        return (None, None);
+        return Ok((None, None));
     }
+
+    // Validate boundaries before processing
+    validate_page_boundaries(boundaries)?;
 
     let mut first_page = None;
     let mut last_page = None;
@@ -122,7 +199,7 @@ fn calculate_page_range(
         }
     }
 
-    (first_page, last_page)
+    Ok((first_page, last_page))
 }
 
 /// Split text into chunks with optional page boundary tracking.
@@ -182,43 +259,41 @@ pub fn chunk_text(
     let total_chunks = text_chunks.len();
     let mut char_offset = 0;
 
-    let chunks: Vec<Chunk> = text_chunks
-        .into_iter()
-        .enumerate()
-        .map(|(index, chunk_text)| {
-            let char_start = char_offset;
-            let chunk_length = chunk_text.len();
-            let char_end = char_start + chunk_length;
+    let mut chunks: Vec<Chunk> = Vec::new();
 
-            let overlap_chars = if index < total_chunks - 1 {
-                config.overlap.min(chunk_length)
-            } else {
-                0
-            };
-            char_offset = char_end - overlap_chars;
+    for (index, chunk_text) in text_chunks.into_iter().enumerate() {
+        let char_start = char_offset;
+        let chunk_length = chunk_text.len();
+        let char_end = char_start + chunk_length;
 
-            // Calculate page range for this chunk
-            let (first_page, last_page) = if let Some(boundaries) = page_boundaries {
-                calculate_page_range(char_start, char_end, boundaries)
-            } else {
-                (None, None)
-            };
+        let overlap_chars = if index < total_chunks - 1 {
+            config.overlap.min(chunk_length)
+        } else {
+            0
+        };
+        char_offset = char_end - overlap_chars;
 
-            Chunk {
-                content: chunk_text.to_string(),
-                embedding: None,
-                metadata: ChunkMetadata {
-                    char_start,
-                    char_end,
-                    token_count: None,
-                    chunk_index: index,
-                    total_chunks,
-                    first_page,
-                    last_page,
-                },
-            }
-        })
-        .collect();
+        // Calculate page range for this chunk
+        let (first_page, last_page) = if let Some(boundaries) = page_boundaries {
+            calculate_page_range(char_start, char_end, boundaries)?
+        } else {
+            (None, None)
+        };
+
+        chunks.push(Chunk {
+            content: chunk_text.to_string(),
+            embedding: None,
+            metadata: ChunkMetadata {
+                char_start,
+                char_end,
+                token_count: None,
+                chunk_index: index,
+                total_chunks,
+                first_page,
+                last_page,
+            },
+        });
+    }
 
     let chunk_count = chunks.len();
 
@@ -867,6 +942,529 @@ mod tests {
         for chunk in &result.chunks {
             // Each chunk should have at least a first_page when boundaries exist
             assert!(chunk.metadata.first_page.is_some() || chunk.metadata.last_page.is_some());
+        }
+    }
+
+    #[test]
+    fn test_chunk_text_with_invalid_boundary_range() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 30,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "Page one content here. Page two content.";
+
+        // Invalid: char_start >= char_end
+        let boundaries = vec![PageBoundary {
+            char_start: 10,
+            char_end: 5, // Invalid: end < start
+            page_number: 1,
+        }];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid boundary range"));
+        assert!(err.to_string().contains("char_start"));
+    }
+
+    #[test]
+    fn test_chunk_text_with_unsorted_boundaries() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 30,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "Page one content here. Page two content.";
+
+        // Invalid: boundaries not sorted by char_start
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 22,
+                char_end: 40,
+                page_number: 2,
+            },
+            PageBoundary {
+                char_start: 0,
+                char_end: 21,
+                page_number: 1,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not sorted"));
+        assert!(err.to_string().contains("boundaries"));
+    }
+
+    #[test]
+    fn test_chunk_text_with_overlapping_boundaries() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 30,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "Page one content here. Page two content.";
+
+        // Invalid: overlapping boundaries
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 25, // Overlaps with next boundary start
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 20, // Starts before previous ends
+                char_end: 40,
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Overlapping"));
+        assert!(err.to_string().contains("boundaries"));
+    }
+
+    #[test]
+    fn test_calculate_page_range_with_invalid_boundaries() {
+        use crate::types::PageBoundary;
+
+        // Invalid: char_start >= char_end
+        let boundaries = vec![PageBoundary {
+            char_start: 15,
+            char_end: 10,
+            page_number: 1,
+        }];
+
+        let result = calculate_page_range(0, 20, &boundaries);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid boundary range"));
+    }
+
+    #[test]
+    fn test_validate_page_boundaries_valid() {
+        use crate::types::PageBoundary;
+
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 20,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 20,
+                char_end: 40,
+                page_number: 2,
+            },
+            PageBoundary {
+                char_start: 40,
+                char_end: 60,
+                page_number: 3,
+            },
+        ];
+
+        // Should not error on valid boundaries
+        let result = chunk_text(
+            "x".repeat(60).as_str(),
+            &ChunkingConfig {
+                max_characters: 30,
+                overlap: 5,
+                trim: false,
+                chunker_type: ChunkerType::Text,
+            },
+            Some(&boundaries),
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_page_boundaries_empty() {
+        // Empty boundaries should be valid (no boundaries to validate)
+        let boundaries: Vec<PageBoundary> = vec![];
+        let result = chunk_text(
+            "Some test text",
+            &ChunkingConfig {
+                max_characters: 30,
+                overlap: 5,
+                trim: true,
+                chunker_type: ChunkerType::Text,
+            },
+            Some(&boundaries),
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_page_boundaries_with_gaps() {
+        use crate::types::PageBoundary;
+
+        // Valid: boundaries with gaps are allowed
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 10,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 15, // Gap from 10 to 15
+                char_end: 25,
+                page_number: 2,
+            },
+        ];
+
+        let text = "0123456789XXXXX0123456789";
+        let result = chunk_text(
+            text,
+            &ChunkingConfig {
+                max_characters: 30,
+                overlap: 5,
+                trim: false,
+                chunker_type: ChunkerType::Text,
+            },
+            Some(&boundaries),
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_chunk_with_same_start_and_end() {
+        use crate::types::PageBoundary;
+
+        // Invalid: char_start == char_end
+        let boundaries = vec![PageBoundary {
+            char_start: 10,
+            char_end: 10,
+            page_number: 1,
+        }];
+
+        let result = chunk_text(
+            "test content here",
+            &ChunkingConfig {
+                max_characters: 30,
+                overlap: 5,
+                trim: true,
+                chunker_type: ChunkerType::Text,
+            },
+            Some(&boundaries),
+        );
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid boundary range"));
+    }
+
+    #[test]
+    fn test_multiple_overlapping_errors() {
+        use crate::types::PageBoundary;
+
+        // Multiple errors: both unsorted AND overlapping
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 20,
+                char_end: 30,
+                page_number: 2,
+            },
+            PageBoundary {
+                char_start: 10, // Not sorted
+                char_end: 25,   // Also overlaps with previous
+                page_number: 1,
+            },
+        ];
+
+        let result = chunk_text(
+            "test content",
+            &ChunkingConfig {
+                max_characters: 30,
+                overlap: 5,
+                trim: true,
+                chunker_type: ChunkerType::Text,
+            },
+            Some(&boundaries),
+        );
+        assert!(result.is_err());
+        // Should catch unsorted issue first
+        assert!(result.unwrap_err().to_string().contains("not sorted"));
+    }
+
+    #[test]
+    fn test_chunk_with_pages_basic() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 25,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "First page content here.Second page content here.Third page.";
+
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 24,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 24,
+                char_end: 50,
+                page_number: 2,
+            },
+            PageBoundary {
+                char_start: 50,
+                char_end: 61,
+                page_number: 3,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+
+        // First chunk should be on page 1
+        if !result.chunks.is_empty() {
+            assert!(result.chunks[0].metadata.first_page.is_some());
+        }
+    }
+
+    #[test]
+    fn test_chunk_with_pages_single_page_chunk() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 100,
+            overlap: 10,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "All content on single page fits in one chunk.";
+
+        let boundaries = vec![PageBoundary {
+            char_start: 0,
+            char_end: 45,
+            page_number: 1,
+        }];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+        assert_eq!(result.chunks.len(), 1);
+        assert_eq!(result.chunks[0].metadata.first_page, Some(1));
+        assert_eq!(result.chunks[0].metadata.last_page, Some(1));
+    }
+
+    #[test]
+    fn test_chunk_with_pages_no_overlap() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 20,
+            overlap: 0,
+            trim: false,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "AAAAA BBBBB CCCCC DDDDD";
+
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 11,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 11,
+                char_end: 24,
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+        assert!(result.chunks.len() >= 1);
+
+        // Verify no chunks overlap page boundaries incorrectly
+        for chunk in &result.chunks {
+            if let (Some(first), Some(last)) = (chunk.metadata.first_page, chunk.metadata.last_page) {
+                assert!(first <= last);
+            }
+        }
+    }
+
+    #[test]
+    fn test_calculate_page_range_within_page() {
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 100,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 100,
+                char_end: 200,
+                page_number: 2,
+            },
+        ];
+
+        let (first, last) = calculate_page_range(10, 50, &boundaries).unwrap();
+        assert_eq!(first, Some(1));
+        assert_eq!(last, Some(1));
+    }
+
+    #[test]
+    fn test_calculate_page_range_spanning_pages() {
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 100,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 100,
+                char_end: 200,
+                page_number: 2,
+            },
+        ];
+
+        let (first, last) = calculate_page_range(50, 150, &boundaries).unwrap();
+        assert_eq!(first, Some(1));
+        assert_eq!(last, Some(2));
+    }
+
+    #[test]
+    fn test_calculate_page_range_empty_boundaries() {
+        let boundaries: Vec<PageBoundary> = vec![];
+
+        let (first, last) = calculate_page_range(0, 50, &boundaries).unwrap();
+        assert_eq!(first, None);
+        assert_eq!(last, None);
+    }
+
+    #[test]
+    fn test_calculate_page_range_no_overlap() {
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 100,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 100,
+                char_end: 200,
+                page_number: 2,
+            },
+        ];
+
+        // Chunk completely after all boundaries
+        let (first, last) = calculate_page_range(200, 250, &boundaries).unwrap();
+        assert_eq!(first, None);
+        assert_eq!(last, None);
+    }
+
+    #[test]
+    fn test_calculate_page_range_three_pages() {
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 100,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 100,
+                char_end: 200,
+                page_number: 2,
+            },
+            PageBoundary {
+                char_start: 200,
+                char_end: 300,
+                page_number: 3,
+            },
+        ];
+
+        let (first, last) = calculate_page_range(50, 250, &boundaries).unwrap();
+        assert_eq!(first, Some(1));
+        assert_eq!(last, Some(3));
+    }
+
+    #[test]
+    fn test_chunk_metadata_page_range_accuracy() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 30,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "Page One Content Here.Page Two.";
+
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 21,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 21,
+                char_end: 32,
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+
+        for chunk in &result.chunks {
+            // Verify char offsets match content length
+            assert_eq!(chunk.metadata.char_end - chunk.metadata.char_start, chunk.content.len());
+        }
+    }
+
+    #[test]
+    fn test_chunk_page_range_boundary_edge_cases() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 10,
+            overlap: 2,
+            trim: false,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "0123456789ABCDEFGHIJ";
+
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 10,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 10,
+                char_end: 20,
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+
+        // Check chunks at boundary edges
+        for chunk in &result.chunks {
+            let on_page1 = chunk.metadata.char_start < 10;
+            let on_page2 = chunk.metadata.char_end > 10;
+
+            if on_page1 && on_page2 {
+                // Spanning boundary
+                assert_eq!(chunk.metadata.first_page, Some(1));
+                assert_eq!(chunk.metadata.last_page, Some(2));
+            } else if on_page1 {
+                assert_eq!(chunk.metadata.first_page, Some(1));
+            } else if on_page2 {
+                assert_eq!(chunk.metadata.first_page, Some(2));
+            }
         }
     }
 }
