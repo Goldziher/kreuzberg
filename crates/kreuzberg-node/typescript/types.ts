@@ -388,6 +388,23 @@ export interface ExtractedImage {
 }
 
 /**
+ * Content for a single page/slide/sheet.
+ *
+ * When page extraction is enabled, documents are split into per-page content
+ * with associated tables and images mapped to each page.
+ */
+export interface PageContent {
+	/** Page number (1-indexed) */
+	pageNumber: number;
+	/** Text content for this page */
+	content: string;
+	/** Tables found on this page */
+	tables: Table[];
+	/** Images found on this page */
+	images: ExtractedImage[];
+}
+
+/**
  * Extraction result metadata.
  *
  * Uses a flattened discriminated union approach with format_type as the discriminator.
@@ -491,6 +508,7 @@ export interface ExtractionResult {
 	detectedLanguages: string[] | null;
 	chunks: Chunk[] | null;
 	images: ExtractedImage[] | null;
+	pages?: PageContent[] | null;
 }
 
 export type ProcessingStage = "early" | "middle" | "late";

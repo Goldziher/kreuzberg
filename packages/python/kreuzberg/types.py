@@ -180,14 +180,55 @@ class PageConfig(TypedDict, total=False):
     marker_format: str
 
 
-class PageInfo(TypedDict):
-    """Metadata for an individual page/slide/sheet."""
+class PageInfo(TypedDict, total=False):
+    """Metadata for an individual page/slide/sheet.
+
+    Captures per-page information including dimensions, content counts,
+    and visibility state (for presentations).
+    """
+
+    number: int
+    title: str | None
+    dimensions: tuple[float, float] | None
+    image_count: int | None
+    table_count: int | None
+    hidden: bool | None
+
+
+PageUnitType = Literal["page", "slide", "sheet"]
+"""Type of paginated unit in a document.
+
+Distinguishes between different types of "pages":
+- "page": Standard document pages (PDF, DOCX, images)
+- "slide": Presentation slides (PPTX, ODP)
+- "sheet": Spreadsheet sheets (XLSX, ODS)
+"""
+
+
+class PageStructure(TypedDict, total=False):
+    """Page structure metadata.
+
+    Contains information about pages/slides/sheets in a document, including
+    boundaries for mapping chunks to pages and detailed per-page metadata.
+    """
+
+    total_count: int
+    unit_type: PageUnitType
+    boundaries: list[PageBoundary] | None
+    pages: list[PageInfo] | None
+
+
+class PageContent(TypedDict):
+    """Content for a single page/slide.
+
+    When page extraction is enabled, documents are split into per-page content
+    with associated tables and images mapped to each page.
+    """
 
     page_number: int
     content: str
     tables: list[Table]
-    images: list[ExtractedImage] | None
-    boundaries: PageBoundary
+    images: list[ExtractedImage]
 
 
 class Chunk(TypedDict, total=False):
@@ -408,7 +449,7 @@ class ExtractionResult(TypedDict):
     detected_languages: list[str] | None
     chunks: list[Chunk] | None
     images: list[ExtractedImage] | None
-    pages: list[PageInfo] | None
+    pages: list[PageContent] | None
 
 
 __all__ = [
@@ -427,7 +468,10 @@ __all__ = [
     "OcrMetadata",
     "PageBoundary",
     "PageConfig",
+    "PageContent",
     "PageInfo",
+    "PageStructure",
+    "PageUnitType",
     "PdfMetadata",
     "PptxMetadata",
     "Table",
