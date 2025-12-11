@@ -337,7 +337,7 @@ jobs:
         shell: pwsh
         run: |
           $workspace = (Get-Location).Path
-          Add-Content -Path $env:GITHUB_ENV -Value "CGO_LDFLAGS=-L$workspace\target\x86_64-pc-windows-gnu\release -L$workspace\target\release"
+          Add-Content -Path $env:GITHUB_ENV -Value "CGO_LDFLAGS=-L$workspace\target\x86_64-pc-windows-gnu\release -L$workspace\target\release -lkreuzberg_ffi -static-libgcc -static-libstdc++"
 
       - name: Debug - Environment and CGO configuration
         shell: bash
