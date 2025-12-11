@@ -750,7 +750,7 @@ wheels = [
 
 [[package]]
 name = "docling-core"
-version = "2.54.1"
+version = "2.55.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonref" },
@@ -764,9 +764,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/31/9b/0804689b01667def131e57efd38a8cf4cbab847cd4db993068dfe75a3488/docling_core-2.54.1.tar.gz", hash = "sha256:c6595e8b84f5e9de7a0a6298206d749f4be5730824604e684f204078a3689985", size = 200260, upload-time = "2025-12-08T12:58:39.407Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e9/77/bad4f298c12b2fab737861178c04d9f21c741b65c561197a9fd918031c31/docling_core-2.55.0.tar.gz", hash = "sha256:184a61552d5947b0fb035d48231ae03d3165c4a749e961737652a0d110d53a3f", size = 203784, upload-time = "2025-12-10T10:44:19.303Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/40/e6/1e44ca753e0808bf5fa8782dfa3bbb7dbd54eb01a223f426a650a5361869/docling_core-2.54.1-py3-none-any.whl", hash = "sha256:2d22ee1cd8508fa7ffdd2e01ef30d7521390ff55ef240610f16be0cf54ffe73e", size = 200232, upload-time = "2025-12-08T12:58:37.914Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/a8/7c42ba02595c92c18a7b2fceb2f8b30d3a595d6283b130cc380fa6b2b01d/docling_core-2.55.0-py3-none-any.whl", hash = "sha256:dac64cd56d7f2fb471da1286dc9112c8c160bc69e451fcc12b97dd5019b38284", size = 202847, upload-time = "2025-12-10T10:44:17.681Z" },
 ]
 
 [package.optional-dependencies]
@@ -1942,7 +1942,7 @@ wheels = [
 
 [[package]]
 name = "modelscope"
-version = "1.32.0"
+version = "1.33.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -1951,9 +1951,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/4d/a0961c29177906dff58de5c328a0b183ca8ebf33961fe5a91ddbfd4fae9c/modelscope-1.32.0.tar.gz", hash = "sha256:b717c11cef11c57d1d47b69da06f5888e634925e72de9adc3ccb1d29c74c9821", size = 4556707, upload-time = "2025-11-18T02:39:31.81Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/02/db35ce865e66fd212fcf0cb5b43db3a3474cf82fae8d835b56ce7dba9247/modelscope-1.33.0.tar.gz", hash = "sha256:5d9ca8eb934cabea236104ed774b3ddf352f96c705272876108aaa25a3bb0b38", size = 4558673, upload-time = "2025-12-10T03:50:01.05Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/64/92/b24fd3d91d87bf2189a422d6acea736505616b54706eadf141d2298c7a1b/modelscope-1.32.0-py3-none-any.whl", hash = "sha256:b47711464766ac626b1ad72772619f05881deeeefdfc7c0b6495d4463963e24e", size = 6048504, upload-time = "2025-11-18T02:39:29.219Z" },
+    { url = "https://files.pythonhosted.org/packages/86/05/63f01821681b2be5d1739b4aad7b186c28d4ead2c5c99a9fc4aa53c13c19/modelscope-1.33.0-py3-none-any.whl", hash = "sha256:d9bdd566303f813d762e133410007eaf1b78f065c871228ab38640919b707489", size = 6050040, upload-time = "2025-12-10T03:49:58.428Z" },
 ]
 
 [[package]]
@@ -3821,7 +3821,7 @@ wheels = [
 
 [[package]]
 name = "rapidocr"
-version = "3.4.2"
+version = "3.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorlog" },
@@ -3838,7 +3838,7 @@ dependencies = [
     { name = "tqdm" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/83/5b8c8075954c5b61d938b8954710d986134c4ca7c32a841ad7d8c844cf6c/rapidocr-3.4.2-py3-none-any.whl", hash = "sha256:17845fa8cc9a20a935111e59482f2214598bba1547000cfd960d8924dd4522a5", size = 15056674, upload-time = "2025-10-11T14:43:00.296Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/a8/401c97c8fa6c7f964ace3bf11d8fad4902f07f969a0f4f5d7518f46ebeef/rapidocr-3.4.3-py3-none-any.whl", hash = "sha256:a007bf196c41e2c7321dfa570e8cef06cd7fb41d7a283b91b7e4b7b08623ed27", size = 15060208, upload-time = "2025-12-09T14:45:34.189Z" },
 ]
 
 [[package]]
@@ -5033,11 +5033,11 @@ wheels = [
 
 [[package]]
 name = "types-psutil"
-version = "7.1.3.20251202"
+version = "7.1.3.20251211"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/56/38/fe935d9e9e70f9f0aaa04b743673a72acafcb6410d7a565c7c333348faa3/types_psutil-7.1.3.20251202.tar.gz", hash = "sha256:5cfecaced7c486fb3995bb290eab45043d697a261718aca01b9b340d1ab7968a", size = 24948, upload-time = "2025-12-02T03:10:58.301Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/d5/85165865b060fed80b5991574c2ae0ddfd4786398dc8bceddfe0a8960b74/types_psutil-7.1.3.20251211.tar.gz", hash = "sha256:2c25f8fd3a1a4aebdffb861b97755c9a2d5d8019dd6ec1a2f2a77ec796652c89", size = 25198, upload-time = "2025-12-11T03:16:44.651Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/c3/7452fb13e3322885aa1f3c4b754fbb325eb666185656cb5982d720cc8fec/types_psutil-7.1.3.20251202-py3-none-any.whl", hash = "sha256:39bfc44780de7ab686c65169e36a7969db09e7f39d92de643b55789292953400", size = 31843, upload-time = "2025-12-02T03:10:57.153Z" },
+    { url = "https://files.pythonhosted.org/packages/29/61/658be05b56aeec195386b3f5c48cfa5bdaf8e989de3e4d802eeba457bd05/types_psutil-7.1.3.20251211-py3-none-any.whl", hash = "sha256:369872d955d7d47d77f4832b41e2300f832126e3fa97eb107d2d6a294c23c650", size = 32055, upload-time = "2025-12-11T03:16:43.864Z" },
 ]
 
 [[package]]

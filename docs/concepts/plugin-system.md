@@ -265,7 +265,7 @@ registry.register(CustomPDFExtractor())
 
 ## Cross-Language Plugin Support
 
-Plugins can be implemented in any supported language and interact seamlessly:
+Plugins can be implemented in any supported language and interact directly:
 
 ```mermaid
 flowchart LR

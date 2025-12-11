@@ -1,5 +1,5 @@
 /* Kreuzberg Custom Theme */
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap");
 
 /* Light Mode */
 :root > * {
@@ -42,38 +42,38 @@
 	--md-default-fg-color--dark: #ffffff;
 
 	/* BACKGROUNDS */
-	--md-default-bg-color: #23232C;
+	--md-default-bg-color: #23232c;
 	--md-default-bg-color--light: #2a2836;
-	--md-default-bg-color--dark: #23232C;
+	--md-default-bg-color--dark: #23232c;
 
 	/* SURFACES */
-	--md-primary-bg-color: #23232C;
+	--md-primary-bg-color: #23232c;
 	--md-shadow-z1: none;
 }
 
 /* Dark mode - force background color on all elements */
 [data-md-color-scheme="slate"] {
-	background-color: #23232C;
+	background-color: #23232c;
 }
 
 [data-md-color-scheme="slate"] .md-main {
-	background-color: #23232C;
+	background-color: #23232c;
 }
 
 [data-md-color-scheme="slate"] .md-content {
-	background-color: #23232C;
+	background-color: #23232c;
 }
 
 [data-md-color-scheme="slate"] .md-sidebar {
-	background-color: #23232C;
+	background-color: #23232c;
 }
 
 [data-md-color-scheme="slate"] .md-container {
-	background-color: #23232C;
+	background-color: #23232c;
 }
 
 [data-md-color-scheme="slate"] body {
-	background-color: #23232C;
+	background-color: #23232c;
 }
 
 /* Code Block Styling - Dark Mode Code Card Style */
@@ -91,17 +91,17 @@
 
 /* Code block title styling - Dark Mode */
 [data-md-color-scheme="slate"] .highlight .filename {
-	color: rgba(50, 48, 64, 0.60);
+	color: rgba(50, 48, 64, 0.6);
 	font-family: Inter, sans-serif;
 	font-size: 14px;
 	font-style: normal;
 	font-weight: 400;
 	line-height: 22px;
-    padding: 0 0 0 24px;
-    margin: 0;
+	padding: 0 0 0 24px;
+	margin: 0;
 	align-self: flex-start;
-    background: transparent url('/assets/icons/file.svg') no-repeat left center;
-    background-size: 16px 16px;
+	background: transparent url("/assets/icons/file.svg") no-repeat left center;
+	background-size: 16px 16px;
 }
 
 [data-md-color-scheme="slate"] .highlight pre {
@@ -147,7 +147,7 @@
 
 /* Code block title styling - Light Mode */
 [data-md-color-scheme="default"] .highlight .filename {
-	color: rgba(255, 255, 255, 0.60);
+	color: rgba(255, 255, 255, 0.6);
 	font-family: Inter, sans-serif;
 	font-size: 14px;
 	font-style: normal;
@@ -156,7 +156,7 @@
 	padding: 0 0 0 24px;
 	margin: 0;
 	align-self: flex-start;
-	background: transparent url('/assets/icons/file.svg') no-repeat left center;
+	background: transparent url("/assets/icons/file.svg") no-repeat left center;
 	background-size: 16px 16px;
 }
 
@@ -227,7 +227,7 @@
 [data-md-color-scheme="slate"] .highlight .c1,
 [data-md-color-scheme="slate"] .highlight .cm,
 [data-md-color-scheme="slate"] .highlight .ch {
-	color: rgba(50, 48, 64, 0.60);
+	color: rgba(50, 48, 64, 0.6);
 }
 
 /* Ruby/TOML keyword and name styling (dark mode) */
@@ -267,7 +267,7 @@
 [data-md-color-scheme="default"] .highlight .c1,
 [data-md-color-scheme="default"] .highlight .cm,
 [data-md-color-scheme="default"] .highlight .ch {
-	color: rgba(255, 255, 255, 0.60);
+	color: rgba(255, 255, 255, 0.6);
 }
 
 /* Ruby/TOML keyword and name styling (light mode) */
@@ -306,7 +306,7 @@
 [data-md-color-scheme="slate"] .language-bash .filename,
 [data-md-color-scheme="slate"] .language-sh .filename,
 [data-md-color-scheme="slate"] .language-console .filename {
-	background-image: url('/assets/icons/terminal.svg') !important;
+	background-image: url("/assets/icons/terminal.svg") !important;
 	background-repeat: no-repeat !important;
 	background-position: left center !important;
 	background-size: 16px 16px !important;
@@ -316,7 +316,7 @@
 [data-md-color-scheme="default"] .language-bash .filename,
 [data-md-color-scheme="default"] .language-sh .filename,
 [data-md-color-scheme="default"] .language-console .filename {
-	background-image: url('/assets/icons/terminal.svg') !important;
+	background-image: url("/assets/icons/terminal.svg") !important;
 	background-repeat: no-repeat !important;
 	background-position: left center !important;
 	background-size: 16px 16px !important;
@@ -336,7 +336,7 @@
 	font-weight: 400;
 	line-height: 22px;
 	margin-bottom: 0.75rem;
-	background-image: url('/assets/icons/terminal.svg');
+	background-image: url("/assets/icons/terminal.svg");
 	background-repeat: no-repeat;
 	background-position: left center;
 	background-size: 16px 16px;
@@ -357,7 +357,7 @@
 	font-weight: 400;
 	line-height: 22px;
 	margin-bottom: 0.75rem;
-	background-image: url('/assets/icons/terminal.svg');
+	background-image: url("/assets/icons/terminal.svg");
 	background-repeat: no-repeat;
 	background-position: left center;
 	background-size: 16px 16px;
@@ -386,7 +386,7 @@
 
 /* Button styling - dark mode */
 [data-md-color-scheme="slate"] .md-button--primary:hover {
-	background-color: #58FBDA;
+	background-color: #58fbda;
 	color: #000000;
 }
 
@@ -396,7 +396,7 @@
 
 /* Back to top button styling - dark mode */
 [data-md-color-scheme="slate"] .md-top:hover {
-	background-color: #58FBDA;
+	background-color: #58fbda;
 	color: #000000;
 }
 
@@ -447,8 +447,8 @@
 	padding: 6px 16px 6px 40px;
 	align-items: center;
 	border-radius: 4px;
-	background: #3D3A4D;
-	color: #99A1AF;
+	background: #3d3a4d;
+	color: #99a1af;
 	font-family: Inter, sans-serif;
 	font-size: 14px;
 	font-style: normal;
@@ -457,7 +457,7 @@
 }
 
 .md-search__input::placeholder {
-	color: #99A1AF;
+	color: #99a1af;
 	font-family: Inter, sans-serif;
 	font-size: 14px;
 	font-style: normal;
@@ -468,11 +468,11 @@
 
 /* Search icon - keep consistent color */
 .md-search__icon {
-	color: #99A1AF !important;
+	color: #99a1af !important;
 }
 
 .md-search__icon[for="__search"] {
-	color: #99A1AF !important;
+	color: #99a1af !important;
 }
 
 /* Header styling */
@@ -512,7 +512,7 @@
 /* Paragraph styling */
 .md-typeset p,
 .md-typeset li {
-	color: #5B5966;
+	color: #5b5966;
 	font-family: Inter, sans-serif;
 	font-size: 16px;
 	font-style: normal;
@@ -538,7 +538,7 @@
 
 /* Link styling */
 .md-typeset a {
-	color: #DA2AE0;
+	color: #da2ae0;
 	font-family: Inter, sans-serif;
 	font-size: 16px;
 	font-style: normal;
@@ -554,7 +554,7 @@
 
 /* Dark mode link styling */
 [data-md-color-scheme="slate"] .md-typeset a {
-	color: #58FBDA;
+	color: #58fbda;
 }
 
 /* Strong/bold text styling */
@@ -563,7 +563,7 @@ strong {
 }
 
 [data-md-color-scheme="slate"] strong {
-	color: #FFFFFF;
+	color: #ffffff;
 }
 
 /* Site title styling - Exo 2 font */
@@ -590,7 +590,7 @@ strong {
 
 /* Navigation bar background */
 .md-tabs {
-	background-color: #3D3A4D;
+	background-color: #3d3a4d;
 	width: 100%;
 }
 
@@ -654,7 +654,7 @@ strong {
 
 /* Sidebar navigation item styling */
 .md-nav__link {
-	color: #706E79;
+	color: #706e79;
 	font-family: Inter, sans-serif;
 	font-size: 14px;
 	font-style: normal;
@@ -664,7 +664,7 @@ strong {
 
 /* Active sidebar navigation link */
 .md-nav__link.md-nav__link--active {
-	color: #DA2AE0;
+	color: #da2ae0;
 }
 
 /* Dark mode sidebar navigation */
@@ -673,11 +673,11 @@ strong {
 }
 
 [data-md-color-scheme="slate"] .md-nav__link.md-nav__link--active {
-	color: #58FBDA;
+	color: #58fbda;
 }
 
 [data-md-color-scheme="slate"] .md-nav__link:hover {
-	color: #58FBDA;
+	color: #58fbda;
 }
 
 /* Top-level nav item gradient button style */
@@ -689,7 +689,7 @@ strong {
 .md-nav--lifted > .md-nav__list > .md-nav__item--active > .md-nav__link,
 .md-nav--lifted > .md-nav__list > .md-nav__item--active > label.md-nav__link,
 .md-nav--lifted > .md-nav__list > .md-nav__item--active > a.md-nav__link {
-	background: linear-gradient(90deg, rgba(88, 251, 218, 0.10) 0%, rgba(218, 42, 224, 0.10) 100%);
+	background: linear-gradient(90deg, rgba(88, 251, 218, 0.1) 0%, rgba(218, 42, 224, 0.1) 100%);
 	box-shadow: none;
 	border-radius: 4px;
 	padding: 8px 60px 8px 12px;
@@ -701,7 +701,7 @@ strong {
 [data-md-color-scheme="slate"] .md-nav--lifted > .md-nav__list > .md-nav__item--active > .md-nav__link,
 [data-md-color-scheme="slate"] .md-nav--lifted > .md-nav__list > .md-nav__item--active > label.md-nav__link,
 [data-md-color-scheme="slate"] .md-nav--lifted > .md-nav__list > .md-nav__item--active > a.md-nav__link {
-	color: #FFFFFF;
+	color: #ffffff;
 }
 
 /* Spacing between top-level nav link and items below */
@@ -747,7 +747,7 @@ nav.md-nav--secondary ul.md-nav__list {
 /* Table text color - dark mode */
 [data-md-color-scheme="slate"] .md-typeset table th,
 [data-md-color-scheme="slate"] .md-typeset table td {
-	color: #FFFFFF;
+	color: #ffffff;
 }
 
 /* Source file metadata styling - light mode (dimmer than paragraph color) */
@@ -786,7 +786,7 @@ nav.md-nav--secondary ul.md-nav__list {
 }
 
 [data-md-color-scheme="default"] .md-sidebar__scrollwrap::-webkit-scrollbar-thumb {
-	background-color: #DA2AE0;
+	background-color: #da2ae0;
 	border-radius: 3px;
 }
 
@@ -797,7 +797,7 @@ nav.md-nav--secondary ul.md-nav__list {
 /* Firefox scrollbar - light mode */
 [data-md-color-scheme="default"] .md-sidebar__scrollwrap {
 	scrollbar-width: thin;
-	scrollbar-color: #DA2AE0 transparent;
+	scrollbar-color: #da2ae0 transparent;
 }
 
 /* Sidebar scrollbar styling - dark mode */
@@ -810,7 +810,7 @@ nav.md-nav--secondary ul.md-nav__list {
 }
 
 [data-md-color-scheme="slate"] .md-sidebar__scrollwrap::-webkit-scrollbar-thumb {
-	background-color: #58FBDA;
+	background-color: #58fbda;
 	border-radius: 3px;
 }
 
@@ -821,6 +821,5 @@ nav.md-nav--secondary ul.md-nav__list {
 /* Firefox scrollbar - dark mode */
 [data-md-color-scheme="slate"] .md-sidebar__scrollwrap {
 	scrollbar-width: thin;
-	scrollbar-color: #58FBDA transparent;
+	scrollbar-color: #58fbda transparent;
 }
-

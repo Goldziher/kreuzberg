@@ -38,20 +38,23 @@ repos:
     rev: v2.3.8
     hooks:
       - id: biome-format
+        exclude: ^docs/snippets/
       - id: biome-lint
+        exclude: ^docs/snippets/
   - repo: https://github.com/oxc-project/mirrors-oxlint
     rev: v1.32.0
     hooks:
       - id: oxlint
         args: ["--fix"]
+        exclude: ^docs/snippets/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.8
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
-        exclude: ^(v3|benchmarks|scripts|crates)/
+        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
       - id: ruff-format
-        exclude: ^(v3|benchmarks|scripts|crates)/
+        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.11.0
     hooks:
@@ -66,7 +69,9 @@ repos:
     rev: v1.0
     hooks:
       - id: fmt
+        exclude: ^docs/snippets/
       - id: clippy
+        exclude: ^docs/snippets/
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.9
     hooks:
@@ -75,7 +80,7 @@ repos:
     rev: v0.6.30
     hooks:
       - id: cpd
-        exclude: "crates/kreuzberg-tesseract/third_party/.*"
+        exclude: "(crates/kreuzberg-tesseract/third_party/.*|^docs/snippets/)"
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
         files: ^packages/java/src/.*\.java$
@@ -104,11 +109,11 @@ repos:
         pass_filenames: false
       - id: mypy
         name: mypy
-        entry: uv run mypy
+        entry: uv run python -m mypy
         require_serial: true
         language: system
         types: [python]
-        exclude: ^(v3|benchmarks|scripts|crates|examples|e2e)/
+        exclude: ^(v3|benchmarks|scripts|crates|examples|e2e|docs/snippets|packages/python|tools|packages/ruby)/
       - id: dotnet-format
         name: dotnet format (packages/csharp)
         entry: bash -c 'cd packages/csharp && dotnet format Kreuzberg/Kreuzberg.csproj --verify-no-changes && dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj --verify-no-changes && dotnet format Benchmark/Benchmark.csproj --verify-no-changes'

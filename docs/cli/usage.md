@@ -639,6 +639,19 @@ The `serve` command starts a RESTful HTTP API server:
 
     --8<-- "snippets/cli/serve_java.md"
 
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    # Start API server on port 8000
+    Kreuzberg::APIProxy.run(port: 8000, host: '0.0.0.0') do |server|
+      puts "API server running on http://localhost:8000"
+      # Server runs while block executes
+      # Make HTTP requests to endpoint
+      sleep
+    end
+    ```
 
 The server provides endpoints for:
 - `/extract` - Extract text from uploaded files
@@ -672,6 +685,18 @@ The `mcp` command starts a Model Context Protocol server for AI integration:
 === "Java"
 
     --8<-- "snippets/cli/mcp_java.md"
+
+=== "Ruby"
+
+    ```ruby
+    require 'kreuzberg'
+
+    # Start MCP server for Claude Desktop
+    server = Kreuzberg::MCPProxy::Server.new(transport: 'stdio')
+    server.start
+    # Server communicates via stdio for Claude integration
+    ```
+
 The MCP server provides tools for AI agents:
 - `extract_file` - Extract text from a file path
 - `extract_bytes` - Extract text from base64-encoded bytes

@@ -1,23 +1,23 @@
 # Kreuzberg for Node.js
 
-[![npm](https://img.shields.io/npm/v/kreuzberg)](https://www.npmjs.com/package/kreuzberg)
+[![npm](https://img.shields.io/npm/v/%40kreuzberg%2Fnode)](https://www.npmjs.com/package/@kreuzberg/node)
 [![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
 [![PyPI](https://img.shields.io/pypi/v/kreuzberg)](https://pypi.org/project/kreuzberg/)
 [![RubyGems](https://img.shields.io/gem/v/kreuzberg)](https://rubygems.org/gems/kreuzberg)
-[![Node Version](https://img.shields.io/node/v/kreuzberg)](https://www.npmjs.com/package/kreuzberg)
+[![Node Version](https://img.shields.io/node/v/%40kreuzberg%2Fnode)](https://www.npmjs.com/package/@kreuzberg/node)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev)
 
 High-performance document intelligence for Node.js and TypeScript, powered by Rust.
 
-Extract text, tables, images, and metadata from 50+ file formats including PDF, DOCX, PPTX, XLSX, images, and more.
+Extract text, tables, images, and metadata from 56 file formats including PDF, DOCX, PPTX, XLSX, images, and more.
 
 > **🚀 Version 4.0.0 Release Candidate**
 > This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter.
 
 ## Features
 
-- **50+ File Formats**: PDF, DOCX, PPTX, XLSX, images, HTML, Markdown, XML, JSON, and more
+- **56 File Formats**: PDF, DOCX, PPTX, XLSX, images, HTML, Markdown, XML, JSON, and more
 - **OCR Support**: Built-in Tesseract, EasyOCR, and PaddleOCR backends for scanned documents
 - **Table Extraction**: Advanced table detection and structured data extraction
 - **High Performance**: Native Rust core provides 10-50x performance improvements over pure JavaScript
@@ -537,7 +537,7 @@ Processing 100 mixed documents (PDF, DOCX, XLSX):
 If you encounter errors about missing native modules:
 
 ```bash
-npm rebuild kreuzberg
+npm rebuild @kreuzberg/node
 ```
 
 ### OCR Not Working
@@ -653,7 +653,7 @@ For comprehensive documentation, visit [https://kreuzberg.dev](https://kreuzberg
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](https://github.com/kreuzberg-dev/kreuzberg/blob/main/docs/contributing.md) for details.
+We welcome contributions! Please see our [Contributing Guide](../../CONTRIBUTING.md) for details.
 
 ## License
 
@@ -666,4 +666,4 @@ MIT
 - [GitHub](https://github.com/kreuzberg-dev/kreuzberg)
 - [Issue Tracker](https://github.com/kreuzberg-dev/kreuzberg/issues)
 - [Changelog](https://github.com/kreuzberg-dev/kreuzberg/blob/main/CHANGELOG.md)
-- [npm Package](https://www.npmjs.com/package/kreuzberg)
+- [npm Package](https://www.npmjs.com/package/@kreuzberg/node)

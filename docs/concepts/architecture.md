@@ -7,7 +7,7 @@ Kreuzberg is built with a Rust-first, multi-language architecture designed for m
 The architecture follows three key principles:
 
 1. **Rust Core**: All performance-critical operations (PDF parsing, OCR, text processing) are implemented in Rust for speed, safety, and memory efficiency
-2. **Language-Agnostic Plugins**: The plugin system works across language boundaries, allowing Python OCR backends to integrate seamlessly with the Rust core
+2. **Language-Agnostic Plugins**: The plugin system works across language boundaries, allowing Python OCR backends to integrate directly with the Rust core
 3. **Zero-Copy Boundaries**: Data passes across FFI boundaries efficiently using zero-copy techniques where possible
 
 ## Multi-Language Architecture

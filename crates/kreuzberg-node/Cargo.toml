@@ -24,7 +24,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }
 base64 = { workspace = true }
-html-to-markdown-rs = { version = "2.12.0", default-features = false }
+html-to-markdown-rs = { version = "2.13.0", default-features = false }
 
 [build-dependencies]
 napi-build = "2.3"

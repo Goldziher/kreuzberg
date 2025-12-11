@@ -10,6 +10,7 @@
 *.dll
 *.dylib
 *.egg-info/
+*.gem
 *.log
 *.node
 *.pdb

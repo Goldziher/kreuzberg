@@ -104,7 +104,7 @@
 	"devDependencies": {
 		"@napi-rs/cli": "^3.5.0",
 		"@types/archiver": "^7.0.0",
-		"@types/node": "^24.10.2",
+		"@types/node": "^25.0.0",
 		"@types/which": "^3.0.4",
 		"@vitest/coverage-v8": "^4.0.15",
 		"archiver": "^7.0.1",

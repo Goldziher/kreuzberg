@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev)
 
-High-performance document intelligence for .NET. Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats.
+High-performance document intelligence for .NET. Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats.
 
 **Powered by a Rust core** – Native performance for document extraction with safe P/Invoke bindings.
 
@@ -16,7 +16,7 @@ High-performance document intelligence for .NET. Extract text, metadata, and str
 
 ## Features
 
-- **50+ File Formats**: PDF, DOCX, PPTX, XLSX, images, HTML, Markdown, XML, JSON, and more
+- **56 File Formats**: PDF, DOCX, PPTX, XLSX, images, HTML, Markdown, XML, JSON, and more
 - **OCR Support**: Built-in Tesseract OCR for scanned documents and images
 - **High Performance**: Rust-powered extraction for native-level performance
 - **Table Extraction**: Extract structured tables from documents
@@ -45,7 +45,7 @@ Install-Package Kreuzberg
 
 ```xml
 <ItemGroup>
-    <PackageReference Include="Kreuzberg" Version="4.0.0-rc1" />
+    <PackageReference Include="Kreuzberg" Version="4.0.0-rc.6" />
 </ItemGroup>
 ```
 
@@ -540,11 +540,10 @@ Check that:
 [https://kreuzberg.dev](https://kreuzberg.dev)
 
 - [Installation Guide](https://kreuzberg.dev/getting-started/installation/)
-- [User Guide](https://kreuzberg.dev/user-guide/)
-- [API Reference](https://kreuzberg.dev/api-reference/)
-- [Format Support](https://kreuzberg.dev/formats/)
-- [OCR Backends](https://kreuzberg.dev/user-guide/ocr-backends/)
-- [C# Guide](../../docs/guides/csharp.md)
+- [User Guide](https://kreuzberg.dev/guides/extraction/)
+- [API Reference](https://kreuzberg.dev/reference/api-csharp/)
+- [Format Support](https://kreuzberg.dev/reference/formats/)
+- [OCR Backends](https://kreuzberg.dev/guides/ocr/)
 
 ## License
 

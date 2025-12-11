@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev)
 
-High-performance document intelligence library for Rust. Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats.
+High-performance document intelligence library for Rust. Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats.
 
 This is the core Rust library that powers the Python, TypeScript, and Ruby bindings.
 

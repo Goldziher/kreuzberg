@@ -52,6 +52,10 @@ Kreuzberg uses the `text-splitter` library with two chunking strategies:
 
 ### Configuration
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/chunking_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/chunking_config.md"
@@ -90,6 +94,10 @@ Each chunk includes:
 - `embedding`: Optional embedding vector (if configured)
 
 ### Example: RAG Pipeline
+
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/chunking_rag.md"
 
 === "Go"
 
@@ -157,6 +165,10 @@ Detect languages in extracted text using the fast `whatlang` library. Supports 6
 
 ### Configuration
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/language_detection_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/language_detection_config.md"
@@ -205,6 +217,10 @@ ISO 639-3 codes including:
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/language_detection_multilingual.md"
+
 === "Go"
 
     --8<-- "snippets/go/language_detection_multilingual.md"
@@ -247,6 +263,10 @@ Generate embeddings for vector databases, semantic search, and RAG systems using
 
 ### Configuration
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/embedding_with_chunking.md"
+
 === "Go"
 
     --8<-- "snippets/go/embedding_with_chunking.md"
@@ -272,6 +292,10 @@ Generate embeddings for vector databases, semantic search, and RAG systems using
     --8<-- "snippets/typescript/embedding_with_chunking.md"
 
 ### Example: Vector Database Integration
+
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/vector_database_integration.md"
 
 === "Go"
 
@@ -311,6 +335,10 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
 
 ### Configuration
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/token_reduction_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/token_reduction_config.md"
@@ -336,6 +364,10 @@ Intelligently reduce token count while preserving meaning. Removes stopwords, re
     --8<-- "snippets/typescript/token_reduction_config.md"
 
 ### Example
+
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/token_reduction_example.md"
 
 === "Go"
 
@@ -382,6 +414,10 @@ Extract important keywords and phrases using YAKE or RAKE algorithms.
 
 ### Configuration
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/keyword_extraction_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/keyword_extraction_config.md"
@@ -407,6 +443,10 @@ Extract important keywords and phrases using YAKE or RAKE algorithms.
     --8<-- "snippets/typescript/keyword_extraction_config.md"
 
 ### Example
+
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/keyword_extraction_example.md"
 
 === "Go"
 
@@ -450,6 +490,10 @@ Automatic text quality scoring that detects OCR artifacts, script content, navig
 
 Quality processing is enabled by default:
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/quality_processing_config.md"
+
 === "Go"
 
     --8<-- "snippets/go/quality_processing_config.md"
@@ -485,6 +529,10 @@ The quality score ranges from 0.0 (lowest quality) to 1.0 (highest quality):
 
 ### Example
 
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/quality_processing_example.md"
+
 === "Go"
 
     --8<-- "snippets/go/quality_processing_example.md"
@@ -511,7 +559,11 @@ The quality score ranges from 0.0 (lowest quality) to 1.0 (highest quality):
 
 ## Combining Features
 
-Advanced features work seamlessly together:
+Advanced features work together:
+
+=== "C#"
+
+    --8<-- "snippets/csharp/advanced/combining_all_features.md"
 
 === "Go"
 

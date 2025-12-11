@@ -2,13 +2,13 @@
 
 [![PyPI](https://img.shields.io/pypi/v/kreuzberg)](https://pypi.org/project/kreuzberg/)
 [![Crates.io](https://img.shields.io/crates/v/kreuzberg)](https://crates.io/crates/kreuzberg)
-[![npm](https://img.shields.io/npm/v/kreuzberg)](https://www.npmjs.com/package/kreuzberg)
+[![npm](https://img.shields.io/npm/v/%40kreuzberg%2Fnode)](https://www.npmjs.com/package/@kreuzberg/node)
 [![RubyGems](https://img.shields.io/gem/v/kreuzberg)](https://rubygems.org/gems/kreuzberg)
 [![Python Versions](https://img.shields.io/pypi/pyversions/kreuzberg)](https://pypi.org/project/kreuzberg/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev)
 
-High-performance document intelligence for Python. Extract text, metadata, and structured information from PDFs, Office documents, images, and 50+ formats.
+High-performance document intelligence for Python. Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats.
 
 **Powered by a Rust core** – Native performance for document extraction.
 
@@ -444,10 +444,10 @@ config = ExtractionConfig(
 **[https://kreuzberg.dev](https://kreuzberg.dev)**
 
 - [Installation Guide](https://kreuzberg.dev/getting-started/installation/)
-- [User Guide](https://kreuzberg.dev/user-guide/)
-- [API Reference](https://kreuzberg.dev/api-reference/)
-- [Format Support](https://kreuzberg.dev/formats/)
-- [OCR Backends](https://kreuzberg.dev/user-guide/ocr-backends/)
+- [User Guide](https://kreuzberg.dev/guides/extraction/)
+- [API Reference](https://kreuzberg.dev/reference/api-python/)
+- [Format Support](https://kreuzberg.dev/reference/formats/)
+- [OCR Backends](https://kreuzberg.dev/guides/ocr/)
 
 ## License
 
