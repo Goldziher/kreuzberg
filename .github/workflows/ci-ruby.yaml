@@ -215,6 +215,11 @@ jobs:
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
 
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: ruby-test-${{ matrix.platform }}
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -307,6 +312,10 @@ jobs:
       - name: Build local native extension
         shell: bash
         run: scripts/ci/ruby/compile-extension.sh
+
+      - name: Build kreuzberg CLI binary
+        shell: bash
+        run: cargo build --release --package kreuzberg-cli
 
       - name: Run Ruby tests
         shell: bash
