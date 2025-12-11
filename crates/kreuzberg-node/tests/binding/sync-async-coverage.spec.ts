@@ -37,7 +37,7 @@ let sampleTextPath: string;
 let sampleTextBytes: Uint8Array;
 
 beforeAll(() => {
-	samplePdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+	samplePdfPath = getTestDocumentPath("pdf/simple.pdf");
 	samplePdfBytes = new Uint8Array(readFileSync(samplePdfPath));
 
 	sampleTextPath = getTestDocumentPath("pandoc/simple_metadata.md");

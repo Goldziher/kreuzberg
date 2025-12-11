@@ -10,7 +10,7 @@ function getTestDocumentPath(relativePath: string): string {
 }
 
 describe("Configuration Options", () => {
-	const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+	const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 	const pdfBytes = new Uint8Array(readFileSync(pdfPath));
 
 	describe("Basic configuration", () => {

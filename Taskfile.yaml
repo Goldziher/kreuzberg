@@ -399,7 +399,7 @@ tasks:
     desc: Run Python E2E tests
     dir: packages/python
     cmds:
-      - uv run pytest ../../e2e/python/tests
+      - uv run pytest ../../e2e/python/tests {{.CLI_ARGS}}
   e2e:python:verify:
     desc: Regenerate and validate Python E2E suite (generate + lint + test)
     cmds:
@@ -423,7 +423,7 @@ tasks:
     cmds:
       - pnpm install -r
       - cd crates/kreuzberg-node && pnpm build
-      - pnpm vitest run --root e2e/typescript/tests
+      - pnpm vitest run --root e2e/typescript/tests {{.CLI_ARGS}}
   e2e:ts:verify:
     desc: Regenerate and validate TypeScript E2E suite (generate + lint + test)
     cmds:
@@ -443,7 +443,7 @@ tasks:
     desc: Run Ruby E2E tests
     dir: packages/ruby
     cmds:
-      - "{{.BUNDLE}} exec rspec ../../e2e/ruby/spec"
+      - "{{.BUNDLE}} exec rspec ../../e2e/ruby/spec {{.CLI_ARGS}}"
   e2e:ruby:verify:
     desc: Regenerate and validate Ruby E2E suite (generate + lint + test)
     cmds:
@@ -458,7 +458,7 @@ tasks:
     desc: Run Java E2E tests
     dir: e2e/java
     cmds:
-      - mvn -B -DtrimStackTrace=false -Dsurefire.useFile=false test
+      - mvn -B -DtrimStackTrace=false -Dsurefire.useFile=false test {{.CLI_ARGS}}
   e2e:java:verify:
     desc: Regenerate and validate Java E2E suite
     cmds:

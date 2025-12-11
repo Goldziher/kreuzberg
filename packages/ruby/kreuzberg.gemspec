@@ -21,6 +21,15 @@ core_files =
                .map { |path| path.delete_prefix('crates/') }
                .map { |path| "vendor/#{path}" }
 
+# Include the kreuzberg-ffi crate
+ffi_prefix = 'crates/kreuzberg-ffi/'
+ffi_cmd = %(git -C "#{repo_root}" ls-files -z #{ffi_prefix})
+ffi_files =
+  `#{ffi_cmd}`.split("\x0")
+              .select { |path| path.start_with?(ffi_prefix) }
+              .map { |path| path.delete_prefix('crates/') }
+              .map { |path| "vendor/#{path}" }
+
 fallback_files = Dir.chdir(__dir__) do
   ruby_fallback = Dir.glob(
     %w[
@@ -52,7 +61,17 @@ fallback_files = Dir.chdir(__dir__) do
        .map { |path| "vendor/#{path.delete_prefix('crates/')}" }
   end
 
-  ruby_fallback + core_fallback
+  # Fallback for FFI crate - copy from repo root
+  ffi_fallback = Dir.chdir(repo_root) do
+    Dir.glob('crates/kreuzberg-ffi/**/*', File::FNM_DOTMATCH)
+       .reject { |f| File.directory?(f) }
+       .reject { |f| f.include?('/target/') }
+       .grep_v(/\.(swp|bak|tmp)$/)
+       .grep_v(/~$/)
+       .map { |path| "vendor/#{path.delete_prefix('crates/')}" }
+  end
+
+  ruby_fallback + core_fallback + ffi_fallback
 end
 
 # Check for vendored crates (copied during CI/packaging)
@@ -67,6 +86,16 @@ vendor_files = Dir.chdir(__dir__) do
                     else
                       []
                     end
+
+  kreuzberg_ffi_files = if Dir.exist?('vendor/kreuzberg-ffi')
+                          Dir.glob('vendor/kreuzberg-ffi/**/*', File::FNM_DOTMATCH)
+                             .reject { |f| File.directory?(f) }
+                             .reject { |f| f.include?('/target/') }
+                             .grep_v(/\.(swp|bak|tmp)$/)
+                             .grep_v(/~$/)
+                        else
+                          []
+                        end
 
   rb_sys_files = if Dir.exist?('vendor/rb-sys')
                    Dir.glob('vendor/rb-sys/**/*', File::FNM_DOTMATCH)
@@ -84,17 +113,17 @@ vendor_files = Dir.chdir(__dir__) do
                      []
                    end
 
-  kreuzberg_files + rb_sys_files + workspace_toml
+  kreuzberg_files + kreuzberg_ffi_files + rb_sys_files + workspace_toml
 end
 
 # Use git-tracked files if available, otherwise fallback to glob
 # Always include vendored files if they exist on disk (for CI packaging)
-files = if (ruby_files + core_files).empty?
+files = if (ruby_files + core_files + ffi_files).empty?
           fallback_files
         elsif vendor_files.any?
           ruby_files + vendor_files
         else
-          ruby_files + core_files
+          ruby_files + core_files + ffi_files
         end
 
 # Filter to only include files that actually exist

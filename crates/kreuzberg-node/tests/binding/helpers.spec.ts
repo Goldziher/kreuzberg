@@ -11,7 +11,7 @@ function getTestDocumentPath(relativePath: string): string {
 describe("Helper Functions and Edge Cases", () => {
 	describe("Metadata parsing", () => {
 		it("should parse JSON metadata from string", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(typeof result.metadata).toBe("object");
@@ -19,7 +19,7 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should handle metadata with nested objects", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, {
 				pdfOptions: { extractMetadata: true },
 			});
@@ -32,7 +32,7 @@ describe("Helper Functions and Edge Cases", () => {
 	});
 
 	describe("Result conversion", () => {
-		const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+		const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 
 		it("should convert raw result to ExtractionResult", () => {
 			const result = extractFileSync(pdfPath, null, null);
@@ -80,21 +80,21 @@ describe("Helper Functions and Edge Cases", () => {
 
 	describe("MIME type handling", () => {
 		it("should auto-detect MIME type when null", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(result.mimeType).toContain("application/pdf");
 		});
 
 		it("should use provided MIME type hint", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, "application/pdf", null);
 
 			expect(result.mimeType).toContain("application/pdf");
 		});
 
 		it("should require MIME type for bytes extraction", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const bytes = new Uint8Array(readFileSync(pdfPath));
 
 			const result = extractBytesSync(bytes, "application/pdf", null);
@@ -103,7 +103,7 @@ describe("Helper Functions and Edge Cases", () => {
 	});
 
 	describe("Buffer/Uint8Array conversion", () => {
-		const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+		const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 		const pdfBytes = readFileSync(pdfPath);
 
 		it("should handle Node.js Buffer", () => {
@@ -131,7 +131,7 @@ describe("Helper Functions and Edge Cases", () => {
 
 	describe("Content validation", () => {
 		it("should return string content", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(typeof result.content).toBe("string");
@@ -139,7 +139,7 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should return valid MIME type string", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(typeof result.mimeType).toBe("string");
@@ -148,7 +148,7 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should return valid metadata object", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(typeof result.metadata).toBe("object");
@@ -157,7 +157,7 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should return valid tables array", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(Array.isArray(result.tables)).toBe(true);
@@ -179,14 +179,14 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should handle files with special characters in path", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 			const result = extractFileSync(pdfPath, null, null);
 
 			expect(result.content).toBeTruthy();
 		});
 
 		it("should handle multiple extractions of same file", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 
 			const result1 = extractFileSync(pdfPath, null, null);
 			const result2 = extractFileSync(pdfPath, null, null);
@@ -197,7 +197,7 @@ describe("Helper Functions and Edge Cases", () => {
 		});
 
 		it("should handle extraction with different configs on same file", () => {
-			const pdfPath = getTestDocumentPath("pdfs/code_and_formula.pdf");
+			const pdfPath = getTestDocumentPath("pdf/simple.pdf");
 
 			const result1 = extractFileSync(pdfPath, null, { useCache: true });
 			const result2 = extractFileSync(pdfPath, null, { useCache: false });

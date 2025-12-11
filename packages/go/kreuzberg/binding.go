@@ -3,7 +3,7 @@ package kreuzberg
 /*
 #cgo CFLAGS: -I${SRCDIR}/../../../crates/kreuzberg-ffi
 #cgo !windows LDFLAGS: -L${SRCDIR}/../../../target/release -lkreuzberg_ffi
-#cgo windows LDFLAGS: -lkreuzberg_ffi -static-libgcc -static-libstdc++
+#cgo windows LDFLAGS: -L${SRCDIR}/../../../target/x86_64-pc-windows-gnu/release -L${SRCDIR}/../../../target/release -lkreuzberg_ffi -static-libgcc -static-libstdc++
 #include "../../../crates/kreuzberg-ffi/kreuzberg.h"
 #include <stdlib.h>
 #include <stdint.h>

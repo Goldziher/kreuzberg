@@ -43,9 +43,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>24</maven.compiler.source>
+        <maven.compiler.target>24</maven.compiler.target>
+        <maven.compiler.release>24</maven.compiler.release>
         <junit.version>5.11.4</junit.version>
         <maven.version>3.9.0</maven.version>
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
@@ -86,7 +86,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <release>25</release>
+                    <release>24</release>
                 </configuration>
                 <executions>
                     <!-- Compile benchmark helper script -->
@@ -247,13 +247,13 @@
             </plugin>
 
             <!-- PMD Plugin for code quality checks -->
-            <!-- NOTE: targetJdk pinned to 25 to align with project toolchain -->
+            <!-- NOTE: targetJdk pinned to 24 to align with project toolchain -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>${maven-pmd-plugin.version}</version>
                 <configuration>
-                    <targetJdk>25</targetJdk>
+                    <targetJdk>24</targetJdk>
                     <typeResolution>false</typeResolution>
                     <rulesets>
                         <ruleset>/rulesets/java/quickstart.xml</ruleset>
