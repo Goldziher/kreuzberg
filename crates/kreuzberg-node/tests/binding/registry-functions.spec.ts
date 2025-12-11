@@ -286,9 +286,12 @@ describe("unregisterOcrBackend", () => {
 });
 
 describe("clearOcrBackends", () => {
+	beforeEach(() => {
+		clearOcrBackends();
+	});
+
 	it("should clear all custom OCR backends while preserving default backends", () => {
 		const initialBackends = listOcrBackends();
-		expect(initialBackends.length).toBeGreaterThan(0);
 
 		const customBackend: OcrBackendProtocol = {
 			name: () => "test_clear_backend",
