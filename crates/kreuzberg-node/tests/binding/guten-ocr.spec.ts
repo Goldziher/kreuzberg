@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GutenOcrBackend } from "../../dist/index.js";
 
 // Valid minimal 1x1 PNG image for testing
 // This is a complete, valid PNG file that can be processed by image libraries
@@ -11,13 +10,15 @@ const validMinimalPng = new Uint8Array([
 ]);
 
 describe("GutenOcrBackend", () => {
-	describe("Constructor and basic properties", () => {
-		it("should create instance without options", () => {
+	describe("Constructor and basic properties", async () => {
+		it("should create instance without options", async () => {
+			const { GutenOcrBackend } = await import("../../dist/index.js");
 			const backend = new GutenOcrBackend();
 			expect(backend).toBeInstanceOf(GutenOcrBackend);
 		});
 
-		it("should create instance with custom options", () => {
+		it("should create instance with custom options", async () => {
+			const { GutenOcrBackend } = await import("../../dist/index.js");
 			const backend = new GutenOcrBackend({
 				models: {
 					detectionPath: "/custom/detection.onnx",
@@ -30,12 +31,14 @@ describe("GutenOcrBackend", () => {
 			expect(backend).toBeInstanceOf(GutenOcrBackend);
 		});
 
-		it("should return correct backend name", () => {
+		it("should return correct backend name", async () => {
+			const { GutenOcrBackend } = await import("../../dist/index.js");
 			const backend = new GutenOcrBackend();
 			expect(backend.name()).toBe("guten-ocr");
 		});
 
-		it("should return supported languages", () => {
+		it("should return supported languages", async () => {
+			const { GutenOcrBackend } = await import("../../dist/index.js");
 			const backend = new GutenOcrBackend();
 			const languages = backend.supportedLanguages();
 			expect(languages).toContain("en");
@@ -51,7 +54,6 @@ describe("GutenOcrBackend", () => {
 		let mockOcrInstance: any;
 
 		beforeEach(() => {
-			vi.resetModules();
 			mockOcrInstance = {
 				detect: vi.fn(),
 			};
@@ -61,32 +63,32 @@ describe("GutenOcrBackend", () => {
 		});
 
 		afterEach(() => {
-			vi.unstubAllGlobals();
+			vi.unmock("@gutenye/ocr-node");
+			vi.unmock("sharp");
 		});
 
 		it("should initialize successfully", async () => {
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({
 				default: mockOcrModule,
 			}));
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			await backend.initialize();
 		});
 
 		it("should throw error if @gutenye/ocr-node is not installed", async () => {
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => {
 				throw new Error("MODULE_NOT_FOUND");
 			});
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			await expect(backend.initialize()).rejects.toThrow(/requires the '@gutenye\/ocr-node' package/);
 		});
 
 		it("should throw error if OCR creation fails", async () => {
-			const backend = new GutenOcrBackend();
-
 			const failingModule = {
 				create: vi.fn().mockRejectedValue(new Error("Creation failed")),
 			};
@@ -95,15 +97,19 @@ describe("GutenOcrBackend", () => {
 				default: failingModule,
 			}));
 
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
+
 			await expect(backend.initialize()).rejects.toThrow(/Failed to initialize Guten OCR/);
 		});
 
 		it("should not reinitialize if already initialized", async () => {
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({
 				default: mockOcrModule,
 			}));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			await backend.initialize();
 			const firstCallCount = mockOcrModule.create.mock.calls.length;
@@ -121,11 +127,13 @@ describe("GutenOcrBackend", () => {
 				},
 				isDebug: true,
 			};
-			const backend = new GutenOcrBackend(options);
 
 			vi.doMock("@gutenye/ocr-node", () => ({
 				default: mockOcrModule,
 			}));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend(options);
 
 			await backend.initialize();
 			expect(mockOcrModule.create).toHaveBeenCalledWith(options);
@@ -134,6 +142,7 @@ describe("GutenOcrBackend", () => {
 
 	describe("Shutdown", () => {
 		it("should cleanup resources", async () => {
+			const { GutenOcrBackend } = await import("../../dist/index.js");
 			const backend = new GutenOcrBackend();
 			await backend.shutdown();
 		});
@@ -145,8 +154,6 @@ describe("GutenOcrBackend", () => {
 		let mockSharp: any;
 
 		beforeEach(() => {
-			vi.resetModules();
-
 			mockOcrInstance = {
 				detect: vi.fn().mockResolvedValue([
 					{
@@ -197,14 +204,16 @@ describe("GutenOcrBackend", () => {
 		});
 
 		afterEach(() => {
-			vi.unstubAllGlobals();
+			vi.unmock("@gutenye/ocr-node");
+			vi.unmock("sharp");
 		});
 
 		it("should process image successfully", async () => {
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			const result = await backend.processImage(validMinimalPng, "en");
 
@@ -219,10 +228,11 @@ describe("GutenOcrBackend", () => {
 		});
 
 		it("should auto-initialize if not initialized", async () => {
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			await backend.processImage(validMinimalPng, "en");
 
@@ -232,10 +242,11 @@ describe("GutenOcrBackend", () => {
 		it("should handle empty text detection", async () => {
 			mockOcrInstance.detect.mockResolvedValue([]);
 
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			const result = await backend.processImage(validMinimalPng, "en");
 
@@ -278,10 +289,11 @@ describe("GutenOcrBackend", () => {
 				},
 			]);
 
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			const result = await backend.processImage(validMinimalPng, "en");
 
@@ -289,11 +301,12 @@ describe("GutenOcrBackend", () => {
 		});
 
 		it("should throw error if initialization fails during processImage", async () => {
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => {
 				throw new Error("MODULE_NOT_FOUND");
 			});
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow();
 		});
@@ -301,10 +314,11 @@ describe("GutenOcrBackend", () => {
 		it("should throw error if OCR detection fails", async () => {
 			mockOcrInstance.detect.mockRejectedValue(new Error("Detection failed"));
 
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow(/Guten OCR processing failed/);
 		});
@@ -314,10 +328,11 @@ describe("GutenOcrBackend", () => {
 				throw new Error("Invalid image");
 			});
 
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: failingSharp }));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			const result = await backend.processImage(validMinimalPng, "en");
 
@@ -331,9 +346,10 @@ describe("GutenOcrBackend", () => {
 				create: vi.fn().mockResolvedValue(null),
 			};
 
-			const backend = new GutenOcrBackend();
-
 			vi.doMock("@gutenye/ocr-node", () => ({ default: nullModule }));
+
+			const { GutenOcrBackend } = await import("../../dist/index.js");
+			const backend = new GutenOcrBackend();
 
 			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow(
 				/Guten OCR backend failed to initialize/,
