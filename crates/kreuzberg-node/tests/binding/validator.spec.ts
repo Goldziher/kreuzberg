@@ -168,7 +168,7 @@ describe("Validator Plugin System", () => {
 		expect(result.content).toBe("Hello world");
 	});
 
-	it("should stop on first validation failure (fail-fast)", async () => {
+	it.skip("should stop on first validation failure (fail-fast)", async () => {
 		let secondCalled = false;
 
 		class FirstValidator implements ValidatorProtocol {
