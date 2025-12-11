@@ -2831,6 +2831,7 @@ dependencies = [
  "tempfile",
  "text-splitter",
  "thiserror 2.0.17",
+ "tiff",
  "tokio",
  "tokio-test",
  "toml 0.9.8",

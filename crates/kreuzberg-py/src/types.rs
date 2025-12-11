@@ -193,6 +193,65 @@ impl ExtractionResult {
             None
         };
 
+        let pages = if let Some(pgs) = result.pages {
+            let page_list = PyList::empty(py);
+            for page in pgs {
+                let page_dict = PyDict::new(py);
+                page_dict.set_item("page_number", page.page_number)?;
+                page_dict.set_item("content", &page.content)?;
+
+                let page_tables = PyList::empty(py);
+                for table in page.tables {
+                    page_tables.append(ExtractedTable::from_rust(table, py)?)?;
+                }
+                page_dict.set_item("tables", page_tables)?;
+
+                if let Some(imgs) = page.images {
+                    let page_images = PyList::empty(py);
+                    for img in imgs {
+                        let img_dict = PyDict::new(py);
+                        img_dict.set_item("data", pyo3::types::PyBytes::new(py, &img.data))?;
+                        img_dict.set_item("format", &img.format)?;
+                        img_dict.set_item("image_index", img.image_index)?;
+                        if let Some(page_num) = img.page_number {
+                            img_dict.set_item("page_number", page_num)?;
+                        }
+                        if let Some(width) = img.width {
+                            img_dict.set_item("width", width)?;
+                        }
+                        if let Some(height) = img.height {
+                            img_dict.set_item("height", height)?;
+                        }
+                        if let Some(colorspace) = &img.colorspace {
+                            img_dict.set_item("colorspace", colorspace)?;
+                        }
+                        if let Some(bits) = img.bits_per_component {
+                            img_dict.set_item("bits_per_component", bits)?;
+                        }
+                        img_dict.set_item("is_mask", img.is_mask)?;
+                        if let Some(desc) = &img.description {
+                            img_dict.set_item("description", desc)?;
+                        }
+                        page_images.append(img_dict)?;
+                    }
+                    page_dict.set_item("images", page_images)?;
+                } else {
+                    page_dict.set_item("images", py.None())?;
+                }
+
+                let boundary_dict = PyDict::new(py);
+                boundary_dict.set_item("byte_start", page.boundaries.byte_start)?;
+                boundary_dict.set_item("byte_end", page.boundaries.byte_end)?;
+                boundary_dict.set_item("page_number", page.boundaries.page_number)?;
+                page_dict.set_item("boundaries", boundary_dict)?;
+
+                page_list.append(page_dict)?;
+            }
+            Some(page_list.unbind())
+        } else {
+            None
+        };
+
         Ok(Self {
             content: result.content,
             mime_type: result.mime_type,
@@ -201,6 +260,7 @@ impl ExtractionResult {
             detected_languages,
             images,
             chunks,
+            pages,
         })
     }
 }

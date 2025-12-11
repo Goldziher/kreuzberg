@@ -124,6 +124,22 @@ export interface KeywordConfig {
 	rakeParams?: RakeParams;
 }
 
+/**
+ * Page tracking and extraction configuration.
+ *
+ * Controls how pages/slides/sheets are extracted and tracked in the document.
+ * Page range information in chunk metadata (first_page/last_page) is automatically
+ * enabled when page boundaries are available and chunking is configured.
+ */
+export interface PageConfig {
+	/** Extract pages as separate array (ExtractionResult.pages) */
+	extractPages?: boolean;
+	/** Insert page markers in main content string */
+	insertPageMarkers?: boolean;
+	/** Page marker format (use {page_num} placeholder) */
+	markerFormat?: string;
+}
+
 export interface ExtractionConfig {
 	useCache?: boolean;
 	enableQualityProcessing?: boolean;
@@ -137,6 +153,7 @@ export interface ExtractionConfig {
 	postprocessor?: PostProcessorConfig;
 	htmlOptions?: HtmlConversionOptions;
 	keywords?: KeywordConfig;
+	pages?: PageConfig;
 	maxConcurrentExtractions?: number;
 }
 
@@ -263,12 +280,91 @@ export interface ErrorMetadata {
 	message?: string;
 }
 
+/**
+ * Page boundary information for chunk metadata.
+ *
+ * Tracks where a specific page's content starts and ends in the main content string,
+ * enabling mapping from byte positions to page numbers. All offsets are guaranteed to be
+ * at valid UTF-8 character boundaries.
+ */
+export interface PageBoundary {
+	/** Byte offset where this page starts in the content string (UTF-8 valid boundary, inclusive) */
+	byteStart: number;
+	/** Byte offset where this page ends in the content string (UTF-8 valid boundary, exclusive) */
+	byteEnd: number;
+	/** Page number (1-indexed) */
+	pageNumber: number;
+}
+
+/**
+ * Type of paginated unit in a document.
+ *
+ * Distinguishes between different types of "pages":
+ * - "page": Standard document pages (PDF, DOCX, images)
+ * - "slide": Presentation slides (PPTX, ODP)
+ * - "sheet": Spreadsheet sheets (XLSX, ODS)
+ */
+export type PageUnitType = "page" | "slide" | "sheet";
+
+/**
+ * Detailed per-page metadata.
+ *
+ * Captures information about a single page/slide/sheet including dimensions,
+ * content counts, and visibility state.
+ */
+export interface PageInfo {
+	/** Page number (1-indexed) */
+	number: number;
+	/** Page title (usually for presentations) */
+	title?: string | null;
+	/** Dimensions in points (PDF) or pixels (images): [width, height] */
+	dimensions?: [number, number] | null;
+	/** Number of images on this page */
+	imageCount?: number | null;
+	/** Number of tables on this page */
+	tableCount?: number | null;
+	/** Whether this page is hidden (e.g., in presentations) */
+	hidden?: boolean | null;
+}
+
+/**
+ * Page structure metadata.
+ *
+ * Contains information about pages/slides/sheets in a document, including
+ * boundaries for mapping chunks to pages and detailed per-page metadata.
+ */
+export interface PageStructure {
+	/** Total number of pages/slides/sheets */
+	totalCount: number;
+	/** Type of paginated unit (page, slide, or sheet) */
+	unitType: PageUnitType;
+	/** Byte offset boundaries for each page */
+	boundaries?: PageBoundary[] | null;
+	/** Detailed per-page metadata (optional, only when needed) */
+	pages?: PageInfo[] | null;
+}
+
+/**
+ * Metadata about a chunk's position and properties in the document.
+ *
+ * Tracks where a chunk appears in the original document, including byte offsets
+ * and page ranges when page tracking is enabled.
+ */
 export interface ChunkMetadata {
-	charStart: number;
-	charEnd: number;
+	/** Byte offset where this chunk starts in the original text (UTF-8 valid boundary) */
+	byteStart: number;
+	/** Byte offset where this chunk ends in the original text (UTF-8 valid boundary) */
+	byteEnd: number;
+	/** Number of tokens in this chunk (if available from embedding model) */
 	tokenCount?: number | null;
+	/** Zero-based index of this chunk in the document */
 	chunkIndex: number;
+	/** Total number of chunks in the document */
 	totalChunks: number;
+	/** First page number this chunk spans (1-indexed, only when page tracking enabled) */
+	firstPage?: number | null;
+	/** Last page number this chunk spans (1-indexed, only when page tracking enabled) */
+	lastPage?: number | null;
 }
 
 export interface Chunk {
@@ -378,6 +474,8 @@ export interface Metadata {
 	image_preprocessing?: ImagePreprocessingMetadata | null;
 
 	json_schema?: Record<string, unknown> | null;
+
+	page_structure?: PageStructure | null;
 
 	error?: ErrorMetadata | null;
 

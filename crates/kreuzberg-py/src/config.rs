@@ -56,7 +56,8 @@ impl ExtractionConfig {
         keywords=None,
         postprocessor=None,
         html_options=None,
-        max_concurrent_extractions=None
+        max_concurrent_extractions=None,
+        pages=None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -73,6 +74,7 @@ impl ExtractionConfig {
         postprocessor: Option<PostProcessorConfig>,
         html_options: Option<Bound<'_, PyDict>>,
         max_concurrent_extractions: Option<usize>,
+        pages: Option<PageConfig>,
     ) -> PyResult<Self> {
         let (html_options_inner, html_options_dict) = parse_html_options_dict(html_options)?;
         Ok(Self {
@@ -90,6 +92,7 @@ impl ExtractionConfig {
                 postprocessor: postprocessor.map(Into::into),
                 html_options: html_options_inner,
                 max_concurrent_extractions,
+                pages: pages.map(Into::into),
             },
             html_options_dict,
         })
@@ -109,7 +112,8 @@ impl ExtractionConfig {
         language_detection=None,
         postprocessor=None,
         html_options=None,
-        max_concurrent_extractions=None
+        max_concurrent_extractions=None,
+        pages=None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -125,6 +129,7 @@ impl ExtractionConfig {
         postprocessor: Option<PostProcessorConfig>,
         html_options: Option<Bound<'_, PyDict>>,
         max_concurrent_extractions: Option<usize>,
+        pages: Option<PageConfig>,
     ) -> PyResult<Self> {
         let (html_options_inner, html_options_dict) = parse_html_options_dict(html_options)?;
         Ok(Self {
@@ -142,6 +147,7 @@ impl ExtractionConfig {
                 postprocessor: postprocessor.map(Into::into),
                 html_options: html_options_inner,
                 max_concurrent_extractions,
+                pages: pages.map(Into::into),
             },
             html_options_dict,
         })
@@ -280,6 +286,16 @@ impl ExtractionConfig {
         self.inner.html_options = parsed;
         self.html_options_dict = stored;
         Ok(())
+    }
+
+    #[getter]
+    fn pages(&self) -> Option<PageConfig> {
+        self.inner.pages.clone().map(Into::into)
+    }
+
+    #[setter]
+    fn set_pages(&mut self, value: Option<PageConfig>) {
+        self.inner.pages = value.map(Into::into);
     }
 
     fn __repr__(&self) -> String {
@@ -2267,6 +2283,83 @@ impl KeywordConfig {
 impl From<KeywordConfig> for kreuzberg::keywords::KeywordConfig {
     fn from(config: KeywordConfig) -> Self {
         config.inner
+    }
+}
+
+/// Page extraction and tracking configuration.
+///
+/// Controls how pages are extracted, tracked, and represented in the extraction results.
+///
+/// Example:
+///     >>> from kreuzberg import PageConfig
+///     >>> config = PageConfig(extract_pages=True, insert_page_markers=True)
+#[pyclass(name = "PageConfig", module = "kreuzberg")]
+#[derive(Clone)]
+pub struct PageConfig {
+    inner: kreuzberg::core::PageConfig,
+}
+
+#[pymethods]
+impl PageConfig {
+    #[new]
+    #[pyo3(signature = (extract_pages=None, insert_page_markers=None, marker_format=None))]
+    fn new(extract_pages: Option<bool>, insert_page_markers: Option<bool>, marker_format: Option<String>) -> Self {
+        Self {
+            inner: kreuzberg::core::PageConfig {
+                extract_pages: extract_pages.unwrap_or(false),
+                insert_page_markers: insert_page_markers.unwrap_or(false),
+                marker_format: marker_format.unwrap_or_else(|| "\n\n<!-- PAGE {page_num} -->\n\n".to_string()),
+            },
+        }
+    }
+
+    #[getter]
+    fn extract_pages(&self) -> bool {
+        self.inner.extract_pages
+    }
+
+    #[setter]
+    fn set_extract_pages(&mut self, value: bool) {
+        self.inner.extract_pages = value;
+    }
+
+    #[getter]
+    fn insert_page_markers(&self) -> bool {
+        self.inner.insert_page_markers
+    }
+
+    #[setter]
+    fn set_insert_page_markers(&mut self, value: bool) {
+        self.inner.insert_page_markers = value;
+    }
+
+    #[getter]
+    fn marker_format(&self) -> String {
+        self.inner.marker_format.clone()
+    }
+
+    #[setter]
+    fn set_marker_format(&mut self, value: String) {
+        self.inner.marker_format = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "PageConfig(extract_pages={}, insert_page_markers={}, marker_format='{}')",
+            self.inner.extract_pages, self.inner.insert_page_markers, self.inner.marker_format
+        )
+    }
+}
+
+impl From<PageConfig> for kreuzberg::core::PageConfig {
+    fn from(config: PageConfig) -> Self {
+        config.inner
+    }
+}
+
+impl From<kreuzberg::core::PageConfig> for PageConfig {
+    fn from(config: kreuzberg::core::PageConfig) -> Self {
+        Self { inner: config }
     }
 }
 

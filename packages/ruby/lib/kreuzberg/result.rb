@@ -42,31 +42,39 @@ module Kreuzberg
     #
     # @!attribute [r] content
     #   @return [String] Chunk content
-    # @!attribute [r] char_start
-    #   @return [Integer] Starting character index
-    # @!attribute [r] char_end
-    #   @return [Integer] Ending character index
+    # @!attribute [r] byte_start
+    #   @return [Integer] Starting byte offset (UTF-8)
+    # @!attribute [r] byte_end
+    #   @return [Integer] Ending byte offset (UTF-8)
     # @!attribute [r] token_count
     #   @return [Integer, nil] Approximate token count (may be nil)
+    # @!attribute [r] first_page
+    #   @return [Integer, nil] First page number (1-indexed)
+    # @!attribute [r] last_page
+    #   @return [Integer, nil] Last page number (1-indexed)
     #
     Chunk = Struct.new(
       :content,
-      :char_start,
-      :char_end,
+      :byte_start,
+      :byte_end,
       :token_count,
       :chunk_index,
       :total_chunks,
+      :first_page,
+      :last_page,
       :embedding,
       keyword_init: true
     ) do
       def to_h
         {
           content: content,
-          char_start: char_start,
-          char_end: char_end,
+          byte_start: byte_start,
+          byte_end: byte_end,
           token_count: token_count,
           chunk_index: chunk_index,
           total_chunks: total_chunks,
+          first_page: first_page,
+          last_page: last_page,
           embedding: embedding
         }
       end
@@ -180,11 +188,13 @@ module Kreuzberg
       chunks_data.map do |chunk_hash|
         Chunk.new(
           content: chunk_hash['content'],
-          char_start: chunk_hash['char_start'],
-          char_end: chunk_hash['char_end'],
+          byte_start: chunk_hash['byte_start'],
+          byte_end: chunk_hash['byte_end'],
           token_count: chunk_hash['token_count'],
           chunk_index: chunk_hash['chunk_index'],
           total_chunks: chunk_hash['total_chunks'],
+          first_page: chunk_hash['first_page'],
+          last_page: chunk_hash['last_page'],
           embedding: chunk_hash['embedding']
         )
       end

@@ -155,11 +155,39 @@ class ErrorMetadata(TypedDict, total=False):
 class ChunkMetadata(TypedDict):
     """Chunk metadata describing offsets within the original document."""
 
-    char_start: int
-    char_end: int
+    byte_start: int
+    byte_end: int
     token_count: int | None
     chunk_index: int
     total_chunks: int
+    first_page: int | None
+    last_page: int | None
+
+
+class PageBoundary(TypedDict):
+    """Page boundaries in the document content."""
+
+    byte_start: int
+    byte_end: int
+    page_number: int
+
+
+class PageConfig(TypedDict, total=False):
+    """Page extraction configuration."""
+
+    extract_pages: bool
+    insert_page_markers: bool
+    marker_format: str
+
+
+class PageInfo(TypedDict):
+    """Metadata for an individual page/slide/sheet."""
+
+    page_number: int
+    content: str
+    tables: list[Table]
+    images: list[ExtractedImage] | None
+    boundaries: PageBoundary
 
 
 class Chunk(TypedDict, total=False):
@@ -370,6 +398,7 @@ class ExtractionResult(TypedDict):
         detected_languages: List of detected language codes (ISO 639-1)
         chunks: Optional list of text chunks with embeddings and metadata
         images: Optional list of extracted images (with nested OCR results)
+        pages: Optional list of per-page content when page extraction is enabled
     """
 
     content: str
@@ -379,6 +408,7 @@ class ExtractionResult(TypedDict):
     detected_languages: list[str] | None
     chunks: list[Chunk] | None
     images: list[ExtractedImage] | None
+    pages: list[PageInfo] | None
 
 
 __all__ = [
@@ -395,6 +425,9 @@ __all__ = [
     "ImagePreprocessingMetadata",
     "Metadata",
     "OcrMetadata",
+    "PageBoundary",
+    "PageConfig",
+    "PageInfo",
     "PdfMetadata",
     "PptxMetadata",
     "Table",

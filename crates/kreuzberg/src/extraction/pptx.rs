@@ -225,11 +225,8 @@ impl ContentBuilder {
             self.content.push_str(&marker);
         }
 
-        // Add traditional slide header comment
-        self.content.reserve(50);
-        self.content.push_str("\n\n<!-- Slide number: ");
-        self.content.push_str(&slide_number.to_string());
-        self.content.push_str(" -->\n");
+        // Note: Slide header is added by to_markdown() based on include_slide_comment config
+        // Don't add it here to avoid duplication
 
         byte_start
     }
@@ -1164,8 +1161,7 @@ pub fn extract_pptx_from_path(
         let byte_start = if page_config.is_some() {
             content_builder.start_slide(slide.slide_number)
         } else {
-            content_builder.add_slide_header(slide.slide_number);
-            0 // Not tracked
+            0 // Not tracked, header added by to_markdown()
         };
 
         let slide_content = slide.to_markdown(&config);
@@ -1253,9 +1249,19 @@ pub fn extract_pptx_from_bytes(
     // IO errors must bubble up - temp file write issues need user reports ~keep
     std::fs::write(&temp_path, data)?;
 
-    let result = extract_pptx_from_path(temp_path.to_str().unwrap(), extract_images, page_config);
+    // Ensure cleanup happens even on error, validate path encoding
+    let result = extract_pptx_from_path(
+        temp_path.to_str().ok_or_else(|| {
+            crate::KreuzbergError::validation("Invalid temp path - contains invalid UTF-8".to_string())
+        })?,
+        extract_images,
+        page_config,
+    );
 
-    let _ = std::fs::remove_file(&temp_path);
+    // Clean up temp file, log error but don't fail the operation
+    if let Err(e) = std::fs::remove_file(&temp_path) {
+        tracing::warn!("Failed to remove temp PPTX file: {}", e);
+    }
 
     result
 }

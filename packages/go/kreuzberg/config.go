@@ -36,6 +36,7 @@ type ExtractionConfig struct {
 	Keywords                 *KeywordConfig           `json:"keywords,omitempty"`
 	Postprocessor            *PostProcessorConfig     `json:"postprocessor,omitempty"`
 	HTMLOptions              *HTMLConversionOptions   `json:"html_options,omitempty"`
+	Pages                    *PageConfig              `json:"pages,omitempty"`
 	MaxConcurrentExtractions *int                     `json:"max_concurrent_extractions,omitempty"`
 }
 
@@ -211,4 +212,11 @@ type HTMLConversionOptions struct {
 	StripTags          []string                  `json:"strip_tags,omitempty"`
 	PreserveTags       []string                  `json:"preserve_tags,omitempty"`
 	Preprocessing      *HTMLPreprocessingOptions `json:"preprocessing,omitempty"`
+}
+
+// PageConfig configures page tracking and extraction.
+type PageConfig struct {
+	ExtractPages      *bool   `json:"extract_pages,omitempty"`
+	InsertPageMarkers *bool   `json:"insert_page_markers,omitempty"`
+	MarkerFormat      *string `json:"marker_format,omitempty"`
 }

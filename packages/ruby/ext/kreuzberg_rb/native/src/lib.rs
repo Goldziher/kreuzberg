@@ -1050,6 +1050,36 @@ fn html_options_to_ruby_hash(ruby: &Ruby, options: &ConversionOptions) -> Result
 
     Ok(hash)
 }
+
+/// Parse PageConfig from Ruby Hash
+fn parse_page_config(ruby: &Ruby, hash: RHash) -> Result<PageConfig, Error> {
+    let extract_pages = if let Some(val) = get_kw(ruby, hash, "extract_pages") {
+        bool::try_convert(val)?
+    } else {
+        false
+    };
+
+    let insert_page_markers = if let Some(val) = get_kw(ruby, hash, "insert_page_markers") {
+        bool::try_convert(val)?
+    } else {
+        false
+    };
+
+    let marker_format = if let Some(val) = get_kw(ruby, hash, "marker_format") {
+        String::try_convert(val)?
+    } else {
+        "\n\n<!-- PAGE {page_num} -->\n\n".to_string()
+    };
+
+    let config = PageConfig {
+        extract_pages,
+        insert_page_markers,
+        marker_format,
+    };
+
+    Ok(config)
+}
+
 /// Parse ExtractionConfig from Ruby Hash
 fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<ExtractionConfig, Error> {
     let mut config = ExtractionConfig::default();
@@ -1128,6 +1158,13 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
         {
             let html_hash = RHash::try_convert(val)?;
             config.html_options = Some(parse_html_options(ruby, html_hash)?);
+        }
+
+        if let Some(val) = get_kw(ruby, hash, "pages")
+            && !val.is_nil()
+        {
+            let pages_hash = RHash::try_convert(val)?;
+            config.pages = Some(parse_page_config(ruby, pages_hash)?);
         }
 
         if let Some(val) = get_kw(ruby, hash, "max_concurrent_extractions") {
@@ -1532,8 +1569,8 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         for chunk in chunks {
             let chunk_hash = ruby.hash_new();
             chunk_hash.aset("content", chunk.content)?;
-            chunk_hash.aset("char_start", chunk.metadata.byte_start)?;
-            chunk_hash.aset("char_end", chunk.metadata.byte_end)?;
+            chunk_hash.aset("byte_start", chunk.metadata.byte_start)?;
+            chunk_hash.aset("byte_end", chunk.metadata.byte_end)?;
             if let Some(token_count) = chunk.metadata.token_count {
                 chunk_hash.aset("token_count", token_count)?;
             } else {
@@ -1541,6 +1578,16 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
             }
             chunk_hash.aset("chunk_index", chunk.metadata.chunk_index)?;
             chunk_hash.aset("total_chunks", chunk.metadata.total_chunks)?;
+            if let Some(first_page) = chunk.metadata.first_page {
+                chunk_hash.aset("first_page", first_page as i64)?;
+            } else {
+                chunk_hash.aset("first_page", ruby.qnil().as_value())?;
+            }
+            if let Some(last_page) = chunk.metadata.last_page {
+                chunk_hash.aset("last_page", last_page as i64)?;
+            } else {
+                chunk_hash.aset("last_page", ruby.qnil().as_value())?;
+            }
             if let Some(embedding) = chunk.embedding {
                 let embedding_array = ruby.ary_new();
                 for value in embedding {

@@ -248,8 +248,8 @@ func TestChunkingInResult(t *testing.T) {
 		chunk := Chunk{
 			Content: "chunk content",
 			Metadata: ChunkMetadata{
-				CharStart:   0,
-				CharEnd:     13,
+				ByteStart:   0,
+				ByteEnd:     13,
 				ChunkIndex:  0,
 				TotalChunks: 1,
 			},
@@ -269,8 +269,8 @@ func TestChunkingInResult(t *testing.T) {
 		chunk1 := Chunk{
 			Content: "first part",
 			Metadata: ChunkMetadata{
-				CharStart:   0,
-				CharEnd:     10,
+				ByteStart:   0,
+				ByteEnd:     10,
 				ChunkIndex:  0,
 				TotalChunks: 2,
 			},
@@ -278,8 +278,8 @@ func TestChunkingInResult(t *testing.T) {
 		chunk2 := Chunk{
 			Content: "second part",
 			Metadata: ChunkMetadata{
-				CharStart:   5,
-				CharEnd:     16,
+				ByteStart:   5,
+				ByteEnd:     16,
 				ChunkIndex:  1,
 				TotalChunks: 2,
 			},
@@ -806,8 +806,8 @@ func TestChunkingWithEmbeddings(t *testing.T) {
 		Content:   "test chunk",
 		Embedding: []float32{0.1, 0.2, 0.3},
 		Metadata: ChunkMetadata{
-			CharStart:  0,
-			CharEnd:    10,
+			ByteStart:  0,
+			ByteEnd:    10,
 			TokenCount: IntPtr(3),
 		},
 	}

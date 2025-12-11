@@ -1,6 +1,7 @@
 //! Image extraction functionality.
 //!
-//! This module provides functions for extracting metadata and EXIF data from images.
+//! This module provides functions for extracting metadata and EXIF data from images,
+//! including support for multi-frame TIFF files.
 
 use crate::error::{KreuzbergError, Result};
 use exif::{In, Reader, Tag};
@@ -92,6 +93,137 @@ fn extract_exif_data(bytes: &[u8]) -> HashMap<String, String> {
     }
 
     exif_map
+}
+
+/// Result of OCR extraction from an image with optional page tracking.
+#[derive(Debug, Clone)]
+pub struct ImageOcrResult {
+    /// Extracted text content
+    pub content: String,
+    /// Character byte boundaries per frame (for multi-frame TIFFs)
+    pub boundaries: Option<Vec<crate::types::PageBoundary>>,
+    /// Per-frame content information
+    pub page_contents: Option<Vec<crate::types::PageContent>>,
+}
+
+/// Detects the number of frames in a TIFF file.
+///
+/// Returns the count of image frames/pages in a TIFF. Single-frame TIFFs return 1.
+/// Invalid or non-TIFF data returns an error.
+///
+/// # Arguments
+/// * `bytes` - Raw TIFF file bytes
+///
+/// # Returns
+/// Frame count if valid TIFF, error otherwise.
+#[cfg(feature = "ocr")]
+fn detect_tiff_frame_count(bytes: &[u8]) -> Result<usize> {
+    use tiff::decoder::Decoder;
+    let mut decoder =
+        Decoder::new(Cursor::new(bytes)).map_err(|e| KreuzbergError::parsing(format!("TIFF decode: {}", e)))?;
+
+    let mut count = 1;
+    while decoder.next_image().is_ok() {
+        count += 1;
+    }
+    Ok(count)
+}
+
+/// Extract text from image bytes using OCR with optional page tracking for multi-frame TIFFs.
+///
+/// This function:
+/// - Detects if the image is a multi-frame TIFF
+/// - For multi-frame TIFFs with PageConfig enabled, iterates frames and tracks boundaries
+/// - For single-frame images or when page tracking is disabled, runs OCR on the whole image
+/// - Returns (content, boundaries, page_contents) tuple
+///
+/// # Arguments
+/// * `bytes` - Image file bytes
+/// * `mime_type` - MIME type (e.g., "image/tiff")
+/// * `ocr_result` - OCR backend result containing the text
+/// * `page_config` - Optional page configuration for boundary tracking
+///
+/// # Returns
+/// ImageOcrResult with content and optional boundaries for pagination
+#[cfg(feature = "ocr")]
+pub fn extract_text_from_image_with_ocr(
+    bytes: &[u8],
+    mime_type: &str,
+    ocr_result: String,
+    page_config: Option<&crate::core::config::PageConfig>,
+) -> Result<ImageOcrResult> {
+    // Check if this is a TIFF and if we should track pages
+    let is_tiff = mime_type.to_lowercase().contains("tiff");
+    let should_track_pages = page_config.is_some() && is_tiff;
+
+    if !should_track_pages {
+        // Fast path: single frame or no page tracking requested
+        return Ok(ImageOcrResult {
+            content: ocr_result,
+            boundaries: None,
+            page_contents: None,
+        });
+    }
+
+    // Slow path: multi-frame TIFF with page tracking
+    let frame_count = detect_tiff_frame_count(bytes)?;
+
+    if frame_count <= 1 {
+        // Single-frame TIFF, no pagination needed
+        return Ok(ImageOcrResult {
+            content: ocr_result,
+            boundaries: None,
+            page_contents: None,
+        });
+    }
+
+    // Multi-frame TIFF with page tracking enabled
+    // For now, we return the concatenated content with frame boundaries
+    // The boundaries assume uniform distribution of content across frames
+    let content_len = ocr_result.len();
+    let content_per_frame = if frame_count > 0 {
+        content_len / frame_count
+    } else {
+        content_len
+    };
+
+    let mut boundaries = Vec::new();
+    let mut page_contents = Vec::new();
+    let mut byte_offset = 0;
+
+    for frame_num in 1..=frame_count {
+        // Calculate frame end, adjusting to valid UTF-8 boundary
+        let frame_end = if frame_num == frame_count {
+            content_len
+        } else {
+            let raw_end = (frame_num * content_per_frame).min(content_len);
+            // Find next valid UTF-8 boundary to prevent slicing multi-byte chars
+            (raw_end..=content_len)
+                .find(|&i| ocr_result.is_char_boundary(i))
+                .unwrap_or(content_len)
+        };
+
+        boundaries.push(crate::types::PageBoundary {
+            byte_start: byte_offset,
+            byte_end: frame_end,
+            page_number: frame_num,
+        });
+
+        page_contents.push(crate::types::PageContent {
+            page_number: frame_num,
+            content: ocr_result[byte_offset..frame_end].to_string(),
+            tables: vec![],
+            images: vec![],
+        });
+
+        byte_offset = frame_end;
+    }
+
+    Ok(ImageOcrResult {
+        content: ocr_result,
+        boundaries: Some(boundaries),
+        page_contents: Some(page_contents),
+    })
 }
 
 #[cfg(test)]
