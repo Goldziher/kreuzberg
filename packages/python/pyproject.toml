@@ -105,6 +105,7 @@ markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "windows_slow: marks tests as too slow on Windows CI (deselect with '-m \"not windows_slow\"')",
   "integration: marks tests as integration tests (requires running services)",
+  "cli_features: marks tests that require CLI binary built with --features all (deselect with '-m \"not cli_features\"')",
 ]
 # Timeout exceptions are ignored by default, re-raise them
 timeout_func_only = true

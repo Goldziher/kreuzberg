@@ -40,7 +40,7 @@ describe("Validator Plugin System", () => {
 		expect(result.content).toBe("Test content");
 	});
 
-	it.skip("should fail when validator throws ValidationError", async () => {
+	it("should fail when validator throws ValidationError", async () => {
 		class ContentLengthValidator implements ValidatorProtocol {
 			name(): string {
 				return "content_length";
@@ -168,7 +168,7 @@ describe("Validator Plugin System", () => {
 		expect(result.content).toBe("Hello world");
 	});
 
-	it.skip("should stop on first validation failure (fail-fast)", async () => {
+	it("should stop on first validation failure (fail-fast)", async () => {
 		let secondCalled = false;
 
 		class FirstValidator implements ValidatorProtocol {

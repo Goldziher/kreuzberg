@@ -113,7 +113,7 @@ describe("MIME Utility Functions", () => {
 			expect(mimeType).toBe("application/pdf");
 		});
 
-		it.skip("should work without checking file existence when checkExists is false", () => {
+		it("should work without checking file existence when checkExists is false", () => {
 			const nonExistentFile = join(tempDir, "nonexistent.pdf");
 
 			const mimeType = detectMimeTypeFromPath(nonExistentFile, false);

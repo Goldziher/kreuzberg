@@ -1,5 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+/*
+ * NOTE: Many tests in this file are skipped due to Vitest module mocking limitations.
+ *
+ * The tests use `vi.doMock()` inside test bodies with dynamic imports:
+ *   vi.doMock("@gutenye/ocr-node", () => ({...}));
+ *   const { GutenOcrBackend } = await import("../../dist/index.js");
+ *
+ * This pattern doesn't work reliably because:
+ * - The module may already be cached from previous tests
+ * - vi.doMock() called in test body doesn't intercept subsequent imports
+ * - Module cache persists even with singleThread: true
+ *
+ * Potential fix: Use vi.mock() at module scope or vi.resetModules() before each import,
+ * but this requires significant test restructuring.
+ */
+
 // Valid minimal 1x1 PNG image for testing
 // This is a complete, valid PNG file that can be processed by image libraries
 const validMinimalPng = new Uint8Array([
@@ -77,6 +93,7 @@ describe("GutenOcrBackend", () => {
 			await backend.initialize();
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should throw error if @gutenye/ocr-node is not installed", async () => {
 			vi.doMock("@gutenye/ocr-node", () => {
 				throw new Error("MODULE_NOT_FOUND");
@@ -88,6 +105,7 @@ describe("GutenOcrBackend", () => {
 			await expect(backend.initialize()).rejects.toThrow(/requires the '@gutenye\/ocr-node' package/);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should throw error if OCR creation fails", async () => {
 			const failingModule = {
 				create: vi.fn().mockRejectedValue(new Error("Creation failed")),
@@ -103,6 +121,7 @@ describe("GutenOcrBackend", () => {
 			await expect(backend.initialize()).rejects.toThrow(/Failed to initialize Guten OCR/);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should not reinitialize if already initialized", async () => {
 			vi.doMock("@gutenye/ocr-node", () => ({
 				default: mockOcrModule,
@@ -118,6 +137,7 @@ describe("GutenOcrBackend", () => {
 			expect(mockOcrModule.create).toHaveBeenCalledTimes(firstCallCount);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should pass options to OCR create", async () => {
 			const options = {
 				models: {
@@ -208,6 +228,7 @@ describe("GutenOcrBackend", () => {
 			vi.unmock("sharp");
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should process image successfully", async () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
@@ -227,6 +248,7 @@ describe("GutenOcrBackend", () => {
 			expect(result.tables).toEqual([]);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should auto-initialize if not initialized", async () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({ default: mockSharp }));
@@ -239,6 +261,7 @@ describe("GutenOcrBackend", () => {
 			expect(mockOcrModule.create).toHaveBeenCalled();
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should handle empty text detection", async () => {
 			mockOcrInstance.detect.mockResolvedValue([]);
 
@@ -255,6 +278,7 @@ describe("GutenOcrBackend", () => {
 			expect(result.metadata.text_regions).toBe(0);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should calculate average confidence correctly", async () => {
 			mockOcrInstance.detect.mockResolvedValue([
 				{
@@ -300,6 +324,7 @@ describe("GutenOcrBackend", () => {
 			expect(result.metadata.confidence).toBeCloseTo(0.8333, 3);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should throw error if initialization fails during processImage", async () => {
 			vi.doMock("@gutenye/ocr-node", () => {
 				throw new Error("MODULE_NOT_FOUND");
@@ -311,6 +336,7 @@ describe("GutenOcrBackend", () => {
 			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow();
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should throw error if OCR detection fails", async () => {
 			mockOcrInstance.detect.mockRejectedValue(new Error("Detection failed"));
 
@@ -323,6 +349,7 @@ describe("GutenOcrBackend", () => {
 			await expect(backend.processImage(validMinimalPng, "en")).rejects.toThrow(/Guten OCR processing failed/);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should continue if sharp processing fails", async () => {
 			const failingSharp = vi.fn().mockImplementation(() => {
 				throw new Error("Invalid image");
@@ -341,6 +368,7 @@ describe("GutenOcrBackend", () => {
 			expect(result.content).toContain("Hello");
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should throw error if OCR instance is null after initialization", async () => {
 			const nullModule = {
 				create: vi.fn().mockResolvedValue(null),
@@ -356,6 +384,7 @@ describe("GutenOcrBackend", () => {
 			);
 		});
 
+		// Skipped: vi.doMock() in test body with dynamic import does not work reliably
 		it.skip("should emit debug logs when KREUZBERG_DEBUG_GUTEN is enabled", async () => {
 			vi.doMock("@gutenye/ocr-node", () => ({ default: mockOcrModule }));
 			vi.doMock("sharp", () => ({

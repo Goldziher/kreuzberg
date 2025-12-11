@@ -1,4 +1,19 @@
-"""Tests for CLI server commands (serve and mcp) via Python proxy."""
+"""Tests for CLI server commands (serve and mcp) via Python proxy.
+
+These tests require the CLI binary to be compiled with '--features all' to enable
+the 'serve' (REST API) and 'mcp' (Model Context Protocol) features.
+
+To run these tests locally:
+    maturin develop --release --cargo-extra-args="--features all"
+
+Or build the CLI separately then rebuild Python bindings:
+    cd /path/to/kreuzberg
+    cargo build --release -p kreuzberg-cli --features all
+    cd packages/python
+    maturin develop --release
+
+See crates/kreuzberg-cli/README.md for more details on CLI features.
+"""
 
 import contextlib
 import socket
@@ -19,6 +34,22 @@ def _get_free_port() -> int:
         return addr[1]
 
 
+def _cli_feature_unavailable_skip(command: str, stderr: str) -> None:
+    """Skip test with helpful message about missing CLI features."""
+    message = (
+        f"CLI '{command}' command not available. The CLI binary was compiled without "
+        f"the required feature (--features all). This is expected in default installations.\n"
+        f"\nTo enable these tests, rebuild with:\n"
+        f"    maturin develop --release --cargo-extra-args='--features all'\n"
+        f"\nOr separately:\n"
+        f"    cargo build --release -p kreuzberg-cli --features all\n"
+        f"    maturin develop --release\n"
+        f"\nStderr: {stderr}"
+    )
+    pytest.skip(message)
+
+
+@pytest.mark.cli_features
 @pytest.mark.timeout(60)
 def test_serve_command_help() -> None:
     """Test that serve command help is accessible via Python CLI proxy."""
@@ -31,17 +62,12 @@ def test_serve_command_help() -> None:
             check=False,
         )
     except subprocess.TimeoutExpired as e:
-        stdout = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout if e.stdout else "")
         stderr = e.stderr.decode() if isinstance(e.stderr, bytes) else (e.stderr if e.stderr else "")
-        pytest.skip(
-            f"serve --help command timed out after 30 seconds. This may indicate the CLI binary needs to be rebuilt with '--features all'. stdout: {stdout}, stderr: {stderr}"
-        )
+        _cli_feature_unavailable_skip("serve", stderr)
 
     if result.returncode != 0:
         if "unrecognized subcommand" in result.stderr.lower() or "not found" in result.stderr.lower():
-            pytest.skip(
-                f"serve command not available. CLI binary may need to be rebuilt with '--features all'. stderr: {result.stderr}"
-            )
+            _cli_feature_unavailable_skip("serve", result.stderr)
         raise AssertionError(f"Command failed with return code {result.returncode}. stderr: {result.stderr}")
 
     assert "Start the API server" in result.stdout
@@ -50,6 +76,7 @@ def test_serve_command_help() -> None:
     assert "--config" in result.stdout
 
 
+@pytest.mark.cli_features
 @pytest.mark.timeout(60)
 def test_mcp_command_help() -> None:
     """Test that mcp command help is accessible via Python CLI proxy."""
@@ -62,23 +89,19 @@ def test_mcp_command_help() -> None:
             check=False,
         )
     except subprocess.TimeoutExpired as e:
-        stdout = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout if e.stdout else "")
         stderr = e.stderr.decode() if isinstance(e.stderr, bytes) else (e.stderr if e.stderr else "")
-        pytest.skip(
-            f"mcp --help command timed out after 30 seconds. This may indicate the CLI binary needs to be rebuilt with '--features all'. stdout: {stdout}, stderr: {stderr}"
-        )
+        _cli_feature_unavailable_skip("mcp", stderr)
 
     if result.returncode != 0:
         if "unrecognized subcommand" in result.stderr.lower() or "not found" in result.stderr.lower():
-            pytest.skip(
-                f"mcp command not available. CLI binary may need to be rebuilt with '--features all'. stderr: {result.stderr}"
-            )
+            _cli_feature_unavailable_skip("mcp", result.stderr)
         raise AssertionError(f"Command failed with return code {result.returncode}. stderr: {result.stderr}")
 
     assert "Start the MCP (Model Context Protocol) server" in result.stdout
     assert "--config" in result.stdout
 
 
+@pytest.mark.cli_features
 @pytest.mark.integration
 @pytest.mark.timeout(90)
 def test_serve_command_starts_and_responds() -> None:
@@ -98,9 +121,7 @@ def test_serve_command_starts_and_responds() -> None:
         if process.poll() is not None:
             stdout, stderr = process.communicate()
             if "unrecognized subcommand" in stderr.lower() or "not found" in stderr.lower():
-                pytest.skip(
-                    f"serve command not available. CLI binary may need to be rebuilt with '--features all'. stderr: {stderr}"
-                )
+                _cli_feature_unavailable_skip("serve", stderr)
             raise AssertionError(f"Server process died. stdout: {stdout}, stderr: {stderr}")
 
         with httpx.Client() as client:
@@ -128,6 +149,7 @@ def test_serve_command_starts_and_responds() -> None:
                 process.wait(timeout=2)
 
 
+@pytest.mark.cli_features
 @pytest.mark.integration
 @pytest.mark.timeout(90)
 def test_serve_command_with_config() -> None:
@@ -170,9 +192,7 @@ language = "eng"
         if process.poll() is not None:
             stdout, stderr = process.communicate()
             if "unrecognized subcommand" in stderr.lower() or "not found" in stderr.lower():
-                pytest.skip(
-                    f"serve command not available. CLI binary may need to be rebuilt with '--features all'. stderr: {stderr}"
-                )
+                _cli_feature_unavailable_skip("serve", stderr)
             raise AssertionError(f"Server process died. stdout: {stdout}, stderr: {stderr}")
 
         with httpx.Client() as client:
@@ -192,6 +212,7 @@ language = "eng"
         config_path.unlink(missing_ok=True)
 
 
+@pytest.mark.cli_features
 @pytest.mark.integration
 @pytest.mark.timeout(90)
 def test_serve_command_extract_endpoint(tmp_path: Path) -> None:
@@ -211,9 +232,7 @@ def test_serve_command_extract_endpoint(tmp_path: Path) -> None:
         if process.poll() is not None:
             stdout, stderr = process.communicate()
             if "unrecognized subcommand" in stderr.lower() or "not found" in stderr.lower():
-                pytest.skip(
-                    f"serve command not available. CLI binary may need to be rebuilt with '--features all'. stderr: {stderr}"
-                )
+                _cli_feature_unavailable_skip("serve", stderr)
             raise AssertionError(f"Server process died. stdout: {stdout}, stderr: {stderr}")
 
         test_file = tmp_path / "test.txt"
