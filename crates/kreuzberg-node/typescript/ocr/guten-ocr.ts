@@ -211,6 +211,9 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 	/**
 	 * Shutdown the backend and release resources.
 	 *
+	 * This method cleans up all resources associated with the backend,
+	 * including the GutenOCR instance and module references.
+	 *
 	 * @example
 	 * ```typescript
 	 * const backend = new GutenOcrBackend();
@@ -220,8 +223,15 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 	 * ```
 	 */
 	async shutdown(): Promise<void> {
-		this.ocr = null;
-		this.ocrModule = null;
+		// Release the OCR instance first
+		if (this.ocr !== null) {
+			this.ocr = null;
+		}
+
+		// Clear module reference to allow garbage collection
+		if (this.ocrModule !== null) {
+			this.ocrModule = null;
+		}
 	}
 
 	/**
