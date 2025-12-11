@@ -178,11 +178,12 @@ fn map_page_breaks_to_boundaries(text: &str, page_breaks: Vec<usize>) -> Result<
             // Advance chars_per_page characters from current position
             let remaining = &text[byte_offset..];
             let chars_to_skip = chars_per_page;
-            byte_offset + remaining
-                .chars()
-                .take(chars_to_skip)
-                .map(|c| c.len_utf8())
-                .sum::<usize>()
+            byte_offset
+                + remaining
+                    .chars()
+                    .take(chars_to_skip)
+                    .map(|c| c.len_utf8())
+                    .sum::<usize>()
         };
 
         byte_offset = end;
@@ -286,8 +287,16 @@ mod tests {
 
         // Verify all boundaries are at valid UTF-8 boundaries
         for boundary in &result {
-            assert!(text.is_char_boundary(boundary.byte_start), "byte_start {} is not a valid UTF-8 boundary", boundary.byte_start);
-            assert!(text.is_char_boundary(boundary.byte_end), "byte_end {} is not a valid UTF-8 boundary", boundary.byte_end);
+            assert!(
+                text.is_char_boundary(boundary.byte_start),
+                "byte_start {} is not a valid UTF-8 boundary",
+                boundary.byte_start
+            );
+            assert!(
+                text.is_char_boundary(boundary.byte_end),
+                "byte_end {} is not a valid UTF-8 boundary",
+                boundary.byte_end
+            );
         }
 
         // Verify continuity
@@ -320,8 +329,16 @@ mod tests {
 
         // Verify all boundaries are at valid UTF-8 boundaries
         for boundary in &result {
-            assert!(text.is_char_boundary(boundary.byte_start), "byte_start {} is not a valid UTF-8 boundary", boundary.byte_start);
-            assert!(text.is_char_boundary(boundary.byte_end), "byte_end {} is not a valid UTF-8 boundary", boundary.byte_end);
+            assert!(
+                text.is_char_boundary(boundary.byte_start),
+                "byte_start {} is not a valid UTF-8 boundary",
+                boundary.byte_start
+            );
+            assert!(
+                text.is_char_boundary(boundary.byte_end),
+                "byte_end {} is not a valid UTF-8 boundary",
+                boundary.byte_end
+            );
         }
 
         // Verify continuity
@@ -350,16 +367,34 @@ mod tests {
 
         // Verify all boundaries are at valid UTF-8 boundaries
         for boundary in &result {
-            assert!(text.is_char_boundary(boundary.byte_start), "byte_start {} is not a valid UTF-8 boundary", boundary.byte_start);
-            assert!(text.is_char_boundary(boundary.byte_end), "byte_end {} is not a valid UTF-8 boundary", boundary.byte_end);
+            assert!(
+                text.is_char_boundary(boundary.byte_start),
+                "byte_start {} is not a valid UTF-8 boundary",
+                boundary.byte_start
+            );
+            assert!(
+                text.is_char_boundary(boundary.byte_end),
+                "byte_end {} is not a valid UTF-8 boundary",
+                boundary.byte_end
+            );
         }
 
         // Verify continuity (no gaps or overlaps)
         assert_eq!(result[0].byte_start, 0);
         for i in 0..result.len() - 1 {
-            assert_eq!(result[i].byte_end, result[i + 1].byte_start, "Gap or overlap between page {} and {}", i + 1, i + 2);
+            assert_eq!(
+                result[i].byte_end,
+                result[i + 1].byte_start,
+                "Gap or overlap between page {} and {}",
+                i + 1,
+                i + 2
+            );
         }
-        assert_eq!(result[result.len() - 1].byte_end, text.len(), "Last page does not end at text boundary");
+        assert_eq!(
+            result[result.len() - 1].byte_end,
+            text.len(),
+            "Last page does not end at text boundary"
+        );
 
         // Verify no text is lost or duplicated
         let mut reconstructed = String::new();

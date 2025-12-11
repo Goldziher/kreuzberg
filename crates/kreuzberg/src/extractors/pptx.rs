@@ -118,17 +118,18 @@ impl DocumentExtractor for PptxExtractor {
     ) -> Result<ExtractionResult> {
         let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
+        let pages_config = config.pages.clone();
         let pptx_result = if crate::core::batch_mode::is_batch_mode() {
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
                 let _guard = span.entered();
-                crate::extraction::pptx::extract_pptx_from_bytes(&content_owned, extract_images)
+                crate::extraction::pptx::extract_pptx_from_bytes(&content_owned, extract_images, pages_config.as_ref())
             })
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("PPTX extraction task failed: {}", e)))??
         } else {
-            crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images)?
+            crate::extraction::pptx::extract_pptx_from_bytes(content, extract_images, config.pages.as_ref())?
         };
 
         let mut additional = std::collections::HashMap::new();
@@ -150,15 +151,23 @@ impl DocumentExtractor for PptxExtractor {
             None
         };
 
+        // Build BaseMetadata with PageStructure if available
+        let mut metadata = Metadata {
+            format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
+            additional,
+            ..Default::default()
+        };
+
+        // Set pages field in BaseMetadata if PageStructure was built
+        if let Some(page_structure) = pptx_result.page_structure {
+            metadata.pages = Some(page_structure);
+        }
+
         Ok(ExtractionResult {
             content: pptx_result.content,
             mime_type: mime_type.to_string(),
-            metadata: Metadata {
-                format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
-                additional,
-                ..Default::default()
-            },
-            pages: None,
+            metadata,
+            pages: pptx_result.page_contents,
             tables: vec![],
             detected_languages: None,
             chunks: None,
@@ -179,7 +188,8 @@ impl DocumentExtractor for PptxExtractor {
 
         let extract_images = config.images.as_ref().is_some_and(|img| img.extract_images);
 
-        let pptx_result = crate::extraction::pptx::extract_pptx_from_path(path_str, extract_images)?;
+        let pptx_result =
+            crate::extraction::pptx::extract_pptx_from_path(path_str, extract_images, config.pages.as_ref())?;
 
         let mut additional = std::collections::HashMap::new();
         additional.insert("slide_count".to_string(), serde_json::json!(pptx_result.slide_count));
@@ -200,15 +210,23 @@ impl DocumentExtractor for PptxExtractor {
             None
         };
 
+        // Build BaseMetadata with PageStructure if available
+        let mut metadata = Metadata {
+            format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
+            additional,
+            ..Default::default()
+        };
+
+        // Set pages field in BaseMetadata if PageStructure was built
+        if let Some(page_structure) = pptx_result.page_structure {
+            metadata.pages = Some(page_structure);
+        }
+
         Ok(ExtractionResult {
             content: pptx_result.content,
             mime_type: mime_type.to_string(),
-            metadata: Metadata {
-                format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
-                additional,
-                ..Default::default()
-            },
-            pages: None,
+            metadata,
+            pages: pptx_result.page_contents,
             tables: vec![],
             detected_languages: None,
             chunks: None,

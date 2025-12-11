@@ -121,13 +121,17 @@ fn validate_utf8_boundaries(text: &str, boundaries: &[PageBoundary]) -> Result<(
             if !text.is_char_boundary(boundary.byte_start) {
                 return Err(KreuzbergError::validation(format!(
                     "Page boundary {} has byte_start={} which is not a valid UTF-8 character boundary (text length={}). This may indicate corrupted multibyte characters (emoji, CJK, etc.)",
-                    idx, boundary.byte_start, text.len()
+                    idx,
+                    boundary.byte_start,
+                    text.len()
                 )));
             }
         } else if boundary.byte_start > text.len() {
             return Err(KreuzbergError::validation(format!(
                 "Page boundary {} has byte_start={} which exceeds text length {}",
-                idx, boundary.byte_start, text.len()
+                idx,
+                boundary.byte_start,
+                text.len()
             )));
         }
 
@@ -136,13 +140,17 @@ fn validate_utf8_boundaries(text: &str, boundaries: &[PageBoundary]) -> Result<(
             if !text.is_char_boundary(boundary.byte_end) {
                 return Err(KreuzbergError::validation(format!(
                     "Page boundary {} has byte_end={} which is not a valid UTF-8 character boundary (text length={}). This may indicate corrupted multibyte characters (emoji, CJK, etc.)",
-                    idx, boundary.byte_end, text.len()
+                    idx,
+                    boundary.byte_end,
+                    text.len()
                 )));
             }
         } else if boundary.byte_end > text.len() {
             return Err(KreuzbergError::validation(format!(
                 "Page boundary {} has byte_end={} which exceeds text length {}",
-                idx, boundary.byte_end, text.len()
+                idx,
+                boundary.byte_end,
+                text.len()
             )));
         }
     }
@@ -1621,13 +1629,11 @@ mod tests {
         let text = "Hello 👋 World";
         // Emoji 👋 starts at byte 6 and ends at byte 10
         // Trying to set boundary at byte 7, 8, or 9 is invalid
-        let boundaries = vec![
-            PageBoundary {
-                byte_start: 0,
-                byte_end: 7, // Mid-emoji (between byte 6 and 10)
-                page_number: 1,
-            },
-        ];
+        let boundaries = vec![PageBoundary {
+            byte_start: 0,
+            byte_end: 7, // Mid-emoji (between byte 6 and 10)
+            page_number: 1,
+        }];
 
         let config = ChunkingConfig::default();
         let result = chunk_text(text, &config, Some(&boundaries));
@@ -1644,13 +1650,11 @@ mod tests {
         // Chinese character 中 is E4 B8 AD (3 bytes)
         let text = "中文文本";
         // Character 中 is at bytes 0-2, 文 is at 3-5, etc.
-        let boundaries = vec![
-            PageBoundary {
-                byte_start: 0,
-                byte_end: 1, // Mid-character (in the middle of 中)
-                page_number: 1,
-            },
-        ];
+        let boundaries = vec![PageBoundary {
+            byte_start: 0,
+            byte_end: 1, // Mid-character (in the middle of 中)
+            page_number: 1,
+        }];
 
         let config = ChunkingConfig::default();
         let result = chunk_text(text, &config, Some(&boundaries));
@@ -1689,13 +1693,11 @@ mod tests {
         use crate::types::PageBoundary;
 
         let text = "Short";
-        let boundaries = vec![
-            PageBoundary {
-                byte_start: 0,
-                byte_end: 100, // Way exceeds text length
-                page_number: 1,
-            },
-        ];
+        let boundaries = vec![PageBoundary {
+            byte_start: 0,
+            byte_end: 100, // Way exceeds text length
+            page_number: 1,
+        }];
 
         let config = ChunkingConfig::default();
         let result = chunk_text(text, &config, Some(&boundaries));
@@ -1723,13 +1725,11 @@ mod tests {
 
         let text = "Exact boundary test";
         let text_len = text.len();
-        let boundaries = vec![
-            PageBoundary {
-                byte_start: 0,
-                byte_end: text_len, // Exactly at end
-                page_number: 1,
-            },
-        ];
+        let boundaries = vec![PageBoundary {
+            byte_start: 0,
+            byte_end: text_len, // Exactly at end
+            page_number: 1,
+        }];
 
         let config = ChunkingConfig::default();
         let result = chunk_text(text, &config, Some(&boundaries));
@@ -1769,13 +1769,11 @@ mod tests {
         let config = ChunkingConfig::default();
 
         // Set boundary way out of bounds
-        let boundaries = vec![
-            PageBoundary {
-                byte_start: 0,
-                byte_end: 1000, // Way out of bounds
-                page_number: 1,
-            },
-        ];
+        let boundaries = vec![PageBoundary {
+            byte_start: 0,
+            byte_end: 1000, // Way out of bounds
+            page_number: 1,
+        }];
 
         let result = chunk_text(text, &config, Some(&boundaries));
         assert!(result.is_err());
@@ -1813,13 +1811,11 @@ mod tests {
         let text = "Test 👋 text";
         let config = ChunkingConfig::default();
 
-        let boundaries = vec![
-            PageBoundary {
-                byte_start: 0,
-                byte_end: 6, // Mid-emoji
-                page_number: 1,
-            },
-        ];
+        let boundaries = vec![PageBoundary {
+            byte_start: 0,
+            byte_end: 6, // Mid-emoji
+            page_number: 1,
+        }];
 
         let result = chunk_text(text, &config, Some(&boundaries));
         assert!(result.is_err());
@@ -1879,13 +1875,11 @@ mod tests {
         let config = ChunkingConfig::default();
 
         // Valid boundaries with 0 values
-        let boundaries = vec![
-            PageBoundary {
-                byte_start: 0,
-                byte_end: 0,
-                page_number: 1,
-            },
-        ];
+        let boundaries = vec![PageBoundary {
+            byte_start: 0,
+            byte_end: 0,
+            page_number: 1,
+        }];
 
         // Zero-length boundary should fail validation from page_boundaries
         // but UTF-8 validation should pass (0 is always valid)

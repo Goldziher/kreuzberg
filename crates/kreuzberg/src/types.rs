@@ -664,6 +664,12 @@ pub struct PptxExtractionResult {
     pub table_count: usize,
     /// Extracted images from the presentation
     pub images: Vec<ExtractedImage>,
+    /// Slide structure with boundaries (when page tracking is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_structure: Option<PageStructure>,
+    /// Per-slide content (when page tracking is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_contents: Option<Vec<PageContent>>,
 }
 
 /// PowerPoint presentation metadata.

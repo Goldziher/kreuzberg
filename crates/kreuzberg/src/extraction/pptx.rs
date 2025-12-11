@@ -181,18 +181,76 @@ impl Default for ParserConfig {
 
 struct ContentBuilder {
     content: String,
+    boundaries: Vec<crate::types::PageBoundary>,
+    page_contents: Vec<crate::types::PageContent>,
+    config: Option<crate::core::config::PageConfig>,
 }
 
 impl ContentBuilder {
     fn new() -> Self {
         Self {
             content: String::with_capacity(8192),
+            boundaries: Vec::new(),
+            page_contents: Vec::new(),
+            config: None,
         }
     }
 
-    fn with_capacity(capacity: usize) -> Self {
+    fn with_page_config(capacity: usize, config: Option<crate::core::config::PageConfig>) -> Self {
         Self {
             content: String::with_capacity(capacity),
+            boundaries: if config.is_some() {
+                Vec::new()
+            } else {
+                Vec::with_capacity(0)
+            },
+            page_contents: if config.is_some() {
+                Vec::new()
+            } else {
+                Vec::with_capacity(0)
+            },
+            config,
+        }
+    }
+
+    fn start_slide(&mut self, slide_number: u32) -> usize {
+        // Track byte_start for this slide BEFORE adding any content
+        let byte_start = self.content.len();
+
+        // Add page marker if configured
+        if let Some(ref cfg) = self.config
+            && cfg.insert_page_markers
+        {
+            let marker = cfg.marker_format.replace("{page_num}", &slide_number.to_string());
+            self.content.push_str(&marker);
+        }
+
+        // Add traditional slide header comment
+        self.content.reserve(50);
+        self.content.push_str("\n\n<!-- Slide number: ");
+        self.content.push_str(&slide_number.to_string());
+        self.content.push_str(" -->\n");
+
+        byte_start
+    }
+
+    fn end_slide(&mut self, slide_number: u32, byte_start: usize, slide_content: String) {
+        let byte_end = self.content.len();
+
+        // Only track boundaries if config is enabled
+        if self.config.is_some() {
+            self.boundaries.push(crate::types::PageBoundary {
+                byte_start,
+                byte_end,
+                page_number: slide_number as usize,
+            });
+
+            self.page_contents.push(crate::types::PageContent {
+                page_number: slide_number as usize,
+                content: slide_content,
+                tables: Vec::new(),
+                images: Vec::new(),
+            });
         }
     }
 
@@ -271,8 +329,25 @@ impl ContentBuilder {
         }
     }
 
-    fn build(self) -> String {
-        self.content.trim().to_string()
+    fn build(
+        self,
+    ) -> (
+        String,
+        Option<Vec<crate::types::PageBoundary>>,
+        Option<Vec<crate::types::PageContent>>,
+    ) {
+        let content = self.content.trim().to_string();
+        let boundaries = if self.config.is_some() && !self.boundaries.is_empty() {
+            Some(self.boundaries)
+        } else {
+            None
+        };
+        let pages = if self.config.is_some() && !self.page_contents.is_empty() {
+            Some(self.page_contents)
+        } else {
+            None
+        };
+        (content, boundaries, pages)
     }
 }
 
@@ -443,7 +518,7 @@ impl Slide {
             }
         }
 
-        builder.build()
+        builder.build().0 // Extract just the content String
     }
 
     fn image_count(&self) -> usize {
@@ -1058,7 +1133,11 @@ fn detect_image_format(data: &[u8]) -> String {
     }
 }
 
-pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxExtractionResult> {
+pub fn extract_pptx_from_path(
+    path: &str,
+    extract_images: bool,
+    page_config: Option<&crate::core::config::PageConfig>,
+) -> Result<PptxExtractionResult> {
     let config = ParserConfig {
         extract_images,
         ..Default::default()
@@ -1074,20 +1153,31 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
     let slide_count = iterator.slide_count();
 
     let estimated_capacity = slide_count * 1024;
-    let mut content_builder = ContentBuilder::with_capacity(estimated_capacity);
+    let mut content_builder = ContentBuilder::with_page_config(estimated_capacity, page_config.cloned());
 
     let mut total_image_count = 0;
     let mut total_table_count = 0;
     let mut extracted_images = Vec::new();
 
     while let Some(slide) = iterator.next_slide()? {
-        content_builder.add_slide_header(slide.slide_number);
+        // Track slide boundaries if configured
+        let byte_start = if page_config.is_some() {
+            content_builder.start_slide(slide.slide_number)
+        } else {
+            content_builder.add_slide_header(slide.slide_number);
+            0 // Not tracked
+        };
 
         let slide_content = slide.to_markdown(&config);
         content_builder.add_text(&slide_content);
 
         if let Some(slide_notes) = notes.get(&slide.slide_number) {
             content_builder.add_notes(slide_notes);
+        }
+
+        // End slide tracking if configured
+        if page_config.is_some() {
+            content_builder.end_slide(slide.slide_number, byte_start, slide_content.clone());
         }
 
         if config.extract_images
@@ -1117,17 +1207,44 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
         total_table_count += slide.table_count();
     }
 
+    let (content, boundaries, page_contents) = content_builder.build();
+
+    // Build PageStructure if boundaries were tracked
+    let page_structure = boundaries.as_ref().map(|bounds| crate::types::PageStructure {
+        total_count: slide_count,
+        unit_type: crate::types::PageUnitType::Slide,
+        boundaries: Some(bounds.clone()),
+        pages: page_contents.as_ref().map(|pcs| {
+            pcs.iter()
+                .map(|pc| crate::types::PageInfo {
+                    number: pc.page_number,
+                    title: None,
+                    dimensions: None,
+                    image_count: None,
+                    table_count: None,
+                    hidden: None,
+                })
+                .collect()
+        }),
+    });
+
     Ok(PptxExtractionResult {
-        content: content_builder.build(),
+        content,
         metadata,
         slide_count,
         image_count: total_image_count,
         table_count: total_table_count,
         images: extracted_images,
+        page_structure,
+        page_contents,
     })
 }
 
-pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<PptxExtractionResult> {
+pub fn extract_pptx_from_bytes(
+    data: &[u8],
+    extract_images: bool,
+    page_config: Option<&crate::core::config::PageConfig>,
+) -> Result<PptxExtractionResult> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let unique_id = COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -1136,7 +1253,7 @@ pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<Pptx
     // IO errors must bubble up - temp file write issues need user reports ~keep
     std::fs::write(&temp_path, data)?;
 
-    let result = extract_pptx_from_path(temp_path.to_str().unwrap(), extract_images);
+    let result = extract_pptx_from_path(temp_path.to_str().unwrap(), extract_images, page_config);
 
     let _ = std::fs::remove_file(&temp_path);
 

@@ -359,12 +359,14 @@ impl DocumentExtractor for PdfExtractor {
                 let tables = extract_tables_from_document(&document, &pdf_metadata)?;
 
                 // Validate page data matches config in batch mode
-                if let Some(ref page_cfg) = pages_config {
-                    if page_cfg.extract_pages && page_contents.is_none() {
-                        return Err(PdfError::ExtractionFailed(
-                            "Page extraction was configured but no page data was extracted in batch mode".to_string()
-                        ).into());
-                    }
+                if let Some(ref page_cfg) = pages_config
+                    && page_cfg.extract_pages
+                    && page_contents.is_none()
+                {
+                    return Err(PdfError::ExtractionFailed(
+                        "Page extraction was configured but no page data was extracted in batch mode".to_string(),
+                    )
+                    .into());
                 }
 
                 Ok::<_, crate::error::KreuzbergError>((pdf_metadata, native_text, tables, page_contents))
@@ -439,16 +441,16 @@ impl DocumentExtractor for PdfExtractor {
 
         // Validate page markers after text extraction if configured
         #[cfg(feature = "pdf")]
-        if let Some(ref page_cfg) = config.pages {
-            if page_cfg.insert_page_markers {
-                let marker_placeholder = page_cfg.marker_format.replace("{page_num}", "");
-                if !marker_placeholder.is_empty() && !text.contains(&marker_placeholder) {
-                    #[cfg(feature = "otel")]
-                    tracing::warn!(
-                        "Page markers were configured but none found in extracted content. \
-                         This may indicate very short documents or incomplete extraction."
-                    );
-                }
+        if let Some(ref page_cfg) = config.pages
+            && page_cfg.insert_page_markers
+        {
+            let marker_placeholder = page_cfg.marker_format.replace("{page_num}", "");
+            if !marker_placeholder.is_empty() && !text.contains(&marker_placeholder) {
+                #[cfg(feature = "otel")]
+                tracing::warn!(
+                    "Page markers were configured but none found in extracted content. \
+                     This may indicate very short documents or incomplete extraction."
+                );
             }
         }
 
@@ -598,11 +600,18 @@ mod tests {
         if let Ok(content) = std::fs::read(pdf_path) {
             let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
             // Should succeed and extract pages when configured
-            assert!(result.is_ok(), "Failed to extract PDF with page config: {:?}", result.err());
+            assert!(
+                result.is_ok(),
+                "Failed to extract PDF with page config: {:?}",
+                result.err()
+            );
 
             let extraction_result = result.unwrap();
             // Verify pages were extracted
-            assert!(extraction_result.pages.is_some(), "Pages should be extracted when extract_pages is true");
+            assert!(
+                extraction_result.pages.is_some(),
+                "Pages should be extracted when extract_pages is true"
+            );
         }
     }
 
@@ -617,11 +626,18 @@ mod tests {
         if let Ok(content) = std::fs::read(pdf_path) {
             let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
             // Should succeed without page config
-            assert!(result.is_ok(), "Failed to extract PDF without page config: {:?}", result.err());
+            assert!(
+                result.is_ok(),
+                "Failed to extract PDF without page config: {:?}",
+                result.err()
+            );
 
             let extraction_result = result.unwrap();
             // Verify pages are not extracted when not configured
-            assert!(extraction_result.pages.is_none(), "Pages should not be extracted when pages config is None");
+            assert!(
+                extraction_result.pages.is_none(),
+                "Pages should not be extracted when pages config is None"
+            );
         }
     }
 
@@ -644,7 +660,11 @@ mod tests {
         if let Ok(content) = std::fs::read(pdf_path) {
             let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
             // Extraction should succeed
-            assert!(result.is_ok(), "Failed to extract PDF with page markers: {:?}", result.err());
+            assert!(
+                result.is_ok(),
+                "Failed to extract PDF with page markers: {:?}",
+                result.err()
+            );
 
             let extraction_result = result.unwrap();
             // For a multi-page PDF, markers should be present
