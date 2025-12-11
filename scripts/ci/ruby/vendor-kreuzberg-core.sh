@@ -14,56 +14,67 @@ echo "=== Vendoring kreuzberg core crate ==="
 
 # Remove and recreate vendor directory
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
+rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi"
 # Keep rb-sys - it's patched for Windows compatibility
 mkdir -p "$REPO_ROOT/packages/ruby/vendor"
 
-# Copy core crate
+# Copy core crate and FFI crate
 cp -R "$REPO_ROOT/crates/kreuzberg" "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
+cp -R "$REPO_ROOT/crates/kreuzberg-ffi" "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi"
 
 # Clean up build artifacts
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg/.fastembed_cache"
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg/target"
+rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi/target"
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg" -name '*.swp' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg" -name '*.bak' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg" -name '*.tmp' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg" -name '*~' -delete
+find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*.swp' -delete
+find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*.bak' -delete
+find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*.tmp' -delete
+find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*~' -delete
 
 # Extract core version from workspace Cargo.toml
 core_version=$(awk -F '"' '/^\[workspace.package\]/,/^version =/ {if ($0 ~ /^version =/) {print $2; exit}}' "$REPO_ROOT/Cargo.toml")
 
-# Make vendored core crate installable without workspace context
-sed -i.bak "s/^version\.workspace = true/version = \"${core_version}\"/" "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^edition\.workspace = true/edition = "2024"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^rust-version\.workspace = true/rust-version = "1.91"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^authors\.workspace = true/authors = ["Na'\''aman Hirschfeld <nhirschfeld@gmail.com>"]/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^license\.workspace = true/license = "MIT"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+# Make vendored core and ffi crates installable without workspace context
+for crate_dir in kreuzberg kreuzberg-ffi; do
+	sed -i.bak "s/^version\.workspace = true/version = \"${core_version}\"/" "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^edition\.workspace = true/edition = "2024"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^rust-version\.workspace = true/rust-version = "1.91"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^authors\.workspace = true/authors = ["Na'\''aman Hirschfeld <nhirschfeld@gmail.com>"]/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^license\.workspace = true/license = "MIT"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+done
 
 # Inline workspace dependencies (without workspace = true references)
-sed -i.bak 's/^ahash = { workspace = true }/ahash = "0.8.12"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^async-trait = { workspace = true }/async-trait = "0.1.89"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^base64 = { workspace = true }/base64 = "0.22.1"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^hex = { workspace = true }/hex = "0.4.3"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^libc = { workspace = true }/libc = "0.2.178"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^num_cpus = { workspace = true }/num_cpus = "1.17.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^serde = { workspace = true }/serde = { version = "1.0.228", features = ["derive"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^serde_json = { workspace = true }/serde_json = "1.0.145"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^thiserror = { workspace = true }/thiserror = "2.0.17"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^tokio = { workspace = true }/tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^tracing = { workspace = true }/tracing = "0.1"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^anyhow = { workspace = true }/anyhow = "1.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^reqwest = { workspace = true, /reqwest = { version = "0.12.25", /' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-# Replace both base and dev image entries
-sed -i.bak 's/^image = { workspace = true, /image = { version = "0.25.9", /' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+for crate_dir in kreuzberg kreuzberg-ffi; do
+	sed -i.bak 's/^ahash = { workspace = true }/ahash = "0.8.12"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^async-trait = { workspace = true }/async-trait = "0.1.89"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^base64 = { workspace = true }/base64 = "0.22.1"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^hex = { workspace = true }/hex = "0.4.3"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^libc = { workspace = true }/libc = "0.2.178"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^num_cpus = { workspace = true }/num_cpus = "1.17.0"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^serde = { workspace = true }/serde = { version = "1.0.228", features = ["derive"] }/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^serde_json = { workspace = true }/serde_json = "1.0.145"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^thiserror = { workspace = true }/thiserror = "2.0.17"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^tokio = { workspace = true }/tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^tracing = { workspace = true }/tracing = "0.1"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^anyhow = { workspace = true }/anyhow = "1.0"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^reqwest = { workspace = true, /reqwest = { version = "0.12.25", /' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	# Replace both base and dev image entries
+	sed -i.bak 's/^image = { workspace = true, /image = { version = "0.25.9", /' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
 
-# Inline dev-dependencies
-sed -i.bak 's/^tempfile = { workspace = true }/tempfile = "3.23.0"/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
-sed -i.bak 's/^criterion = { workspace = true }/criterion = { version = "0.8", features = ["html_reports"] }/' "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml"
+	# Inline dev-dependencies
+	sed -i.bak 's/^tempfile = { workspace = true }/tempfile = "3.23.0"/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
+	sed -i.bak 's/^criterion = { workspace = true }/criterion = { version = "0.8", features = ["html_reports"] }/' "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml"
 
-rm -f "$REPO_ROOT/packages/ruby/vendor/kreuzberg/Cargo.toml.bak"
+	rm -f "$REPO_ROOT/packages/ruby/vendor/$crate_dir/Cargo.toml.bak"
+done
 
 cat >"$REPO_ROOT/packages/ruby/vendor/Cargo.toml" <<'EOF'
 [workspace]
-members = ["kreuzberg"]
+members = ["kreuzberg", "kreuzberg-ffi"]
 
 [workspace.package]
 version = "__CORE_VERSION__"
