@@ -317,7 +317,7 @@ def main():
     for cargo_toml in repo_root.rglob("Cargo.toml"):
         if cargo_toml == repo_root / "Cargo.toml":
             continue
-        if "target" in cargo_toml.parts or "tmp" in cargo_toml.parts:
+        if "target" in cargo_toml.parts or "tmp" in cargo_toml.parts or "vendor" in cargo_toml.parts:
             continue
 
         content = cargo_toml.read_text()
