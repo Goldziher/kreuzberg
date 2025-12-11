@@ -130,7 +130,10 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
             chunker_type: crate::chunking::ChunkerType::Text,
         };
 
-        match crate::chunking::chunk_text(&result.content, &chunk_config) {
+        // Extract page boundaries if available for page-aware chunking
+        let page_boundaries = result.metadata.pages.as_ref().and_then(|ps| ps.boundaries.as_deref());
+
+        match crate::chunking::chunk_text(&result.content, &chunk_config, page_boundaries) {
             Ok(chunking_result) => {
                 result.chunks = Some(chunking_result.chunks);
 
@@ -253,6 +256,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         result.metadata.additional.insert(
             VALIDATION_MARKER_KEY.to_string(),
@@ -275,6 +279,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: true,
@@ -295,6 +300,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: false,
@@ -316,6 +322,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         let config = ExtractionConfig {
             chunking: Some(crate::ChunkingConfig {
@@ -343,6 +350,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         let config = ExtractionConfig {
             chunking: None,
@@ -367,6 +375,7 @@ mod tests {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,
@@ -403,6 +412,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         let config = ExtractionConfig::default();
 
@@ -432,6 +442,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         let config = ExtractionConfig::default();
 
@@ -452,6 +463,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         let config = ExtractionConfig {
             enable_quality_processing: true,
@@ -488,6 +500,7 @@ Natural language processing enables computers to understand human language.
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         #[cfg(feature = "keywords-yake")]
@@ -529,6 +542,7 @@ Natural language processing enables computers to understand human language.
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig {
@@ -564,6 +578,7 @@ Natural language processing enables computers to understand human language.
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         #[cfg(feature = "keywords-yake")]
@@ -693,6 +708,7 @@ Natural language processing enables computers to understand human language.
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         result.metadata.additional.insert(
             VALIDATION_MARKER_KEY.to_string(),
@@ -778,6 +794,7 @@ Natural language processing enables computers to understand human language.
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
         result.metadata.additional.insert(
             VALIDATION_MARKER_KEY.to_string(),
@@ -969,6 +986,7 @@ Natural language processing enables computers to understand human language.
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();

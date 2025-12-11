@@ -30,7 +30,7 @@
 //! };
 //!
 //! let long_text = "This is a very long document...".repeat(100);
-//! let result = chunk_text(&long_text, &config)?;
+//! let result = chunk_text(&long_text, &config, None)?;
 //!
 //! println!("Split into {} chunks", result.chunk_count);
 //! for (i, chunk) in result.chunks.iter().enumerate() {
@@ -47,7 +47,7 @@
 //! - Processing large documents in batches
 //! - Maintaining context across chunk boundaries
 use crate::error::{KreuzbergError, Result};
-use crate::types::{Chunk, ChunkMetadata};
+use crate::types::{Chunk, ChunkMetadata, PageBoundary};
 use serde::{Deserialize, Serialize};
 use text_splitter::{Characters, ChunkCapacity, ChunkConfig, MarkdownSplitter, TextSplitter};
 
@@ -88,7 +88,77 @@ fn build_chunk_config(max_characters: usize, overlap: usize, trim: bool) -> Resu
         .map_err(|e| KreuzbergError::validation(format!("Invalid chunking configuration: {}", e)))
 }
 
-pub fn chunk_text(text: &str, config: &ChunkingConfig) -> Result<ChunkingResult> {
+/// Calculate which pages a character range spans.
+///
+/// # Arguments
+///
+/// * `char_start` - Starting character offset of the chunk
+/// * `char_end` - Ending character offset of the chunk
+/// * `boundaries` - Page boundary markers from the document
+///
+/// # Returns
+///
+/// A tuple of (first_page, last_page) where page numbers are 1-indexed.
+/// Returns (None, None) if boundaries are empty or chunk doesn't overlap any page.
+fn calculate_page_range(
+    char_start: usize,
+    char_end: usize,
+    boundaries: &[PageBoundary],
+) -> (Option<usize>, Option<usize>) {
+    if boundaries.is_empty() {
+        return (None, None);
+    }
+
+    let mut first_page = None;
+    let mut last_page = None;
+
+    for boundary in boundaries {
+        // Check if chunk overlaps this page
+        if char_start < boundary.char_end && char_end > boundary.char_start {
+            if first_page.is_none() {
+                first_page = Some(boundary.page_number);
+            }
+            last_page = Some(boundary.page_number);
+        }
+    }
+
+    (first_page, last_page)
+}
+
+/// Split text into chunks with optional page boundary tracking.
+///
+/// # Arguments
+///
+/// * `text` - The text to split into chunks
+/// * `config` - Chunking configuration (max size, overlap, type)
+/// * `page_boundaries` - Optional page boundary markers for mapping chunks to pages
+///
+/// # Returns
+///
+/// A ChunkingResult containing all chunks and their metadata.
+///
+/// # Examples
+///
+/// ```rust
+/// use kreuzberg::chunking::{chunk_text, ChunkingConfig, ChunkerType};
+///
+/// # fn example() -> kreuzberg::Result<()> {
+/// let config = ChunkingConfig {
+///     max_characters: 500,
+///     overlap: 50,
+///     trim: true,
+///     chunker_type: ChunkerType::Text,
+/// };
+/// let result = chunk_text("Long text...", &config, None)?;
+/// assert!(!result.chunks.is_empty());
+/// # Ok(())
+/// # }
+/// ```
+pub fn chunk_text(
+    text: &str,
+    config: &ChunkingConfig,
+    page_boundaries: Option<&[PageBoundary]>,
+) -> Result<ChunkingResult> {
     if text.is_empty() {
         return Ok(ChunkingResult {
             chunks: vec![],
@@ -127,6 +197,13 @@ pub fn chunk_text(text: &str, config: &ChunkingConfig) -> Result<ChunkingResult>
             };
             char_offset = char_end - overlap_chars;
 
+            // Calculate page range for this chunk
+            let (first_page, last_page) = if let Some(boundaries) = page_boundaries {
+                calculate_page_range(char_start, char_end, boundaries)
+            } else {
+                (None, None)
+            };
+
             Chunk {
                 content: chunk_text.to_string(),
                 embedding: None,
@@ -136,6 +213,8 @@ pub fn chunk_text(text: &str, config: &ChunkingConfig) -> Result<ChunkingResult>
                     token_count: None,
                     chunk_index: index,
                     total_chunks,
+                    first_page,
+                    last_page,
                 },
             }
         })
@@ -159,11 +238,11 @@ pub fn chunk_text_with_type(
         trim,
         chunker_type,
     };
-    chunk_text(text, &config)
+    chunk_text(text, &config, None)
 }
 
 pub fn chunk_texts_batch(texts: &[&str], config: &ChunkingConfig) -> Result<Vec<ChunkingResult>> {
-    texts.iter().map(|text| chunk_text(text, config)).collect()
+    texts.iter().map(|text| chunk_text(text, config, None)).collect()
 }
 
 #[cfg(test)]
@@ -173,7 +252,7 @@ mod tests {
     #[test]
     fn test_chunk_empty_text() {
         let config = ChunkingConfig::default();
-        let result = chunk_text("", &config).unwrap();
+        let result = chunk_text("", &config, None).unwrap();
         assert_eq!(result.chunks.len(), 0);
         assert_eq!(result.chunk_count, 0);
     }
@@ -187,7 +266,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "This is a short text.";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert_eq!(result.chunks.len(), 1);
         assert_eq!(result.chunk_count, 1);
         assert_eq!(result.chunks[0].content, text);
@@ -202,7 +281,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert!(result.chunk_count >= 2);
         assert_eq!(result.chunks.len(), result.chunk_count);
         assert!(result.chunks.iter().all(|chunk| chunk.content.len() <= 20));
@@ -217,7 +296,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "abcdefghijklmnopqrstuvwxyz0123456789";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert!(result.chunk_count >= 2);
 
         if result.chunks.len() >= 2 {
@@ -240,7 +319,7 @@ mod tests {
             chunker_type: ChunkerType::Markdown,
         };
         let markdown = "# Title\n\nParagraph one.\n\n## Section\n\nParagraph two.";
-        let result = chunk_text(markdown, &config).unwrap();
+        let result = chunk_text(markdown, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
         assert!(result.chunks.iter().any(|chunk| chunk.content.contains("# Title")));
     }
@@ -254,7 +333,7 @@ mod tests {
             chunker_type: ChunkerType::Markdown,
         };
         let markdown = "# Code Example\n\n```python\nprint('hello')\n```\n\nSome text after code.";
-        let result = chunk_text(markdown, &config).unwrap();
+        let result = chunk_text(markdown, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
         assert!(result.chunks.iter().any(|chunk| chunk.content.contains("```")));
     }
@@ -268,7 +347,7 @@ mod tests {
             chunker_type: ChunkerType::Markdown,
         };
         let markdown = "Check out [this link](https://example.com) for more info.";
-        let result = chunk_text(markdown, &config).unwrap();
+        let result = chunk_text(markdown, &config, None).unwrap();
         assert_eq!(result.chunk_count, 1);
         assert!(result.chunks[0].content.contains("[this link]"));
     }
@@ -282,7 +361,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "  Leading and trailing spaces  should be trimmed  ";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
         assert!(result.chunks.iter().all(|chunk| !chunk.content.starts_with(' ')));
     }
@@ -296,7 +375,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "  Text with spaces  ";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert_eq!(result.chunk_count, 1);
         assert!(result.chunks[0].content.starts_with(' ') || result.chunks[0].content.len() < text.len());
     }
@@ -309,7 +388,7 @@ mod tests {
             trim: true,
             chunker_type: ChunkerType::Text,
         };
-        let result = chunk_text("Some text", &config);
+        let result = chunk_text("Some text", &config, None);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(matches!(err, KreuzbergError::Validation { .. }));
@@ -403,7 +482,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "a".repeat(1000);
-        let result = chunk_text(&text, &config).unwrap();
+        let result = chunk_text(&text, &config, None).unwrap();
         assert!(result.chunk_count >= 10);
         assert!(result.chunks.iter().all(|chunk| chunk.content.len() <= 100));
     }
@@ -417,7 +496,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "Line one\nLine two\nLine three\nLine four\nLine five";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
     }
 
@@ -430,7 +509,7 @@ mod tests {
             chunker_type: ChunkerType::Markdown,
         };
         let markdown = "# List Example\n\n- Item 1\n- Item 2\n- Item 3\n\nMore text.";
-        let result = chunk_text(markdown, &config).unwrap();
+        let result = chunk_text(markdown, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
         assert!(result.chunks.iter().any(|chunk| chunk.content.contains("- Item")));
     }
@@ -444,7 +523,7 @@ mod tests {
             chunker_type: ChunkerType::Markdown,
         };
         let markdown = "# Table\n\n| Col1 | Col2 |\n|------|------|\n| A    | B    |\n| C    | D    |";
-        let result = chunk_text(markdown, &config).unwrap();
+        let result = chunk_text(markdown, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
         assert!(result.chunks.iter().any(|chunk| chunk.content.contains("|")));
     }
@@ -458,7 +537,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "Special chars: @#$%^&*()[]{}|\\<>?/~`";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert_eq!(result.chunk_count, 1);
         assert!(result.chunks[0].content.contains("@#$%"));
     }
@@ -472,7 +551,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "Unicode: 你好世界 🌍 café résumé";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert_eq!(result.chunk_count, 1);
         assert!(result.chunks[0].content.contains("你好"));
         assert!(result.chunks[0].content.contains("🌍"));
@@ -487,7 +566,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "日本語のテキストです。これは長い文章で、複数のチャンクに分割されるべきです。";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
     }
 
@@ -500,7 +579,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "English text mixed with 中文文本 and some français";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
         assert!(result.chunk_count >= 1);
     }
 
@@ -513,7 +592,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
 
         assert!(result.chunks.len() >= 2, "Expected at least 2 chunks");
 
@@ -565,7 +644,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
 
         for i in 0..result.chunks.len() - 1 {
             let current_chunk = &result.chunks[i];
@@ -591,7 +670,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "0123456789 ABCDEFGHIJ KLMNOPQRST UVWXYZ";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
 
         assert!(result.chunks.len() >= 2, "Expected multiple chunks");
 
@@ -625,7 +704,7 @@ mod tests {
                 chunker_type: ChunkerType::Text,
             };
             let text = "Word ".repeat(30);
-            let result = chunk_text(&text, &config).unwrap();
+            let result = chunk_text(&text, &config, None).unwrap();
 
             for chunk in &result.chunks {
                 assert!(
@@ -657,7 +736,7 @@ mod tests {
             chunker_type: ChunkerType::Text,
         };
         let text = "AAAAA BBBBB CCCCC DDDDD EEEEE";
-        let result = chunk_text(text, &config).unwrap();
+        let result = chunk_text(text, &config, None).unwrap();
 
         assert!(result.chunks.len() >= 2, "Need multiple chunks for this test");
 
@@ -673,5 +752,121 @@ mod tests {
         let last_chunk_covers_end =
             last_chunk.content.trim_end() == text.trim_end() || last_chunk.metadata.char_end >= expected_end - 5;
         assert!(last_chunk_covers_end, "Last chunk should cover the end of the text");
+    }
+
+    #[test]
+    fn test_chunk_with_page_boundaries() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 30,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "Page one content here. Page two starts here and continues.";
+
+        // Define page boundaries: page 1 is chars 0-21, page 2 is chars 22-58
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 21,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 22,
+                char_end: 58,
+                page_number: 2,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+        assert!(result.chunks.len() >= 2);
+
+        // First chunk should be on page 1
+        assert_eq!(result.chunks[0].metadata.first_page, Some(1));
+
+        // Last chunk should be on page 2
+        let last_chunk = result.chunks.last().unwrap();
+        assert_eq!(last_chunk.metadata.last_page, Some(2));
+    }
+
+    #[test]
+    fn test_chunk_without_page_boundaries() {
+        let config = ChunkingConfig {
+            max_characters: 30,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "This is some test content that should be split into multiple chunks.";
+
+        let result = chunk_text(text, &config, None).unwrap();
+        assert!(result.chunks.len() >= 2);
+
+        // Without page boundaries, all chunks should have None for page info
+        for chunk in &result.chunks {
+            assert_eq!(chunk.metadata.first_page, None);
+            assert_eq!(chunk.metadata.last_page, None);
+        }
+    }
+
+    #[test]
+    fn test_chunk_empty_boundaries() {
+        let config = ChunkingConfig {
+            max_characters: 30,
+            overlap: 5,
+            trim: true,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "Some text content here.";
+        let boundaries: Vec<PageBoundary> = vec![];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+        assert_eq!(result.chunks.len(), 1);
+
+        // With empty boundaries, pages should be None
+        assert_eq!(result.chunks[0].metadata.first_page, None);
+        assert_eq!(result.chunks[0].metadata.last_page, None);
+    }
+
+    #[test]
+    fn test_chunk_spanning_multiple_pages() {
+        use crate::types::PageBoundary;
+
+        let config = ChunkingConfig {
+            max_characters: 50,
+            overlap: 5,
+            trim: false,
+            chunker_type: ChunkerType::Text,
+        };
+        let text = "0123456789 AAAAAAAAAA 1111111111 BBBBBBBBBB 2222222222";
+
+        let boundaries = vec![
+            PageBoundary {
+                char_start: 0,
+                char_end: 20,
+                page_number: 1,
+            },
+            PageBoundary {
+                char_start: 20,
+                char_end: 40,
+                page_number: 2,
+            },
+            PageBoundary {
+                char_start: 40,
+                char_end: 56,
+                page_number: 3,
+            },
+        ];
+
+        let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
+        assert!(result.chunks.len() >= 2);
+
+        // Check that chunks spanning pages are properly marked
+        for chunk in &result.chunks {
+            // Each chunk should have at least a first_page when boundaries exist
+            assert!(chunk.metadata.first_page.is_some() || chunk.metadata.last_page.is_some());
+        }
     }
 }

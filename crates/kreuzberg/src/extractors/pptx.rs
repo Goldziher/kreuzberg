@@ -69,6 +69,7 @@ impl PptxExtractor {
                         detected_languages: None,
                         chunks: None,
                         images: None,
+                        pages: None,
                     };
                     image.ocr_result = Some(Box::new(extraction_result));
                 }
@@ -157,6 +158,7 @@ impl DocumentExtractor for PptxExtractor {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,
@@ -206,6 +208,7 @@ impl DocumentExtractor for PptxExtractor {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,

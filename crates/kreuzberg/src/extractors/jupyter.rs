@@ -336,6 +336,7 @@ impl DocumentExtractor for JupyterExtractor {
                 additional: metadata_additional,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,

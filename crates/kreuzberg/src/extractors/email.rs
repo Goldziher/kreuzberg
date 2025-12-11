@@ -90,6 +90,7 @@ impl DocumentExtractor for EmailExtractor {
                 subject: email_result.subject.clone(),
                 date: email_result.date.clone(),
                 additional,
+                pages: None,
                 ..Default::default()
             },
             tables: vec![],

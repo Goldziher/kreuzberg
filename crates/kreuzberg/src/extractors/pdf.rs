@@ -3,7 +3,7 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::{ExtractionResult, Metadata};
+use crate::types::{ExtractionResult, Metadata, PageContent};
 use async_trait::async_trait;
 use std::path::Path;
 
@@ -140,7 +140,7 @@ fn evaluate_native_text_for_ocr(native_text: &str, page_count: Option<usize>) ->
 #[cfg(all(feature = "pdf", feature = "ocr"))]
 fn extract_tables_from_document(
     document: &PdfDocument,
-    _metadata: &crate::pdf::metadata::PdfMetadata,
+    _metadata: &crate::pdf::metadata::PdfExtractionMetadata,
 ) -> Result<Vec<Table>> {
     use crate::ocr::table::{reconstruct_table, table_to_markdown};
     use crate::pdf::table::extract_words_from_page;
@@ -177,9 +177,41 @@ fn extract_tables_from_document(
 #[cfg(all(feature = "pdf", not(feature = "ocr")))]
 fn extract_tables_from_document(
     _document: &PdfDocument,
-    _metadata: &crate::pdf::metadata::PdfMetadata,
+    _metadata: &crate::pdf::metadata::PdfExtractionMetadata,
 ) -> Result<Vec<crate::types::Table>> {
     Ok(vec![])
+}
+
+/// Helper function to assign tables and images to pages.
+///
+/// If page_contents is None, returns None (no per-page tracking enabled).
+/// Otherwise, iterates through tables and images, assigning them to pages based on page_number.
+fn assign_tables_and_images_to_pages(
+    mut page_contents: Option<Vec<PageContent>>,
+    tables: &[crate::types::Table],
+    images: &[crate::types::ExtractedImage],
+) -> Option<Vec<PageContent>> {
+    let pages = page_contents.take()?;
+
+    let mut updated_pages = pages;
+
+    // Assign tables to their respective pages
+    for table in tables {
+        if let Some(page) = updated_pages.iter_mut().find(|p| p.page_number == table.page_number) {
+            page.tables.push(table.clone());
+        }
+    }
+
+    // Assign images to their respective pages
+    for image in images {
+        if let Some(page_num) = image.page_number
+            && let Some(page) = updated_pages.iter_mut().find(|p| p.page_number == page_num)
+        {
+            page.images.push(image.clone());
+        }
+    }
+
+    Some(updated_pages)
 }
 
 /// PDF document extractor using pypdfium2 and playa-pdf.
@@ -295,7 +327,7 @@ impl DocumentExtractor for PdfExtractor {
         config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
         #[cfg(feature = "pdf")]
-        let (pdf_metadata, native_text, tables) = if crate::core::batch_mode::is_batch_mode() {
+        let (pdf_metadata, native_text, tables, page_contents) = if crate::core::batch_mode::is_batch_mode() {
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
             tokio::task::spawn_blocking(move || {
@@ -315,12 +347,18 @@ impl DocumentExtractor for PdfExtractor {
                     }
                 })?;
 
-                let metadata = crate::pdf::metadata::extract_metadata_from_document(&document)?;
-                let native_text = crate::pdf::text::extract_text_from_pdf_document(&document)?;
+                // Extract text with page tracking
+                let (native_text, boundaries, page_contents) = crate::pdf::text::extract_text_from_pdf_document(
+                    &document, None, // Don't pass page config in batch mode
+                )?;
 
-                let tables = extract_tables_from_document(&document, &metadata)?;
+                // Extract metadata with boundaries for PageStructure
+                let pdf_metadata =
+                    crate::pdf::metadata::extract_metadata_from_document(&document, boundaries.as_deref())?;
 
-                Ok::<_, crate::error::KreuzbergError>((metadata, native_text, tables))
+                let tables = extract_tables_from_document(&document, &pdf_metadata)?;
+
+                Ok::<_, crate::error::KreuzbergError>((pdf_metadata, native_text, tables, page_contents))
             })
             .await
             .map_err(|e| crate::error::KreuzbergError::Other(format!("PDF extraction task failed: {}", e)))??
@@ -340,12 +378,16 @@ impl DocumentExtractor for PdfExtractor {
                 }
             })?;
 
-            let metadata = crate::pdf::metadata::extract_metadata_from_document(&document)?;
-            let native_text = crate::pdf::text::extract_text_from_pdf_document(&document)?;
+            // Extract text with page tracking
+            let (native_text, boundaries, page_contents) =
+                crate::pdf::text::extract_text_from_pdf_document(&document, config.pages.as_ref())?;
 
-            let tables = extract_tables_from_document(&document, &metadata)?;
+            // Extract metadata with boundaries for PageStructure
+            let pdf_metadata = crate::pdf::metadata::extract_metadata_from_document(&document, boundaries.as_deref())?;
 
-            (metadata, native_text, tables)
+            let tables = extract_tables_from_document(&document, &pdf_metadata)?;
+
+            (pdf_metadata, native_text, tables, page_contents)
         };
 
         #[cfg(feature = "ocr")]
@@ -356,20 +398,21 @@ impl DocumentExtractor for PdfExtractor {
                 native_text
             }
         } else if config.ocr.is_some() {
-            let decision = evaluate_native_text_for_ocr(&native_text, pdf_metadata.page_count);
+            // Page count is not directly available from pdf_metadata anymore
+            // For now, pass None - the evaluation function can work without it
+            let decision = evaluate_native_text_for_ocr(&native_text, None);
 
             if std::env::var("KREUZBERG_DEBUG_OCR").is_ok() {
                 eprintln!(
                     "[kreuzberg::pdf::ocr] fallback={} non_whitespace={} alnum={} meaningful_words={} \
-                     avg_non_whitespace={:.2} avg_alnum={:.2} alnum_ratio={:.3} pages={}",
+                     avg_non_whitespace={:.2} avg_alnum={:.2} alnum_ratio={:.3}",
                     decision.fallback,
                     decision.stats.non_whitespace,
                     decision.stats.alnum,
                     decision.stats.meaningful_words,
                     decision.avg_non_whitespace,
                     decision.avg_alnum,
-                    decision.stats.alnum_ratio,
-                    pdf_metadata.page_count.unwrap_or(0)
+                    decision.stats.alnum_ratio
                 );
             }
 
@@ -415,14 +458,34 @@ impl DocumentExtractor for PdfExtractor {
             None
         };
 
+        // Assign tables and images to pages if page extraction is enabled
+        let final_pages = assign_tables_and_images_to_pages(page_contents, &tables, images.as_deref().unwrap_or(&[]));
+
         Ok(ExtractionResult {
             content: text,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
                 #[cfg(feature = "pdf")]
-                format: Some(crate::types::FormatMetadata::Pdf(pdf_metadata)),
+                title: pdf_metadata.title.clone(),
+                #[cfg(feature = "pdf")]
+                subject: pdf_metadata.subject.clone(),
+                #[cfg(feature = "pdf")]
+                authors: pdf_metadata.authors.clone(),
+                #[cfg(feature = "pdf")]
+                keywords: pdf_metadata.keywords.clone(),
+                #[cfg(feature = "pdf")]
+                created_at: pdf_metadata.created_at.clone(),
+                #[cfg(feature = "pdf")]
+                modified_at: pdf_metadata.modified_at.clone(),
+                #[cfg(feature = "pdf")]
+                created_by: pdf_metadata.created_by.clone(),
+                #[cfg(feature = "pdf")]
+                pages: pdf_metadata.page_structure.clone(),
+                #[cfg(feature = "pdf")]
+                format: Some(crate::types::FormatMetadata::Pdf(pdf_metadata.pdf_specific)),
                 ..Default::default()
             },
+            pages: final_pages,
             tables,
             detected_languages: None,
             chunks: None,

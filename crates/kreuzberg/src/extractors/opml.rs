@@ -191,6 +191,7 @@ impl DocumentExtractor for OpmlExtractor {
                 additional: metadata_map,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,

@@ -267,6 +267,7 @@ impl DocumentExtractor for DocxExtractor {
                 additional: metadata_map,
                 ..Default::default()
             },
+            pages: None,
             tables,
             detected_languages: None,
             chunks: None,

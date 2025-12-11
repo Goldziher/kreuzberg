@@ -966,24 +966,12 @@ fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
             }
         }
 
-        PptxMetadata {
-            title: metadata_map.get("title").cloned(),
-            author: metadata_map.get("author").cloned(),
-            description: metadata_map.get("description").cloned(),
-            summary: metadata_map.get("summary").cloned(),
-            fonts: Vec::new(),
-        }
+        PptxMetadata { fonts: Vec::new() }
     }
 
     #[cfg(not(feature = "office"))]
     {
-        PptxMetadata {
-            title: None,
-            author: None,
-            description: None,
-            summary: None,
-            fonts: Vec::new(),
-        }
+        PptxMetadata { fonts: Vec::new() }
     }
 }
 

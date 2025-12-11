@@ -123,6 +123,7 @@ impl DocumentExtractor for ImageExtractor {
                         format: Some(crate::types::FormatMetadata::Image(image_metadata)),
                         ..Default::default()
                     },
+                    pages: None,
                     tables: vec![],
                     detected_languages: None,
                     chunks: None,
@@ -141,6 +142,7 @@ impl DocumentExtractor for ImageExtractor {
                 format: Some(crate::types::FormatMetadata::Image(image_metadata)),
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,

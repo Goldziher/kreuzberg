@@ -7,6 +7,42 @@ use crate::{KreuzbergError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+/// Page extraction and tracking configuration.
+///
+/// Controls how pages are extracted, tracked, and represented in the extraction results.
+/// When `None`, page tracking is disabled.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PageConfig {
+    /// Extract pages as separate array (ExtractionResult.pages)
+    #[serde(default)]
+    pub extract_pages: bool,
+
+    /// Insert page markers in main content string
+    #[serde(default)]
+    pub insert_page_markers: bool,
+
+    /// Page marker format (use {page_num} placeholder)
+    /// Default: "\n\n<!-- PAGE {page_num} -->\n\n"
+    #[serde(default = "default_page_marker_format")]
+    pub marker_format: String,
+
+    /// Track page ranges in chunk metadata
+    #[serde(default)]
+    pub track_page_ranges: bool,
+}
+
+impl Default for PageConfig {
+    fn default() -> Self {
+        Self {
+            extract_pages: false,
+            insert_page_markers: false,
+            marker_format: "\n\n<!-- PAGE {page_num} -->\n\n".to_string(),
+            track_page_ranges: false,
+        }
+    }
+}
+
 /// Main extraction configuration.
 ///
 /// This struct contains all configuration options for the extraction process.
@@ -60,6 +96,10 @@ pub struct ExtractionConfig {
     /// Language detection configuration (None = no language detection)
     #[serde(default)]
     pub language_detection: Option<LanguageDetectionConfig>,
+
+    /// Page extraction configuration (None = no page tracking)
+    #[serde(default)]
+    pub pages: Option<PageConfig>,
 
     /// Keyword extraction configuration (None = no keyword extraction)
     #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
@@ -277,6 +317,9 @@ fn default_eng() -> String {
 fn default_tesseract_backend() -> String {
     "tesseract".to_string()
 }
+fn default_page_marker_format() -> String {
+    "\n\n<!-- PAGE {page_num} -->\n\n".to_string()
+}
 fn default_chunk_size() -> usize {
     1000
 }
@@ -320,6 +363,7 @@ impl Default for ExtractionConfig {
             pdf_options: None,
             token_reduction: None,
             language_detection: None,
+            pages: None,
             #[cfg(any(feature = "keywords-yake", feature = "keywords-rake"))]
             keywords: None,
             postprocessor: None,

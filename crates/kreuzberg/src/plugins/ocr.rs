@@ -462,6 +462,7 @@ mod tests {
                 detected_languages: None,
                 chunks: None,
                 images: None,
+                pages: None,
             })
         }
 

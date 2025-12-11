@@ -160,6 +160,7 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
         cleaned_text,
         attachments,
         metadata,
+        pages: None,
     })
 }
 
@@ -303,6 +304,7 @@ pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
         cleaned_text,
         attachments,
         metadata,
+        pages: None,
     })
 }
 
@@ -553,6 +555,7 @@ mod tests {
             cleaned_text: "Hello World".to_string(),
             attachments: vec![],
             metadata: HashMap::new(),
+            pages: None,
         };
 
         let output = build_email_text_output(&result);
@@ -582,6 +585,7 @@ mod tests {
                 size: Some(1024),
                 is_image: false,
                 data: None,
+                pages: None,
             }],
             metadata: HashMap::new(),
         };
@@ -747,6 +751,7 @@ mod tests {
             cleaned_text: "Cleaned body text".to_string(),
             attachments: vec![],
             metadata: HashMap::new(),
+            pages: None,
         };
 
         let output = build_email_text_output(&result);
@@ -779,6 +784,7 @@ mod tests {
                 size: Some(100),
                 is_image: false,
                 data: None,
+                pages: None,
             }],
             metadata: HashMap::new(),
         };
