@@ -276,22 +276,23 @@ async fn test_no_extension() {
 
     let detected = detect_mime_type(&temp_path, true);
 
-    if detected.is_err() {
-        let error = detected.unwrap_err();
-        assert!(
-            matches!(
-                error,
-                kreuzberg::KreuzbergError::Validation { .. } | kreuzberg::KreuzbergError::UnsupportedFormat(_)
-            ),
-            "Should return appropriate error for file without extension"
-        );
-    } else {
-        let mime = detected.unwrap();
-        assert!(
-            mime.contains('/'),
-            "Detected MIME type should be valid format: {}",
-            mime
-        );
+    match detected {
+        Err(error) => {
+            assert!(
+                matches!(
+                    error,
+                    kreuzberg::KreuzbergError::Validation { .. } | kreuzberg::KreuzbergError::UnsupportedFormat(_)
+                ),
+                "Should return appropriate error for file without extension"
+            );
+        }
+        Ok(mime) => {
+            assert!(
+                mime.contains('/'),
+                "Detected MIME type should be valid format: {}",
+                mime
+            );
+        }
     }
 
     let _ = std::fs::remove_file(&temp_path);

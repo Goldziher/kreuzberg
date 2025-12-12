@@ -495,8 +495,7 @@ async fn test_typst_mime_type_variants() {
     for mime_type in mime_types {
         let result = extract_bytes(&content, mime_type, &config).await;
 
-        if result.is_ok() {
-            let extraction = result.unwrap();
+        if let Ok(extraction) = result {
             assert!(
                 !extraction.content.is_empty(),
                 "Should extract content with MIME type: {}",
