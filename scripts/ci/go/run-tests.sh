@@ -33,7 +33,7 @@ cd "$REPO_ROOT/packages/go"
 echo "Working directory: $(pwd)"
 echo
 
-# Build list of Go packages that actually contain source files (skip an empty module root)
+# Build list of Go packages that actually contain source files (skip empty module root)
 echo "Discovering Go packages (excluding empty roots)..."
 mapfile -t go_dirs < <(find . -name '*.go' -not -path './vendor/*' -print0 | xargs -0 -n1 dirname | sort -u)
 packages=()
@@ -45,9 +45,13 @@ for dir in "${go_dirs[@]}"; do
 	packages+=("./${dir#./}")
 done
 
+echo "Found packages: $(printf '%s ' "${packages[@]}")"
+echo
+
 if [[ ${#packages[@]} -eq 0 ]]; then
-	echo "No Go packages found; nothing to test."
-	exit 0
+	echo "Error: No Go packages found in $(pwd)"
+	find . -name '*.go' -not -path './vendor/*' | head -20
+	exit 1
 fi
 
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
@@ -58,6 +62,7 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	export PATH="$ffiPathGnu:$ffiPathRelease:$PATH"
 	# Set CGO_LDFLAGS to help linker find the library
 	export CGO_LDFLAGS="-L$ffiPathGnu -L$ffiPathRelease"
+	export CGO_ENABLED=1
 
 	echo "=========================================="
 	echo "Windows-specific Configuration"
@@ -67,6 +72,7 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	echo "FFI path (Release): $ffiPathRelease"
 	echo "PATH: $PATH"
 	echo "CGO_LDFLAGS: $CGO_LDFLAGS"
+	echo "CGO_ENABLED: $CGO_ENABLED"
 	echo "CGO_CFLAGS: ${CGO_CFLAGS:-<not set>}"
 	echo "CC: ${CC:-<not set>}"
 	echo "CXX: ${CXX:-<not set>}"
@@ -106,6 +112,7 @@ else
 		export CGO_LDFLAGS="-L$ffiPath -Wl,-rpath,$ffiPath"
 	fi
 
+	export CGO_ENABLED=1
 	export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 	echo "=========================================="
@@ -117,6 +124,7 @@ else
 	echo "DYLD_LIBRARY_PATH: $DYLD_LIBRARY_PATH"
 	echo "DYLD_FALLBACK_LIBRARY_PATH: $DYLD_FALLBACK_LIBRARY_PATH"
 	echo "CGO_LDFLAGS: $CGO_LDFLAGS"
+	echo "CGO_ENABLED: $CGO_ENABLED"
 	echo "CGO_CFLAGS: ${CGO_CFLAGS:-<not set>}"
 	echo "CC: ${CC:-<not set>}"
 	echo "CXX: ${CXX:-<not set>}"
