@@ -33,7 +33,6 @@ fn build_archive_result(
         file_list: file_names,
         total_size: extraction_metadata.total_size as usize,
         compressed_size: None,
-        pages: None,
     };
 
     let mut additional = HashMap::new();
@@ -72,13 +71,13 @@ fn build_archive_result(
         metadata: Metadata {
             format: Some(crate::types::FormatMetadata::Archive(archive_metadata)),
             additional,
-            pages: None,
             ..Default::default()
         },
         tables: vec![],
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     }
 }
 

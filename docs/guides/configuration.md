@@ -419,6 +419,148 @@ PDF-specific extraction configuration.
 
     --8<-- "docs/snippets/typescript/config/pdf_config.md"
 
+## Page Configuration
+
+Configure page extraction and boundary tracking.
+
+### Overview
+
+Page tracking enables:
+- Per-page content extraction
+- Byte-accurate page boundaries
+- Automatic chunk-to-page mapping
+- Page markers for LLM context
+
+### Configuration Options
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `extract_pages` | `bool` | `false` | Extract pages array with per-page content |
+| `insert_page_markers` | `bool` | `false` | Insert page markers in combined content |
+| `marker_format` | `String` | `"\\n\\n<!-- PAGE {page_num} -->\\n\\n"` | Page marker template |
+
+### Example Configuration
+
+=== "C#"
+
+    ```csharp title="page_config.cs"
+    var config = new ExtractionConfig
+    {
+        Pages = new PageConfig
+        {
+            ExtractPages = true,
+            InsertPageMarkers = true,
+            MarkerFormat = "\n\n--- Page {page_num} ---\n\n"
+        }
+    };
+    ```
+
+=== "Go"
+
+    ```go title="page_config.go"
+    config := &ExtractionConfig{
+        Pages: &PageConfig{
+            ExtractPages:      true,
+            InsertPageMarkers: true,
+            MarkerFormat:      "\n\n--- Page {page_num} ---\n\n",
+        },
+    }
+    ```
+
+=== "Java"
+
+    ```java title="PageConfig.java"
+    var config = ExtractionConfig.builder()
+        .pages(PageConfig.builder()
+            .extractPages(true)
+            .insertPageMarkers(true)
+            .markerFormat("\n\n--- Page {page_num} ---\n\n")
+            .build())
+        .build();
+    ```
+
+=== "Python"
+
+    ```python title="page_config.py"
+    config = ExtractionConfig(
+        pages=PageConfig(
+            extract_pages=True,
+            insert_page_markers=True,
+            marker_format="\n\n--- Page {page_num} ---\n\n"
+        )
+    )
+    ```
+
+=== "Ruby"
+
+    ```ruby title="page_config.rb"
+    config = ExtractionConfig.new(
+      pages: PageConfig.new(
+        extract_pages: true,
+        insert_page_markers: true,
+        marker_format: "\n\n--- Page {page_num} ---\n\n"
+      )
+    )
+    ```
+
+=== "Rust"
+
+    ```rust title="page_config.rs"
+    let config = ExtractionConfig {
+        pages: Some(PageConfig {
+            extract_pages: true,
+            insert_page_markers: true,
+            marker_format: "\n\n--- Page {page_num} ---\n\n".to_string(),
+        }),
+        ..Default::default()
+    };
+    ```
+
+=== "TypeScript"
+
+    ```typescript title="page_config.ts"
+    const config: ExtractionConfig = {
+      pages: {
+        extractPages: true,
+        insertPageMarkers: true,
+        markerFormat: "\n\n--- Page {page_num} ---\n\n"
+      }
+    };
+    ```
+
+### Field Details
+
+**extract_pages**: When `true`, populates `ExtractionResult.pages` with per-page content. Each page contains its text, tables, and images separately.
+
+**insert_page_markers**: When `true`, inserts page markers into the combined `content` string at page boundaries. Useful for LLMs to understand document structure.
+
+**marker_format**: Template string for page markers. Use `{page_num}` placeholder for the page number. Default HTML comment format is LLM-friendly.
+
+### Format-Specific Behavior
+
+**PDF**: Full byte-accurate page tracking with O(1) lookup performance. Every page boundary is tracked precisely.
+
+**PPTX**: Slide boundaries tracked. Each slide is treated as a "page" with `PageUnitType::Slide`.
+
+**DOCX**: Best-effort detection using explicit page breaks. Only pages with `<w:br type="page"/>` tags are tracked.
+
+**Other formats**: Page tracking not available. `PageStructure` will be `None`/`null`.
+
+### Byte Offsets vs Character Offsets
+
+Page boundaries use **byte offsets** (not character offsets) for UTF-8 safety and performance:
+
+```python
+# Correct: Use byte offsets
+boundary = boundaries[0]
+page_text = content.encode('utf-8')[boundary.byte_start:boundary.byte_end].decode('utf-8')
+
+# Incorrect: Don't use as character indices
+page_text = content[boundary.byte_start:boundary.byte_end]  # Wrong for multi-byte chars
+```
+
+See [Byte Offset Handling](../migration/v3-to-v4.md#byte-offset-changes) in the migration guide.
+
 ## ImageExtractionConfig
 
 Configuration for extracting images from documents.

@@ -88,7 +88,6 @@ pub fn parse_xml(xml_bytes: &[u8], preserve_whitespace: bool) -> Result<XmlExtra
         content,
         element_count,
         unique_elements,
-        pages: None,
     })
 }
 

@@ -1,7 +1,3 @@
-[build-system]
-build-backend = "hatchling.build"
-requires = [ "hatchling" ]
-
 [dependency-groups]
 dev = [
   "covdefaults>=2.3.0",

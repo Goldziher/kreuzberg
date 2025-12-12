@@ -45,6 +45,8 @@ pub struct ExtractionResult {
     images: Option<Py<PyList>>,
 
     chunks: Option<Py<PyList>>,
+
+    pages: Option<Py<PyList>>,
 }
 
 #[pymethods]
@@ -73,6 +75,11 @@ impl ExtractionResult {
     #[getter]
     fn chunks<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyList>> {
         self.chunks.as_ref().map(|chunks| chunks.bind(py).clone())
+    }
+
+    #[getter]
+    fn pages<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyList>> {
+        self.pages.as_ref().map(|pages| pages.bind(py).clone())
     }
 
     fn __repr__(&self) -> String {
@@ -206,44 +213,34 @@ impl ExtractionResult {
                 }
                 page_dict.set_item("tables", page_tables)?;
 
-                if let Some(imgs) = page.images {
-                    let page_images = PyList::empty(py);
-                    for img in imgs {
-                        let img_dict = PyDict::new(py);
-                        img_dict.set_item("data", pyo3::types::PyBytes::new(py, &img.data))?;
-                        img_dict.set_item("format", &img.format)?;
-                        img_dict.set_item("image_index", img.image_index)?;
-                        if let Some(page_num) = img.page_number {
-                            img_dict.set_item("page_number", page_num)?;
-                        }
-                        if let Some(width) = img.width {
-                            img_dict.set_item("width", width)?;
-                        }
-                        if let Some(height) = img.height {
-                            img_dict.set_item("height", height)?;
-                        }
-                        if let Some(colorspace) = &img.colorspace {
-                            img_dict.set_item("colorspace", colorspace)?;
-                        }
-                        if let Some(bits) = img.bits_per_component {
-                            img_dict.set_item("bits_per_component", bits)?;
-                        }
-                        img_dict.set_item("is_mask", img.is_mask)?;
-                        if let Some(desc) = &img.description {
-                            img_dict.set_item("description", desc)?;
-                        }
-                        page_images.append(img_dict)?;
+                let page_images = PyList::empty(py);
+                for img in page.images {
+                    let img_dict = PyDict::new(py);
+                    img_dict.set_item("data", pyo3::types::PyBytes::new(py, &img.data))?;
+                    img_dict.set_item("format", &img.format)?;
+                    img_dict.set_item("image_index", img.image_index)?;
+                    if let Some(page_num) = img.page_number {
+                        img_dict.set_item("page_number", page_num)?;
                     }
-                    page_dict.set_item("images", page_images)?;
-                } else {
-                    page_dict.set_item("images", py.None())?;
+                    if let Some(width) = img.width {
+                        img_dict.set_item("width", width)?;
+                    }
+                    if let Some(height) = img.height {
+                        img_dict.set_item("height", height)?;
+                    }
+                    if let Some(colorspace) = &img.colorspace {
+                        img_dict.set_item("colorspace", colorspace)?;
+                    }
+                    if let Some(bits) = img.bits_per_component {
+                        img_dict.set_item("bits_per_component", bits)?;
+                    }
+                    img_dict.set_item("is_mask", img.is_mask)?;
+                    if let Some(desc) = &img.description {
+                        img_dict.set_item("description", desc)?;
+                    }
+                    page_images.append(img_dict)?;
                 }
-
-                let boundary_dict = PyDict::new(py);
-                boundary_dict.set_item("byte_start", page.boundaries.byte_start)?;
-                boundary_dict.set_item("byte_end", page.boundaries.byte_end)?;
-                boundary_dict.set_item("page_number", page.boundaries.page_number)?;
-                page_dict.set_item("boundaries", boundary_dict)?;
+                page_dict.set_item("images", page_images)?;
 
                 page_list.append(page_dict)?;
             }
@@ -294,6 +291,7 @@ mod tests {
                 detected_languages: Some(vec!["en".to_string()]),
                 chunks: None,
                 images: None,
+                pages: None,
             };
 
             let py_result = ExtractionResult::from_rust(rust_result, py).expect("conversion should succeed");

@@ -160,7 +160,6 @@ pub fn parse_eml_content(data: &[u8]) -> Result<EmailExtractionResult> {
         cleaned_text,
         attachments,
         metadata,
-        pages: None,
     })
 }
 
@@ -304,7 +303,6 @@ pub fn parse_msg_content(data: &[u8]) -> Result<EmailExtractionResult> {
         cleaned_text,
         attachments,
         metadata,
-        pages: None,
     })
 }
 

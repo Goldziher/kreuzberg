@@ -2296,7 +2296,7 @@ impl From<KeywordConfig> for kreuzberg::keywords::KeywordConfig {
 #[pyclass(name = "PageConfig", module = "kreuzberg")]
 #[derive(Clone)]
 pub struct PageConfig {
-    inner: kreuzberg::core::PageConfig,
+    inner: kreuzberg::core::config::PageConfig,
 }
 
 #[pymethods]
@@ -2305,7 +2305,7 @@ impl PageConfig {
     #[pyo3(signature = (extract_pages=None, insert_page_markers=None, marker_format=None))]
     fn new(extract_pages: Option<bool>, insert_page_markers: Option<bool>, marker_format: Option<String>) -> Self {
         Self {
-            inner: kreuzberg::core::PageConfig {
+            inner: kreuzberg::core::config::PageConfig {
                 extract_pages: extract_pages.unwrap_or(false),
                 insert_page_markers: insert_page_markers.unwrap_or(false),
                 marker_format: marker_format.unwrap_or_else(|| "\n\n<!-- PAGE {page_num} -->\n\n".to_string()),
@@ -2351,14 +2351,14 @@ impl PageConfig {
     }
 }
 
-impl From<PageConfig> for kreuzberg::core::PageConfig {
+impl From<PageConfig> for kreuzberg::core::config::PageConfig {
     fn from(config: PageConfig) -> Self {
         config.inner
     }
 }
 
-impl From<kreuzberg::core::PageConfig> for PageConfig {
-    fn from(config: kreuzberg::core::PageConfig) -> Self {
+impl From<kreuzberg::core::config::PageConfig> for PageConfig {
+    fn from(config: kreuzberg::core::config::PageConfig) -> Self {
         Self { inner: config }
     }
 }

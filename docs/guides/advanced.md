@@ -588,3 +588,103 @@ Advanced features work together:
 === "TypeScript"
 
     --8<-- "docs/snippets/typescript/getting-started/combining_all_features.md"
+
+## Page Tracking Patterns
+
+Advanced patterns for using page tracking in real-world applications.
+
+### Chunk-to-Page Mapping
+
+When both chunking and page tracking are enabled, chunks automatically include page metadata:
+
+```python
+from kreuzberg import extract_file_sync, ExtractionConfig, ChunkingConfig, PageConfig
+
+config = ExtractionConfig(
+    chunking=ChunkingConfig(chunk_size=500, overlap=50),
+    pages=PageConfig(extract_pages=True)
+)
+
+result = extract_file_sync("document.pdf", config=config)
+
+if result.chunks:
+    for chunk in result.chunks:
+        if chunk.metadata.first_page:
+            page_range = (
+                f"Page {chunk.metadata.first_page}"
+                if chunk.metadata.first_page == chunk.metadata.last_page
+                else f"Pages {chunk.metadata.first_page}-{chunk.metadata.last_page}"
+            )
+            print(f"Chunk: {chunk.text[:50]}... ({page_range})")
+```
+
+### Page-Filtered Search
+
+Filter chunks by page range for focused retrieval:
+
+```python
+def search_in_pages(chunks: list[Chunk], query: str, page_start: int, page_end: int) -> list[Chunk]:
+    """Search only within specified page range."""
+    page_chunks = [
+        c for c in chunks
+        if c.metadata.first_page and c.metadata.last_page
+        and c.metadata.first_page >= page_start
+        and c.metadata.last_page <= page_end
+    ]
+    return search_chunks(page_chunks, query)
+```
+
+### Page-Aware Embeddings
+
+Include page context in embeddings for better retrieval:
+
+```python
+for chunk in result.chunks:
+    if chunk.metadata.first_page:
+        context = f"Page {chunk.metadata.first_page}: {chunk.text}"
+        embedding = embed(context)
+        store_with_metadata(embedding, {
+            "page": chunk.metadata.first_page,
+            "text": chunk.text
+        })
+```
+
+### Per-Page Processing
+
+Process each page independently:
+
+```python
+from kreuzberg import extract_file_sync, ExtractionConfig, PageConfig
+
+config = ExtractionConfig(
+    pages=PageConfig(extract_pages=True)
+)
+
+result = extract_file_sync("document.pdf", config=config)
+
+if result.pages:
+    for page in result.pages:
+        print(f"Page {page.page_number}:")
+        print(f"  Content: {len(page.content)} chars")
+        print(f"  Tables: {len(page.tables)}")
+        print(f"  Images: {len(page.images)}")
+```
+
+### Format-Specific Strategies
+
+**PDF Documents**: Use byte boundaries for precise page lookups. Ideal for legal documents, research papers.
+
+**Presentations (PPTX)**: Process slides independently. Use `PageUnitType::Slide` to distinguish from regular pages.
+
+**Word Documents (DOCX)**: Page breaks may be approximate. Verify `PageStructure.boundaries` exists before using.
+
+**Multi-Format**: Check `PageStructure` availability:
+
+```python
+if result.metadata.pages and result.metadata.pages.boundaries:
+    # Page tracking available
+    process_with_pages(result)
+else:
+    # Fallback to page-less processing
+    process_without_pages(result)
+```

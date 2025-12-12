@@ -329,6 +329,56 @@ Kreuzberg supports 56 file formats across 8 categories:
 
 See the [installation guide](../getting-started/installation.md#system-dependencies) for optional dependencies (Tesseract, LibreOffice).
 
+## Page Tracking and Boundaries
+
+Kreuzberg can track page boundaries and extract per-page content for supported formats.
+
+### When Page Tracking is Available
+
+Page tracking is format-specific:
+
+- **PDF**: Full byte-accurate page tracking with O(1) lookup performance
+- **PPTX**: Slide boundary tracking (each slide is a "page")
+- **DOCX**: Best-effort page break detection using explicit `<w:br type="page"/>` tags
+- **Other formats**: No page tracking (boundaries and pages are `None`/`null`)
+
+### Enabling Page Extraction
+
+To extract per-page content, enable `extract_pages`:
+
+```mermaid
+graph LR
+    A[Document] --> B[Extract with PageConfig]
+    B --> C[Combined content]
+    B --> D[Pages array]
+    D --> E[Page 1]
+    D --> F[Page 2]
+    D --> G[Page N]
+```
+
+See [PageConfig documentation](../reference/configuration.md#pageconfig) for configuration details.
+
+### Page Markers
+
+Optionally insert page markers into the combined content string:
+
+```python
+config = ExtractionConfig(
+    pages=PageConfig(
+        insert_page_markers=True,
+        marker_format="\n\n<!-- PAGE {page_num} -->\n\n"
+    )
+)
+```
+
+This adds markers like `<!-- PAGE 1 -->` at page boundaries in the `content` field, useful for LLMs to understand document structure.
+
+### Relationship with Chunking
+
+When both page tracking and chunking are enabled, chunks automatically include `first_page` and `last_page` metadata showing which pages they span.
+
+See [Advanced Page Tracking](./advanced.md#page-tracking-patterns) for chunk-to-page mapping examples.
+
 ## Error Handling
 
 All extraction functions raise exceptions on failure:

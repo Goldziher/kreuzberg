@@ -313,6 +313,7 @@ Result object returned by all extraction functions.
 - `metadata` (Hash): Document metadata (format-specific fields)
 - `tables` (Array<Hash>): Array of extracted tables
 - `detected_languages` (Array<String>, nil): Array of detected language codes if language detection is enabled
+- `pages` (Array<Hash>, nil): Per-page extracted content when page extraction is enabled via `PageConfig.extract_pages = true`
 
 **Example:**
 
@@ -326,6 +327,77 @@ puts "Tables: #{result.tables.length}"
 
 if result.detected_languages
   puts "Languages: #{result.detected_languages.join(', ')}"
+end
+```
+
+#### pages
+
+**Type**: `Array<Hash> | nil`
+
+Per-page extracted content when page extraction is enabled via `PageConfig.extract_pages = true`.
+
+Each page hash contains:
+- `page_number` (Integer): 1-indexed page number
+- `content` (String): Text content for that page
+- `tables` (Array<Hash>): Tables on that page
+- `images` (Array<Hash>): Images on that page
+
+**Example:**
+
+```ruby title="page_extraction.rb"
+require 'kreuzberg'
+
+config = {
+  pages: {
+    extract_pages: true
+  }
+}
+
+result = Kreuzberg.extract_file_sync("document.pdf", config: config)
+
+if result.pages
+  result.pages.each do |page|
+    puts "Page #{page['page_number']}:"
+    puts "  Content: #{page['content'].length} chars"
+    puts "  Tables: #{page['tables'].length}"
+    puts "  Images: #{page['images'].length}"
+  end
+end
+```
+
+---
+
+### Accessing Per-Page Content
+
+When page extraction is enabled, access individual pages and iterate over them:
+
+```ruby title="iterate_pages.rb"
+require 'kreuzberg'
+
+config = {
+  pages: {
+    extract_pages: true,
+    insert_page_markers: true,
+    marker_format: "\n\n--- Page {page_num} ---\n\n"
+  }
+}
+
+result = Kreuzberg.extract_file_sync("document.pdf", config: config)
+
+# Access combined content with page markers
+puts "Combined content with markers:"
+puts result.content[0..500]
+puts
+
+# Access per-page content
+if result.pages
+  result.pages.each do |page|
+    puts "Page #{page['page_number']}:"
+    content_preview = page['content'][0..100]
+    puts "  #{content_preview}..."
+    puts "  Found #{page['tables'].length} table(s)" if page['tables'].length > 0
+    puts "  Found #{page['images'].length} image(s)" if page['images'].length > 0
+  end
 end
 ```
 
@@ -404,6 +476,57 @@ result.tables.each do |table|
   puts "Table on page #{table['page_number']}:"
   puts table['markdown']
   puts
+end
+```
+
+---
+
+### ChunkMetadata Hash
+
+Metadata for a single text chunk.
+
+**Fields:**
+
+- `byte_start` (Integer): UTF-8 byte offset in content (inclusive)
+- `byte_end` (Integer): UTF-8 byte offset in content (exclusive)
+- `char_count` (Integer): Number of characters in chunk
+- `token_count` (Integer, nil): Estimated token count (if configured)
+- `first_page` (Integer, nil): First page this chunk appears on (1-indexed, only when page boundaries available)
+- `last_page` (Integer, nil): Last page this chunk appears on (1-indexed, only when page boundaries available)
+
+**Page tracking:** When `PageStructure.boundaries` is available and chunking is enabled, `first_page` and `last_page` are automatically calculated based on byte offsets.
+
+**Example:**
+
+```ruby title="chunk_metadata.rb"
+require 'kreuzberg'
+
+config = {
+  chunking: {
+    chunk_size: 500,
+    chunk_overlap: 50
+  },
+  pages: {
+    extract_pages: true
+  }
+}
+
+result = Kreuzberg.extract_file_sync("document.pdf", config: config)
+
+# Access chunk metadata for page tracking
+result.chunks&.each do |chunk|
+  meta = chunk['metadata']
+  page_info = ""
+
+  if meta['first_page']
+    if meta['first_page'] == meta['last_page']
+      page_info = " (page #{meta['first_page']})"
+    else
+      page_info = " (pages #{meta['first_page']}-#{meta['last_page']})"
+    end
+  end
+
+  puts "Chunk [#{meta['byte_start']}:#{meta['byte_end']}]: #{meta['char_count']} chars#{page_info}"
 end
 ```
 

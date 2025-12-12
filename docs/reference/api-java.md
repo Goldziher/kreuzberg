@@ -635,6 +635,7 @@ List<Table> tables = result.getTables();                // Extracted tables
 List<String> languages = result.getDetectedLanguages(); // Detected languages
 List<Chunk> chunks = result.getChunks();                // Text chunks
 List<ExtractedImage> images = result.getImages();       // Extracted images
+List<PageContent> pages = result.getPages();            // Per-page content (if enabled)
 boolean success = result.isSuccess();                    // Extraction success flag
 
 // Access common metadata fields
@@ -661,6 +662,81 @@ Object author = result.getMetadata().get("author");
 // Process chunks for RAG workflows
 for (Chunk chunk : result.getChunks()) {
     System.out.println("Chunk " + chunk.getIndex() + ": " + chunk.getContent());
+}
+```
+
+#### pages
+
+**Type**: `List<PageContent>`
+
+Per-page extracted content when page extraction is enabled via `PageConfig.extractPages = true`.
+
+Each page contains:
+- Page number (1-indexed)
+- Text content for that page
+- Tables on that page
+- Images on that page
+
+**Example:**
+
+```java title="PageExtraction.java"
+import dev.kreuzberg.*;
+
+var config = ExtractionConfig.builder()
+    .pages(PageConfig.builder()
+        .extractPages(true)
+        .build())
+    .build();
+
+var result = Kreuzberg.extractFile("document.pdf", config);
+
+if (result.getPages() != null) {
+    for (var page : result.getPages()) {
+        System.out.println("Page " + page.getPageNumber() + ":");
+        System.out.println("  Content: " + page.getContent().length() + " chars");
+        System.out.println("  Tables: " + page.getTables().size());
+        System.out.println("  Images: " + page.getImages().size());
+    }
+}
+```
+
+---
+
+### Accessing Per-Page Content
+
+When page extraction is enabled, access individual pages and iterate over them:
+
+```java title="IteratePages.java"
+import dev.kreuzberg.*;
+
+var config = ExtractionConfig.builder()
+    .pages(PageConfig.builder()
+        .extractPages(true)
+        .insertPageMarkers(true)
+        .markerFormat("\n\n--- Page {page_num} ---\n\n")
+        .build())
+    .build();
+
+var result = Kreuzberg.extractFile("document.pdf", config);
+
+// Access combined content with page markers
+System.out.println("Combined content with markers:");
+System.out.println(result.getContent().substring(0, 500));
+System.out.println();
+
+// Access per-page content
+if (result.getPages() != null) {
+    for (var page : result.getPages()) {
+        System.out.println("Page " + page.getPageNumber() + ":");
+        String preview = page.getContent().substring(0, Math.min(100, page.getContent().length()));
+        System.out.println("  " + preview + "...");
+        if (!page.getTables().isEmpty()) {
+            System.out.println("  Found " + page.getTables().size() + " table(s)");
+        }
+        if (!page.getImages().isEmpty()) {
+            System.out.println("  Found " + page.getImages().size() + " image(s)");
+        }
+    }
 }
 ```
 
@@ -737,6 +813,79 @@ ExtractionResult result = Kreuzberg.extractFile("document.pdf", config);
 // Process each chunk (e.g., for embedding generation)
 for (Chunk chunk : result.getChunks()) {
     System.out.println("Chunk " + chunk.getIndex() + ": " + chunk.getContent().substring(0, 50) + "...");
+}
+```
+
+---
+
+### ChunkMetadata
+
+Metadata for a single text chunk.
+
+**Accessors:**
+
+```java title="ChunkMetadataAccess.java"
+// Access chunk metadata for page tracking and boundaries
+int byteStart = metadata.getByteStart();              // UTF-8 byte offset (inclusive)
+int byteEnd = metadata.getByteEnd();                  // UTF-8 byte offset (exclusive)
+int charCount = metadata.getCharCount();              // Number of characters
+Optional<Integer> tokenCount = metadata.getTokenCount(); // Estimated token count
+Optional<Integer> firstPage = metadata.getFirstPage();   // First page (1-indexed)
+Optional<Integer> lastPage = metadata.getLastPage();     // Last page (1-indexed)
+```
+
+**Fields:**
+
+- `byteStart` (int): UTF-8 byte offset in content (inclusive)
+- `byteEnd` (int): UTF-8 byte offset in content (exclusive)
+- `charCount` (int): Number of characters in chunk
+- `tokenCount` (Optional<Integer>): Estimated token count (if configured)
+- `firstPage` (Optional<Integer>): First page this chunk appears on (1-indexed, only when page boundaries available)
+- `lastPage` (Optional<Integer>): Last page this chunk appears on (1-indexed, only when page boundaries available)
+
+**Page tracking:** When `PageStructure.boundaries` is available and chunking is enabled, `firstPage` and `lastPage` are automatically calculated based on byte offsets.
+
+**Example:**
+
+```java title="ChunkMetadataExample.java"
+import dev.kreuzberg.*;
+
+var config = ExtractionConfig.builder()
+    .chunking(ChunkingConfig.builder()
+        .maxChars(500)
+        .maxOverlap(50)
+        .build())
+    .pages(PageConfig.builder()
+        .extractPages(true)
+        .build())
+    .build();
+
+var result = Kreuzberg.extractFile("document.pdf", config);
+
+if (result.getChunks() != null) {
+    for (var chunk : result.getChunks()) {
+        var meta = chunk.getMetadata();
+        String pageInfo = "";
+
+        if (meta.getFirstPage().isPresent()) {
+            int first = meta.getFirstPage().get();
+            int last = meta.getLastPage().orElse(first);
+
+            if (first == last) {
+                pageInfo = " (page " + first + ")";
+            } else {
+                pageInfo = " (pages " + first + "-" + last + ")";
+            }
+        }
+
+        System.out.printf(
+            "Chunk [%d:%d]: %d chars%s%n",
+            meta.getByteStart(),
+            meta.getByteEnd(),
+            meta.getCharCount(),
+            pageInfo
+        );
+    }
 }
 ```
 

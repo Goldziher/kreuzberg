@@ -593,6 +593,7 @@ pub struct ExtractionResult {
 - `metadata` (Metadata): Document metadata (format-specific fields)
 - `tables` (Vec<Table>): Vector of extracted tables
 - `detected_languages` (Option<Vec<String>>): Vector of detected language codes (ISO 639-1) if language detection is enabled
+- `pages` (Option<Vec<PageContent>>): Per-page extracted content when page extraction is enabled via `PageConfig.extract_pages = true`
 
 **Example:**
 
@@ -611,6 +612,91 @@ fn main() -> kreuzberg::Result<()> {
     // Display detected languages if available
     if let Some(langs) = result.detected_languages {
         println!("Languages: {}", langs.join(", "));
+    }
+
+    Ok(())
+}
+```
+
+#### pages
+
+**Type**: `Option<Vec<PageContent>>`
+
+Per-page extracted content when page extraction is enabled via `PageConfig.extract_pages = true`.
+
+Each page contains:
+- Page number (1-indexed)
+- Text content for that page
+- Tables on that page
+- Images on that page
+
+**Example:**
+
+```rust title="page_extraction.rs"
+use kreuzberg::{extract_file_sync, ExtractionConfig, PageConfig};
+
+fn main() -> kreuzberg::Result<()> {
+    let config = ExtractionConfig {
+        pages: Some(PageConfig {
+            extract_pages: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let result = extract_file_sync("document.pdf", None, &config)?;
+
+    if let Some(pages) = result.pages {
+        for page in pages {
+            println!("Page {}:", page.page_number);
+            println!("  Content: {} chars", page.content.len());
+            println!("  Tables: {}", page.tables.len());
+            println!("  Images: {}", page.images.len());
+        }
+    }
+
+    Ok(())
+}
+```
+
+---
+
+### Accessing Per-Page Content
+
+When page extraction is enabled, access individual pages and iterate over them:
+
+```rust title="iterate_pages.rs"
+use kreuzberg::{extract_file_sync, ExtractionConfig, PageConfig};
+
+fn main() -> kreuzberg::Result<()> {
+    let config = ExtractionConfig {
+        pages: Some(PageConfig {
+            extract_pages: true,
+            insert_page_markers: true,
+            marker_format: "\n\n--- Page {page_num} ---\n\n".to_string(),
+        }),
+        ..Default::default()
+    };
+
+    let result = extract_file_sync("document.pdf", None, &config)?;
+
+    // Access combined content with page markers
+    println!("Combined content with markers:");
+    println!("{}", &result.content[..result.content.len().min(500)]);
+    println!();
+
+    // Access per-page content
+    if let Some(pages) = result.pages {
+        for page in pages {
+            println!("Page {}:", page.page_number);
+            println!("  {}", &page.content[..page.content.len().min(100)]);
+            if !page.tables.is_empty() {
+                println!("  Found {} table(s)", page.tables.len());
+            }
+            if !page.images.is_empty() {
+                println!("  Found {} image(s)", page.images.len());
+            }
+        }
     }
 
     Ok(())
@@ -701,6 +787,84 @@ for table in &result.tables {
     println!("Table on page {}:", table.page_number);
     println!("{}", table.markdown);
     println!();
+}
+```
+
+---
+
+### ChunkMetadata
+
+Metadata for a single text chunk.
+
+**Definition:**
+
+```rust title="Rust"
+pub struct ChunkMetadata {
+    pub byte_start: usize,
+    pub byte_end: usize,
+    pub char_count: usize,
+    pub token_count: Option<usize>,
+    pub first_page: Option<usize>,
+    pub last_page: Option<usize>,
+}
+```
+
+**Fields:**
+
+- `byte_start` (usize): UTF-8 byte offset in content (inclusive)
+- `byte_end` (usize): UTF-8 byte offset in content (exclusive)
+- `char_count` (usize): Number of characters in chunk
+- `token_count` (Option<usize>): Estimated token count (if configured)
+- `first_page` (Option<usize>): First page this chunk appears on (1-indexed, only when page boundaries available)
+- `last_page` (Option<usize>): Last page this chunk appears on (1-indexed, only when page boundaries available)
+
+**Page tracking:** When `PageStructure.boundaries` is available and chunking is enabled, `first_page` and `last_page` are automatically calculated based on byte offsets.
+
+**Example:**
+
+```rust title="chunk_metadata.rs"
+use kreuzberg::{extract_file_sync, ExtractionConfig, ChunkingConfig, PageConfig};
+
+fn main() -> kreuzberg::Result<()> {
+    let config = ExtractionConfig {
+        chunking: Some(ChunkingConfig {
+            chunk_size: 500,
+            chunk_overlap: 50,
+            ..Default::default()
+        }),
+        pages: Some(PageConfig {
+            extract_pages: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let result = extract_file_sync("document.pdf", None, &config)?;
+
+    if let Some(chunks) = result.chunks {
+        for chunk in chunks {
+            let meta = &chunk.metadata;
+            let page_info = match (meta.first_page, meta.last_page) {
+                (Some(first), Some(last)) if first == last => {
+                    format!(" (page {})", first)
+                }
+                (Some(first), Some(last)) => {
+                    format!(" (pages {}-{})", first, last)
+                }
+                _ => String::new(),
+            };
+
+            println!(
+                "Chunk [{}:{}]: {} chars{}",
+                meta.byte_start,
+                meta.byte_end,
+                meta.char_count,
+                page_info
+            );
+        }
+    }
+
+    Ok(())
 }
 ```
 

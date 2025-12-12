@@ -580,6 +580,7 @@ class ExtractionResult(TypedDict):
 - `metadata` (Metadata): Document metadata (format-specific fields)
 - `tables` (list[Table]): List of extracted tables
 - `detected_languages` (list[str] | None): List of detected language codes (ISO 639-1) if language detection is enabled
+- `pages` (list[PageContent] | None): Per-page extracted content when page extraction is enabled via `PageConfig.extract_pages = true`
 
 **Example:**
 
@@ -593,6 +594,72 @@ print(f"Tables: {len(result.tables)}")
 
 if result.detected_languages:
     print(f"Languages: {', '.join(result.detected_languages)}")
+```
+
+#### pages
+
+**Type**: `list[PageContent] | None`
+
+Per-page extracted content when page extraction is enabled via `PageConfig.extract_pages = true`.
+
+Each page contains:
+- Page number (1-indexed)
+- Text content for that page
+- Tables on that page
+- Images on that page
+
+**Example:**
+
+```python title="page_extraction.py"
+from kreuzberg import extract_file_sync, ExtractionConfig, PageConfig
+
+config = ExtractionConfig(
+    pages=PageConfig(extract_pages=True)
+)
+
+result = extract_file_sync("document.pdf", config=config)
+
+if result.pages:
+    for page in result.pages:
+        print(f"Page {page.page_number}:")
+        print(f"  Content: {len(page.content)} chars")
+        print(f"  Tables: {len(page.tables)}")
+        print(f"  Images: {len(page.images)}")
+```
+
+---
+
+### Accessing Per-Page Content
+
+When page extraction is enabled, access individual pages and iterate over them:
+
+```python title="iterate_pages.py"
+from kreuzberg import extract_file_sync, ExtractionConfig, PageConfig
+
+config = ExtractionConfig(
+    pages=PageConfig(
+        extract_pages=True,
+        insert_page_markers=True,
+        marker_format="\n\n--- Page {page_num} ---\n\n"
+    )
+)
+
+result = extract_file_sync("document.pdf", config=config)
+
+# Access combined content with page markers
+print("Combined content with markers:")
+print(result.content[:500])
+print()
+
+# Access per-page content
+if result.pages:
+    for page in result.pages:
+        print(f"Page {page.page_number}:")
+        print(f"  {page.content[:100]}...")
+        if page.tables:
+            print(f"  Found {len(page.tables)} table(s)")
+        if page.images:
+            print(f"  Found {len(page.images)} image(s)")
 ```
 
 ---
@@ -679,6 +746,60 @@ for table in result.tables:
     print(f"Table on page {table.page_number}:")
     print(table.markdown)
     print()
+```
+
+---
+
+### ChunkMetadata
+
+Metadata for a single text chunk.
+
+**Type Definition:**
+
+```python title="Python"
+class ChunkMetadata(TypedDict, total=False):
+    byte_start: int
+    byte_end: int
+    char_count: int
+    token_count: int | None
+    first_page: int | None
+    last_page: int | None
+```
+
+**Fields:**
+
+- `byte_start` (int): UTF-8 byte offset in content (inclusive)
+- `byte_end` (int): UTF-8 byte offset in content (exclusive)
+- `char_count` (int): Number of characters in chunk
+- `token_count` (int | None): Estimated token count (if configured)
+- `first_page` (int | None): First page this chunk appears on (1-indexed, only when page boundaries available)
+- `last_page` (int | None): Last page this chunk appears on (1-indexed, only when page boundaries available)
+
+**Page tracking:** When `PageStructure.boundaries` is available and chunking is enabled, `first_page` and `last_page` are automatically calculated based on byte offsets.
+
+**Example:**
+
+```python title="chunk_metadata.py"
+from kreuzberg import extract_file_sync, ExtractionConfig, ChunkingConfig, PageConfig
+
+config = ExtractionConfig(
+    chunking=ChunkingConfig(chunk_size=500, overlap=50),
+    pages=PageConfig(extract_pages=True)
+)
+
+result = extract_file_sync("document.pdf", config=config)
+
+if result.chunks:
+    for chunk in result.chunks:
+        meta = chunk.metadata
+        page_info = ""
+        if meta.get('first_page'):
+            if meta['first_page'] == meta.get('last_page'):
+                page_info = f" (page {meta['first_page']})"
+            else:
+                page_info = f" (pages {meta['first_page']}-{meta.get('last_page')})"
+
+        print(f"Chunk [{meta['byte_start']}:{meta['byte_end']}]: {len(chunk.text)} chars{page_info}")
 ```
 
 ---

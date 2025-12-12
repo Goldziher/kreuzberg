@@ -489,6 +489,7 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         detected_languages,
         chunks,
         images,
+        pages,
     } = result;
 
     let content_guard =
@@ -564,6 +565,17 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
                 serde_json::to_string(&images).map_err(|e| format!("Failed to serialize images to JSON: {}", e))?;
             Some(CStringGuard::new(CString::new(json).map_err(|e| {
                 format!("Failed to convert images JSON to C string: {}", e)
+            })?))
+        }
+        _ => None,
+    };
+
+    let _pages_json_guard = match pages {
+        Some(pages) if !pages.is_empty() => {
+            let json =
+                serde_json::to_string(&pages).map_err(|e| format!("Failed to serialize pages to JSON: {}", e))?;
+            Some(CStringGuard::new(CString::new(json).map_err(|e| {
+                format!("Failed to convert pages JSON to C string: {}", e)
             })?))
         }
         _ => None,
@@ -1766,6 +1778,7 @@ impl OcrBackend for FfiOcrBackend {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         })
     }
 

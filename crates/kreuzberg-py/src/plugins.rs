@@ -673,6 +673,7 @@ fn dict_to_extraction_result(_py: Python<'_>, dict: &Bound<'_, PyAny>) -> Result
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     })
 }
 
