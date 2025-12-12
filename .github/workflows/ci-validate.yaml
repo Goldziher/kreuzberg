@@ -92,6 +92,16 @@ jobs:
         run: cargo install cargo-deny --locked
         shell: bash
 
+      - name: Install shfmt
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            curl -sSL "https://github.com/mvdan/sh/releases/download/v3.8.0/shfmt_v3.8.0_linux_amd64" -o /usr/local/bin/shfmt
+            chmod +x /usr/local/bin/shfmt
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install shfmt
+          fi
+        shell: bash
+
       - name: Cache Prek
         uses: actions/cache@v4
         with:
