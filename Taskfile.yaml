@@ -43,8 +43,12 @@ tasks:
   lint:
     desc: Run all linters with auto-fix enabled
     cmds:
+      - task: toml:format
       - task: rust:lint
       - task: rust:licenses
+      - task: shell:lint
+      - task: github:lint
+      - task: python:pyproject:format
       - task: python:lint
       - task: typescript:lint
       - task: ruby:lint
@@ -56,6 +60,9 @@ tasks:
     cmds:
       - task: rust:lint:check
       - task: rust:licenses
+      - task: shell:lint:check
+      - task: github:lint
+      - task: python:pyproject:validate
       - task: python:lint:check
       - task: typescript:lint:check
       - task: ruby:lint:check
@@ -285,6 +292,7 @@ tasks:
     dir: crates/kreuzberg-node
     cmds:
       - pnpm lint:fix
+      - pnpm exec oxlint --fix typescript
   typescript:lint:check:
     desc: Lint TypeScript code in check-only mode (biome, no fixes)
     dir: crates/kreuzberg-node
@@ -358,6 +366,28 @@ tasks:
       - echo "Checking for dependency updates..."
       - mvn versions:display-dependency-updates
       - mvn versions:display-plugin-updates
+  shell:lint:
+    desc: Lint shell scripts with auto-fix (shfmt + shellcheck)
+    cmds:
+      - bash -c 'files=$(git ls-files "*.sh"); [ -z "$files" ] || shfmt -w $files'
+      - bash -c 'files=$(git ls-files "*.sh"); [ -z "$files" ] || shellcheck $files'
+  shell:lint:check:
+    desc: Lint shell scripts in check-only mode (shfmt + shellcheck)
+    cmds:
+      - bash -c 'files=$(git ls-files "*.sh"); [ -z "$files" ] || shfmt -d $files'
+      - bash -c 'files=$(git ls-files "*.sh"); [ -z "$files" ] || shellcheck $files'
+  github:lint:
+    desc: Lint GitHub Actions workflows (actionlint)
+    cmds:
+      - actionlint
+  python:pyproject:format:
+    desc: Format pyproject.toml (pyproject-fmt)
+    cmds:
+      - uv run pyproject-fmt pyproject.toml
+  python:pyproject:validate:
+    desc: Validate pyproject.toml (validate-pyproject)
+    cmds:
+      - uv run validate-pyproject pyproject.toml
   e2e:rust:generate:
     desc: Generate Rust E2E tests from fixtures
     cmds:

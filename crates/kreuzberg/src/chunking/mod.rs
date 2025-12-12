@@ -1362,7 +1362,7 @@ mod tests {
         ];
 
         let result = chunk_text(text, &config, Some(&boundaries)).unwrap();
-        assert!(result.chunks.len() >= 1);
+        assert!(!result.chunks.is_empty());
 
         // Verify no chunks overlap page boundaries incorrectly
         for chunk in &result.chunks {

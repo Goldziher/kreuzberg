@@ -40,6 +40,7 @@ repos:
       - id: biome-format
         exclude: ^docs/snippets/
       - id: biome-lint
+        args: ["--write"]
         exclude: ^docs/snippets/
   - repo: https://github.com/oxc-project/mirrors-oxlint
     rev: v1.32.0
@@ -87,15 +88,44 @@ repos:
         exclude: "crates/kreuzberg-tesseract/third_party/.*"
   - repo: local
     hooks:
+      - id: taplo-format
+        name: taplo format
+        entry: bash -c 'scripts/toml_format.sh'
+        language: system
+        files: \.toml$
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
+        pass_filenames: false
+        require_serial: true
+      - id: taplo-format-check
+        name: taplo format check
+        entry: bash -c 'scripts/toml_format.sh --check'
+        language: system
+        files: \.toml$
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
+        pass_filenames: false
+        require_serial: true
+      - id: cargo-deny-licenses
+        name: cargo deny licenses
+        entry: cargo deny check licenses
+        language: system
+        files: ^(Cargo\.toml|Cargo\.lock|crates/.*/Cargo\.toml|tools/.*/Cargo\.toml|e2e/rust/Cargo\.toml|packages/ruby/ext/kreuzberg_rb/native/Cargo\.toml|deny\.toml)$
+        pass_filenames: false
+        require_serial: true
+      - id: go-fmt
+        name: go fmt (packages/go)
+        entry: bash -c 'cd packages/go && go fmt ./...'
+        language: system
+        files: ^packages/go/.*\.go$
+        pass_filenames: false
       - id: golangci-lint
         name: golangci-lint (packages/go)
-        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml ./...'
+        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml --fix ./...'
         language: system
         files: ^packages/go/
         pass_filenames: false
       - id: rubocop
         name: rubocop
-        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yaml'
+        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yml'
         require_serial: true
         language: system
         files: ^packages/ruby/.*\.rb$
@@ -106,6 +136,13 @@ repos:
         require_serial: true
         language: system
         files: ^packages/ruby/(lib|sig)/.*\.(rb|rbs)$
+        pass_filenames: false
+      - id: java-pmd
+        name: pmd (packages/java)
+        entry: bash -c 'cd packages/java && mvn pmd:check'
+        require_serial: true
+        language: system
+        files: ^packages/java/src/.*\.java$
         pass_filenames: false
       - id: mypy
         name: mypy

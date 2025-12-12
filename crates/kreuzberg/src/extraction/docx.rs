@@ -421,16 +421,13 @@ mod tests {
         if let Ok(bytes) = std::fs::read(docx_path) {
             let result = extract_text_with_page_breaks(&bytes);
             // Should succeed and either have no boundaries or empty
-            match result {
-                Ok((text, boundaries)) => {
-                    assert!(!text.is_empty());
-                    // If boundaries present, should have at least one page
-                    if let Some(b) = boundaries {
-                        assert!(!b.is_empty());
-                    }
+            if let Ok((text, boundaries)) = result {
+                assert!(!text.is_empty());
+                // If boundaries present, should have at least one page
+                if let Some(b) = boundaries {
+                    assert!(!b.is_empty());
                 }
-                Err(_) => {} // File might not exist in test environment
-            }
+            } // File might not exist in test environment
         }
     }
 }

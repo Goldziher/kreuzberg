@@ -366,6 +366,7 @@ async fn test_concurrent_pipeline_processing() {
                 detected_languages: None,
                 chunks: None,
                 images: None,
+                pages: None,
             };
 
             run_pipeline(result, &config).await

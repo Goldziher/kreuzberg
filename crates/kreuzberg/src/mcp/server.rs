@@ -750,6 +750,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);
@@ -786,6 +787,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);
@@ -807,6 +809,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);
@@ -825,6 +828,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);

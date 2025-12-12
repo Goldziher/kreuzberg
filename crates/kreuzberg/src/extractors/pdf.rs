@@ -586,14 +586,16 @@ mod tests {
         use crate::core::config::PageConfig;
 
         let extractor = PdfExtractor::new();
-        let mut config = ExtractionConfig::default();
 
         // Enable page extraction
-        config.pages = Some(PageConfig {
-            extract_pages: true,
-            insert_page_markers: false,
-            marker_format: "<!-- PAGE {page_num} -->".to_string(),
-        });
+        let config = ExtractionConfig {
+            pages: Some(PageConfig {
+                extract_pages: true,
+                insert_page_markers: false,
+                marker_format: "<!-- PAGE {page_num} -->".to_string(),
+            }),
+            ..Default::default()
+        };
 
         // Read a real test PDF
         let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
@@ -647,14 +649,16 @@ mod tests {
         use crate::core::config::PageConfig;
 
         let extractor = PdfExtractor::new();
-        let mut config = ExtractionConfig::default();
 
         // Enable page marker insertion
-        config.pages = Some(PageConfig {
-            extract_pages: true,
-            insert_page_markers: true,
-            marker_format: "\n\n<!-- PAGE {page_num} -->\n\n".to_string(),
-        });
+        let config = ExtractionConfig {
+            pages: Some(PageConfig {
+                extract_pages: true,
+                insert_page_markers: true,
+                marker_format: "\n\n<!-- PAGE {page_num} -->\n\n".to_string(),
+            }),
+            ..Default::default()
+        };
 
         let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
         if let Ok(content) = std::fs::read(pdf_path) {
