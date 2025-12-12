@@ -5,7 +5,7 @@ runs:
   steps:
     - name: Restore OpenSSL cache (Linux)
       if: runner.os == 'Linux'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-linux
       with:
         path: |
@@ -55,7 +55,7 @@ runs:
 
     - name: Restore OpenSSL cache (macOS)
       if: runner.os == 'macOS'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-macos
       with:
         path: /usr/local/opt/openssl@3/
@@ -91,7 +91,7 @@ runs:
 
     - name: Restore OpenSSL cache (Windows)
       if: runner.os == 'Windows'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-windows
       with:
         path: |

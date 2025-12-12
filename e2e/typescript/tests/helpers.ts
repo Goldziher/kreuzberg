@@ -36,11 +36,37 @@ function resolveWorkspaceRoot(): string {
 	}
 
 	// Fallback to three levels up from e2e/typescript/tests
-	return resolve(__dirname, "../../..");
+	const fallback = resolve(__dirname, "../../..");
+	if (existsSync(fallback)) {
+		return fallback;
+	}
+
+	// Last resort: try to find by looking for test_documents relative to __dirname
+	let searchDir = __dirname;
+	while (true) {
+		if (existsSync(join(searchDir, "test_documents"))) {
+			return searchDir;
+		}
+		const parent = dirname(searchDir);
+		if (parent === searchDir) {
+			break;
+		}
+		searchDir = parent;
+	}
+
+	// If all else fails, return the fallback (it's the most likely location)
+	return fallback;
 }
 
 const WORKSPACE_ROOT = resolveWorkspaceRoot();
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
+
+// Log resolved paths for debugging (only on failure or verbose mode)
+if (process.env.DEBUG_PATHS === "true") {
+	console.log("WORKSPACE_ROOT:", WORKSPACE_ROOT);
+	console.log("TEST_DOCUMENTS:", TEST_DOCUMENTS);
+	console.log("Exists:", existsSync(TEST_DOCUMENTS));
+}
 
 type PlainRecord = Record<string, unknown>;
 
