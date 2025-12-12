@@ -446,7 +446,7 @@ impl Drop for CStringGuard {
 /// C-compatible extraction result structure
 ///
 /// Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
-/// Field order: 10 pointers (8 bytes each) + 1 bool + 7 bytes padding = 88 bytes total
+/// Field order: 11 pointers (8 bytes each) + 1 bool + 7 bytes padding = 96 bytes total
 #[repr(C)]
 pub struct CExtractionResult {
     /// Extracted text content (null-terminated UTF-8 string, must be freed with kreuzberg_free_string)
@@ -469,6 +469,8 @@ pub struct CExtractionResult {
     pub chunks_json: *mut c_char,
     /// Extracted images as JSON array (null-terminated string, or NULL if not available, must be freed with kreuzberg_free_string)
     pub images_json: *mut c_char,
+    /// Page structure as JSON object (null-terminated string, or NULL if not available, must be freed with kreuzberg_free_string)
+    pub page_structure_json: *mut c_char,
     /// Whether extraction was successful
     pub success: bool,
     /// Padding to match Java MemoryLayout (7 bytes padding to align to 8-byte boundary)
@@ -570,6 +572,17 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         _ => None,
     };
 
+    let page_structure_json_guard = match &metadata.pages {
+        Some(page_structure) => {
+            let json = serde_json::to_string(&page_structure)
+                .map_err(|e| format!("Failed to serialize page structure to JSON: {}", e))?;
+            Some(CStringGuard::new(CString::new(json).map_err(|e| {
+                format!("Failed to convert page structure JSON to C string: {}", e)
+            })?))
+        }
+        _ => None,
+    };
+
     let _pages_json_guard = match pages {
         Some(pages) if !pages.is_empty() => {
             let json =
@@ -592,6 +605,7 @@ fn to_c_extraction_result(result: ExtractionResult) -> std::result::Result<*mut 
         metadata_json: metadata_json_guard.map_or(ptr::null_mut(), |g| g.into_raw()),
         chunks_json: chunks_json_guard.map_or(ptr::null_mut(), |g| g.into_raw()),
         images_json: images_json_guard.map_or(ptr::null_mut(), |g| g.into_raw()),
+        page_structure_json: page_structure_json_guard.map_or(ptr::null_mut(), |g| g.into_raw()),
         success: true,
         _padding1: [0u8; 7],
     })))
@@ -3535,7 +3549,7 @@ pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut c_char {
 // These assertions ensure that alignment and padding are correct for FFI interoperability.
 //
 // Expected sizes (on 64-bit systems):
-// - CExtractionResult: 88 bytes (10 pointers + 1 bool + 7 bytes padding)
+// - CExtractionResult: 96 bytes (11 pointers + 1 bool + 7 bytes padding)
 // - CBatchResult: 24 bytes (1 pointer + 1 usize + 1 bool + 7 bytes padding)
 // - CBytesWithMime: 24 bytes (1 pointer + 1 usize + 1 pointer, naturally aligned)
 
@@ -3543,7 +3557,7 @@ pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut c_char {
 const _: () = {
     const fn assert_c_extraction_result_size() {
         const SIZE: usize = std::mem::size_of::<CExtractionResult>();
-        const _: () = assert!(SIZE == 88, "CExtractionResult size must be 88 bytes");
+        const _: () = assert!(SIZE == 96, "CExtractionResult size must be 96 bytes");
     }
 
     const fn assert_c_extraction_result_alignment() {

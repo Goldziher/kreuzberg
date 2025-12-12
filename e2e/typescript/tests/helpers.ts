@@ -1,4 +1,5 @@
-import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { expect } from "vitest";
 import type {
 	ChunkingConfig,
@@ -13,7 +14,32 @@ import type {
 	TokenReductionConfig,
 } from "@kreuzberg/node";
 
-const WORKSPACE_ROOT = resolve(__dirname, "../../../../..");
+/**
+ * Resolve the workspace root robustly regardless of the current working directory.
+ */
+function resolveWorkspaceRoot(): string {
+	const envRoot = process.env.KREUZBERG_WORKSPACE_ROOT ?? process.env.GITHUB_WORKSPACE;
+	if (envRoot && existsSync(envRoot)) {
+		return envRoot;
+	}
+
+	let current = process.cwd();
+	while (true) {
+		if (existsSync(join(current, "Cargo.toml"))) {
+			return current;
+		}
+		const parent = dirname(current);
+		if (parent === current) {
+			break;
+		}
+		current = parent;
+	}
+
+	// Fallback to three levels up from e2e/typescript/tests
+	return resolve(__dirname, "../../..");
+}
+
+const WORKSPACE_ROOT = resolveWorkspaceRoot();
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
 
 type PlainRecord = Record<string, unknown>;

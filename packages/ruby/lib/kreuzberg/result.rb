@@ -21,7 +21,7 @@ module Kreuzberg
   # rubocop:disable Metrics/ClassLength
   class Result
     attr_reader :content, :mime_type, :metadata, :metadata_json, :tables,
-                :detected_languages, :chunks, :images
+                :detected_languages, :chunks, :images, :pages
 
     # Table structure
     #
@@ -111,6 +111,28 @@ module Kreuzberg
       end
     end
 
+    # Per-page content
+    #
+    # @!attribute [r] page_number
+    #   @return [Integer] Page number (1-indexed)
+    # @!attribute [r] content
+    #   @return [String] Text content for this page
+    # @!attribute [r] tables
+    #   @return [Array<Table>] Tables on this page
+    # @!attribute [r] images
+    #   @return [Array<Image>] Images on this page
+    #
+    PageContent = Struct.new(:page_number, :content, :tables, :images, keyword_init: true) do
+      def to_h
+        {
+          page_number: page_number,
+          content: content,
+          tables: tables.map(&:to_h),
+          images: images.map(&:to_h)
+        }
+      end
+    end
+
     # Initialize from native hash result
     #
     # @param hash [Hash] Hash returned from native extension
@@ -125,6 +147,7 @@ module Kreuzberg
       @detected_languages = parse_detected_languages(get_value(hash, 'detected_languages'))
       @chunks = parse_chunks(get_value(hash, 'chunks'))
       @images = parse_images(get_value(hash, 'images'))
+      @pages = parse_pages(get_value(hash, 'pages'))
     end
 
     # Convert to hash
@@ -136,10 +159,11 @@ module Kreuzberg
         content: @content,
         mime_type: @mime_type,
         metadata: @metadata,
-        tables: @tables.map(&:to_h),
+        tables: serialize_tables,
         detected_languages: @detected_languages,
-        chunks: @chunks&.map(&:to_h),
-        images: @images&.map(&:to_h)
+        chunks: serialize_chunks,
+        images: serialize_images,
+        pages: serialize_pages
       }
     end
 
@@ -152,6 +176,22 @@ module Kreuzberg
     end
 
     private
+
+    def serialize_tables
+      @tables.map(&:to_h)
+    end
+
+    def serialize_chunks
+      @chunks&.map(&:to_h)
+    end
+
+    def serialize_images
+      @images&.map(&:to_h)
+    end
+
+    def serialize_pages
+      @pages&.map(&:to_h)
+    end
 
     def get_value(hash, key, default = nil)
       hash[key] || hash[key.to_sym] || default
@@ -218,6 +258,19 @@ module Kreuzberg
           is_mask: image_hash['is_mask'],
           description: image_hash['description'],
           ocr_result: image_hash['ocr_result'] ? Result.new(image_hash['ocr_result']) : nil
+        )
+      end
+    end
+
+    def parse_pages(pages_data)
+      return nil if pages_data.nil?
+
+      pages_data.map do |page_hash|
+        PageContent.new(
+          page_number: page_hash['page_number'],
+          content: page_hash['content'],
+          tables: parse_tables(page_hash['tables']),
+          images: parse_images(page_hash['images'])
         )
       end
     end

@@ -149,6 +149,8 @@ async fn test_generate_embeddings_for_chunks_basic() {
                 chunk_index: 0,
                 total_chunks: 1,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         },
         Chunk {
@@ -160,6 +162,8 @@ async fn test_generate_embeddings_for_chunks_basic() {
                 chunk_index: 1,
                 total_chunks: 1,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         },
         Chunk {
@@ -171,6 +175,8 @@ async fn test_generate_embeddings_for_chunks_basic() {
                 chunk_index: 2,
                 total_chunks: 1,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         },
     ];
@@ -219,6 +225,8 @@ async fn test_generate_embeddings_for_chunks_normalization() {
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -244,6 +252,8 @@ async fn test_generate_embeddings_for_chunks_normalization() {
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -324,6 +334,8 @@ async fn test_generate_embeddings_for_chunks_model_caching() {
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -350,6 +362,8 @@ async fn test_generate_embeddings_for_chunks_model_caching() {
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -382,6 +396,8 @@ async fn test_generate_embeddings_for_chunks_invalid_preset() {
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -425,6 +441,8 @@ async fn test_generate_embeddings_for_chunks_unknown_model() {
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -469,6 +487,8 @@ async fn test_generate_embeddings_for_chunks_custom_model_not_supported() {
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -514,6 +534,8 @@ async fn test_generate_embeddings_for_chunks_batch_size() {
                 chunk_index: i,
                 total_chunks: 10,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         })
         .collect();
@@ -566,7 +588,7 @@ async fn test_generate_embeddings_chunking_integration() {
         ..Default::default()
     };
 
-    let mut chunking_result = chunk_text(text, &chunking_config).expect("Chunking failed");
+    let mut chunking_result = chunk_text(text, &chunking_config, None).expect("Chunking failed");
 
     assert!(
         chunking_result.chunks.len() > 1,

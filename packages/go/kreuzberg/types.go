@@ -64,6 +64,7 @@ type Metadata struct {
 	ImagePreprocessing *ImagePreprocessingMetadata `json:"image_preprocessing,omitempty"`
 	JSONSchema         json.RawMessage             `json:"json_schema,omitempty"`
 	Error              *ErrorMetadata              `json:"error,omitempty"`
+	PageStructure      *PageStructure              `json:"page_structure,omitempty"`
 	Additional         map[string]json.RawMessage  `json:"-"`
 }
 
