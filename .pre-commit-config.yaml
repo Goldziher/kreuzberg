@@ -1,6 +1,7 @@
 default_install_hook_types:
   - pre-commit
   - commit-msg
+exclude: ^docs/snippets/|vendor/|node_modules/|target/|v3/|invalid*
 
 repos:
   - repo: https://github.com/Goldziher/gitfluff
@@ -16,15 +17,11 @@ repos:
       - id: end-of-file-fixer
       - id: check-merge-conflict
       - id: check-added-large-files
-        exclude: ^uv\.lock$
       - id: detect-private-key
       - id: check-json
-        exclude: ^packages/typescript/tsconfig\.json$
       - id: check-yaml
         args: ["--allow-multiple-documents"]
-        exclude: ^packages/python/tests/fixtures/invalid\.yaml$
       - id: check-toml
-        exclude: (invalid|test).*\.toml$
       - id: check-case-conflict
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
@@ -38,40 +35,31 @@ repos:
     rev: v2.3.8
     hooks:
       - id: biome-format
-        exclude: ^docs/snippets/
       - id: biome-lint
-        exclude: ^docs/snippets/
   - repo: https://github.com/oxc-project/mirrors-oxlint
     rev: v1.32.0
     hooks:
       - id: oxlint
         args: ["--fix"]
-        exclude: ^docs/snippets/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.9
     hooks:
+      - id: ruff-format
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
-        exclude: ^(v3/|docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
-      - id: ruff-format
-        exclude: ^(v3/|docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.11.0
     hooks:
       - id: shellcheck
-        exclude: ^(crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/scop/pre-commit-shfmt
     rev: v3.12.0-2
     hooks:
       - id: shfmt
-        exclude: ^(crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
     hooks:
       - id: fmt
-        exclude: ^docs/snippets/
       - id: clippy
-        exclude: ^docs/snippets/
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.9
     hooks:
@@ -80,11 +68,9 @@ repos:
     rev: v0.6.30
     hooks:
       - id: cpd
-        exclude: "(crates/kreuzberg-tesseract/third_party/.*|^docs/snippets/)"
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
         files: ^(packages/java|e2e/java)/src/.*\.java$
-        exclude: "crates/kreuzberg-tesseract/third_party/.*"
   - repo: local
     hooks:
       - id: taplo-format
@@ -92,7 +78,6 @@ repos:
         entry: bash -c 'scripts/toml_format.sh'
         language: system
         files: \.toml$
-        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
         pass_filenames: false
         require_serial: true
       - id: taplo-format-check
@@ -100,7 +85,6 @@ repos:
         entry: bash -c 'scripts/toml_format.sh --check'
         language: system
         files: \.toml$
-        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
         pass_filenames: false
         require_serial: true
       - id: cargo-deny-licenses
@@ -149,7 +133,6 @@ repos:
         require_serial: true
         language: system
         types: [python]
-        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
         pass_filenames: false
       - id: typescript-typecheck
         name: typescript typecheck (crates/kreuzberg-node)
@@ -157,7 +140,6 @@ repos:
         require_serial: true
         language: system
         files: ^crates/kreuzberg-node/
-        exclude: ^docs/snippets/
         pass_filenames: false
       - id: dotnet-format
         name: dotnet format (packages/csharp)
