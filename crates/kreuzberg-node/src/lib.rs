@@ -1351,7 +1351,6 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 "compressed_size",
                 "width",
                 "height",
-                "exif",
                 "element_count",
                 "unique_elements",
                 "line_count",

@@ -29,7 +29,7 @@
 //! use kreuzberg::extraction::pptx::extract_pptx_from_path;
 //!
 //! # fn example() -> kreuzberg::Result<()> {
-//! let result = extract_pptx_from_path("presentation.pptx", true)?;
+//! let result = extract_pptx_from_path("presentation.pptx", true, None)?;
 //!
 //! println!("Slide count: {}", result.slide_count);
 //! println!("Image count: {}", result.image_count);

@@ -48,7 +48,7 @@ tokio = { version = "1.48.0", features = [
     "time",
     "io-util",
 ] }
-html-to-markdown-rs = { version = "2.13.0", default-features = false }
+html-to-markdown-rs = { version = "2.14.1", default-features = false }
 
 [dev-dependencies]
 pretty_assertions = "1.4"
