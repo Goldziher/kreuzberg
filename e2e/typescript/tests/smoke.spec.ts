@@ -1,10 +1,10 @@
 // Auto-generated tests for smoke fixtures.
 
 import { existsSync } from "node:fs";
-import type { ExtractionResult } from "@kreuzberg/node";
-import { extractFileSync } from "@kreuzberg/node";
 import { describe, it } from "vitest";
 import { assertions, buildConfig, resolveDocument, shouldSkipFixture } from "./helpers.js";
+import { extractFileSync } from "@kreuzberg/node";
+import type { ExtractionResult } from "@kreuzberg/node";
 
 const TEST_TIMEOUT_MS = 60_000;
 
@@ -92,7 +92,7 @@ describe("smoke fixtures", () => {
 				return;
 			}
 			assertions.assertExpectedMime(result, ["image/png"]);
-			assertions.assertMetadataExpectation(result, "format", { eq: "PNG" });
+			assertions.assertMetadataExpectation(result, "format", "PNG");
 		},
 		TEST_TIMEOUT_MS,
 	);
@@ -215,7 +215,7 @@ describe("smoke fixtures", () => {
 			]);
 			assertions.assertTableCount(result, 1, null);
 			assertions.assertMetadataExpectation(result, "sheet_count", { gte: 2 });
-			assertions.assertMetadataExpectation(result, "sheet_names", { contains: "Stanley Cups" });
+			assertions.assertMetadataExpectation(result, "sheet_names", { contains: ["Stanley Cups"] });
 		},
 		TEST_TIMEOUT_MS,
 	);
