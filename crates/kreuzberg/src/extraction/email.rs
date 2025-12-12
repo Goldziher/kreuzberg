@@ -553,7 +553,6 @@ mod tests {
             cleaned_text: "Hello World".to_string(),
             attachments: vec![],
             metadata: HashMap::new(),
-            pages: None,
         };
 
         let output = build_email_text_output(&result);
@@ -583,7 +582,6 @@ mod tests {
                 size: Some(1024),
                 is_image: false,
                 data: None,
-                pages: None,
             }],
             metadata: HashMap::new(),
         };
@@ -749,7 +747,6 @@ mod tests {
             cleaned_text: "Cleaned body text".to_string(),
             attachments: vec![],
             metadata: HashMap::new(),
-            pages: None,
         };
 
         let output = build_email_text_output(&result);
@@ -782,7 +779,6 @@ mod tests {
                 size: Some(100),
                 is_image: false,
                 data: None,
-                pages: None,
             }],
             metadata: HashMap::new(),
         };
