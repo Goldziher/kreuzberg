@@ -37,7 +37,7 @@ office = [
     "dep:rst_parser",
     "dep:fb2",
     "dep:typst-syntax",
-    "html",  # EPUB needs HTML parsing (zip + roxmltree + html-to-markdown-rs)
+    "html",               # EPUB needs HTML parsing (zip + roxmltree + html-to-markdown-rs)
 ]
 email = ["dep:mail-parser", "dep:msg_parser"]
 html = ["dep:html-to-markdown-rs"]

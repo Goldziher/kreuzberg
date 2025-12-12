@@ -3,17 +3,10 @@ set -euo pipefail
 
 MODE="${1:-}"
 
-taplo_args=()
-if [[ "${MODE}" == "--check" ]]; then
-	taplo_args+=("--check")
-	taplo_args+=("--diff")
-fi
-
 shopt -s nullglob
 
 files=(
 	Cargo.toml
-	pyproject.toml
 	rustfmt.toml
 	.cargo/config.toml
 	crates/*/Cargo.toml
@@ -37,7 +30,11 @@ if [[ ${#expanded_files[@]} -eq 0 ]]; then
 fi
 
 set +e
-taplo format "${taplo_args[@]}" "${expanded_files[@]}"
+if [[ "${MODE}" == "--check" ]]; then
+	taplo format --check --diff "${expanded_files[@]}"
+else
+	taplo format "${expanded_files[@]}"
+fi
 status=$?
 set -e
 

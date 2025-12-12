@@ -462,7 +462,10 @@ fn clean_test_files(src_test: &Utf8Path) -> Result<()> {
     for entry in fs::read_dir(src_test.as_std_path())? {
         let entry = entry?;
         let path = entry.path();
-        if path.file_name().is_some_and(|name| name == "E2EHelpers.java") {
+        if path
+            .file_name()
+            .is_some_and(|name| name == "E2EHelpers.java" || name == "package-info.java")
+        {
             continue;
         }
         if path.extension().is_some_and(|ext| ext == "java") {
