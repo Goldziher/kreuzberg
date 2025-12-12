@@ -195,14 +195,12 @@ fn assign_tables_and_images_to_pages(
 
     let mut updated_pages = pages;
 
-    // Assign tables to their respective pages
     for table in tables {
         if let Some(page) = updated_pages.iter_mut().find(|p| p.page_number == table.page_number) {
             page.tables.push(table.clone());
         }
     }
 
-    // Assign images to their respective pages
     for image in images {
         if let Some(page_num) = image.page_number
             && let Some(page) = updated_pages.iter_mut().find(|p| p.page_number == page_num)
@@ -348,17 +346,14 @@ impl DocumentExtractor for PdfExtractor {
                     }
                 })?;
 
-                // Extract text with page tracking
                 let (native_text, boundaries, page_contents) =
                     crate::pdf::text::extract_text_from_pdf_document(&document, pages_config.as_ref())?;
 
-                // Extract metadata with boundaries for PageStructure
                 let pdf_metadata =
                     crate::pdf::metadata::extract_metadata_from_document(&document, boundaries.as_deref())?;
 
                 let tables = extract_tables_from_document(&document, &pdf_metadata)?;
 
-                // Validate page data matches config in batch mode
                 if let Some(ref page_cfg) = pages_config
                     && page_cfg.extract_pages
                     && page_contents.is_none()
@@ -389,11 +384,9 @@ impl DocumentExtractor for PdfExtractor {
                 }
             })?;
 
-            // Extract text with page tracking
             let (native_text, boundaries, page_contents) =
                 crate::pdf::text::extract_text_from_pdf_document(&document, config.pages.as_ref())?;
 
-            // Extract metadata with boundaries for PageStructure
             let pdf_metadata = crate::pdf::metadata::extract_metadata_from_document(&document, boundaries.as_deref())?;
 
             let tables = extract_tables_from_document(&document, &pdf_metadata)?;
@@ -409,8 +402,6 @@ impl DocumentExtractor for PdfExtractor {
                 native_text
             }
         } else if config.ocr.is_some() {
-            // Page count is not directly available from pdf_metadata anymore
-            // For now, pass None - the evaluation function can work without it
             let decision = evaluate_native_text_for_ocr(&native_text, None);
 
             if std::env::var("KREUZBERG_DEBUG_OCR").is_ok() {
@@ -439,7 +430,6 @@ impl DocumentExtractor for PdfExtractor {
         #[cfg(not(feature = "ocr"))]
         let text = native_text;
 
-        // Validate page markers after text extraction if configured
         #[cfg(feature = "pdf")]
         if let Some(ref page_cfg) = config.pages
             && page_cfg.insert_page_markers
@@ -484,7 +474,6 @@ impl DocumentExtractor for PdfExtractor {
             None
         };
 
-        // Assign tables and images to pages if page extraction is enabled
         let final_pages = assign_tables_and_images_to_pages(page_contents, &tables, images.as_deref().unwrap_or(&[]));
 
         Ok(ExtractionResult {
@@ -587,7 +576,6 @@ mod tests {
 
         let extractor = PdfExtractor::new();
 
-        // Enable page extraction
         let config = ExtractionConfig {
             pages: Some(PageConfig {
                 extract_pages: true,
@@ -597,11 +585,9 @@ mod tests {
             ..Default::default()
         };
 
-        // Read a real test PDF
         let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
         if let Ok(content) = std::fs::read(pdf_path) {
             let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
-            // Should succeed and extract pages when configured
             assert!(
                 result.is_ok(),
                 "Failed to extract PDF with page config: {:?}",
@@ -609,7 +595,6 @@ mod tests {
             );
 
             let extraction_result = result.unwrap();
-            // Verify pages were extracted
             assert!(
                 extraction_result.pages.is_some(),
                 "Pages should be extracted when extract_pages is true"
@@ -623,11 +608,9 @@ mod tests {
         let extractor = PdfExtractor::new();
         let config = ExtractionConfig::default();
 
-        // No page config - extraction should still succeed
         let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
         if let Ok(content) = std::fs::read(pdf_path) {
             let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
-            // Should succeed without page config
             assert!(
                 result.is_ok(),
                 "Failed to extract PDF without page config: {:?}",
@@ -635,7 +618,6 @@ mod tests {
             );
 
             let extraction_result = result.unwrap();
-            // Verify pages are not extracted when not configured
             assert!(
                 extraction_result.pages.is_none(),
                 "Pages should not be extracted when pages config is None"
@@ -650,7 +632,6 @@ mod tests {
 
         let extractor = PdfExtractor::new();
 
-        // Enable page marker insertion
         let config = ExtractionConfig {
             pages: Some(PageConfig {
                 extract_pages: true,
@@ -663,7 +644,6 @@ mod tests {
         let pdf_path = "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/fixtures/pdf/simple_text.pdf";
         if let Ok(content) = std::fs::read(pdf_path) {
             let result = extractor.extract_bytes(&content, "application/pdf", &config).await;
-            // Extraction should succeed
             assert!(
                 result.is_ok(),
                 "Failed to extract PDF with page markers: {:?}",
@@ -671,11 +651,8 @@ mod tests {
             );
 
             let extraction_result = result.unwrap();
-            // For a multi-page PDF, markers should be present
-            // The marker placeholder is "<!-- PAGE -->" (with {page_num} replaced)
             let marker_placeholder = "<!-- PAGE ";
             if extraction_result.content.len() > 100 {
-                // Only check for markers in substantial content (not single-page docs)
                 assert!(
                     extraction_result.content.contains(marker_placeholder),
                     "Page markers should be inserted when configured and document has multiple pages"
@@ -687,7 +664,6 @@ mod tests {
     #[test]
     #[cfg(feature = "pdf")]
     fn test_pdf_extractor_without_feature_pdf() {
-        // This test ensures the extractor is available even when PDF feature is off
         let extractor = PdfExtractor::new();
         assert_eq!(extractor.name(), "pdf-extractor");
     }

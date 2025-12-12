@@ -50,7 +50,6 @@ func TestBatchExtractFilesWithMissingFile(t *testing.T) {
 
 	missingPath := filepath.Join(dir, "missing.pdf")
 	results, err := BatchExtractFilesSync([]string{validPath, missingPath}, nil)
-	// May error or return partial results depending on implementation
 	_ = err
 	_ = results
 }
@@ -227,7 +226,6 @@ func TestBatchWithPartialFailures(t *testing.T) {
 
 	missingPath := filepath.Join(dir, "missing.pdf")
 
-	// Batch may return partial results or error
 	results, err := BatchExtractFilesSync([]string{validPath, missingPath}, nil)
 	_ = err
 	_ = results
@@ -255,7 +253,6 @@ func TestBatchResultConsistency(t *testing.T) {
 		t.Fatalf("batch should return 1 result")
 	}
 
-	// Results should be structurally similar
 	if (results[0] == nil) != (singleResult == nil) {
 		t.Fatalf("batch and single result consistency mismatch")
 	}
@@ -299,9 +296,8 @@ func TestBatchMemoryManagement(t *testing.T) {
 			}
 		}
 
-		// Should complete without excessive memory use
 		_, err := BatchExtractFilesSync(paths, nil)
-		_ = err // May succeed or fail
+		_ = err
 	})
 
 	t.Run("bytes batch memory", func(t *testing.T) {
@@ -314,9 +310,8 @@ func TestBatchMemoryManagement(t *testing.T) {
 			})
 		}
 
-		// Should complete without excessive memory use
 		_, err := BatchExtractBytesSync(items, nil)
-		_ = err // May succeed or fail
+		_ = err
 	})
 }
 
@@ -362,15 +357,12 @@ func TestBatchMixedOperations(t *testing.T) {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
-	// File batch
 	_, err1 := BatchExtractFilesSync([]string{path}, nil)
 
-	// Byte batch
 	pdfData, _ := getValidPDFBytes()
 	items := []BytesWithMime{{Data: pdfData, MimeType: "application/pdf"}}
 	_, err2 := BatchExtractBytesSync(items, nil)
 
-	// Both should work without interference
 	_ = err1
 	_ = err2
 }
@@ -450,7 +442,6 @@ func TestBatchErrorPropagation(t *testing.T) {
 		}
 
 		_, err := BatchExtractBytesSync(items, nil)
-		// May error or handle gracefully
 		_ = err
 	})
 
@@ -462,7 +453,6 @@ func TestBatchErrorPropagation(t *testing.T) {
 		}
 
 		results, err := BatchExtractBytesSync(items, nil)
-		// May return partial results
 		_ = err
 		_ = results
 	})
@@ -506,7 +496,6 @@ func TestBatchResultMetadata(t *testing.T) {
 	}
 
 	if len(results) > 0 && results[0] != nil {
-		// Metadata should be present
 		_ = results[0].Metadata
 	}
 }
@@ -554,7 +543,6 @@ func TestBatchResourceCleanup(t *testing.T) {
 		_, err = BatchExtractFilesSync([]string{path}, nil)
 		_ = err
 
-		// Temp directory should be cleaned up properly by t.TempDir()
 	}
 }
 
@@ -618,13 +606,11 @@ func TestBatchDeferredCleanup(t *testing.T) {
 		{Data: pdfData, MimeType: "application/pdf"},
 	}
 
-	// Verify cleanup happens after extraction
 	_, err := BatchExtractBytesSync(items, nil)
 	if err != nil {
 		t.Logf("batch extraction completed with error: %v", err)
 	}
 
-	// Second batch should work fine if resources were properly cleaned
 	items2 := []BytesWithMime{
 		{Data: pdfData, MimeType: "application/pdf"},
 	}
@@ -655,9 +641,8 @@ func TestBatchExtractionIndexing(t *testing.T) {
 		t.Fatalf("result count mismatch: expected %d, got %d", len(paths), len(results))
 	}
 
-	// Each result should correspond to the input at the same index
 	for i := range results {
-		_ = results[i] // Verify we can access each result
+		_ = results[i]
 	}
 }
 
@@ -670,7 +655,6 @@ func TestBatchWithNoConfig(t *testing.T) {
 	}
 
 	_, err = BatchExtractFilesSync([]string{path}, nil)
-	// Should use default config
 	_ = err
 }
 
@@ -700,7 +684,6 @@ func TestBatchResultNilHandling(t *testing.T) {
 		t.Fatalf("batch extraction failed: %v", err)
 	}
 
-	// Empty batch should return empty results
 	if results == nil {
 		t.Fatalf("expected non-nil results slice for empty batch")
 	}
@@ -740,7 +723,6 @@ func TestBatchDataIntegrity(t *testing.T) {
 		t.Fatalf("batch extraction failed: %v", err)
 	}
 
-	// Verify we got results for all items
 	if len(results) != len(items) {
 		t.Fatalf("expected %d results, got %d", len(items), len(results))
 	}

@@ -130,7 +130,6 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
             chunker_type: crate::chunking::ChunkerType::Text,
         };
 
-        // Extract page boundaries if available for page-aware chunking
         let page_boundaries = result.metadata.pages.as_ref().and_then(|ps| ps.boundaries.as_deref());
 
         match crate::chunking::chunk_text(&result.content, &chunk_config, page_boundaries) {

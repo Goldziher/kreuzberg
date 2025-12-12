@@ -297,7 +297,6 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
                     "canonical" => metadata.canonical = Some(value_str),
                     "meta-description" => description = Some(value_str),
                     "meta-keywords" => {
-                        // Parse keywords as comma-separated list and store as Vec
                         keywords = Some(
                             value_str
                                 .split(',')

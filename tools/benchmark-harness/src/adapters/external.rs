@@ -46,7 +46,6 @@ pub fn create_markitdown_adapter() -> Result<SubprocessAdapter> {
 
 /// Creates a subprocess adapter for Pandoc (universal document converter)
 pub fn create_pandoc_adapter() -> Result<SubprocessAdapter> {
-    // Verify pandoc is installed
     which::which("pandoc").map_err(|_| {
         crate::Error::Config(
             "pandoc not found. Install with: brew install pandoc (macOS) or apt install pandoc (Linux)".to_string(),

@@ -35,13 +35,11 @@ function resolveWorkspaceRoot(): string {
 		current = parent;
 	}
 
-	// Fallback to three levels up from e2e/typescript/tests
 	const fallback = resolve(__dirname, "../../..");
 	if (existsSync(fallback)) {
 		return fallback;
 	}
 
-	// Last resort: try to find by looking for test_documents relative to __dirname
 	let searchDir = __dirname;
 	while (true) {
 		if (existsSync(join(searchDir, "test_documents"))) {
@@ -54,14 +52,12 @@ function resolveWorkspaceRoot(): string {
 		searchDir = parent;
 	}
 
-	// If all else fails, return the fallback (it's the most likely location)
 	return fallback;
 }
 
 const WORKSPACE_ROOT = resolveWorkspaceRoot();
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
 
-// Log resolved paths for debugging (only on failure or verbose mode)
 if (process.env.DEBUG_PATHS === "true") {
 	console.log("WORKSPACE_ROOT:", WORKSPACE_ROOT);
 	console.log("TEST_DOCUMENTS:", TEST_DOCUMENTS);
@@ -346,13 +342,11 @@ export const assertions = {
 			throw new Error(`Metadata path '${path}' missing in ${JSON.stringify(result.metadata)}`);
 		}
 
-		// Handle string expectations as equality checks
 		if (typeof expectation === "string") {
 			expect(valuesEqual(value, expectation)).toBe(true);
 			return;
 		}
 
-		// Handle object expectations
 		if (!isPlainRecord(expectation)) {
 			throw new Error(`Expectation must be a string or object for path '${path}'`);
 		}

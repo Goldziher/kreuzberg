@@ -1,4 +1,3 @@
-# Auto-generated tests for xml fixtures.
 from __future__ import annotations
 
 import pytest

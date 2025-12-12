@@ -152,12 +152,10 @@ pub fn extract_text_from_image_with_ocr(
     ocr_result: String,
     page_config: Option<&crate::core::config::PageConfig>,
 ) -> Result<ImageOcrResult> {
-    // Check if this is a TIFF and if we should track pages
     let is_tiff = mime_type.to_lowercase().contains("tiff");
     let should_track_pages = page_config.is_some() && is_tiff;
 
     if !should_track_pages {
-        // Fast path: single frame or no page tracking requested
         return Ok(ImageOcrResult {
             content: ocr_result,
             boundaries: None,
@@ -165,11 +163,9 @@ pub fn extract_text_from_image_with_ocr(
         });
     }
 
-    // Slow path: multi-frame TIFF with page tracking
     let frame_count = detect_tiff_frame_count(bytes)?;
 
     if frame_count <= 1 {
-        // Single-frame TIFF, no pagination needed
         return Ok(ImageOcrResult {
             content: ocr_result,
             boundaries: None,
@@ -177,9 +173,6 @@ pub fn extract_text_from_image_with_ocr(
         });
     }
 
-    // Multi-frame TIFF with page tracking enabled
-    // For now, we return the concatenated content with frame boundaries
-    // The boundaries assume uniform distribution of content across frames
     let content_len = ocr_result.len();
     let content_per_frame = if frame_count > 0 {
         content_len / frame_count
@@ -192,12 +185,10 @@ pub fn extract_text_from_image_with_ocr(
     let mut byte_offset = 0;
 
     for frame_num in 1..=frame_count {
-        // Calculate frame end, adjusting to valid UTF-8 boundary
         let frame_end = if frame_num == frame_count {
             content_len
         } else {
             let raw_end = (frame_num * content_per_frame).min(content_len);
-            // Find next valid UTF-8 boundary to prevent slicing multi-byte chars
             (raw_end..=content_len)
                 .find(|&i| ocr_result.is_char_boundary(i))
                 .unwrap_or(content_len)

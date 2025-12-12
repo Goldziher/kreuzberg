@@ -1382,10 +1382,7 @@ pub unsafe extern "C" fn kreuzberg_free_batch_result(batch_result: *mut CBatchRe
         let batch = unsafe { Box::from_raw(batch_result) };
 
         // NOTE: Do not free individual results here - calling code is responsible for that.
-        // The Java bindings call parseAndFreeResult for each result before calling this function.
-        // Freeing them here would cause a double-free.
 
-        // Only free the results array itself
         if !batch.results.is_null() {
             unsafe {
                 let _results_array = Box::from_raw(std::ptr::slice_from_raw_parts_mut(batch.results, batch.count));
@@ -3544,14 +3541,6 @@ pub unsafe extern "C" fn kreuzberg_config_discover() -> *mut c_char {
         }
     })
 }
-
-// Static assertions to verify FFI struct sizes match Java MemoryLayout definitions.
-// These assertions ensure that alignment and padding are correct for FFI interoperability.
-//
-// Expected sizes (on 64-bit systems):
-// - CExtractionResult: 96 bytes (11 pointers + 1 bool + 7 bytes padding)
-// - CBatchResult: 24 bytes (1 pointer + 1 usize + 1 bool + 7 bytes padding)
-// - CBytesWithMime: 24 bytes (1 pointer + 1 usize + 1 pointer, naturally aligned)
 
 #[allow(non_upper_case_globals)]
 const _: () = {

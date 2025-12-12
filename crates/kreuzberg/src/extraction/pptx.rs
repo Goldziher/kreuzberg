@@ -214,10 +214,8 @@ impl ContentBuilder {
     }
 
     fn start_slide(&mut self, slide_number: u32) -> usize {
-        // Track byte_start for this slide BEFORE adding any content
         let byte_start = self.content.len();
 
-        // Add page marker if configured
         if let Some(ref cfg) = self.config
             && cfg.insert_page_markers
         {
@@ -225,16 +223,12 @@ impl ContentBuilder {
             self.content.push_str(&marker);
         }
 
-        // Note: Slide header is added by to_markdown() based on include_slide_comment config
-        // Don't add it here to avoid duplication
-
         byte_start
     }
 
     fn end_slide(&mut self, slide_number: u32, byte_start: usize, slide_content: String) {
         let byte_end = self.content.len();
 
-        // Only track boundaries if config is enabled
         if self.config.is_some() {
             self.boundaries.push(crate::types::PageBoundary {
                 byte_start,
@@ -515,7 +509,7 @@ impl Slide {
             }
         }
 
-        builder.build().0 // Extract just the content String
+        builder.build().0
     }
 
     fn image_count(&self) -> usize {
@@ -1157,11 +1151,10 @@ pub fn extract_pptx_from_path(
     let mut extracted_images = Vec::new();
 
     while let Some(slide) = iterator.next_slide()? {
-        // Track slide boundaries if configured
         let byte_start = if page_config.is_some() {
             content_builder.start_slide(slide.slide_number)
         } else {
-            0 // Not tracked, header added by to_markdown()
+            0
         };
 
         let slide_content = slide.to_markdown(&config);
@@ -1171,7 +1164,6 @@ pub fn extract_pptx_from_path(
             content_builder.add_notes(slide_notes);
         }
 
-        // End slide tracking if configured
         if page_config.is_some() {
             content_builder.end_slide(slide.slide_number, byte_start, slide_content.clone());
         }
@@ -1205,7 +1197,6 @@ pub fn extract_pptx_from_path(
 
     let (content, boundaries, page_contents) = content_builder.build();
 
-    // Build PageStructure if boundaries were tracked
     let page_structure = boundaries.as_ref().map(|bounds| crate::types::PageStructure {
         total_count: slide_count,
         unit_type: crate::types::PageUnitType::Slide,
@@ -1249,7 +1240,6 @@ pub fn extract_pptx_from_bytes(
     // IO errors must bubble up - temp file write issues need user reports ~keep
     std::fs::write(&temp_path, data)?;
 
-    // Ensure cleanup happens even on error, validate path encoding
     let result = extract_pptx_from_path(
         temp_path.to_str().ok_or_else(|| {
             crate::KreuzbergError::validation("Invalid temp path - contains invalid UTF-8".to_string())
@@ -1258,7 +1248,6 @@ pub fn extract_pptx_from_bytes(
         page_config,
     );
 
-    // Clean up temp file, log error but don't fail the operation
     if let Err(e) = std::fs::remove_file(&temp_path) {
         tracing::warn!("Failed to remove temp PPTX file: {}", e);
     }
@@ -1389,8 +1378,6 @@ mod tests {
         let pptx_bytes = create_test_pptx_bytes(vec!["Content"]);
         let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
-        // Common metadata fields (title, author, description) are now in base Metadata struct
-        // PptxMetadata contains format-specific fields like fonts
         assert!(result.metadata.fonts.is_empty() || !result.metadata.fonts.is_empty());
     }
 
@@ -3108,9 +3095,6 @@ mod tests {
         let pptx_bytes = create_test_pptx_bytes(vec!["Content"]);
         let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
-        // Verify that PptxExtractionResult contains PptxMetadata with expected structure
-        // Common metadata fields (title, author, description) are now in base Metadata struct
-        // PptxMetadata contains format-specific fields like fonts
         let _ = &result.metadata.fonts;
     }
 }

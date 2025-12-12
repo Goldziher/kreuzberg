@@ -391,9 +391,7 @@ fn extract_text_from_rtf(content: &str) -> (String, Vec<Table>) {
                                     if let Some(state) = table_state.as_ref()
                                         && !state.in_row
                                         && !state.rows.is_empty()
-                                    {
-                                        // We'll finalize once we see content outside the table
-                                    }
+                                    {}
                                 }
                                 _ => {}
                             }
@@ -571,7 +569,7 @@ fn extract_rtf_metadata(rtf_content: &str, extracted_text: &str) -> HashMap<Stri
             };
 
             let mut chars = cleaned_segment.chars().peekable();
-            chars.next(); // consume the leading backslash
+            chars.next();
             let (keyword, numeric) = parse_rtf_control_word(&mut chars);
             let remaining: String = chars.collect();
             let trimmed = remaining.trim();

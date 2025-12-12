@@ -63,7 +63,6 @@ func TestErrorWithPanicContext(t *testing.T) {
 	if ocrErr.PanicCtx().Line != 42 {
 		t.Fatalf("expected panic context line to be 42, got %d", ocrErr.PanicCtx().Line)
 	}
-	// Verify panic context is included in error message
 	if !strings.Contains(ocrErr.Error(), "src/core.rs:42") {
 		t.Fatalf("expected panic context in error message, got: %s", ocrErr.Error())
 	}

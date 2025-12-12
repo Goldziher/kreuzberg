@@ -104,7 +104,6 @@ pub fn extract_odt_properties<R: Read + std::io::Seek>(archive: &mut ZipArchive<
 
     let root = doc.root_element();
 
-    // Extract Dublin Core elements
     let title = super::parse_xml_text(root, "title");
     let subject = super::parse_xml_text(root, "subject");
     let creator = super::parse_xml_text(root, "creator");
@@ -112,7 +111,6 @@ pub fn extract_odt_properties<R: Read + std::io::Seek>(archive: &mut ZipArchive<
     let language = super::parse_xml_text(root, "language");
     let date = super::parse_xml_text(root, "date");
 
-    // Extract OpenDocument meta elements
     let initial_creator = super::parse_xml_text(root, "initial-creator");
     let keywords = super::parse_xml_text(root, "keyword");
     let creation_date = super::parse_xml_text(root, "creation-date");
@@ -120,7 +118,6 @@ pub fn extract_odt_properties<R: Read + std::io::Seek>(archive: &mut ZipArchive<
     let editing_duration = super::parse_xml_text(root, "editing-duration");
     let editing_cycles = super::parse_xml_text(root, "editing-cycles");
 
-    // Extract document statistics
     let page_count = super::parse_xml_int(root, "page-count");
     let word_count = super::parse_xml_int(root, "word-count");
     let character_count = super::parse_xml_int(root, "character-count");

@@ -406,13 +406,7 @@ func ConfigFromFile(path string) (*ExtractionConfig, error) {
 // ConfigDiscover searches parent directories for a config file and loads it.
 // Returns nil without error if no config file is found.
 func ConfigDiscover() (*ExtractionConfig, error) {
-	// Try to discover config in parent directories
-	// This works by checking current directory and parent directories
-	// Since we can't directly use the ExtractionConfig* return type easily,
-	// we'll use a workaround: discover the config file path and load it
-	// For now, implement a simple search for config files
 
-	// Use a temporary approach: search for config files manually
 	configNames := []string{"kreuzberg.toml", "kreuzberg.yaml", "kreuzberg.yml", "kreuzberg.json"}
 
 	currentDir, err := os.Getwd()
@@ -420,27 +414,22 @@ func ConfigDiscover() (*ExtractionConfig, error) {
 		return nil, newIOError("failed to get current directory", err)
 	}
 
-	// Search current and parent directories
 	dir := currentDir
 	for {
 		for _, name := range configNames {
 			configPath := filepath.Join(dir, name)
 			if _, err := os.Stat(configPath); err == nil {
-				// Found config file
 				return LoadExtractionConfigFromFile(configPath)
 			}
 		}
 
-		// Move to parent directory
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			// Reached root directory
 			break
 		}
 		dir = parent
 	}
 
-	// No config found
 	return nil, nil
 }
 

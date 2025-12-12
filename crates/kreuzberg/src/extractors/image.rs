@@ -46,7 +46,6 @@ impl ImageExtractor {
 
         let ocr_result = backend.process_image(content, ocr_config).await?;
 
-        // Extract text with optional page tracking for multi-frame TIFFs
         let ocr_text = ocr_result.content.clone();
         let ocr_extraction_result = crate::extraction::image::extract_text_from_image_with_ocr(
             content,

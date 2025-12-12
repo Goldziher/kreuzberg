@@ -17,7 +17,6 @@ function resolveWorkspaceRoot(): string {
 		return envRoot;
 	}
 
-	// Look for test_documents directory starting from __dirname
 	let current = __dirname;
 	while (true) {
 		if (existsSync(join(current, "test_documents"))) {
@@ -30,7 +29,6 @@ function resolveWorkspaceRoot(): string {
 		current = parent;
 	}
 
-	// Fallback: try from process.cwd()
 	current = process.cwd();
 	while (true) {
 		if (existsSync(join(current, "test_documents"))) {
@@ -43,8 +41,6 @@ function resolveWorkspaceRoot(): string {
 		current = parent;
 	}
 
-	// Last resort: assume we're 4 levels up from tests/helpers
-	// tests/helpers -> tests -> kreuzberg-node -> crates -> workspace root
 	return join(__dirname, "../../../../");
 }
 

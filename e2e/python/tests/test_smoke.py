@@ -1,4 +1,3 @@
-# Auto-generated tests for smoke fixtures.
 from __future__ import annotations
 
 import pytest

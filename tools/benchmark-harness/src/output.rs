@@ -78,7 +78,6 @@ pub struct ByExtensionReport {
 pub fn analyze_by_extension(results: &[BenchmarkResult]) -> ByExtensionReport {
     let mut by_extension: HashMap<String, HashMap<String, Vec<&BenchmarkResult>>> = HashMap::new();
 
-    // Group results by extension and framework
     for result in results {
         let ext = result.file_extension.clone();
         let framework = result.framework.clone();
@@ -91,7 +90,6 @@ pub fn analyze_by_extension(results: &[BenchmarkResult]) -> ByExtensionReport {
             .push(result);
     }
 
-    // Calculate statistics for each extension
     let mut report = HashMap::new();
     for (ext, framework_results) in by_extension {
         let total_files = framework_results.values().map(|v| v.len()).max().unwrap_or(0);

@@ -135,7 +135,6 @@ impl DocumentExtractor for DocxExtractor {
                         .map(|(idx, table)| convert_docx_table_to_table(table, idx))
                         .collect();
 
-                    // Detect page breaks (best-effort)
                     let page_boundaries = crate::extraction::docx::detect_page_breaks_from_docx(&content_owned)?;
 
                     Ok((text, tables, page_boundaries))
@@ -157,7 +156,6 @@ impl DocumentExtractor for DocxExtractor {
                 .map(|(idx, table)| convert_docx_table_to_table(table, idx))
                 .collect();
 
-            // Detect page breaks (best-effort)
             let page_boundaries = crate::extraction::docx::detect_page_breaks_from_docx(content)?;
 
             (text, tables, page_boundaries)
@@ -268,7 +266,6 @@ impl DocumentExtractor for DocxExtractor {
             }
         }
 
-        // Build PageStructure if page boundaries were detected
         let page_structure = if let Some(boundaries) = page_boundaries {
             let total_count = boundaries.len();
             Some(PageStructure {

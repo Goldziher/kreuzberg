@@ -69,7 +69,6 @@ pub enum FormatMetadata {
 /// via a discriminated union, and additional custom fields from postprocessors.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
-    // ========== Common Document Properties (extracted from format-specific) ==========
     /// Document title
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -90,7 +89,6 @@ pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
 
-    // ========== Temporal Metadata (standardized naming) ==========
     /// Creation timestamp (ISO 8601 format)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
@@ -107,12 +105,10 @@ pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub modified_by: Option<String>,
 
-    // ========== Page Structure (first-class page tracking) ==========
     /// Page/slide/sheet structure with boundaries
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pages: Option<PageStructure>,
 
-    // ========== Existing Fields (kept for backward compatibility) ==========
     /// Document date (DEPRECATED - use created_at/modified_at instead)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<String>,
@@ -1044,19 +1040,16 @@ mod tests {
         let json = serde_json::to_value(&metadata).unwrap();
         println!("Serialized metadata: {}", serde_json::to_string_pretty(&json).unwrap());
 
-        // Check that format_type is present
         assert!(
             json.get("format_type").is_some(),
             "format_type should be present in serialized JSON"
         );
         assert_eq!(json.get("format_type").unwrap(), "text");
 
-        // Check that Text metadata fields are present
         assert_eq!(json.get("line_count").unwrap(), 1);
         assert_eq!(json.get("word_count").unwrap(), 2);
         assert_eq!(json.get("character_count").unwrap(), 13);
 
-        // Check that additional field is merged
         assert_eq!(json.get("quality_score").unwrap(), 1.0);
     }
 }

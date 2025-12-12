@@ -49,18 +49,14 @@ pub fn extract_text(bytes: &[u8]) -> Result<String> {
 /// # Performance
 /// Performs two passes: one with docx-lite for text extraction and one for page break detection.
 pub fn extract_text_with_page_breaks(bytes: &[u8]) -> Result<(String, Option<Vec<PageBoundary>>)> {
-    // Extract text content
     let text = extract_text(bytes)?;
 
-    // Detect page breaks from document.xml
     let page_breaks = detect_page_breaks(bytes)?;
 
-    // If no page breaks found, return text without boundaries
     if page_breaks.is_empty() {
         return Ok((text, None));
     }
 
-    // Map detected page break positions to character offsets
     let boundaries = map_page_breaks_to_boundaries(&text, page_breaks)?;
 
     Ok((text, Some(boundaries)))
@@ -85,8 +81,6 @@ pub fn detect_page_breaks_from_docx(bytes: &[u8]) -> Result<Option<Vec<PageBound
     match extract_text_with_page_breaks(bytes) {
         Ok((_, boundaries)) => Ok(boundaries),
         Err(e) => {
-            // Page break detection is best-effort, return None on any error
-            // The main extraction should not fail due to page break detection
             tracing::debug!("Page break detection failed: {}", e);
             Ok(None)
         }
@@ -111,7 +105,6 @@ fn detect_page_breaks(bytes: &[u8]) -> Result<Vec<usize>> {
     let mut archive =
         ZipArchive::new(cursor).map_err(|e| KreuzbergError::parsing(format!("Failed to open DOCX as ZIP: {}", e)))?;
 
-    // Extract document.xml
     let document_xml = match archive.by_name("word/document.xml") {
         Ok(mut file) => {
             let mut content = String::new();
@@ -119,11 +112,9 @@ fn detect_page_breaks(bytes: &[u8]) -> Result<Vec<usize>> {
                 .map_err(|e| KreuzbergError::parsing(format!("Failed to read document.xml: {}", e)))?;
             content
         }
-        Err(_) => return Ok(Vec::new()), // No document.xml means no page breaks
+        Err(_) => return Ok(Vec::new()),
     };
 
-    // Simple string-based detection for explicit page breaks
-    // Looking for: <w:br w:type="page"/>
     let mut breaks = Vec::new();
     let search_pattern = r#"<w:br w:type="page"/>"#;
 
@@ -157,10 +148,8 @@ fn map_page_breaks_to_boundaries(text: &str, page_breaks: Vec<usize>) -> Result<
         return Ok(Vec::new());
     }
 
-    // Estimate page count: number of breaks + 1 (for content before first break and after last break)
     let page_count = page_breaks.len() + 1;
 
-    // Count total characters (not bytes) in text
     let char_count = text.chars().count();
     let chars_per_page = char_count / page_count;
 
@@ -170,12 +159,9 @@ fn map_page_breaks_to_boundaries(text: &str, page_breaks: Vec<usize>) -> Result<
     for page_num in 1..=page_count {
         let start = byte_offset;
 
-        // Calculate end by advancing chars_per_page characters
         let end = if page_num == page_count {
-            // Last page: extend to end of document
             text.len()
         } else {
-            // Advance chars_per_page characters from current position
             let remaining = &text[byte_offset..];
             let chars_to_skip = chars_per_page;
             byte_offset
@@ -223,7 +209,7 @@ mod tests {
     #[test]
     fn test_map_page_breaks_to_boundaries_single_break() {
         let text = "Page 1 content here with some text.Page 2 content here with more text.";
-        let breaks = vec![0]; // One break detected
+        let breaks = vec![0];
 
         let result = map_page_breaks_to_boundaries(text, breaks).unwrap();
 
@@ -240,17 +226,16 @@ mod tests {
 
     #[test]
     fn test_map_page_breaks_to_boundaries_multiple_breaks() {
-        let text = "A".repeat(300); // 300 character text
-        let breaks = vec![0, 0, 0]; // Three breaks
+        let text = "A".repeat(300);
+        let breaks = vec![0, 0, 0];
 
         let result = map_page_breaks_to_boundaries(&text, breaks).unwrap();
 
-        assert_eq!(result.len(), 4); // 3 breaks + 1 = 4 pages
+        assert_eq!(result.len(), 4);
         assert_eq!(result[0].page_number, 1);
         assert_eq!(result[3].page_number, 4);
         assert_eq!(result[3].byte_end, text.len());
 
-        // Verify all boundaries are continuous
         for i in 0..result.len() - 1 {
             assert_eq!(result[i].byte_end, result[i + 1].byte_start);
         }
@@ -258,14 +243,12 @@ mod tests {
 
     #[test]
     fn test_map_page_breaks_to_boundaries_utf8_boundary() {
-        // Test with UTF-8 multi-byte characters
         let text = "Hello world! こんにちは世界！ More text here.";
-        let breaks = vec![0]; // One break
+        let breaks = vec![0];
 
         let result = map_page_breaks_to_boundaries(text, breaks).unwrap();
 
         assert_eq!(result.len(), 2);
-        // Should not panic when checking UTF-8 boundaries
         assert!(text.is_char_boundary(result[0].byte_start));
         assert!(text.is_char_boundary(result[0].byte_end));
         assert!(text.is_char_boundary(result[1].byte_start));
@@ -274,9 +257,8 @@ mod tests {
 
     #[test]
     fn test_docx_page_breaks_with_emoji() {
-        // Test with emoji (4-byte UTF-8 sequences)
         let text = "Hello 😀 World 🌍 Foo 🎉 Bar";
-        let breaks = vec![0, 0]; // Two breaks = 3 pages
+        let breaks = vec![0, 0];
 
         let result = map_page_breaks_to_boundaries(text, breaks).unwrap();
 
@@ -285,7 +267,6 @@ mod tests {
         assert_eq!(result[1].page_number, 2);
         assert_eq!(result[2].page_number, 3);
 
-        // Verify all boundaries are at valid UTF-8 boundaries
         for boundary in &result {
             assert!(
                 text.is_char_boundary(boundary.byte_start),
@@ -299,13 +280,11 @@ mod tests {
             );
         }
 
-        // Verify continuity
         assert_eq!(result[0].byte_start, 0);
         assert_eq!(result[0].byte_end, result[1].byte_start);
         assert_eq!(result[1].byte_end, result[2].byte_start);
         assert_eq!(result[2].byte_end, text.len());
 
-        // Verify no text is lost or duplicated
         let reconstructed = format!(
             "{}{}{}",
             &text[result[0].byte_start..result[0].byte_end],
@@ -317,9 +296,8 @@ mod tests {
 
     #[test]
     fn test_docx_page_breaks_with_cjk() {
-        // Test with CJK characters (3-byte UTF-8 sequences)
         let text = "你好世界你好世界你好世界你好世界";
-        let breaks = vec![0]; // One break = 2 pages
+        let breaks = vec![0];
 
         let result = map_page_breaks_to_boundaries(text, breaks).unwrap();
 
@@ -327,7 +305,6 @@ mod tests {
         assert_eq!(result[0].page_number, 1);
         assert_eq!(result[1].page_number, 2);
 
-        // Verify all boundaries are at valid UTF-8 boundaries
         for boundary in &result {
             assert!(
                 text.is_char_boundary(boundary.byte_start),
@@ -341,12 +318,10 @@ mod tests {
             );
         }
 
-        // Verify continuity
         assert_eq!(result[0].byte_start, 0);
         assert_eq!(result[0].byte_end, result[1].byte_start);
         assert_eq!(result[1].byte_end, text.len());
 
-        // Verify no text is lost or duplicated
         let reconstructed = format!(
             "{}{}",
             &text[result[0].byte_start..result[0].byte_end],
@@ -357,15 +332,13 @@ mod tests {
 
     #[test]
     fn test_docx_page_breaks_multibyte_utf8() {
-        // Mixed multibyte characters: emoji (4-byte) + CJK (3-byte) + ASCII (1-byte)
         let text = "ASCII 😀 中文 hello 🎉 world 日本語";
-        let breaks = vec![0, 0]; // Two breaks = 3 pages
+        let breaks = vec![0, 0];
 
         let result = map_page_breaks_to_boundaries(text, breaks).unwrap();
 
         assert_eq!(result.len(), 3);
 
-        // Verify all boundaries are at valid UTF-8 boundaries
         for boundary in &result {
             assert!(
                 text.is_char_boundary(boundary.byte_start),
@@ -379,7 +352,6 @@ mod tests {
             );
         }
 
-        // Verify continuity (no gaps or overlaps)
         assert_eq!(result[0].byte_start, 0);
         for i in 0..result.len() - 1 {
             assert_eq!(
@@ -396,7 +368,6 @@ mod tests {
             "Last page does not end at text boundary"
         );
 
-        // Verify no text is lost or duplicated
         let mut reconstructed = String::new();
         for boundary in &result {
             reconstructed.push_str(&text[boundary.byte_start..boundary.byte_end]);
@@ -406,28 +377,22 @@ mod tests {
 
     #[test]
     fn test_detect_page_breaks_no_feature() {
-        // Page break detection should handle invalid ZIP gracefully
-        // Invalid input should return an error (expected behavior)
         let result = detect_page_breaks(b"invalid");
-        // Should fail because "invalid" is not a valid ZIP file
         assert!(result.is_err());
     }
 
     #[test]
     fn test_extract_text_with_page_breaks_no_breaks() {
-        // Load a real DOCX file without explicit page breaks
         let docx_path =
             "/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/test_documents/documents/lorem_ipsum.docx";
         if let Ok(bytes) = std::fs::read(docx_path) {
             let result = extract_text_with_page_breaks(&bytes);
-            // Should succeed and either have no boundaries or empty
             if let Ok((text, boundaries)) = result {
                 assert!(!text.is_empty());
-                // If boundaries present, should have at least one page
                 if let Some(b) = boundaries {
                     assert!(!b.is_empty());
                 }
-            } // File might not exist in test environment
+            }
         }
     }
 }

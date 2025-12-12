@@ -27,7 +27,7 @@ class DockerKreuzbergClient {
     console.log("Starting Kreuzberg Docker container...");
     const cmd = `docker run -d --name ${this.containerName} -p ${this.apiPort}:8000 ${this.containerImage}`;
     await execAsync(cmd);
-    console.log(`Container started on http://localhost:${this.apiPort}`);
+    console.log(`Container started on http:
   }
 
   async extractFile(filePath: string): Promise<string> {

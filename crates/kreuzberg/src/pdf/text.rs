@@ -120,7 +120,6 @@ pub fn extract_text_from_pdf_document(
 ) -> Result<PdfTextExtractionResult> {
     let page_count = document.pages().len() as usize;
 
-    // Fast path: no page tracking needed
     if page_config.is_none() {
         let estimated_size = page_count * 2048;
         let mut content = String::with_capacity(estimated_size);
@@ -161,34 +160,27 @@ pub fn extract_text_from_pdf_document(
 
         let page_text = text.all();
 
-        // Insert page marker before pages 2+
         if page_number > 1 && config.insert_page_markers {
             let marker = config.marker_format.replace("{page_num}", &page_number.to_string());
             content.push_str(&marker);
         }
 
-        // Add separator between pages 1 and 2+ (if no markers)
         if page_number > 1 && !config.insert_page_markers && !content.is_empty() {
             content.push_str("\n\n");
         }
 
-        // Track byte offset before this page (using .len() for byte offsets, UTF-8 valid boundaries)
         let byte_start = content.len();
 
-        // Add page text
         content.push_str(&page_text);
 
-        // Track byte offset after this page
         let byte_end = content.len();
 
-        // Record boundary
         boundaries.push(PageBoundary {
             byte_start,
             byte_end,
             page_number,
         });
 
-        // Record page content if enabled
         if let Some(ref mut pages) = page_contents {
             pages.push(PageContent {
                 page_number,

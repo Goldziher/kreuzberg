@@ -144,13 +144,10 @@ pub fn extract_metadata_from_document(
     document: &PdfDocument<'_>,
     page_boundaries: Option<&[PageBoundary]>,
 ) -> Result<PdfExtractionMetadata> {
-    // Extract PDF-specific metadata first
     let pdf_specific = extract_pdf_specific_metadata(document)?;
 
-    // Extract common metadata fields
     let common = extract_common_metadata_from_document(document)?;
 
-    // Build page structure if boundaries are provided
     let page_structure = if let Some(boundaries) = page_boundaries {
         Some(build_page_structure(document, boundaries)?)
     } else {
@@ -216,14 +213,12 @@ fn extract_pdf_specific_metadata(document: &PdfDocument<'_>) -> Result<PdfMetada
 fn build_page_structure(document: &PdfDocument<'_>, boundaries: &[PageBoundary]) -> Result<PageStructure> {
     let total_count = document.pages().len() as usize;
 
-    // VALIDATION: Check boundaries are non-empty
     if boundaries.is_empty() {
         return Err(PdfError::MetadataExtractionFailed(
             "No page boundaries provided for PageStructure".to_string(),
         ));
     }
 
-    // VALIDATION: Check boundary count matches page count
     if boundaries.len() != total_count {
         return Err(PdfError::MetadataExtractionFailed(format!(
             "Boundary count {} doesn't match page count {}",
@@ -232,12 +227,10 @@ fn build_page_structure(document: &PdfDocument<'_>, boundaries: &[PageBoundary])
         )));
     }
 
-    // Build per-page metadata with dimensions
     let mut pages = Vec::new();
     for (index, boundary) in boundaries.iter().enumerate() {
         let page_number = boundary.page_number;
 
-        // Try to get dimensions for this page (use boundary index, not actual page index)
         let dimensions = if let Ok(page_rect) = document.pages().page_size(index as u16) {
             Some((page_rect.width().value as f64, page_rect.height().value as f64))
         } else {
@@ -480,17 +473,12 @@ mod tests {
 
     #[test]
     fn test_build_page_structure_empty_boundaries() {
-        // Test that empty boundaries are rejected
-        // Note: This is a unit test that validates the error path
-        // In practice, this would be called with a real PDF document
         let result_msg = "No page boundaries provided for PageStructure".to_string();
         assert!(!result_msg.is_empty());
     }
 
     #[test]
     fn test_build_page_structure_boundary_mismatch_message() {
-        // Test that mismatch between boundary count and page count is detected
-        // This test validates the error message format
         let boundaries_count = 3;
         let page_count = 5;
         let error_msg = format!(

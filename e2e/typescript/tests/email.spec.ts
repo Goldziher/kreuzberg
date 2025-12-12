@@ -1,5 +1,3 @@
-// Auto-generated tests for email fixtures.
-
 import { existsSync } from "node:fs";
 import { describe, it } from "vitest";
 import { assertions, buildConfig, resolveDocument, shouldSkipFixture } from "./helpers.js";

@@ -151,14 +151,12 @@ impl DocumentExtractor for PptxExtractor {
             None
         };
 
-        // Build BaseMetadata with PageStructure if available
         let mut metadata = Metadata {
             format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
             additional,
             ..Default::default()
         };
 
-        // Set pages field in BaseMetadata if PageStructure was built
         if let Some(page_structure) = pptx_result.page_structure {
             metadata.pages = Some(page_structure);
         }
@@ -210,14 +208,12 @@ impl DocumentExtractor for PptxExtractor {
             None
         };
 
-        // Build BaseMetadata with PageStructure if available
         let mut metadata = Metadata {
             format: Some(crate::types::FormatMetadata::Pptx(pptx_result.metadata)),
             additional,
             ..Default::default()
         };
 
-        // Set pages field in BaseMetadata if PageStructure was built
         if let Some(page_structure) = pptx_result.page_structure {
             metadata.pages = Some(page_structure);
         }

@@ -671,7 +671,6 @@ func TestExtensionResolution(t *testing.T) {
 
 	t.Run("invalid MIME type may error", func(t *testing.T) {
 		_, err := GetExtensionsForMime("invalid/mime")
-		// May or may not error depending on implementation
 		_ = err
 	})
 }
@@ -776,14 +775,12 @@ func TestEmbeddingPresets(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to list presets: %v", err)
 		}
-		// May be empty or populated depending on configuration
 		_ = presets
 	})
 
 	t.Run("get preset by name", func(t *testing.T) {
 		preset, err := GetEmbeddingPreset("default")
 		if err != nil {
-			// May not exist, that's okay
 			_ = err
 		} else if preset != nil {
 			if preset.Name == "" {
