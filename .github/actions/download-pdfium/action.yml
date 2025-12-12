@@ -34,7 +34,9 @@ runs:
 
         version="${PDFIUM_VERSION:-${{ inputs.pdfium-version }}}"
         tmpdir="$(mktemp -d)"
-        curl -fsSL -o "$tmpdir/pdfium.tgz" "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
+        curl -fL --retry 5 --retry-delay 2 --retry-max-time 180 --retry-all-errors \
+          -o "$tmpdir/pdfium.tgz" \
+          "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${version}/pdfium-${platform_id}-${arch_id}.tgz"
         mkdir -p "$tmpdir/extracted"
         tar -xzf "$tmpdir/pdfium.tgz" -C "$tmpdir/extracted"
 

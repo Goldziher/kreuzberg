@@ -33,6 +33,23 @@ cd "$REPO_ROOT/packages/go"
 echo "Working directory: $(pwd)"
 echo
 
+# Build list of Go packages that actually contain source files (skip an empty module root)
+echo "Discovering Go packages (excluding empty roots)..."
+mapfile -t go_dirs < <(find . -name '*.go' -not -path './vendor/*' -print0 | xargs -0 -n1 dirname | sort -u)
+packages=()
+for dir in "${go_dirs[@]}"; do
+	# Skip the module root if it contains no Go sources
+	if [[ "$dir" == "." ]]; then
+		continue
+	fi
+	packages+=("./${dir#./}")
+done
+
+if [[ ${#packages[@]} -eq 0 ]]; then
+	echo "No Go packages found; nothing to test."
+	exit 0
+fi
+
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
 	# Windows path - handled via PowerShell wrapper
 	workspace=$(cd ../.. && pwd)
@@ -73,7 +90,7 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	# Skip -race on Windows: mingw + static CRT regularly fails to link race runtime
 	# -x to print the underlying compile/link commands for debugging toolchain issues
 	echo "Running Go tests with verbose output and compile command tracing..."
-	go test -v -x "${GO_TEST_FLAGS:-}" ./...
+	go test -v -x "${GO_TEST_FLAGS:-}" "${packages[@]}"
 else
 	# Unix paths (Linux/macOS)
 	workspace=$(cd ../.. && pwd)
@@ -129,5 +146,5 @@ else
 	# -x prints the underlying compile/link commands for debugging toolchain issues
 	# -race enables the race condition detector (not available on Windows)
 	echo "Running Go tests with verbose output, race detection, and compile command tracing..."
-	go test -v -race -x "${GO_TEST_FLAGS:-}" ./...
+	go test -v -race -x "${GO_TEST_FLAGS:-}" "${packages[@]}"
 fi

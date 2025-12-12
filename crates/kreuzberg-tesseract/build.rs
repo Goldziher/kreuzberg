@@ -496,11 +496,35 @@ mod build_tesseract {
             .expect("Failed to create HTTP client");
 
         println!("cargo:warning=Downloading {} from {}", name, url);
-        let mut response = client.get(url).send().expect("Failed to download archive");
+        let max_attempts = 5;
+        let mut response = None;
 
-        if !response.status().is_success() {
-            panic!("Failed to download {}: HTTP {}", name, response.status());
+        for attempt in 1..=max_attempts {
+            let err_msg = match client.get(url).send() {
+                Ok(resp) if resp.status().is_success() => {
+                    response = Some(resp);
+                    break;
+                }
+                Ok(resp) => format!("HTTP {}", resp.status()),
+                Err(err) => err.to_string(),
+            };
+
+            if attempt == max_attempts {
+                panic!(
+                    "Failed to download {} after {} attempts: {}",
+                    name, max_attempts, err_msg
+                );
+            }
+
+            let backoff = 2u64.pow((attempt - 1).min(4)); // cap at 16s
+            println!(
+                "cargo:warning=Download attempt {}/{} for {} failed ({}). Retrying in {}s...",
+                attempt, max_attempts, name, err_msg, backoff
+            );
+            std::thread::sleep(std::time::Duration::from_secs(backoff));
         }
+
+        let mut response = response.expect("unreachable: download loop must either succeed or panic");
 
         let mut content = Vec::new();
         response.copy_to(&mut content).expect("Failed to read archive content");
