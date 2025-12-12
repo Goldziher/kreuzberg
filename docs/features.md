@@ -133,7 +133,8 @@ Automatic language detection for extracted text using fast-langdetect.
 - ISO 639-1 and ISO 639-3 code support
 
 **Configuration:**
-```python
+```python title="language_detection_config.py"
+# Configure language detection with multiple language support
 LanguageDetectionConfig(
     detect_multiple=True,
     confidence_threshold=0.7
@@ -156,7 +157,8 @@ Split extracted text into semantic chunks for LLM processing.
 - Optional embedding generation
 
 **Configuration:**
-```python
+```python title="chunking_config.py"
+# Configure content chunking with size and overlap settings
 ChunkingConfig(
     max_chars=1000,
     max_overlap=200
@@ -180,7 +182,8 @@ Generate vector embeddings for chunks using FastEmbed.
 - Optional L2 normalization
 
 **Configuration:**
-```python
+```python title="embedding_config.py"
+# Configure embedding generation with balanced preset model
 EmbeddingConfig(
     model=EmbeddingModelType.preset("balanced"),
     normalize=True
@@ -203,7 +206,8 @@ Reduce token count while preserving semantic meaning using extractive summarizat
 - Configurable reduction targets
 
 **Configuration:**
-```python
+```python title="token_reduction_config.py"
+# Configure token reduction with moderate compression
 TokenReductionConfig(
     mode="moderate"
 )
@@ -222,7 +226,8 @@ Enhance extraction quality with text normalization and cleanup.
 - Character set validation
 
 **Configuration:**
-```python
+```python title="extraction_config.py"
+# Enable quality processing for text normalization and cleanup
 ExtractionConfig(
     enable_quality_processing=True
 )
@@ -243,7 +248,8 @@ Extract keywords and key phrases from documents.
 - Relevance scoring
 
 **Configuration:**
-```python
+```python title="keyword_extraction_config.py"
+# Configure keyword extraction using YAKE algorithm
 KeywordExtractionConfig(
     algorithm="yake",
     max_keywords=10,
@@ -258,7 +264,8 @@ KeywordExtractionConfig(
 Process multiple documents concurrently using async/await or thread pools.
 
 **Async API:**
-```python
+```python title="batch_extraction.py"
+# Process multiple documents concurrently using async batch extraction
 results = await batch_extract_file(
     ["doc1.pdf", "doc2.pdf", "doc3.pdf"],
     config=config
@@ -290,7 +297,8 @@ Intelligent caching system for expensive operations.
 - LRU eviction policy
 
 **Configuration:**
-```python
+```python title="cache_config.py"
+# Enable caching with custom directory
 ExtractionConfig(
     use_cache=True,
     cache_dir="/custom/cache/path"
@@ -317,7 +325,8 @@ Configuration files automatically discovered in order:
 3. System config: `/etc/kreuzberg/config.{toml,yaml,json}`
 
 **Discovery API:**
-```python
+```python title="config_discovery.py"
+# Automatically discover and load configuration from filesystem
 config = ExtractionConfig.discover()
 ```
 
@@ -359,13 +368,15 @@ Extensible architecture supporting four plugin types:
 ### Plugin Registration
 
 **Rust:**
-```rust
+```rust title="plugin_registration.rs"
+// Register custom document extractor with priority 50
 let registry = get_document_extractor_registry();
 registry.register("custom", Arc::new(MyExtractor), 50)?;
 ```
 
 **Python:**
-```python
+```python title="plugin_registration.py"
+# Register custom document extractor plugin
 from kreuzberg.plugins import register_extractor
 
 register_extractor(MyExtractor(), priority=50)
@@ -399,7 +410,7 @@ Production-ready RESTful API server.
 - Graceful shutdown
 
 **Start Server:**
-```bash
+```bash title="Terminal"
 kreuzberg serve --host 0.0.0.0 --port 8000
 ```
 
@@ -419,12 +430,13 @@ Stdio-based MCP server for AI agent integration.
 - Error handling
 
 **Start Server:**
-```bash
+```bash title="Terminal"
 kreuzberg mcp
 ```
 
 **Claude Desktop Configuration:**
-```json
+```json title="claude_desktop_config.json"
+// Configure kreuzberg MCP server in Claude Desktop
 {
   "mcpServers": {
     "kreuzberg": {
@@ -520,7 +532,8 @@ Rust provides fine-grained control over included components via Cargo features:
 - `cli` - CLI features + common extractors
 
 **Example Cargo.toml:**
-```toml
+```toml title="Cargo.toml"
+# Add kreuzberg with specific features enabled
 [dependencies]
 kreuzberg = { version = "4.0", features = ["pdf", "ocr", "chunking"] }
 ```
@@ -531,7 +544,7 @@ kreuzberg = { version = "4.0", features = ["pdf", "ocr", "chunking"] }
 
 Python bindings include all core features by default. Optional OCR backends require separate installation:
 
-```bash
+```bash title="Terminal"
 # Core package (Tesseract OCR only)
 pip install kreuzberg
 
@@ -551,7 +564,7 @@ pip install kreuzberg[all]
 
 TypeScript and Ruby bindings include all features in a single package. No optional dependencies or modular installation.
 
-```bash
+```bash title="Terminal"
 # TypeScript - full package
 npm install @kreuzberg/node
 
@@ -591,7 +604,7 @@ Disk-based caching improves performance for repeated operations:
 
 Primary CLI for document extraction.
 
-```bash
+```bash title="Terminal"
 kreuzberg extract document.pdf --ocr --format json
 ```
 
@@ -606,7 +619,7 @@ kreuzberg extract document.pdf --ocr --format json
 
 Start HTTP REST API server.
 
-```bash
+```bash title="Terminal"
 kreuzberg serve --host 0.0.0.0 --port 8000 --config production.toml
 ```
 
@@ -614,13 +627,13 @@ kreuzberg serve --host 0.0.0.0 --port 8000 --config production.toml
 
 Start Model Context Protocol server.
 
-```bash
+```bash title="Terminal"
 kreuzberg mcp --config kreuzberg.toml
 ```
 
 ### Cache Management
 
-```bash
+```bash title="Terminal"
 # View cache statistics
 kreuzberg cache stats
 
@@ -639,7 +652,7 @@ See [CLI Usage](cli/usage.md) for complete documentation.
 - LibreOffice (optional) for legacy Office formats (.doc, .ppt)
 
 **Installation:**
-```bash
+```bash title="Terminal"
 # macOS
 brew install tesseract libreoffice
 
@@ -682,7 +695,7 @@ Pre-built Docker images available on Docker Hub:
 - `goldziher/kreuzberg:latest-all` - All features
 
 **Usage:**
-```bash
+```bash title="Terminal"
 docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   extract /data/document.pdf --ocr
 ```

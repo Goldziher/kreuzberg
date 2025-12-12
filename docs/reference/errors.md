@@ -37,7 +37,7 @@ Kreuzberg uses a comprehensive error system based on the `KreuzbergError` enum. 
 
 **Example (Rust):**
 
-```rust
+```rust title="io_error_handling.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
 
 fn process_file(path: &str) -> kreuzberg::Result<String> {
@@ -62,7 +62,7 @@ match process_file("/nonexistent/file.pdf") {
 
 **Example (Python):**
 
-```python
+```python title="io_error_handling.py"
 from kreuzberg import extract_file, ExtractionConfig
 
 try:
@@ -76,7 +76,7 @@ except Exception as e:
 
 **Example (Ruby):**
 
-```ruby
+```ruby title="io_error_handling.rb"
 require 'kreuzberg'
 
 begin
@@ -92,7 +92,7 @@ end
 
 **Example (Go):**
 
-```go
+```go title="io_error_handling.go"
 import (
 	"errors"
 	"fmt"
@@ -134,7 +134,7 @@ fmt.Println(result.Content)
 
 **Example (Rust):**
 
-```rust
+```rust title="parsing_error_handling.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
 
 fn extract_with_error_handling(path: &str) -> kreuzberg::Result<String> {
@@ -156,7 +156,7 @@ fn extract_with_error_handling(path: &str) -> kreuzberg::Result<String> {
 
 **Example (Python):**
 
-```python
+```python title="parsing_error_handling.py"
 from kreuzberg import extract_file, ParsingError
 
 try:
@@ -168,7 +168,7 @@ except ParsingError as e:
 
 **Example (Ruby):**
 
-```ruby
+```ruby title="parsing_error_handling.rb"
 require 'kreuzberg'
 
 begin
@@ -185,7 +185,7 @@ end
 
 **Example (Go):**
 
-```go
+```go title="parsing_error_handling.go"
 import (
 	"errors"
 	"fmt"
@@ -225,7 +225,7 @@ fmt.Println(result.Content)
 
 **Example (Rust):**
 
-```rust
+```rust title="ocr_error_handling.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig, KreuzbergError};
 
 fn extract_with_ocr(path: &str) -> kreuzberg::Result<String> {
@@ -250,7 +250,7 @@ fn extract_with_ocr(path: &str) -> kreuzberg::Result<String> {
 
 **Example (Python):**
 
-```python
+```python title="ocr_error_handling.py"
 from kreuzberg import extract_file, ExtractionConfig, OcrConfig, OCRError
 
 config = ExtractionConfig(ocr=OcrConfig())
@@ -265,7 +265,7 @@ except OCRError as e:
 
 **Example (Ruby):**
 
-```ruby
+```ruby title="ocr_error_handling.rb"
 require 'kreuzberg'
 
 config = Kreuzberg::Config::Extraction.new(
@@ -288,7 +288,7 @@ end
 
 **Example (Go):**
 
-```go
+```go title="ocr_error_handling.go"
 import (
 	"errors"
 	"fmt"
@@ -334,7 +334,7 @@ fmt.Println(result.Content)
 
 **Example (Rust):**
 
-```rust
+```rust title="validation_error.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, ImageExtractionConfig, KreuzbergError};
 
 fn create_config() -> kreuzberg::Result<ExtractionConfig> {
@@ -362,7 +362,7 @@ match create_config() {
 
 **Example (Python):**
 
-```python
+```python title="validation_error.py"
 from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig, ValidationError
 
 try:
@@ -391,7 +391,7 @@ except ValidationError as e:
 
 **Example (Rust):**
 
-```rust
+```rust title="cache_error_handling.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
 
 fn extract_with_cache_handling(path: &str) -> kreuzberg::Result<String> {
@@ -415,7 +415,7 @@ fn extract_with_cache_handling(path: &str) -> kreuzberg::Result<String> {
 
 **Example (Python):**
 
-```python
+```python title="cache_error_handling.py"
 from kreuzberg import extract_file, ExtractionConfig
 
 # Cache errors are silently handled internally
@@ -442,7 +442,7 @@ result = extract_file("document.pdf", config=config)
 
 **Example (Rust):**
 
-```rust
+```rust title="image_processing_error.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, ImageExtractionConfig, KreuzbergError};
 
 fn extract_images(path: &str) -> kreuzberg::Result<String> {
@@ -470,7 +470,7 @@ fn extract_images(path: &str) -> kreuzberg::Result<String> {
 
 **Example (Python):**
 
-```python
+```python title="image_processing_error.py"
 from kreuzberg import extract_file, ExtractionConfig, ImageExtractionConfig, ImageProcessingError
 
 config = ExtractionConfig(images=ImageExtractionConfig(extract_images=True))
@@ -500,7 +500,7 @@ except ImageProcessingError as e:
 
 **Example (Rust):**
 
-```rust
+```rust title="serialization_error.rs"
 use kreuzberg::{ExtractionConfig, KreuzbergError};
 
 fn load_config_from_json(json_str: &str) -> kreuzberg::Result<ExtractionConfig> {
@@ -516,7 +516,7 @@ fn load_config_from_json(json_str: &str) -> kreuzberg::Result<ExtractionConfig> 
 
 **Example (Python):**
 
-```python
+```python title="serialization_error.py"
 from kreuzberg import ExtractionConfig
 import json
 
@@ -542,7 +542,7 @@ except (json.JSONDecodeError, TypeError) as e:
 
 **Example (Rust):**
 
-```rust
+```rust title="missing_dependency_error.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig, KreuzbergError};
 
 fn extract_with_dependency_check(path: &str) -> kreuzberg::Result<String> {
@@ -565,7 +565,7 @@ fn extract_with_dependency_check(path: &str) -> kreuzberg::Result<String> {
 
 **Example (Python):**
 
-```python
+```python title="missing_dependency_error.py"
 from kreuzberg import extract_file, ExtractionConfig, OcrConfig, MissingDependencyError
 
 config = ExtractionConfig(ocr=OcrConfig())
@@ -579,7 +579,7 @@ except MissingDependencyError as e:
 
 **Example (Ruby):**
 
-```ruby
+```ruby title="missing_dependency_error.rb"
 require 'kreuzberg'
 
 config = Kreuzberg::Config::Extraction.new(
@@ -600,7 +600,7 @@ end
 
 **Example (Go):**
 
-```go
+```go title="missing_dependency_error.go"
 import (
 	"errors"
 	"fmt"
@@ -643,7 +643,7 @@ fmt.Println(result.Content)
 
 **Example (Rust):**
 
-```rust
+```rust title="plugin_error.rs"
 use kreuzberg::plugins::registry::get_document_extractor_registry;
 use kreuzberg::KreuzbergError;
 use std::sync::Arc;
@@ -667,7 +667,7 @@ fn register_custom_plugin() -> kreuzberg::Result<()> {
 
 **Example (Python):**
 
-```python
+```python title="plugin_error.py"
 from kreuzberg import get_document_extractor_registry, DocumentExtractor
 
 class CustomExtractor(DocumentExtractor):
@@ -703,7 +703,7 @@ except Exception as e:
 
 **Example (Rust):**
 
-```rust
+```rust title="lock_poisoned_error.rs"
 use kreuzberg::{KreuzbergError};
 
 fn access_registry() -> kreuzberg::Result<()> {
@@ -732,7 +732,7 @@ fn access_registry() -> kreuzberg::Result<()> {
 
 **Example (Rust):**
 
-```rust
+```rust title="unsupported_format_error.rs"
 use kreuzberg::{extract_file_sync, ExtractionConfig, KreuzbergError};
 
 fn extract_with_format_check(path: &str) -> kreuzberg::Result<String> {
@@ -752,7 +752,7 @@ fn extract_with_format_check(path: &str) -> kreuzberg::Result<String> {
 
 **Example (Python):**
 
-```python
+```python title="unsupported_format_error.py"
 from kreuzberg import extract_file, UnsupportedFormatError
 
 try:
@@ -778,7 +778,7 @@ except UnsupportedFormatError as e:
 
 **Example (Rust):**
 
-```rust
+```rust title="other_error.rs"
 use kreuzberg::KreuzbergError;
 
 fn handle_unexpected_error() -> kreuzberg::Result<()> {
@@ -792,25 +792,25 @@ fn handle_unexpected_error() -> kreuzberg::Result<()> {
 
 ### 1. Don't Suppress System Errors
 
-```rust
-// L Bad - wraps IO error
+```rust title="Rust"
+// Bad - wraps IO error
 match std::fs::read("file.txt") {
     Ok(data) => process(data),
     Err(e) => Err(KreuzbergError::parsing(format!("Failed: {}", e))),
 }
 
-//  Good - lets IO error bubble up
+// Good - lets IO error bubble up
 let data = std::fs::read("file.txt")?;
 process(data)
 ```
 
 ### 2. Add Context to Application Errors
 
-```rust
-// L Bad - no context
+```rust title="Rust"
+// Bad - no context
 return Err(KreuzbergError::parsing("parse failed"));
 
-//  Good - includes context
+// Good - includes context
 return Err(KreuzbergError::parsing(format!(
     "Failed to parse {} at line {}: {}",
     file_type, line_num, reason
@@ -819,8 +819,8 @@ return Err(KreuzbergError::parsing(format!(
 
 ### 3. Use Error Chains
 
-```rust
-//  Preserve error chain
+```rust title="Rust"
+// Preserve error chain
 match parse_document(bytes) {
     Ok(doc) => Ok(doc),
     Err(e) => Err(KreuzbergError::parsing_with_source(
@@ -832,7 +832,7 @@ match parse_document(bytes) {
 
 ### 4. Handle Errors Appropriately by Type
 
-```rust
+```rust title="Rust"
 match extract_file_sync(path, None, &config) {
     Ok(result) => Ok(result),
     Err(KreuzbergError::Io(e)) => {
@@ -877,7 +877,7 @@ All Python exceptions inherit from the base `KreuzbergError` class and include a
 
 TypeScript errors are thrown as standard JavaScript `Error` objects with appropriate names:
 
-```typescript
+```typescript title="TypeScript"
 try {
   const result = await extractFile('document.pdf');
 } catch (error) {

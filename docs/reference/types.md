@@ -4,11 +4,11 @@ Complete type definitions and documentation for Kreuzberg across all language bi
 
 ## ExtractionResult
 
-The main result object returned from all document extraction operations. Contains extracted content, metadata, tables, chunks, and images.
+Primary extraction result containing document content, metadata, and structured data elements. All extraction operations return this unified type with format-agnostic content and format-specific metadata.
 
 ### Rust
 
-```rust
+```rust title="extraction_result.rs"
 pub struct ExtractionResult {
     pub content: String,
     pub mime_type: String,
@@ -22,9 +22,9 @@ pub struct ExtractionResult {
 
 ### Python
 
-```python
+```python title="extraction_result.py"
 class ExtractionResult(TypedDict):
-    """Extraction result returned by all extraction functions."""
+    """Main result containing extracted content, metadata, and structured data."""
     content: str
     mime_type: str
     metadata: Metadata
@@ -36,7 +36,7 @@ class ExtractionResult(TypedDict):
 
 ### TypeScript
 
-```typescript
+```typescript title="extraction_result.ts"
 export interface ExtractionResult {
     content: string;
     mimeType: string;
@@ -50,7 +50,7 @@ export interface ExtractionResult {
 
 ### Ruby
 
-```ruby
+```ruby title="extraction_result.rb"
 class Kreuzberg::Result
     attr_reader :content, :mime_type, :metadata, :tables
     attr_reader :detected_languages, :chunks, :images
@@ -59,7 +59,7 @@ end
 
 ### Java
 
-```java
+```java title="ExtractionResult.java"
 public record ExtractionResult(
     String content,
     String mimeType,
@@ -73,7 +73,7 @@ public record ExtractionResult(
 
 ### Go
 
-```go
+```go title="extraction_result.go"
 type ExtractionResult struct {
     Content           string           `json:"content"`
     MimeType          string           `json:"mime_type"`
@@ -87,11 +87,11 @@ type ExtractionResult struct {
 
 ## Metadata
 
-Format-specific metadata extracted from documents, using a discriminated union pattern with `format_type` as the discriminator.
+Document metadata with discriminated union pattern. The `format_type` field determines which format-specific fields are populated, enabling type-safe access to PDF, Excel, Email, and other format-specific metadata.
 
 ### Rust
 
-```rust
+```rust title="metadata.rs"
 pub struct Metadata {
     pub language: Option<String>,
     pub date: Option<String>,
@@ -120,18 +120,18 @@ pub enum FormatMetadata {
 
 ### Python
 
-```python
+```python title="metadata.py"
 class Metadata(TypedDict, total=False):
-    """Strongly-typed metadata for extraction results."""
+    """Document metadata with format-specific fields and processing info."""
     language: str
     date: str
     subject: str
     format_type: Literal["pdf", "excel", "email", "pptx", "archive", "image", "xml", "text", "html", "ocr"]
-    # Format-specific fields flatten at root level
+    # Format-specific fields are included at root level based on format_type
     title: str
     authors: list[str]
     keywords: list[str]
-    # ... (all fields from format-specific metadata)
+    # Additional format-specific fields vary by document type
     image_preprocessing: ImagePreprocessingMetadata
     json_schema: dict[str, Any]
     error: ErrorMetadata
@@ -139,16 +139,16 @@ class Metadata(TypedDict, total=False):
 
 ### TypeScript
 
-```typescript
+```typescript title="metadata.ts"
 export interface Metadata {
     language?: string | null;
     date?: string | null;
     subject?: string | null;
     format_type?: "pdf" | "excel" | "email" | "pptx" | "archive" | "image" | "xml" | "text" | "html" | "ocr";
-    // Format-specific fields flatten at root level
+    // Format-specific fields are included at root level based on format_type
     title?: string | null;
     author?: string | null;
-    // ... (all fields from format-specific metadata)
+    // Additional format-specific fields vary by document type
     image_preprocessing?: ImagePreprocessingMetadata | null;
     json_schema?: Record<string, unknown> | null;
     error?: ErrorMetadata | null;
@@ -158,16 +158,16 @@ export interface Metadata {
 
 ### Ruby
 
-```ruby
-# Returned as Hash from native extension
-result.metadata  # Hash<String, Any>
-# Access format type to determine which fields are present
+```ruby title="metadata.rb"
+# Metadata is returned as a Hash from the native extension
+result.metadata  # Hash with string keys and mixed values
+# Check format_type to determine which format-specific fields are available
 result.metadata["format_type"]  # "pdf", "excel", "email", etc.
 ```
 
 ### Java
 
-```java
+```java title="Metadata.java"
 public final class Metadata {
     private final Optional<String> language;
     private final Optional<String> date;
@@ -183,13 +183,13 @@ public final class FormatMetadata {
     private final Optional<PdfMetadata> pdf;
     private final Optional<ExcelMetadata> excel;
     private final Optional<EmailMetadata> email;
-    // ... (one for each format)
+    // Additional Optional fields for each supported format type
 }
 ```
 
 ### Go
 
-```go
+```go title="metadata.go"
 type Metadata struct {
     Language           *string                     `json:"language,omitempty"`
     Date               *string                     `json:"date,omitempty"`
@@ -206,7 +206,7 @@ type FormatMetadata struct {
     Pdf     *PdfMetadata
     Excel   *ExcelMetadata
     Email   *EmailMetadata
-    // ... (one for each format)
+    // Additional pointer fields for each supported format type
 }
 ```
 
@@ -214,11 +214,11 @@ type FormatMetadata struct {
 
 ### PDF Metadata
 
-Common fields across all formats; format-specific fields are available when `format_type == "pdf"`.
+Document properties extracted from PDF files including title, author, creation dates, and page count. Available when `format_type == "pdf"`.
 
 #### Rust
 
-```rust
+```rust title="pdf_metadata.rs"
 pub struct PdfMetadata {
     pub title: Option<String>,
     pub author: Option<String>,
@@ -234,7 +234,7 @@ pub struct PdfMetadata {
 
 #### Python
 
-```python
+```python title="pdf_metadata.py"
 class PdfMetadata(TypedDict, total=False):
     title: str | None
     author: str | None
@@ -249,7 +249,7 @@ class PdfMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="pdf_metadata.ts"
 export interface PdfMetadata {
     title?: string | null;
     author?: string | null;
@@ -265,7 +265,7 @@ export interface PdfMetadata {
 
 #### Java
 
-```java
+```java title="PdfMetadata.java"
 public record PdfMetadata(
     Optional<String> title,
     Optional<String> author,
@@ -281,7 +281,7 @@ public record PdfMetadata(
 
 #### Go
 
-```go
+```go title="pdf_metadata.go"
 type PdfMetadata struct {
     Title            *string `json:"title,omitempty"`
     Author           *string `json:"author,omitempty"`
@@ -297,9 +297,11 @@ type PdfMetadata struct {
 
 ### Excel Metadata
 
+Spreadsheet workbook information including sheet count and sheet names. Available when `format_type == "excel"`.
+
 #### Rust
 
-```rust
+```rust title="excel_metadata.rs"
 pub struct ExcelMetadata {
     pub sheet_count: usize,
     pub sheet_names: Vec<String>,
@@ -308,7 +310,7 @@ pub struct ExcelMetadata {
 
 #### Python
 
-```python
+```python title="excel_metadata.py"
 class ExcelMetadata(TypedDict, total=False):
     sheet_count: int
     sheet_names: list[str]
@@ -316,7 +318,7 @@ class ExcelMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="excel_metadata.ts"
 export interface ExcelMetadata {
     sheetCount?: number;
     sheetNames?: string[];
@@ -325,7 +327,7 @@ export interface ExcelMetadata {
 
 #### Java
 
-```java
+```java title="ExcelMetadata.java"
 public record ExcelMetadata(
     int sheetCount,
     List<String> sheetNames
@@ -334,7 +336,7 @@ public record ExcelMetadata(
 
 #### Go
 
-```go
+```go title="excel_metadata.go"
 type ExcelMetadata struct {
     SheetCount int      `json:"sheet_count"`
     SheetNames []string `json:"sheet_names"`
@@ -343,9 +345,11 @@ type ExcelMetadata struct {
 
 ### Email Metadata
 
+Email message headers and recipient information including sender, recipients, message ID, and attachment lists. Available when `format_type == "email"`.
+
 #### Rust
 
-```rust
+```rust title="email_metadata.rs"
 pub struct EmailMetadata {
     pub from_email: Option<String>,
     pub from_name: Option<String>,
@@ -359,7 +363,7 @@ pub struct EmailMetadata {
 
 #### Python
 
-```python
+```python title="email_metadata.py"
 class EmailMetadata(TypedDict, total=False):
     from_email: str | None
     from_name: str | None
@@ -372,7 +376,7 @@ class EmailMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="email_metadata.ts"
 export interface EmailMetadata {
     fromEmail?: string | null;
     fromName?: string | null;
@@ -386,7 +390,7 @@ export interface EmailMetadata {
 
 #### Java
 
-```java
+```java title="EmailMetadata.java"
 public record EmailMetadata(
     Optional<String> fromEmail,
     Optional<String> fromName,
@@ -400,7 +404,7 @@ public record EmailMetadata(
 
 #### Go
 
-```go
+```go title="email_metadata.go"
 type EmailMetadata struct {
     FromEmail   *string  `json:"from_email,omitempty"`
     FromName    *string  `json:"from_name,omitempty"`
@@ -414,9 +418,11 @@ type EmailMetadata struct {
 
 ### Archive Metadata
 
+Archive file properties including format type, file count, file list, and compression information. Available when `format_type == "archive"`.
+
 #### Rust
 
-```rust
+```rust title="archive_metadata.rs"
 pub struct ArchiveMetadata {
     pub format: String,
     pub file_count: usize,
@@ -428,7 +434,7 @@ pub struct ArchiveMetadata {
 
 #### Python
 
-```python
+```python title="archive_metadata.py"
 class ArchiveMetadata(TypedDict, total=False):
     format: str
     file_count: int
@@ -439,7 +445,7 @@ class ArchiveMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="archive_metadata.ts"
 export interface ArchiveMetadata {
     format?: string;
     fileCount?: number;
@@ -451,7 +457,7 @@ export interface ArchiveMetadata {
 
 #### Java
 
-```java
+```java title="ArchiveMetadata.java"
 public record ArchiveMetadata(
     String format,
     int fileCount,
@@ -463,7 +469,7 @@ public record ArchiveMetadata(
 
 #### Go
 
-```go
+```go title="archive_metadata.go"
 type ArchiveMetadata struct {
     Format         string   `json:"format"`
     FileCount      int      `json:"file_count"`
@@ -475,9 +481,11 @@ type ArchiveMetadata struct {
 
 ### Image Metadata
 
+Image properties including dimensions, format type, and EXIF metadata extracted from image files. Available when `format_type == "image"`.
+
 #### Rust
 
-```rust
+```rust title="image_metadata.rs"
 pub struct ImageMetadata {
     pub width: u32,
     pub height: u32,
@@ -488,7 +496,7 @@ pub struct ImageMetadata {
 
 #### Python
 
-```python
+```python title="image_metadata.py"
 class ImageMetadata(TypedDict, total=False):
     width: int
     height: int
@@ -498,7 +506,7 @@ class ImageMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="image_metadata.ts"
 export interface ImageMetadata {
     width?: number;
     height?: number;
@@ -509,7 +517,7 @@ export interface ImageMetadata {
 
 #### Java
 
-```java
+```java title="ImageMetadata.java"
 public record ImageMetadata(
     int width,
     int height,
@@ -520,7 +528,7 @@ public record ImageMetadata(
 
 #### Go
 
-```go
+```go title="image_metadata.go"
 type ImageMetadata struct {
     Width  uint32            `json:"width"`
     Height uint32            `json:"height"`
@@ -531,9 +539,11 @@ type ImageMetadata struct {
 
 ### HTML Metadata
 
+Web page metadata including title, description, Open Graph tags, Twitter Card properties, and link relationships. Available when `format_type == "html"`.
+
 #### Rust
 
-```rust
+```rust title="html_metadata.rs"
 pub struct HtmlMetadata {
     pub title: Option<String>,
     pub description: Option<String>,
@@ -561,7 +571,7 @@ pub struct HtmlMetadata {
 
 #### Python
 
-```python
+```python title="html_metadata.py"
 class HtmlMetadata(TypedDict, total=False):
     title: str | None
     description: str | None
@@ -588,7 +598,7 @@ class HtmlMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="html_metadata.ts"
 export interface HtmlMetadata {
     title?: string | null;
     description?: string | null;
@@ -616,7 +626,7 @@ export interface HtmlMetadata {
 
 #### Java
 
-```java
+```java title="HtmlMetadata.java"
 public record HtmlMetadata(
     Optional<String> title,
     Optional<String> description,
@@ -644,7 +654,7 @@ public record HtmlMetadata(
 
 #### Go
 
-```go
+```go title="html_metadata.go"
 type HtmlMetadata struct {
     Title              *string `json:"title,omitempty"`
     Description        *string `json:"description,omitempty"`
@@ -672,9 +682,11 @@ type HtmlMetadata struct {
 
 ### Text/Markdown Metadata
 
+Text document statistics and structure including line/word/character counts, headers, links, and code blocks. Available when `format_type == "text"`.
+
 #### Rust
 
-```rust
+```rust title="text_metadata.rs"
 pub struct TextMetadata {
     pub line_count: usize,
     pub word_count: usize,
@@ -687,7 +699,7 @@ pub struct TextMetadata {
 
 #### Python
 
-```python
+```python title="text_metadata.py"
 class TextMetadata(TypedDict, total=False):
     line_count: int
     word_count: int
@@ -699,7 +711,7 @@ class TextMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="text_metadata.ts"
 export interface TextMetadata {
     lineCount?: number;
     wordCount?: number;
@@ -712,7 +724,7 @@ export interface TextMetadata {
 
 #### Java
 
-```java
+```java title="TextMetadata.java"
 public record TextMetadata(
     int lineCount,
     int wordCount,
@@ -725,7 +737,7 @@ public record TextMetadata(
 
 #### Go
 
-```go
+```go title="text_metadata.go"
 type TextMetadata struct {
     LineCount      int         `json:"line_count"`
     WordCount      int         `json:"word_count"`
@@ -738,9 +750,11 @@ type TextMetadata struct {
 
 ### PowerPoint Metadata
 
+Presentation metadata including title, author, description, summary, and font information. Available when `format_type == "pptx"`.
+
 #### Rust
 
-```rust
+```rust title="pptx_metadata.rs"
 pub struct PptxMetadata {
     pub title: Option<String>,
     pub author: Option<String>,
@@ -752,7 +766,7 @@ pub struct PptxMetadata {
 
 #### Python
 
-```python
+```python title="pptx_metadata.py"
 class PptxMetadata(TypedDict, total=False):
     title: str | None
     author: str | None
@@ -763,7 +777,7 @@ class PptxMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="pptx_metadata.ts"
 export interface PptxMetadata {
     title?: string | null;
     author?: string | null;
@@ -775,7 +789,7 @@ export interface PptxMetadata {
 
 #### Java
 
-```java
+```java title="PptxMetadata.java"
 public record PptxMetadata(
     Optional<String> title,
     Optional<String> author,
@@ -787,7 +801,7 @@ public record PptxMetadata(
 
 #### Go
 
-```go
+```go title="pptx_metadata.go"
 type PptxMetadata struct {
     Title       *string  `json:"title,omitempty"`
     Author      *string  `json:"author,omitempty"`
@@ -799,9 +813,11 @@ type PptxMetadata struct {
 
 ### OCR Metadata
 
+Optical Character Recognition processing metadata including language, page segmentation mode, output format, and table detection results. Available when `format_type == "ocr"`.
+
 #### Rust
 
-```rust
+```rust title="ocr_metadata.rs"
 pub struct OcrMetadata {
     pub language: String,
     pub psm: i32,
@@ -814,7 +830,7 @@ pub struct OcrMetadata {
 
 #### Python
 
-```python
+```python title="ocr_metadata.py"
 class OcrMetadata(TypedDict, total=False):
     language: str
     psm: int
@@ -826,7 +842,7 @@ class OcrMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="ocr_metadata.ts"
 export interface OcrMetadata {
     language?: string;
     psm?: number;
@@ -839,7 +855,7 @@ export interface OcrMetadata {
 
 #### Java
 
-```java
+```java title="OcrMetadata.java"
 public record OcrMetadata(
     String language,
     int psm,
@@ -852,7 +868,7 @@ public record OcrMetadata(
 
 #### Go
 
-```go
+```go title="ocr_metadata.go"
 type OcrMetadata struct {
     Language     string `json:"language"`
     PSM          int    `json:"psm"`
@@ -865,11 +881,11 @@ type OcrMetadata struct {
 
 ## Table
 
-Represents a table extracted from a document.
+Structured table data extracted from documents with cell contents in 2D array format, markdown representation, and source page number.
 
 ### Rust
 
-```rust
+```rust title="table.rs"
 pub struct Table {
     pub cells: Vec<Vec<String>>,
     pub markdown: String,
@@ -879,7 +895,7 @@ pub struct Table {
 
 ### Python
 
-```python
+```python title="table.py"
 class Table(TypedDict):
     cells: list[list[str]]
     markdown: str
@@ -888,7 +904,7 @@ class Table(TypedDict):
 
 ### TypeScript
 
-```typescript
+```typescript title="table.ts"
 export interface Table {
     cells: string[][];
     markdown: string;
@@ -898,13 +914,13 @@ export interface Table {
 
 ### Ruby
 
-```ruby
+```ruby title="table.rb"
 Kreuzberg::Result::Table = Struct.new(:cells, :markdown, :page_number, keyword_init: true)
 ```
 
 ### Java
 
-```java
+```java title="Table.java"
 public record Table(
     List<List<String>> cells,
     String markdown,
@@ -914,7 +930,7 @@ public record Table(
 
 ### Go
 
-```go
+```go title="table.go"
 type Table struct {
     Cells      [][]string `json:"cells"`
     Markdown   string     `json:"markdown"`
@@ -924,11 +940,11 @@ type Table struct {
 
 ## Chunk
 
-Text chunk with optional embedding vector and metadata.
+Text chunk for RAG and vector search applications, containing content segment, optional embedding vector, and position metadata for precise document referencing.
 
 ### Rust
 
-```rust
+```rust title="chunk.rs"
 pub struct Chunk {
     pub content: String,
     pub embedding: Option<Vec<f32>>,
@@ -946,7 +962,7 @@ pub struct ChunkMetadata {
 
 ### Python
 
-```python
+```python title="chunk.py"
 class ChunkMetadata(TypedDict):
     char_start: int
     char_end: int
@@ -962,7 +978,7 @@ class Chunk(TypedDict, total=False):
 
 ### TypeScript
 
-```typescript
+```typescript title="chunk.ts"
 export interface ChunkMetadata {
     charStart: number;
     charEnd: number;
@@ -980,7 +996,7 @@ export interface Chunk {
 
 ### Ruby
 
-```ruby
+```ruby title="chunk.rb"
 Kreuzberg::Result::Chunk = Struct.new(
     :content, :char_start, :char_end, :token_count,
     :chunk_index, :total_chunks, :embedding,
@@ -990,7 +1006,7 @@ Kreuzberg::Result::Chunk = Struct.new(
 
 ### Java
 
-```java
+```java title="Chunk.java"
 public record ChunkMetadata(
     int charStart,
     int charEnd,
@@ -1008,7 +1024,7 @@ public record Chunk(
 
 ### Go
 
-```go
+```go title="chunk.go"
 type ChunkMetadata struct {
     CharStart   int  `json:"char_start"`
     CharEnd     int  `json:"char_end"`
@@ -1026,11 +1042,11 @@ type Chunk struct {
 
 ## ExtractedImage
 
-Image extracted from a document, optionally with nested OCR results.
+Binary image data extracted from documents with format metadata, dimensions, colorspace information, and optional nested OCR extraction results.
 
 ### Rust
 
-```rust
+```rust title="extracted_image.rs"
 pub struct ExtractedImage {
     pub data: Vec<u8>,
     pub format: String,
@@ -1048,7 +1064,7 @@ pub struct ExtractedImage {
 
 ### Python
 
-```python
+```python title="extracted_image.py"
 class ExtractedImage(TypedDict, total=False):
     data: bytes
     format: str
@@ -1065,7 +1081,7 @@ class ExtractedImage(TypedDict, total=False):
 
 ### TypeScript
 
-```typescript
+```typescript title="extracted_image.ts"
 export interface ExtractedImage {
     data: Uint8Array;
     format: string;
@@ -1083,7 +1099,7 @@ export interface ExtractedImage {
 
 ### Ruby
 
-```ruby
+```ruby title="extracted_image.rb"
 Kreuzberg::Result::Image = Struct.new(
     :data, :format, :image_index, :page_number, :width, :height,
     :colorspace, :bits_per_component, :is_mask, :description, :ocr_result,
@@ -1093,7 +1109,7 @@ Kreuzberg::Result::Image = Struct.new(
 
 ### Java
 
-```java
+```java title="ExtractedImage.java"
 public record ExtractedImage(
     byte[] data,
     String format,
@@ -1111,7 +1127,7 @@ public record ExtractedImage(
 
 ### Go
 
-```go
+```go title="extracted_image.go"
 type ExtractedImage struct {
     Data             []byte            `json:"data"`
     Format           string            `json:"format"`
@@ -1131,11 +1147,11 @@ type ExtractedImage struct {
 
 ### ExtractionConfig
 
-Main extraction configuration controlling all pipeline features.
+Comprehensive extraction pipeline configuration controlling OCR, chunking, image processing, language detection, and all processing features.
 
 #### Rust
 
-```rust
+```rust title="extraction_config.rs"
 pub struct ExtractionConfig {
     pub use_cache: bool,
     pub enable_quality_processing: bool,
@@ -1154,7 +1170,7 @@ pub struct ExtractionConfig {
 
 #### Python
 
-```python
+```python title="extraction_config.py"
 @dataclass
 class ExtractionConfig:
     use_cache: bool = True
@@ -1173,7 +1189,7 @@ class ExtractionConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="extraction_config.ts"
 export interface ExtractionConfig {
     useCache?: boolean;
     enableQualityProcessing?: boolean;
@@ -1192,7 +1208,7 @@ export interface ExtractionConfig {
 
 #### Java
 
-```java
+```java title="ExtractionConfig.java"
 public record ExtractionConfig(
     boolean useCache,
     boolean enableQualityProcessing,
@@ -1211,7 +1227,7 @@ public record ExtractionConfig(
 
 #### Go
 
-```go
+```go title="extraction_config.go"
 type ExtractionConfig struct {
     UseCache                    bool
     EnableQualityProcessing     bool
@@ -1230,11 +1246,11 @@ type ExtractionConfig struct {
 
 ### OcrConfig
 
-OCR (Optical Character Recognition) configuration.
+OCR engine selection and language configuration for Tesseract, EasyOCR, and PaddleOCR backends.
 
 #### Rust
 
-```rust
+```rust title="ocr_config.rs"
 pub struct OcrConfig {
     pub backend: String,  // "tesseract", "easyocr", "paddleocr"
     pub language: String, // e.g., "eng", "deu", "fra"
@@ -1244,7 +1260,7 @@ pub struct OcrConfig {
 
 #### Python
 
-```python
+```python title="ocr_config.py"
 @dataclass
 class OcrConfig:
     backend: str = "tesseract"
@@ -1254,7 +1270,7 @@ class OcrConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="ocr_config.ts"
 export interface OcrConfig {
     backend: string;
     language?: string;
@@ -1264,7 +1280,7 @@ export interface OcrConfig {
 
 #### Java
 
-```java
+```java title="OcrConfig.java"
 public record OcrConfig(
     String backend,
     String language,
@@ -1274,7 +1290,7 @@ public record OcrConfig(
 
 #### Go
 
-```go
+```go title="ocr_config.go"
 type OcrConfig struct {
     Backend            string
     Language           string
@@ -1284,11 +1300,11 @@ type OcrConfig struct {
 
 ### TesseractConfig
 
-Fine-grained Tesseract OCR engine parameters.
+Advanced Tesseract OCR engine parameters including page segmentation mode, preprocessing, table detection, and character whitelisting/blacklisting.
 
 #### Rust
 
-```rust
+```rust title="tesseract_config.rs"
 pub struct TesseractConfig {
     pub language: String,
     pub psm: i32,  // Page Segmentation Mode (0-13)
@@ -1316,11 +1332,11 @@ pub struct TesseractConfig {
 
 ### ChunkingConfig
 
-Text chunking configuration for creating overlapping chunks.
+Text chunking configuration for RAG pipelines with character limits, overlap control, and optional embedding generation.
 
 #### Rust
 
-```rust
+```rust title="chunking_config.rs"
 pub struct ChunkingConfig {
     pub max_chars: usize,
     pub max_overlap: usize,
@@ -1331,7 +1347,7 @@ pub struct ChunkingConfig {
 
 #### Python
 
-```python
+```python title="chunking_config.py"
 @dataclass
 class ChunkingConfig:
     max_chars: int = 1000
@@ -1342,7 +1358,7 @@ class ChunkingConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="chunking_config.ts"
 export interface ChunkingConfig {
     maxChars?: number;
     maxOverlap?: number;
@@ -1353,7 +1369,7 @@ export interface ChunkingConfig {
 
 #### Java
 
-```java
+```java title="ChunkingConfig.java"
 public record ChunkingConfig(
     int maxChars,
     int maxOverlap,
@@ -1364,7 +1380,7 @@ public record ChunkingConfig(
 
 #### Go
 
-```go
+```go title="chunking_config.go"
 type ChunkingConfig struct {
     MaxChars   int
     MaxOverlap int
@@ -1375,11 +1391,11 @@ type ChunkingConfig struct {
 
 ### EmbeddingConfig
 
-Configuration for generating embeddings on text chunks.
+Vector embedding configuration supporting FastEmbed models with normalization, batch processing, and custom model selection.
 
 #### Rust
 
-```rust
+```rust title="embedding_config.rs"
 pub struct EmbeddingConfig {
     pub model: EmbeddingModelType,
     pub normalize: bool,
@@ -1397,7 +1413,7 @@ pub enum EmbeddingModelType {
 
 #### Python
 
-```python
+```python title="embedding_config.py"
 @dataclass
 class EmbeddingConfig:
     model: EmbeddingModelType = field(default_factory=lambda: Preset("balanced"))
@@ -1408,13 +1424,13 @@ class EmbeddingConfig:
 
 @dataclass
 class EmbeddingModelType:
-    # One of: Preset, FastEmbed, Custom (discriminated union)
+    # Discriminated union: Preset, FastEmbed, or Custom model types
     pass
 ```
 
 #### TypeScript
 
-```typescript
+```typescript title="embedding_config.ts"
 export interface EmbeddingConfig {
     model: EmbeddingModelType;
     normalize?: boolean;
@@ -1431,11 +1447,11 @@ export type EmbeddingModelType =
 
 ### ImageExtractionConfig
 
-Configuration for extracting and preprocessing images.
+Image extraction and preprocessing settings including DPI targeting, dimension limits, and automatic DPI adjustment for OCR quality.
 
 #### Rust
 
-```rust
+```rust title="image_extraction_config.rs"
 pub struct ImageExtractionConfig {
     pub extract_images: bool,
     pub target_dpi: i32,
@@ -1448,7 +1464,7 @@ pub struct ImageExtractionConfig {
 
 #### Python
 
-```python
+```python title="image_extraction_config.py"
 @dataclass
 class ImageExtractionConfig:
     extract_images: bool = True
@@ -1461,7 +1477,7 @@ class ImageExtractionConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="image_extraction_config.ts"
 export interface ImageExtractionConfig {
     extractImages?: boolean;
     targetDpi?: number;
@@ -1474,7 +1490,7 @@ export interface ImageExtractionConfig {
 
 #### Java
 
-```java
+```java title="ImageExtractionConfig.java"
 public record ImageExtractionConfig(
     boolean extractImages,
     int targetDpi,
@@ -1487,7 +1503,7 @@ public record ImageExtractionConfig(
 
 #### Go
 
-```go
+```go title="image_extraction_config.go"
 type ImageExtractionConfig struct {
     ExtractImages      bool
     TargetDPI          int32
@@ -1500,11 +1516,11 @@ type ImageExtractionConfig struct {
 
 ### PdfConfig
 
-PDF-specific extraction options.
+PDF-specific extraction options including image extraction control, password support for encrypted PDFs, and metadata extraction flags.
 
 #### Rust
 
-```rust
+```rust title="pdf_config.rs"
 pub struct PdfConfig {
     pub extract_images: bool,
     pub passwords: Option<Vec<String>>,
@@ -1514,7 +1530,7 @@ pub struct PdfConfig {
 
 #### Python
 
-```python
+```python title="pdf_config.py"
 @dataclass
 class PdfConfig:
     extract_images: bool = False
@@ -1524,7 +1540,7 @@ class PdfConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="pdf_config.ts"
 export interface PdfConfig {
     extractImages?: boolean;
     passwords?: string[];
@@ -1534,7 +1550,7 @@ export interface PdfConfig {
 
 #### Ruby
 
-```ruby
+```ruby title="pdf_config.rb"
 class Kreuzberg::Config::PdfConfig
     attr_accessor :extract_images, :passwords, :extract_metadata
 end
@@ -1542,7 +1558,7 @@ end
 
 #### Java
 
-```java
+```java title="PdfConfig.java"
 public final class PdfConfig {
     private final boolean extractImages;
     private final List<String> passwords;
@@ -1554,7 +1570,7 @@ public final class PdfConfig {
 
 #### Go
 
-```go
+```go title="pdf_config.go"
 type PdfConfig struct {
     ExtractImages   *bool    `json:"extract_images,omitempty"`
     Passwords       []string `json:"passwords,omitempty"`
@@ -1564,11 +1580,11 @@ type PdfConfig struct {
 
 ### TokenReductionConfig
 
-Token reduction configuration for minimizing output size.
+Token reduction settings for output optimization while preserving semantically important words and phrases.
 
 #### Rust
 
-```rust
+```rust title="token_reduction_config.rs"
 pub struct TokenReductionConfig {
     pub mode: String,
     pub preserve_important_words: bool,
@@ -1577,7 +1593,7 @@ pub struct TokenReductionConfig {
 
 #### Python
 
-```python
+```python title="token_reduction_config.py"
 @dataclass
 class TokenReductionConfig:
     mode: str = "off"
@@ -1586,7 +1602,7 @@ class TokenReductionConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="token_reduction_config.ts"
 export interface TokenReductionConfig {
     mode?: string;
     preserveImportantWords?: boolean;
@@ -1595,7 +1611,7 @@ export interface TokenReductionConfig {
 
 #### Ruby
 
-```ruby
+```ruby title="token_reduction_config.rb"
 class Kreuzberg::Config::TokenReductionConfig
     attr_accessor :mode, :preserve_important_words
 end
@@ -1603,7 +1619,7 @@ end
 
 #### Java
 
-```java
+```java title="TokenReductionConfig.java"
 public final class TokenReductionConfig {
     private final String mode;
     private final boolean preserveImportantWords;
@@ -1614,7 +1630,7 @@ public final class TokenReductionConfig {
 
 #### Go
 
-```go
+```go title="token_reduction_config.go"
 type TokenReductionConfig struct {
     Mode                   string `json:"mode,omitempty"`
     PreserveImportantWords *bool  `json:"preserve_important_words,omitempty"`
@@ -1623,11 +1639,11 @@ type TokenReductionConfig struct {
 
 ### LanguageDetectionConfig
 
-Language detection configuration enabling automatic language identification.
+Automatic language identification configuration with confidence thresholds and multi-language detection support.
 
 #### Rust
 
-```rust
+```rust title="language_detection_config.rs"
 pub struct LanguageDetectionConfig {
     pub enabled: bool,
     pub min_confidence: f64,
@@ -1637,7 +1653,7 @@ pub struct LanguageDetectionConfig {
 
 #### Python
 
-```python
+```python title="language_detection_config.py"
 @dataclass
 class LanguageDetectionConfig:
     enabled: bool = True
@@ -1647,7 +1663,7 @@ class LanguageDetectionConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="language_detection_config.ts"
 export interface LanguageDetectionConfig {
     enabled?: boolean;
     minConfidence?: number;
@@ -1657,7 +1673,7 @@ export interface LanguageDetectionConfig {
 
 #### Ruby
 
-```ruby
+```ruby title="language_detection_config.rb"
 class Kreuzberg::Config::LanguageDetectionConfig
     attr_accessor :enabled, :min_confidence, :detect_multiple
 end
@@ -1665,7 +1681,7 @@ end
 
 #### Java
 
-```java
+```java title="LanguageDetectionConfig.java"
 public final class LanguageDetectionConfig {
     private final boolean enabled;
     private final double minConfidence;
@@ -1677,7 +1693,7 @@ public final class LanguageDetectionConfig {
 
 #### Go
 
-```go
+```go title="language_detection_config.go"
 type LanguageDetectionConfig struct {
     Enabled        *bool    `json:"enabled,omitempty"`
     MinConfidence  *float64 `json:"min_confidence,omitempty"`
@@ -1687,11 +1703,11 @@ type LanguageDetectionConfig struct {
 
 ### KeywordConfig
 
-Keyword extraction configuration for automatic keyword/phrase extraction.
+Automatic keyword and keyphrase extraction using YAKE or RAKE algorithms with configurable scoring, n-gram ranges, and language support.
 
 #### Rust
 
-```rust
+```rust title="keyword_config.rs"
 pub struct KeywordConfig {
     pub algorithm: KeywordAlgorithm,
     pub max_keywords: usize,
@@ -1705,7 +1721,7 @@ pub struct KeywordConfig {
 
 #### Python
 
-```python
+```python title="keyword_config.py"
 @dataclass
 class YakeParams:
     window_size: int = 2
@@ -1728,7 +1744,7 @@ class KeywordConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="keyword_config.ts"
 export interface YakeParams {
     windowSize?: number;
 }
@@ -1751,7 +1767,7 @@ export interface KeywordConfig {
 
 #### Ruby
 
-```ruby
+```ruby title="keyword_config.rb"
 class Kreuzberg::Config::KeywordConfig
     attr_accessor :algorithm, :max_keywords, :min_score,
                   :ngram_range, :language, :yake_params, :rake_params
@@ -1760,7 +1776,7 @@ end
 
 #### Java
 
-```java
+```java title="KeywordConfig.java"
 public final class KeywordConfig {
     private final String algorithm;
     private final Integer maxKeywords;
@@ -1779,7 +1795,7 @@ public final class KeywordConfig {
 
 #### Go
 
-```go
+```go title="keyword_config.go"
 type YakeParams struct {
     WindowSize *int `json:"window_size,omitempty"`
 }
@@ -1802,11 +1818,11 @@ type KeywordConfig struct {
 
 ### ImagePreprocessingMetadata
 
-Image preprocessing transformation metadata tracking DPI changes and resizing.
+Image preprocessing transformation log tracking original and final DPI, scaling factors, dimension changes, and any processing errors.
 
 #### Rust
 
-```rust
+```rust title="image_preprocessing_metadata.rs"
 pub struct ImagePreprocessingMetadata {
     pub original_dimensions: (usize, usize),
     pub original_dpi: (f64, f64),
@@ -1825,7 +1841,7 @@ pub struct ImagePreprocessingMetadata {
 
 #### Python
 
-```python
+```python title="image_preprocessing_metadata.py"
 class ImagePreprocessingMetadata(TypedDict, total=False):
     original_dimensions: tuple[int, int]
     original_dpi: tuple[float, float]
@@ -1843,7 +1859,7 @@ class ImagePreprocessingMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="image_preprocessing_metadata.ts"
 export interface ImagePreprocessingMetadata {
     originalDimensions?: [number, number];
     originalDpi?: [number, number];
@@ -1862,7 +1878,7 @@ export interface ImagePreprocessingMetadata {
 
 #### Ruby
 
-```ruby
+```ruby title="image_preprocessing_metadata.rb"
 class Kreuzberg::Result::ImagePreprocessingMetadata
     attr_reader :original_dimensions, :original_dpi, :target_dpi, :scale_factor,
                 :auto_adjusted, :final_dpi, :new_dimensions, :resample_method,
@@ -1872,7 +1888,7 @@ end
 
 #### Java
 
-```java
+```java title="ImagePreprocessingMetadata.java"
 public record ImagePreprocessingMetadata(
     int[] originalDimensions,
     double[] originalDpi,
@@ -1891,7 +1907,7 @@ public record ImagePreprocessingMetadata(
 
 #### Go
 
-```go
+```go title="image_preprocessing_metadata.go"
 type ImagePreprocessingMetadata struct {
     OriginalDimensions [2]int    `json:"original_dimensions"`
     OriginalDPI        [2]float64 `json:"original_dpi"`
@@ -1910,11 +1926,11 @@ type ImagePreprocessingMetadata struct {
 
 ### ImagePreprocessingConfig
 
-Image preprocessing configuration for OCR quality enhancement.
+Image preprocessing configuration for OCR quality enhancement including rotation, deskewing, denoising, contrast adjustment, and binarization methods.
 
 #### Rust
 
-```rust
+```rust title="image_preprocessing_config.rs"
 pub struct ImagePreprocessingConfig {
     pub target_dpi: i32,
     pub auto_rotate: bool,
@@ -1928,7 +1944,7 @@ pub struct ImagePreprocessingConfig {
 
 #### Python
 
-```python
+```python title="image_preprocessing_config.py"
 @dataclass
 class ImagePreprocessingConfig:
     target_dpi: int = 300
@@ -1942,7 +1958,7 @@ class ImagePreprocessingConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="image_preprocessing_config.ts"
 export interface ImagePreprocessingConfig {
     targetDpi?: number;
     autoRotate?: boolean;
@@ -1956,7 +1972,7 @@ export interface ImagePreprocessingConfig {
 
 #### Ruby
 
-```ruby
+```ruby title="image_preprocessing_config.rb"
 class Kreuzberg::Config::ImagePreprocessingConfig
     attr_accessor :target_dpi, :auto_rotate, :deskew, :denoise,
                   :contrast_enhance, :binarization_method, :invert_colors
@@ -1965,7 +1981,7 @@ end
 
 #### Java
 
-```java
+```java title="ImagePreprocessingConfig.java"
 public final class ImagePreprocessingConfig {
     private final int targetDpi;
     private final boolean autoRotate;
@@ -1981,7 +1997,7 @@ public final class ImagePreprocessingConfig {
 
 #### Go
 
-```go
+```go title="image_preprocessing_config.go"
 type ImagePreprocessingConfig struct {
     TargetDPI        *int   `json:"target_dpi,omitempty"`
     AutoRotate       *bool  `json:"auto_rotate,omitempty"`
@@ -1995,11 +2011,11 @@ type ImagePreprocessingConfig struct {
 
 ### ErrorMetadata
 
-Error metadata for batch operation failure tracking.
+Error information captured during batch operations providing error type classification and detailed error messages.
 
 #### Rust
 
-```rust
+```rust title="error_metadata.rs"
 pub struct ErrorMetadata {
     pub error_type: String,
     pub message: String,
@@ -2008,7 +2024,7 @@ pub struct ErrorMetadata {
 
 #### Python
 
-```python
+```python title="error_metadata.py"
 class ErrorMetadata(TypedDict, total=False):
     error_type: str
     message: str
@@ -2016,7 +2032,7 @@ class ErrorMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="error_metadata.ts"
 export interface ErrorMetadata {
     errorType?: string;
     message?: string;
@@ -2025,7 +2041,7 @@ export interface ErrorMetadata {
 
 #### Ruby
 
-```ruby
+```ruby title="error_metadata.rb"
 class Kreuzberg::Result::ErrorMetadata
     attr_reader :error_type, :message
 end
@@ -2033,7 +2049,7 @@ end
 
 #### Java
 
-```java
+```java title="ErrorMetadata.java"
 public record ErrorMetadata(
     String errorType,
     String message
@@ -2042,7 +2058,7 @@ public record ErrorMetadata(
 
 #### Go
 
-```go
+```go title="error_metadata.go"
 type ErrorMetadata struct {
     ErrorType string `json:"error_type"`
     Message   string `json:"message"`
@@ -2051,11 +2067,11 @@ type ErrorMetadata struct {
 
 ### XmlMetadata
 
-XML document structure metadata.
+XML document structure statistics including total element count and unique element type inventory.
 
 #### Rust
 
-```rust
+```rust title="xml_metadata.rs"
 pub struct XmlMetadata {
     pub element_count: usize,
     pub unique_elements: Vec<String>,
@@ -2064,7 +2080,7 @@ pub struct XmlMetadata {
 
 #### Python
 
-```python
+```python title="xml_metadata.py"
 class XmlMetadata(TypedDict, total=False):
     element_count: int
     unique_elements: list[str]
@@ -2072,7 +2088,7 @@ class XmlMetadata(TypedDict, total=False):
 
 #### TypeScript
 
-```typescript
+```typescript title="xml_metadata.ts"
 export interface XmlMetadata {
     elementCount?: number;
     uniqueElements?: string[];
@@ -2081,7 +2097,7 @@ export interface XmlMetadata {
 
 #### Ruby
 
-```ruby
+```ruby title="xml_metadata.rb"
 class Kreuzberg::Result::XmlMetadata
     attr_reader :element_count, :unique_elements
 end
@@ -2089,7 +2105,7 @@ end
 
 #### Java
 
-```java
+```java title="XmlMetadata.java"
 public record XmlMetadata(
     int elementCount,
     List<String> uniqueElements
@@ -2098,7 +2114,7 @@ public record XmlMetadata(
 
 #### Go
 
-```go
+```go title="xml_metadata.go"
 type XmlMetadata struct {
     ElementCount  int      `json:"element_count"`
     UniqueElements []string `json:"unique_elements"`
@@ -2107,11 +2123,11 @@ type XmlMetadata struct {
 
 ### PostProcessorConfig
 
-Post-processor configuration for selective processor execution.
+Post-processing pipeline control allowing selective enabling or disabling of individual text processors.
 
 #### Rust
 
-```rust
+```rust title="post_processor_config.rs"
 pub struct PostProcessorConfig {
     pub enabled: bool,
     pub enabled_processors: Option<Vec<String>>,
@@ -2121,7 +2137,7 @@ pub struct PostProcessorConfig {
 
 #### Python
 
-```python
+```python title="post_processor_config.py"
 @dataclass
 class PostProcessorConfig:
     enabled: bool = True
@@ -2131,7 +2147,7 @@ class PostProcessorConfig:
 
 #### TypeScript
 
-```typescript
+```typescript title="post_processor_config.ts"
 export interface PostProcessorConfig {
     enabled?: boolean;
     enabledProcessors?: string[];
@@ -2141,7 +2157,7 @@ export interface PostProcessorConfig {
 
 #### Ruby
 
-```ruby
+```ruby title="post_processor_config.rb"
 class Kreuzberg::Config::PostProcessorConfig
     attr_accessor :enabled, :enabled_processors, :disabled_processors
 end
@@ -2149,7 +2165,7 @@ end
 
 #### Java
 
-```java
+```java title="PostProcessorConfig.java"
 public final class PostProcessorConfig {
     private final boolean enabled;
     private final List<String> enabledProcessors;
@@ -2161,7 +2177,7 @@ public final class PostProcessorConfig {
 
 #### Go
 
-```go
+```go title="post_processor_config.go"
 type PostProcessorConfig struct {
     Enabled            *bool    `json:"enabled,omitempty"`
     EnabledProcessors  []string `json:"enabled_processors,omitempty"`
@@ -2171,7 +2187,7 @@ type PostProcessorConfig struct {
 
 ## Type Mappings
 
-Cross-language type equivalents:
+Cross-language type equivalents showing how Kreuzberg types map across Rust, Python, TypeScript, Ruby, Java, and Go:
 
 | Purpose | Rust | Python | TypeScript | Ruby | Java | Go |
 |---------|------|--------|------------|------|------|-----|
@@ -2188,7 +2204,9 @@ Cross-language type equivalents:
 
 ## Nullability and Optionals
 
-### How Each Language Handles Optional Fields
+### Language-Specific Optional Field Handling
+
+Each language binding uses its idiomatic approach for representing optional and nullable values:
 
 **Rust**: Uses `Option<T>` explicitly. `None` represents absence. Mandatory at compile-time.
 
@@ -2202,39 +2220,41 @@ Cross-language type equivalents:
 
 **Go**: Uses pointers (`*T`) for optional values. `nil` represents absence. Primitive types can't be nil (use pointers).
 
-### Example: Processing Optional Metadata Fields
+### Practical Examples: Accessing Optional Metadata Fields
 
-```rust
-// Rust: explicit checking
+Demonstrating idiomatic null-safe field access patterns across all supported languages:
+
+```rust title="optional_field_access.rs"
+// Rust: Pattern matching for safe optional field access
 if let Some(title) = metadata.format.pdf.title {
     println!("Title: {}", title);
 }
 ```
 
-```python
-# Python: straightforward None checking
+```python title="optional_field_access.py"
+# Python: Dictionary-based metadata access with safe get method
 if metadata.get("title"):
     print(f"Title: {metadata['title']}")
 ```
 
-```typescript
-// TypeScript: optional chaining
+```typescript title="optional_field_access.ts"
+// TypeScript: Nullish coalescing for default values
 console.log(metadata.title ?? "No title");
 ```
 
-```ruby
-# Ruby: simple truthy check
+```ruby title="optional_field_access.rb"
+# Ruby: Conditional output with truthy check
 puts "Title: #{result.metadata["title"]}" if result.metadata["title"]
 ```
 
-```java
-// Java: Optional methods
+```java title="OptionalFieldAccess.java"
+// Java: Functional-style Optional handling with ifPresent
 metadata.title()
     .ifPresent(title -> System.out.println("Title: " + title));
 ```
 
-```go
-// Go: pointer nil checks
+```go title="optional_field_access.go"
+// Go: Nil-safe pointer dereferencing with nested checks
 if metadata.Pdf != nil && metadata.Pdf.Title != nil {
     fmt.Println("Title:", *metadata.Pdf.Title)
 }

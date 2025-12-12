@@ -11,7 +11,7 @@ High-performance document intelligence for .NET applications. Extract text, meta
 
 Install the Kreuzberg NuGet package:
 
-```bash
+```bash title="Terminal"
 dotnet add package Kreuzberg
 ```
 
@@ -23,7 +23,7 @@ dotnet add package Kreuzberg
 ### Optional System Dependencies
 
 **Tesseract OCR** (Required for OCR functionality):
-```bash
+```bash title="Terminal"
 # macOS
 brew install tesseract
 
@@ -35,7 +35,7 @@ sudo apt-get install tesseract-ocr
 ```
 
 **LibreOffice** (Optional, for legacy Office formats .doc, .ppt):
-```bash
+```bash title="Terminal"
 # macOS
 brew install libreoffice
 
@@ -48,7 +48,7 @@ sudo apt-get install libreoffice
 
 ### Simple File Extraction
 
-```csharp
+```csharp title="SimpleExtraction.cs"
 using Kreuzberg;
 
 var result = KreuzbergClient.ExtractFileSync("document.pdf");
@@ -57,7 +57,7 @@ Console.WriteLine(result.Content);
 
 ### Extract with Configuration
 
-```csharp
+```csharp title="ConfiguredExtraction.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -74,7 +74,7 @@ Console.WriteLine($"Success: {result.Success}");
 
 ### Async Extraction
 
-```csharp
+```csharp title="AsyncExtraction.cs"
 using Kreuzberg;
 
 var result = await KreuzbergClient.ExtractFileAsync("document.pdf");
@@ -83,7 +83,7 @@ Console.WriteLine(result.Content);
 
 ### Batch Processing
 
-```csharp
+```csharp title="BatchProcessing.cs"
 using Kreuzberg;
 
 var files = new[] { "doc1.pdf", "doc2.docx", "doc3.xlsx" };
@@ -99,7 +99,7 @@ foreach (var result in results)
 
 ### Basic Configuration
 
-```csharp
+```csharp title="BasicConfiguration.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -114,7 +114,7 @@ var result = KreuzbergClient.ExtractFileSync("document.pdf", config);
 
 ### OCR Configuration
 
-```csharp
+```csharp title="OcrConfiguration.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -137,7 +137,7 @@ var result = KreuzbergClient.ExtractFileSync("scanned.pdf", config);
 
 ### Table Extraction with Tesseract
 
-```csharp
+```csharp title="TableExtraction.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -163,7 +163,7 @@ foreach (var table in result.Tables)
 
 ### Complete Configuration Example
 
-```csharp
+```csharp title="CompleteConfiguration.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -218,20 +218,20 @@ var result = KreuzbergClient.ExtractFileSync("document.pdf", config);
 
 ### Loading Configuration from File
 
-```csharp
+```csharp title="LoadConfiguration.cs"
 using Kreuzberg;
 
-// Loads kreuzberg.toml/yaml/json by walking parent directories
+// Discover configuration by walking up directory tree
 var discoveredConfig = KreuzbergClient.DiscoverExtractionConfig();
 
-// Load from specific file path
+// Load from explicit path
 var config = KreuzbergClient.LoadExtractionConfigFromFile("config/extraction.toml");
 var result = KreuzbergClient.ExtractFileSync("document.pdf", config);
 ```
 
 ## Extract from Bytes
 
-```csharp
+```csharp title="ExtractBytes.cs"
 using Kreuzberg;
 
 var data = File.ReadAllBytes("document.pdf");
@@ -241,7 +241,7 @@ Console.WriteLine(result.Content);
 
 ### Batch Extract from Bytes
 
-```csharp
+```csharp title="BatchExtractBytes.cs"
 using Kreuzberg;
 
 var items = new[]
@@ -257,20 +257,20 @@ var results = KreuzbergClient.BatchExtractBytesSync(items);
 
 ### Detect from File
 
-```csharp
+```csharp title="MimeDetectionFromPath.cs"
 using Kreuzberg;
 
 var mimeType = KreuzbergClient.DetectMimeTypeFromPath("document.pdf");
-Console.WriteLine(mimeType); // "application/pdf"
+Console.WriteLine(mimeType);
 
-// Get extensions for MIME type
+// Reverse lookup: get file extensions for a MIME type
 var extensions = KreuzbergClient.GetExtensionsForMime("application/pdf");
-Console.WriteLine(string.Join(", ", extensions)); // ".pdf"
+Console.WriteLine(string.Join(", ", extensions));
 ```
 
 ### Detect from Bytes
 
-```csharp
+```csharp title="MimeDetectionFromBytes.cs"
 using Kreuzberg;
 
 var data = File.ReadAllBytes("document");
@@ -280,18 +280,18 @@ Console.WriteLine(mimeType);
 
 ## Metadata Extraction
 
-```csharp
+```csharp title="MetadataExtraction.cs"
 using Kreuzberg;
 
 var result = KreuzbergClient.ExtractFileSync("document.pdf");
 
-// Language detection
+// Access detected language
 if (result.Metadata.Language != null)
 {
     Console.WriteLine($"Language: {result.Metadata.Language}");
 }
 
-// PDF metadata
+// Access PDF-specific metadata
 if (result.Metadata.Format?.Pdf != null)
 {
     var pdf = result.Metadata.Format.Pdf;
@@ -301,13 +301,13 @@ if (result.Metadata.Format?.Pdf != null)
     Console.WriteLine($"Created: {pdf.CreationDate}");
 }
 
-// Format type
+// Access detected format type
 Console.WriteLine($"Format: {result.Metadata.FormatType}");
 ```
 
 ## Password-Protected PDFs
 
-```csharp
+```csharp title="PasswordProtectedPdf.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -323,7 +323,7 @@ var result = KreuzbergClient.ExtractFileSync("protected.pdf", config);
 
 ## Language Detection
 
-```csharp
+```csharp title="LanguageDetection.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -348,7 +348,7 @@ if (result.DetectedLanguages != null)
 
 ## Text Chunking
 
-```csharp
+```csharp title="TextChunking.cs"
 using Kreuzberg;
 
 var config = new ExtractionConfig
@@ -375,7 +375,7 @@ if (result.Chunks != null)
 
 ## Image Extraction
 
-```csharp
+```csharp title="ImageExtraction.cs"
 using Kreuzberg;
 
 var result = KreuzbergClient.ExtractFileSync("document.pdf");
@@ -396,7 +396,7 @@ if (result.Images != null && result.Images.Count > 0)
 
 ### List Available Presets
 
-```csharp
+```csharp title="ListEmbeddingPresets.cs"
 using Kreuzberg;
 
 var presets = KreuzbergClient.ListEmbeddingPresets();
@@ -405,7 +405,7 @@ Console.WriteLine($"Available presets: {string.Join(", ", presets)}");
 
 ### Get Specific Preset
 
-```csharp
+```csharp title="GetEmbeddingPreset.cs"
 using Kreuzberg;
 
 var preset = KreuzbergClient.GetEmbeddingPreset("default");
@@ -420,7 +420,7 @@ if (preset != null)
 
 ## Custom Post-Processors
 
-```csharp
+```csharp title="CustomPostProcessor.cs"
 using Kreuzberg;
 
 public class CustomProcessor : IPostProcessor
@@ -430,29 +430,29 @@ public class CustomProcessor : IPostProcessor
 
     public ExtractionResult Process(ExtractionResult result)
     {
-        // Modify result
+        // Transform extracted content
         result.Content = result.Content.ToUpper();
         return result;
     }
 }
 
-// Register processor
+// Register the post-processor
 KreuzbergClient.RegisterPostProcessor(new CustomProcessor());
 
-// Use processor
+// Processor runs automatically on extraction
 var result = KreuzbergClient.ExtractFileSync("document.pdf");
 
-// List processors
+// Query registered processors
 var processors = KreuzbergClient.ListPostProcessors();
 Console.WriteLine($"Registered: {string.Join(", ", processors)}");
 
-// Unregister
+// Remove processor when no longer needed
 KreuzbergClient.UnregisterPostProcessor("custom_processor");
 ```
 
 ## Custom Validators
 
-```csharp
+```csharp title="CustomValidator.cs"
 using Kreuzberg;
 
 public class CustomValidator : IValidator
@@ -469,16 +469,16 @@ public class CustomValidator : IValidator
     }
 }
 
-// Register validator
+// Register the validator
 KreuzbergClient.RegisterValidator(new CustomValidator());
 
-// Validators run automatically during extraction
+// Validator runs automatically during extraction
 var result = KreuzbergClient.ExtractFileSync("document.pdf");
 ```
 
 ## Custom OCR Backends
 
-```csharp
+```csharp title="CustomOcrBackend.cs"
 using Kreuzberg;
 
 public class CustomOcrBackend : IOcrBackend
@@ -487,15 +487,15 @@ public class CustomOcrBackend : IOcrBackend
 
     public string Process(ReadOnlySpan<byte> imageBytes, OcrConfig? config)
     {
-        // Process image and return JSON result
+        // Implement OCR processing and return JSON-formatted result
         return "{}";
     }
 }
 
-// Register backend
+// Register the custom OCR backend
 KreuzbergClient.RegisterOcrBackend(new CustomOcrBackend());
 
-// Use custom backend
+// Configure extraction to use custom backend
 var extractConfig = new ExtractionConfig
 {
     Ocr = new OcrConfig { Backend = "custom_ocr" }
@@ -505,7 +505,7 @@ var result = KreuzbergClient.ExtractFileSync("document.pdf", extractConfig);
 
 ## Exception Handling
 
-```csharp
+```csharp title="ExceptionHandling.cs"
 using Kreuzberg;
 using System;
 
@@ -599,17 +599,17 @@ catch (KreuzbergException ex)
 
 ### ExtractionResult
 
-```csharp
+```csharp title="ExtractionResult.cs"
 public sealed class ExtractionResult
 {
-    public string Content { get; set; }           // Extracted text content
-    public string MimeType { get; set; }          // Detected MIME type
-    public Metadata Metadata { get; set; }        // Document metadata
-    public List<Table> Tables { get; set; }       // Extracted tables
+    public string Content { get; set; }
+    public string MimeType { get; set; }
+    public Metadata Metadata { get; set; }
+    public List<Table> Tables { get; set; }
     public List<string>? DetectedLanguages { get; set; }
-    public List<Chunk>? Chunks { get; set; }      // Text chunks
+    public List<Chunk>? Chunks { get; set; }
     public List<ExtractedImage>? Images { get; set; }
-    public bool Success { get; set; }             // Extraction success flag
+    public bool Success { get; set; }
 }
 ```
 
@@ -619,23 +619,23 @@ Contains language, date, subject, and format-specific metadata (PDF, Excel, Emai
 
 ### Table
 
-```csharp
+```csharp title="Table.cs"
 public sealed class Table
 {
-    public List<List<string>> Cells { get; set; } // Table cell contents
-    public string Markdown { get; set; }          // Markdown representation
-    public int PageNumber { get; set; }           // Page number
+    public List<List<string>> Cells { get; set; }
+    public string Markdown { get; set; }
+    public int PageNumber { get; set; }
 }
 ```
 
 ### Chunk
 
-```csharp
+```csharp title="Chunk.cs"
 public sealed class Chunk
 {
-    public string Content { get; set; }                // Chunk text
-    public float[]? Embedding { get; set; }           // Embedding vector
-    public ChunkMetadata Metadata { get; set; }       // Chunk metadata
+    public string Content { get; set; }
+    public float[]? Embedding { get; set; }
+    public ChunkMetadata Metadata { get; set; }
 }
 ```
 
@@ -680,7 +680,7 @@ All memory allocation/deallocation is handled automatically by try/finally block
 
 ### Process Multiple Files with Error Handling
 
-```csharp
+```csharp title="ProcessMultipleFiles.cs"
 using Kreuzberg;
 using System;
 using System.IO;
@@ -713,7 +713,7 @@ foreach (var file in files)
 
 ### Extract and Save Metadata
 
-```csharp
+```csharp title="SaveMetadata.cs"
 using Kreuzberg;
 using System.Text.Json;
 
@@ -734,7 +734,7 @@ File.WriteAllText("metadata.json", json);
 
 ### Concurrent Batch Processing
 
-```csharp
+```csharp title="ConcurrentBatchProcessing.cs"
 using Kreuzberg;
 using System.Threading.Tasks;
 
@@ -765,7 +765,7 @@ Console.WriteLine($"Successfully processed {successful}/{files.Length} files");
 
 If you get "DLL not found" errors, ensure the native library is in your runtime directory:
 
-```bash
+```bash title="Terminal"
 # Check library path
 echo $LD_LIBRARY_PATH     # Linux
 echo $DYLD_LIBRARY_PATH   # macOS
@@ -784,7 +784,7 @@ If P/Invoke calls fail, verify:
 
 Ensure Tesseract is installed and in PATH:
 
-```bash
+```bash title="Terminal"
 tesseract --version
 ```
 
@@ -797,13 +797,12 @@ For large documents, consider:
 
 ## Complete Documentation
 
-[https://kreuzberg.dev](https://kreuzberg.dev)
+For more information, see:
 
-- [Installation Guide](https://kreuzberg.dev/getting-started/installation/)
-- [User Guide](https://kreuzberg.dev/user-guide/)
-- [API Reference](https://kreuzberg.dev/api-reference/)
-- [Format Support](https://kreuzberg.dev/formats/)
-- [OCR Backends](https://kreuzberg.dev/user-guide/ocr-backends/)
+- [Installation Guide](../getting-started/installation.md)
+- [Configuration Reference](../reference/configuration.md)
+- [Format Support](../reference/formats.md)
+- [OCR Guide](ocr.md)
 
 ## License
 

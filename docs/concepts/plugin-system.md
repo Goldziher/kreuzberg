@@ -50,7 +50,7 @@ Handles extraction for specific file formats. Maps MIME types to extraction impl
 
 **Trait Definition:**
 
-```rust
+```rust title="plugin_example.rs"
 #[async_trait]
 pub trait DocumentExtractor: Plugin {
     /// MIME types this extractor supports
@@ -90,8 +90,8 @@ pub trait DocumentExtractor: Plugin {
 
 When multiple extractors support the same MIME type, priority determines selection:
 
-```rust
-// Higher priority = selected first
+```rust title="plugin_example.rs"
+// Custom extractor with higher priority overrides built-in handler
 impl DocumentExtractor for CustomPDFExtractor {
     fn priority(&self) -> i32 { 100 }  // Overrides default PDFExtractor (priority 0)
 }
@@ -103,7 +103,7 @@ Performs optical character recognition on images. Supports multiple OCR engines.
 
 **Trait Definition:**
 
-```rust
+```rust title="plugin_example.rs"
 #[async_trait]
 pub trait OcrBackend: Plugin {
     /// Check if backend supports a language
@@ -127,8 +127,8 @@ pub trait OcrBackend: Plugin {
 
 **Language Support:**
 
-```python
-# Check supported languages
+```python title="plugin_example.py"
+# Query OCR backend for language support capabilities
 registry = get_ocr_backend_registry()
 tesseract = registry.get("tesseract")
 print(tesseract.supports_language("eng"))  # True
@@ -141,7 +141,7 @@ Transforms extraction results after initial extraction. Executes in stages for o
 
 **Trait Definition:**
 
-```rust
+```rust title="plugin_example.rs"
 #[async_trait]
 pub trait PostProcessor: Plugin {
     /// Processing stage (Early, Middle, Late)
@@ -163,7 +163,7 @@ pub trait PostProcessor: Plugin {
 
 **Processing Stages:**
 
-```rust
+```rust title="plugin_example.rs"
 pub enum ProcessingStage {
     Early,   // Run first (e.g., text cleanup)
     Middle,  // Run second (e.g., entity extraction)
@@ -183,7 +183,7 @@ Validates extraction results before post-processing. Can fail extraction if requ
 
 **Trait Definition:**
 
-```rust
+```rust title="plugin_example.rs"
 #[async_trait]
 pub trait Validator: Plugin {
     /// Check if validator should run
@@ -198,7 +198,7 @@ pub trait Validator: Plugin {
 
 **Example Validators:**
 
-```python
+```python title="plugin_example.py"
 class MinimumLengthValidator:
     """Ensures extracted text meets minimum length"""
     def validate(self, result: ExtractionResult, config: ExtractionConfig) -> None:
@@ -237,7 +237,7 @@ stateDiagram-v2
 
 **Lifecycle Methods:**
 
-```rust
+```rust title="plugin_example.rs"
 pub trait Plugin: Send + Sync {
     fn name(&self) -> &str;              // Unique identifier
     fn version(&self) -> String;         // Semantic version
@@ -248,15 +248,15 @@ pub trait Plugin: Send + Sync {
 
 **Registration:**
 
-```rust
-// Rust
+```rust title="plugin_example.rs"
+// Rust: Register custom extractor with thread-safe registry
 let registry = get_document_extractor_registry();
 let mut registry = registry.write().unwrap();
 registry.register("custom-pdf", Arc::new(CustomPDFExtractor::new()))?;
 ```
 
-```python
-# Python
+```python title="plugin_example.py"
+# Python: Register custom extractor using Python bindings
 from kreuzberg import get_document_extractor_registry
 
 registry = get_document_extractor_registry()
@@ -306,10 +306,10 @@ The bridge layers (PyO3, NAPI-RS, Magnus) handle type conversion:
 
 For large data (file bytes, images), bindings use buffer protocols to avoid copying:
 
-```python
-# Python receives Rust bytes without copying
+```python title="plugin_example.py"
+# Python receives buffer protocol view of Rust-owned bytes without memory copy
 def extract_bytes(self, data: bytes, mime_type: str, config: dict) -> dict:
-    # `data` is a zero-copy view into Rust memory
+    # `data` is a zero-copy view into Rust memory via buffer protocol
     return {"content": process(data)}
 ```
 
