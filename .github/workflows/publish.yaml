@@ -2122,6 +2122,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -2203,8 +2204,6 @@ jobs:
 
       - name: Publish native binary packages
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -2212,7 +2211,7 @@ jobs:
             echo "Publishing $pkg"
             publish_log=$(mktemp)
             set +e
-            npm publish "$pkg" --access public --ignore-scripts 2>&1 | tee "$publish_log"
+            npm publish "$pkg" --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
             status=${PIPESTATUS[0]}
             set -e
             if [ "$status" -ne 0 ]; then
@@ -2231,13 +2230,11 @@ jobs:
 
       - name: Publish main Node package
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd crates/kreuzberg-node
           publish_log=$(mktemp)
           set +e
-          pnpm publish --access public --no-git-checks 2>&1 | tee "$publish_log"
+          npm publish --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then
