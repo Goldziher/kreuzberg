@@ -652,7 +652,7 @@ kreuzberg = "4.0"
 
 **CLI** (Homebrew):
 ```bash title="Terminal"
-brew install goldziher/tap/kreuzberg
+brew install kreuzberg-dev/tap/kreuzberg
 ```
 
 **CLI** (Cargo):

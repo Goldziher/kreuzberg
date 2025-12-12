@@ -9,7 +9,7 @@ High-performance document intelligence for .NET applications. Extract text, meta
 
 ## Installation
 
-Install the Kreuzberg NuGet package:
+Install the `Kreuzberg` package (published under the `kreuzberg.dev` organization):
 
 ```bash title="Terminal"
 dotnet add package Kreuzberg
@@ -771,7 +771,7 @@ echo $LD_LIBRARY_PATH     # Linux
 echo $DYLD_LIBRARY_PATH   # macOS
 ```
 
-The library should be located in `runtimes/{rid}/native/` in the NuGet package.
+The library should be located in `runtimes/{rid}/native/` in the package.
 
 ### P/Invoke Errors
 

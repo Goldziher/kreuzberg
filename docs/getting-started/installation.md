@@ -91,7 +91,7 @@ Next steps: [Rust API Reference](../reference/api-rust.md)
 Homebrew tap (macOS / Linux):
 
 ```bash title="Terminal"
-brew install goldziher/tap/kreuzberg
+brew install kreuzberg-dev/tap/kreuzberg
 ```
 
 Cargo install:

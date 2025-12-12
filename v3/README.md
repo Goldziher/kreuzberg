@@ -74,7 +74,7 @@ kreuzberg = "4.0"
 ### CLI
 
 ```bash
-brew install goldziher/tap/kreuzberg
+brew install kreuzberg-dev/tap/kreuzberg
 ```
 
 ```bash

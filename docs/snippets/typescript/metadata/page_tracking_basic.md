@@ -1,10 +1,6 @@
-import { extractFileSync } from 'kreuzberg';
+import { extractFileSync } from '@kreuzberg/node';
 
-const result = extractFileSync('document.pdf', {
-  pages: {
-    extractPages: true
-  }
-});
+const result = extractFileSync('document.pdf', null, { pages: { extractPages: true } });
 
 if (result.pages) {
   for (const page of result.pages) {

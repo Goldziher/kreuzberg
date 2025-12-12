@@ -119,7 +119,7 @@ flowchart TD
 
 ## TypeScript / Node.js {#typescript-nodejs}
 
-All TypeScript/Node.js examples in this guide use the `kreuzberg` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
+All TypeScript/Node.js examples in this guide use the `@kreuzberg/node` package. Import synchronous APIs from the root module and asynchronous helpers from the same namespace. See the [TypeScript API Reference](../reference/api-typescript.md) for complete type definitions.
 
 ```typescript title="basic_extraction.ts"
 import { extractFileSync, ExtractionConfig } from '@kreuzberg/node';

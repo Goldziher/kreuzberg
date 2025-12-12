@@ -527,7 +527,7 @@ kreuzberg mcp
 
 | Language | Package Manager | Modular Features | Full Package |
 |----------|----------------|------------------|--------------|
-| C# | NuGet | ✗ | ✓ (default) |
+| C# | `kreuzberg.dev` | ✗ | ✓ (default) |
 | Go | go.pkg.dev | ✗ | ✓ (default) |
 | Python | PyPI (`pip`) | ✗ | ✓ (default) |
 | Ruby | RubyGems (`gem`) | ✗ | ✓ (default) |
