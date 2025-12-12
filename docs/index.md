@@ -30,7 +30,7 @@ Kreuzberg is a document intelligence platform with a high‑performance Rust cor
 | Ruby               | `gem install kreuzberg` | [Ruby API Reference](reference/api-ruby.md) |
 | Go                 | `go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest` | [Go API Reference](reference/api-go.md) |
 | Rust               | `cargo add kreuzberg` | [Rust API Reference](reference/api-rust.md) |
-| CLI                | `brew install goldziher/tap/kreuzberg` or `cargo install kreuzberg-cli` | [CLI Usage](cli/usage.md) |
+| CLI                | `brew install kreuzberg-dev/tap/kreuzberg` or `cargo install kreuzberg-cli` | [CLI Usage](cli/usage.md) |
 | API Server / MCP   | Docker image `goldziher/kreuzberg:core` | [API Server Guide](guides/api-server.md) |
 
 ## Getting Help

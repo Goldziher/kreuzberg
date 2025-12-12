@@ -144,33 +144,39 @@ async fn test_generate_embeddings_for_chunks_basic() {
             content: "Hello world, this is the first chunk.".to_string(),
             embedding: None,
             metadata: ChunkMetadata {
-                char_start: 0,
-                char_end: 38,
+                byte_start: 0,
+                byte_end: 38,
                 chunk_index: 0,
                 total_chunks: 1,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         },
         Chunk {
             content: "This is the second chunk with different content.".to_string(),
             embedding: None,
             metadata: ChunkMetadata {
-                char_start: 39,
-                char_end: 87,
+                byte_start: 39,
+                byte_end: 87,
                 chunk_index: 1,
                 total_chunks: 1,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         },
         Chunk {
             content: "And this is the third and final chunk.".to_string(),
             embedding: None,
             metadata: ChunkMetadata {
-                char_start: 88,
-                char_end: 126,
+                byte_start: 88,
+                byte_end: 126,
                 chunk_index: 2,
                 total_chunks: 1,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         },
     ];
@@ -214,11 +220,13 @@ async fn test_generate_embeddings_for_chunks_normalization() {
         content: test_text.to_string(),
         embedding: None,
         metadata: ChunkMetadata {
-            char_start: 0,
-            char_end: test_text.len(),
+            byte_start: 0,
+            byte_end: test_text.len(),
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -239,11 +247,13 @@ async fn test_generate_embeddings_for_chunks_normalization() {
         content: test_text.to_string(),
         embedding: None,
         metadata: ChunkMetadata {
-            char_start: 0,
-            char_end: test_text.len(),
+            byte_start: 0,
+            byte_end: test_text.len(),
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -319,11 +329,13 @@ async fn test_generate_embeddings_for_chunks_model_caching() {
         content: "First batch of text.".to_string(),
         embedding: None,
         metadata: ChunkMetadata {
-            char_start: 0,
-            char_end: 20,
+            byte_start: 0,
+            byte_end: 20,
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -345,11 +357,13 @@ async fn test_generate_embeddings_for_chunks_model_caching() {
         content: "Second batch of text.".to_string(),
         embedding: None,
         metadata: ChunkMetadata {
-            char_start: 0,
-            char_end: 21,
+            byte_start: 0,
+            byte_end: 21,
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -377,11 +391,13 @@ async fn test_generate_embeddings_for_chunks_invalid_preset() {
         content: "Test content".to_string(),
         embedding: None,
         metadata: ChunkMetadata {
-            char_start: 0,
-            char_end: 12,
+            byte_start: 0,
+            byte_end: 12,
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -420,11 +436,13 @@ async fn test_generate_embeddings_for_chunks_unknown_model() {
         content: "Test content".to_string(),
         embedding: None,
         metadata: ChunkMetadata {
-            char_start: 0,
-            char_end: 12,
+            byte_start: 0,
+            byte_end: 12,
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -464,11 +482,13 @@ async fn test_generate_embeddings_for_chunks_custom_model_not_supported() {
         content: "Test content".to_string(),
         embedding: None,
         metadata: ChunkMetadata {
-            char_start: 0,
-            char_end: 12,
+            byte_start: 0,
+            byte_end: 12,
             chunk_index: 0,
             total_chunks: 1,
             token_count: None,
+            first_page: None,
+            last_page: None,
         },
     }];
 
@@ -509,11 +529,13 @@ async fn test_generate_embeddings_for_chunks_batch_size() {
             content: format!("This is test chunk number {}.", i),
             embedding: None,
             metadata: ChunkMetadata {
-                char_start: i * 30,
-                char_end: (i + 1) * 30,
+                byte_start: i * 30,
+                byte_end: (i + 1) * 30,
                 chunk_index: i,
                 total_chunks: 10,
                 token_count: None,
+                first_page: None,
+                last_page: None,
             },
         })
         .collect();
@@ -566,7 +588,7 @@ async fn test_generate_embeddings_chunking_integration() {
         ..Default::default()
     };
 
-    let mut chunking_result = chunk_text(text, &chunking_config).expect("Chunking failed");
+    let mut chunking_result = chunk_text(text, &chunking_config, None).expect("Chunking failed");
 
     assert!(
         chunking_result.chunks.len() > 1,

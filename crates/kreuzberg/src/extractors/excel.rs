@@ -150,6 +150,7 @@ impl DocumentExtractor for ExcelExtractor {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables,
             detected_languages: None,
             chunks: None,
@@ -193,6 +194,7 @@ impl DocumentExtractor for ExcelExtractor {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables,
             detected_languages: None,
             chunks: None,

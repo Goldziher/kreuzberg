@@ -257,6 +257,40 @@ KeywordExtractionConfig(
 )
 ```
 
+### Page Tracking and Boundaries
+
+Extract per-page content and track precise page boundaries with byte-accurate offsets.
+
+**Capabilities:**
+- Per-page content extraction (text, tables, images per page)
+- Byte-offset page boundaries for O(1) page lookups
+- Automatic chunk-to-page mapping when chunking is enabled
+- Page markers in combined text for LLM context
+- Format-specific page types (Page/Slide/Sheet)
+
+**Supported Formats:**
+- **PDF**: Full byte-accurate tracking, O(1) performance
+- **PPTX**: Slide boundary tracking
+- **DOCX**: Best-effort page break detection
+
+**Configuration:**
+```python title="page_tracking.py"
+config = ExtractionConfig(
+    pages=PageConfig(
+        extract_pages=True,          # Get pages array
+        insert_page_markers=True,     # Add markers in content
+        marker_format="--- Page {page_num} ---"
+    )
+)
+```
+
+**Use Cases:**
+- Precise location references in RAG systems
+- Page-aware embeddings and retrieval
+- Per-page processing workflows
+- Document structure analysis
+- Page-filtered search results
+
 ## Batch Processing
 
 ### Parallel Extraction
@@ -493,7 +527,7 @@ kreuzberg mcp
 
 | Language | Package Manager | Modular Features | Full Package |
 |----------|----------------|------------------|--------------|
-| C# | NuGet | ✗ | ✓ (default) |
+| C# | `kreuzberg.dev` | ✗ | ✓ (default) |
 | Go | go.pkg.dev | ✗ | ✓ (default) |
 | Python | PyPI (`pip`) | ✗ | ✓ (default) |
 | Ruby | RubyGems (`gem`) | ✗ | ✓ (default) |

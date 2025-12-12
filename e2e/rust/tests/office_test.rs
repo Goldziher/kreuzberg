@@ -387,7 +387,11 @@ fn test_office_xlsx_basic() {
     assertions::assert_content_contains_all(&result, &["Team", "Location", "Stanley Cups"]);
     assertions::assert_table_count(&result, Some(1), None);
     assertions::assert_metadata_expectation(&result, "sheet_count", &serde_json::json!({"gte":2}));
-    assertions::assert_metadata_expectation(&result, "sheet_names", &serde_json::json!({"contains":"Stanley Cups"}));
+    assertions::assert_metadata_expectation(
+        &result,
+        "sheet_names",
+        &serde_json::json!({"contains":["Stanley Cups"]}),
+    );
 }
 
 #[test]

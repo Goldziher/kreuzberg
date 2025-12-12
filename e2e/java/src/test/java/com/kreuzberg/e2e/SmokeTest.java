@@ -138,7 +138,7 @@ public class SmokeTest {
                 E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("Team", "Location", "Stanley Cups", "Blues", "Flyers", "Maple Leafs", "STL", "PHI", "TOR"));
                 E2EHelpers.Assertions.assertTableCount(result, 1, null);
                 E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_count", Map.of("gte", 2));
-                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_names", Map.of("contains", "Stanley Cups"));
+                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_names", Map.of("contains", Arrays.asList("Stanley Cups")));
             }
         );
     }

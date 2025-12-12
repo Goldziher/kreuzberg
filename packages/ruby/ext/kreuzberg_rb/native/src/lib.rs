@@ -1,3 +1,5 @@
+#![allow(unpredictable_function_pointer_comparisons)]
+
 //! Kreuzberg Ruby Bindings (Magnus)
 //!
 //! High-performance document intelligence framework bindings for Ruby.
@@ -7,6 +9,7 @@ use html_to_markdown_rs::options::{
     CodeBlockStyle, ConversionOptions, HeadingStyle, HighlightStyle, ListIndentType, NewlineStyle, PreprocessingPreset,
     WhitespaceMode,
 };
+use kreuzberg::core::config::PageConfig;
 use kreuzberg::keywords::{
     KeywordAlgorithm as RustKeywordAlgorithm, KeywordConfig as RustKeywordConfig, RakeParams as RustRakeParams,
     YakeParams as RustYakeParams,
@@ -1050,6 +1053,36 @@ fn html_options_to_ruby_hash(ruby: &Ruby, options: &ConversionOptions) -> Result
 
     Ok(hash)
 }
+
+/// Parse PageConfig from Ruby Hash
+fn parse_page_config(ruby: &Ruby, hash: RHash) -> Result<PageConfig, Error> {
+    let extract_pages = if let Some(val) = get_kw(ruby, hash, "extract_pages") {
+        bool::try_convert(val)?
+    } else {
+        false
+    };
+
+    let insert_page_markers = if let Some(val) = get_kw(ruby, hash, "insert_page_markers") {
+        bool::try_convert(val)?
+    } else {
+        false
+    };
+
+    let marker_format = if let Some(val) = get_kw(ruby, hash, "marker_format") {
+        String::try_convert(val)?
+    } else {
+        "\n\n<!-- PAGE {page_num} -->\n\n".to_string()
+    };
+
+    let config = PageConfig {
+        extract_pages,
+        insert_page_markers,
+        marker_format,
+    };
+
+    Ok(config)
+}
+
 /// Parse ExtractionConfig from Ruby Hash
 fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<ExtractionConfig, Error> {
     let mut config = ExtractionConfig::default();
@@ -1128,6 +1161,13 @@ fn parse_extraction_config(ruby: &Ruby, opts: Option<RHash>) -> Result<Extractio
         {
             let html_hash = RHash::try_convert(val)?;
             config.html_options = Some(parse_html_options(ruby, html_hash)?);
+        }
+
+        if let Some(val) = get_kw(ruby, hash, "pages")
+            && !val.is_nil()
+        {
+            let pages_hash = RHash::try_convert(val)?;
+            config.pages = Some(parse_page_config(ruby, pages_hash)?);
         }
 
         if let Some(val) = get_kw(ruby, hash, "max_concurrent_extractions") {
@@ -1532,8 +1572,8 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         for chunk in chunks {
             let chunk_hash = ruby.hash_new();
             chunk_hash.aset("content", chunk.content)?;
-            chunk_hash.aset("char_start", chunk.metadata.char_start)?;
-            chunk_hash.aset("char_end", chunk.metadata.char_end)?;
+            chunk_hash.aset("byte_start", chunk.metadata.byte_start)?;
+            chunk_hash.aset("byte_end", chunk.metadata.byte_end)?;
             if let Some(token_count) = chunk.metadata.token_count {
                 chunk_hash.aset("token_count", token_count)?;
             } else {
@@ -1541,6 +1581,16 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
             }
             chunk_hash.aset("chunk_index", chunk.metadata.chunk_index)?;
             chunk_hash.aset("total_chunks", chunk.metadata.total_chunks)?;
+            if let Some(first_page) = chunk.metadata.first_page {
+                chunk_hash.aset("first_page", first_page as i64)?;
+            } else {
+                chunk_hash.aset("first_page", ruby.qnil().as_value())?;
+            }
+            if let Some(last_page) = chunk.metadata.last_page {
+                chunk_hash.aset("last_page", last_page as i64)?;
+            } else {
+                chunk_hash.aset("last_page", ruby.qnil().as_value())?;
+            }
             if let Some(embedding) = chunk.embedding {
                 let embedding_array = ruby.ary_new();
                 for value in embedding {
@@ -1615,6 +1665,92 @@ fn extraction_result_to_ruby(ruby: &Ruby, result: RustExtractionResult) -> Resul
         set_hash_entry(ruby, &hash, "images", images_array.into_value_with(ruby))?;
     } else {
         set_hash_entry(ruby, &hash, "images", ruby.qnil().as_value())?;
+    }
+
+    if let Some(page_content_list) = result.pages {
+        let pages_array = ruby.ary_new();
+        for page_content in page_content_list {
+            let page_hash = ruby.hash_new();
+            page_hash.aset("page_number", page_content.page_number as i64)?;
+            page_hash.aset("content", page_content.content)?;
+
+            let tables_array = ruby.ary_new();
+            for table in page_content.tables {
+                let table_hash = ruby.hash_new();
+
+                let cells_array = ruby.ary_new();
+                for row in table.cells {
+                    let row_array = ruby.ary_from_vec(row);
+                    cells_array.push(row_array)?;
+                }
+                table_hash.aset("cells", cells_array)?;
+                table_hash.aset("markdown", table.markdown)?;
+                table_hash.aset("page_number", table.page_number as i64)?;
+
+                tables_array.push(table_hash)?;
+            }
+            page_hash.aset("tables", tables_array)?;
+
+            let images_array = ruby.ary_new();
+            for image in page_content.images {
+                let image_hash = ruby.hash_new();
+                let data_value = ruby.str_from_slice(&image.data).into_value_with(ruby);
+                image_hash.aset("data", data_value)?;
+                image_hash.aset("format", image.format)?;
+                image_hash.aset("image_index", image.image_index as i64)?;
+                if let Some(page) = image.page_number {
+                    image_hash.aset("page_number", page as i64)?;
+                } else {
+                    image_hash.aset("page_number", ruby.qnil().as_value())?;
+                }
+                if let Some(width) = image.width {
+                    image_hash.aset("width", width as i64)?;
+                } else {
+                    image_hash.aset("width", ruby.qnil().as_value())?;
+                }
+                if let Some(height) = image.height {
+                    image_hash.aset("height", height as i64)?;
+                } else {
+                    image_hash.aset("height", ruby.qnil().as_value())?;
+                }
+                if let Some(colorspace) = image.colorspace {
+                    image_hash.aset("colorspace", colorspace)?;
+                } else {
+                    image_hash.aset("colorspace", ruby.qnil().as_value())?;
+                }
+                if let Some(bits) = image.bits_per_component {
+                    image_hash.aset("bits_per_component", bits as i64)?;
+                } else {
+                    image_hash.aset("bits_per_component", ruby.qnil().as_value())?;
+                }
+                image_hash.aset(
+                    "is_mask",
+                    if image.is_mask {
+                        ruby.qtrue().as_value()
+                    } else {
+                        ruby.qfalse().as_value()
+                    },
+                )?;
+                if let Some(description) = image.description {
+                    image_hash.aset("description", description)?;
+                } else {
+                    image_hash.aset("description", ruby.qnil().as_value())?;
+                }
+                if let Some(ocr_result) = image.ocr_result {
+                    let nested = extraction_result_to_ruby(ruby, *ocr_result)?;
+                    image_hash.aset("ocr_result", nested.into_value_with(ruby))?;
+                } else {
+                    image_hash.aset("ocr_result", ruby.qnil().as_value())?;
+                }
+                images_array.push(image_hash)?;
+            }
+            page_hash.aset("images", images_array)?;
+
+            pages_array.push(page_hash)?;
+        }
+        set_hash_entry(ruby, &hash, "pages", pages_array.into_value_with(ruby))?;
+    } else {
+        set_hash_entry(ruby, &hash, "pages", ruby.qnil().as_value())?;
     }
 
     Ok(hash)
@@ -2366,6 +2502,7 @@ fn register_ocr_backend(name: String, backend: Value) -> Result<(), Error> {
                 detected_languages: None,
                 chunks: None,
                 images: None,
+                pages: None,
             })
         }
 

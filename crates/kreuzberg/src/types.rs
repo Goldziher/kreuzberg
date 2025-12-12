@@ -34,6 +34,13 @@ pub struct ExtractionResult {
     /// Each image may optionally contain a nested `ocr_result` if OCR was performed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub images: Option<Vec<ExtractedImage>>,
+
+    /// Per-page content when page extraction is enabled.
+    ///
+    /// When page extraction is configured, the document is split into per-page content
+    /// with tables and images mapped to their respective pages.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pages: Option<Vec<PageContent>>,
 }
 
 /// Format-specific metadata (discriminated union).
@@ -62,17 +69,53 @@ pub enum FormatMetadata {
 /// via a discriminated union, and additional custom fields from postprocessors.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
-    /// Language of the document (ISO 639 code)
+    // ========== Common Document Properties (extracted from format-specific) ==========
+    /// Document title
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+
+    /// Document subject or description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
+
+    /// Primary author(s) - always Vec for consistency
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authors: Option<Vec<String>>,
+
+    /// Keywords/tags - always Vec for consistency
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<String>>,
+
+    /// Primary language (ISO 639 code)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
 
-    /// Document date (format varies by source)
+    // ========== Temporal Metadata (standardized naming) ==========
+    /// Creation timestamp (ISO 8601 format)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+
+    /// Last modification timestamp (ISO 8601 format)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified_at: Option<String>,
+
+    /// User who created the document
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
+
+    /// User who last modified the document
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified_by: Option<String>,
+
+    // ========== Page Structure (first-class page tracking) ==========
+    /// Page/slide/sheet structure with boundaries
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pages: Option<PageStructure>,
+
+    // ========== Existing Fields (kept for backward compatibility) ==========
+    /// Document date (DEPRECATED - use created_at/modified_at instead)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<String>,
-
-    /// Document subject/description
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub subject: Option<String>,
 
     /// Format-specific metadata (discriminated union)
     ///
@@ -100,6 +143,110 @@ pub struct Metadata {
     /// Fields are merged at the root level during serialization.
     #[serde(flatten)]
     pub additional: HashMap<String, serde_json::Value>,
+}
+
+/// Unified page structure for documents.
+///
+/// Supports different page types (PDF pages, PPTX slides, Excel sheets)
+/// with character offset boundaries for chunk-to-page mapping.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageStructure {
+    /// Total number of pages/slides/sheets
+    pub total_count: usize,
+
+    /// Type of paginated unit
+    pub unit_type: PageUnitType,
+
+    /// Character offset boundaries for each page
+    ///
+    /// Maps character ranges in the extracted content to page numbers.
+    /// Used for chunk page range calculation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boundaries: Option<Vec<PageBoundary>>,
+
+    /// Detailed per-page metadata (optional, only when needed)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pages: Option<Vec<PageInfo>>,
+}
+
+/// Type of paginated unit in a document.
+///
+/// Distinguishes between different types of "pages" (PDF pages, presentation slides, spreadsheet sheets).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PageUnitType {
+    /// Standard document pages (PDF, DOCX, images)
+    Page,
+    /// Presentation slides (PPTX, ODP)
+    Slide,
+    /// Spreadsheet sheets (XLSX, ODS)
+    Sheet,
+}
+
+/// Byte offset boundary for a page.
+///
+/// Tracks where a specific page's content starts and ends in the main content string,
+/// enabling mapping from byte positions to page numbers. Offsets are guaranteed to be
+/// at valid UTF-8 character boundaries when using standard String methods (push_str, push, etc.).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageBoundary {
+    /// Byte offset where this page starts in the content string (UTF-8 valid boundary, inclusive)
+    pub byte_start: usize,
+    /// Byte offset where this page ends in the content string (UTF-8 valid boundary, exclusive)
+    pub byte_end: usize,
+    /// Page number (1-indexed)
+    pub page_number: usize,
+}
+
+/// Metadata for individual page/slide/sheet.
+///
+/// Captures per-page information including dimensions, content counts,
+/// and visibility state (for presentations).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageInfo {
+    /// Page number (1-indexed)
+    pub number: usize,
+
+    /// Page title (usually for presentations)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+
+    /// Dimensions in points (PDF) or pixels (images): (width, height)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dimensions: Option<(f64, f64)>,
+
+    /// Number of images on this page
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_count: Option<usize>,
+
+    /// Number of tables on this page
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub table_count: Option<usize>,
+
+    /// Whether this page is hidden (e.g., in presentations)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<bool>,
+}
+
+/// Content for a single page/slide.
+///
+/// When page extraction is enabled, documents are split into per-page content
+/// with associated tables and images mapped to each page.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageContent {
+    /// Page number (1-indexed)
+    pub page_number: usize,
+
+    /// Text content for this page
+    pub content: String,
+
+    /// Tables found on this page
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub tables: Vec<Table>,
+
+    /// Images found on this page
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub images: Vec<ExtractedImage>,
 }
 
 /// Excel/spreadsheet metadata.
@@ -348,11 +495,11 @@ pub struct Chunk {
 /// Metadata about a chunk's position in the original document.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChunkMetadata {
-    /// Character offset where this chunk starts in the original text.
-    pub char_start: usize,
+    /// Byte offset where this chunk starts in the original text (UTF-8 valid boundary).
+    pub byte_start: usize,
 
-    /// Character offset where this chunk ends in the original text.
-    pub char_end: usize,
+    /// Byte offset where this chunk ends in the original text (UTF-8 valid boundary).
+    pub byte_end: usize,
 
     /// Number of tokens in this chunk (if available).
     ///
@@ -365,6 +512,18 @@ pub struct ChunkMetadata {
 
     /// Total number of chunks in the document.
     pub total_chunks: usize,
+
+    /// First page number this chunk spans (1-indexed).
+    ///
+    /// Only populated when page tracking is enabled in extraction configuration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_page: Option<usize>,
+
+    /// Last page number this chunk spans (1-indexed, equal to first_page for single-page chunks).
+    ///
+    /// Only populated when page tracking is enabled in extraction configuration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_page: Option<usize>,
 }
 
 /// Extracted image from a document.
@@ -505,22 +664,22 @@ pub struct PptxExtractionResult {
     pub table_count: usize,
     /// Extracted images from the presentation
     pub images: Vec<ExtractedImage>,
+    /// Slide structure with boundaries (when page tracking is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_structure: Option<PageStructure>,
+    /// Per-slide content (when page tracking is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_contents: Option<Vec<PageContent>>,
 }
 
 /// PowerPoint presentation metadata.
 ///
-/// Contains document-level metadata extracted from the PPTX file.
+/// Contains PPTX-specific metadata. Common fields like title, author, and description
+/// are now in the base `Metadata` struct.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PptxMetadata {
-    /// Presentation title
-    pub title: Option<String>,
-    /// Author name
-    pub author: Option<String>,
-    /// Description/comments
-    pub description: Option<String>,
-    /// Summary text
-    pub summary: Option<String>,
     /// List of fonts used in the presentation
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub fonts: Vec<String>,
 }
 

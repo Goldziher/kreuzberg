@@ -39,6 +39,7 @@ Main extraction configuration controlling all aspects of document processing.
 | `token_reduction` | `TokenReductionConfig?` | `None` | Token reduction configuration for optimizing LLM context |
 | `language_detection` | `LanguageDetectionConfig?` | `None` | Automatic language detection configuration |
 | `postprocessor` | `PostProcessorConfig?` | `None` | Post-processing pipeline configuration |
+| `pages` | `PageConfig?` | `None` | Page extraction and tracking configuration |
 | `max_concurrent_extractions` | `int?` | `None` | Maximum concurrent batch extractions (defaults to num_cpus * 2) |
 
 ### Example
@@ -337,6 +338,126 @@ PDF-specific extraction configuration.
 
     --8<-- "snippets/typescript/config/pdf_config.md"
 
+
+---
+
+## PageConfig
+
+Configuration for page extraction and tracking.
+
+Controls whether to extract per-page content and how to mark page boundaries in the combined text output.
+
+### Configuration
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `extract_pages` | `bool` | `false` | Extract pages as separate array in results |
+| `insert_page_markers` | `bool` | `false` | Insert page markers in combined content string |
+| `marker_format` | `String` | `"\n\n<!-- PAGE {page_num} -->\n\n"` | Template for page markers (use `{page_num}` placeholder) |
+
+### Example
+
+=== "C#"
+
+    ```csharp title="page_config.cs"
+    var config = new ExtractionConfig
+    {
+        Pages = new PageConfig
+        {
+            ExtractPages = true,
+            InsertPageMarkers = true,
+            MarkerFormat = "\n\n--- Page {page_num} ---\n\n"
+        }
+    };
+    ```
+
+=== "Go"
+
+    ```go title="page_config.go"
+    config := &ExtractionConfig{
+        Pages: &PageConfig{
+            ExtractPages:      true,
+            InsertPageMarkers: true,
+            MarkerFormat:      "\n\n--- Page {page_num} ---\n\n",
+        },
+    }
+    ```
+
+=== "Java"
+
+    ```java title="PageConfig.java"
+    var config = ExtractionConfig.builder()
+        .pages(PageConfig.builder()
+            .extractPages(true)
+            .insertPageMarkers(true)
+            .markerFormat("\n\n--- Page {page_num} ---\n\n")
+            .build())
+        .build();
+    ```
+
+=== "Python"
+
+    ```python title="page_config.py"
+    config = ExtractionConfig(
+        pages=PageConfig(
+            extract_pages=True,
+            insert_page_markers=True,
+            marker_format="\n\n--- Page {page_num} ---\n\n"
+        )
+    )
+    ```
+
+=== "Ruby"
+
+    ```ruby title="page_config.rb"
+    config = ExtractionConfig.new(
+      pages: PageConfig.new(
+        extract_pages: true,
+        insert_page_markers: true,
+        marker_format: "\n\n--- Page {page_num} ---\n\n"
+      )
+    )
+    ```
+
+=== "Rust"
+
+    ```rust title="page_config.rs"
+    let config = ExtractionConfig {
+        pages: Some(PageConfig {
+            extract_pages: true,
+            insert_page_markers: true,
+            marker_format: "\n\n--- Page {page_num} ---\n\n".to_string(),
+        }),
+        ..Default::default()
+    };
+    ```
+
+=== "TypeScript"
+
+    ```typescript title="page_config.ts"
+    const config: ExtractionConfig = {
+      pages: {
+        extractPages: true,
+        insertPageMarkers: true,
+        markerFormat: "\n\n--- Page {page_num} ---\n\n"
+      }
+    };
+    ```
+
+### Field Details
+
+**extract_pages**: When `true`, populates `ExtractionResult.pages` with per-page content. Each page contains its text, tables, and images separately.
+
+**insert_page_markers**: When `true`, inserts page markers into the combined `content` string at page boundaries. Useful for LLMs to understand document structure.
+
+**marker_format**: Template string for page markers. Use `{page_num}` placeholder for the page number. Default HTML comment format is LLM-friendly.
+
+### Format Support
+
+- **PDF**: Full byte-accurate page tracking with O(1) lookup performance
+- **PPTX**: Slide boundary tracking with per-slide content
+- **DOCX**: Best-effort page break detection using explicit page breaks
+- **Other formats**: Page tracking not available (returns `None`/`null`)
 
 ---
 

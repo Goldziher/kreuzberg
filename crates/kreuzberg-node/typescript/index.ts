@@ -60,6 +60,7 @@ import type {
 	LanguageDetectionConfig,
 	OcrBackendProtocol,
 	OcrConfig,
+	PageConfig,
 	PdfConfig,
 	PostProcessorConfig,
 	PostProcessorProtocol,
@@ -224,8 +225,8 @@ function convertChunk(rawChunk: any): Chunk {
 		return {
 			content: "",
 			metadata: {
-				charStart: 0,
-				charEnd: 0,
+				byteStart: 0,
+				byteEnd: 0,
 				tokenCount: null,
 				chunkIndex: 0,
 				totalChunks: 0,
@@ -238,11 +239,13 @@ function convertChunk(rawChunk: any): Chunk {
 		content: rawChunk.content ?? "",
 		embedding: rawChunk.embedding ?? null,
 		metadata: {
-			charStart: metadata.charStart ?? 0,
-			charEnd: metadata.charEnd ?? 0,
-			tokenCount: metadata.tokenCount ?? null,
-			chunkIndex: metadata.chunkIndex ?? 0,
-			totalChunks: metadata.totalChunks ?? 0,
+			byteStart: metadata.byte_start ?? metadata.charStart ?? 0,
+			byteEnd: metadata.byte_end ?? metadata.charEnd ?? 0,
+			tokenCount: metadata.token_count ?? metadata.tokenCount ?? null,
+			chunkIndex: metadata.chunk_index ?? metadata.chunkIndex ?? 0,
+			totalChunks: metadata.total_chunks ?? metadata.totalChunks ?? 0,
+			firstPage: metadata.first_page ?? metadata.firstPage ?? null,
+			lastPage: metadata.last_page ?? metadata.lastPage ?? null,
 		},
 	};
 }
@@ -485,6 +488,18 @@ function normalizeKeywordConfig(config?: KeywordConfig): NativeExtractionConfig 
 	return normalized;
 }
 
+function normalizePageConfig(pages?: PageConfig): NativeExtractionConfig | undefined {
+	if (!pages) {
+		return undefined;
+	}
+
+	const normalized: NativeExtractionConfig = {};
+	setIfDefined(normalized, "extract_pages", pages.extractPages);
+	setIfDefined(normalized, "insert_page_markers", pages.insertPageMarkers);
+	setIfDefined(normalized, "marker_format", pages.markerFormat);
+	return normalized;
+}
+
 function normalizeExtractionConfig(config: ExtractionConfigType | null): NativeExtractionConfig | null {
 	if (!config) {
 		return null;
@@ -519,6 +534,9 @@ function normalizeExtractionConfig(config: ExtractionConfigType | null): NativeE
 
 	const keywords = normalizeKeywordConfig(config.keywords);
 	setIfDefined(normalized, "keywords", keywords);
+
+	const pages = normalizePageConfig(config.pages);
+	setIfDefined(normalized, "pages", pages);
 
 	const htmlOptions = normalizeHtmlOptions(config.htmlOptions);
 	setIfDefined(normalized, "htmlOptions", htmlOptions);

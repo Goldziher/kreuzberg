@@ -1,11 +1,15 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import archiver from "archiver";
 import { expect } from "vitest";
 import type { ExtractionResult, Metadata } from "../../src/types.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 /**
  * Resolve the workspace root robustly regardless of the current working directory.
+ * Looks for test_documents directory as the main indicator of workspace root.
  */
 function resolveWorkspaceRoot(): string {
 	const envRoot = process.env.KREUZBERG_WORKSPACE_ROOT ?? process.env.GITHUB_WORKSPACE;
@@ -13,9 +17,10 @@ function resolveWorkspaceRoot(): string {
 		return envRoot;
 	}
 
-	let current = process.cwd();
+	// Look for test_documents directory starting from __dirname
+	let current = __dirname;
 	while (true) {
-		if (existsSync(join(current, "Cargo.toml"))) {
+		if (existsSync(join(current, "test_documents"))) {
 			return current;
 		}
 		const parent = dirname(current);
@@ -25,8 +30,22 @@ function resolveWorkspaceRoot(): string {
 		current = parent;
 	}
 
-	// Fallback to original behaviour (two levels up) to avoid breaking local runs
-	return join(process.cwd(), "../..");
+	// Fallback: try from process.cwd()
+	current = process.cwd();
+	while (true) {
+		if (existsSync(join(current, "test_documents"))) {
+			return current;
+		}
+		const parent = dirname(current);
+		if (parent === current) {
+			break;
+		}
+		current = parent;
+	}
+
+	// Last resort: assume we're 4 levels up from tests/helpers
+	// tests/helpers -> tests -> kreuzberg-node -> crates -> workspace root
+	return join(__dirname, "../../../../");
 }
 
 /**

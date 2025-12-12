@@ -71,7 +71,7 @@ jobs:
     permissions:
       contents: read
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest
@@ -139,6 +139,8 @@ jobs:
     name: Rust E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -187,8 +189,10 @@ jobs:
   build-and-smoke-cli:
     name: CLI Build + Smoke (${{ matrix.target }})
     timeout-minutes: 60
+    permissions:
+      contents: read
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest

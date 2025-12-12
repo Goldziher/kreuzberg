@@ -26,7 +26,7 @@
 //!
 //! // Extract metadata
 //! let metadata = extract_metadata(&pdf_bytes)?;
-//! println!("Page count: {:?}", metadata.page_count);
+//! println!("PDF version: {:?}", metadata.pdf_version);
 //! # Ok(())
 //! # }
 //! ```

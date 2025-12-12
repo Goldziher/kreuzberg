@@ -591,6 +591,7 @@ interface ExtractionResult {
 - `metadata` (Metadata): Document metadata (format-specific fields)
 - `tables` (Table[]): Array of extracted tables
 - `detectedLanguages` (string[] | null): Array of detected language codes (ISO 639-1) if language detection is enabled
+- `pages` (PageContent[] | undefined): Per-page extracted content when page extraction is enabled via `PageConfig.extractPages = true`
 
 **Example:**
 
@@ -604,6 +605,76 @@ console.log(`Tables: ${result.tables.length}`);
 
 if (result.detectedLanguages) {
   console.log(`Languages: ${result.detectedLanguages.join(', ')}`);
+}
+```
+
+#### pages
+
+**Type**: `PageContent[] | undefined`
+
+Per-page extracted content when page extraction is enabled via `PageConfig.extractPages = true`.
+
+Each page contains:
+- Page number (1-indexed)
+- Text content for that page
+- Tables on that page
+- Images on that page
+
+**Example:**
+
+```typescript title="page_extraction.ts"
+import { extractFileSync } from '@kreuzberg/node';
+
+const result = extractFileSync('document.pdf', null, {
+  pages: {
+    extractPages: true
+  }
+});
+
+if (result.pages) {
+  for (const page of result.pages) {
+    console.log(`Page ${page.pageNumber}:`);
+    console.log(`  Content: ${page.content.length} chars`);
+    console.log(`  Tables: ${page.tables.length}`);
+    console.log(`  Images: ${page.images.length}`);
+  }
+}
+```
+
+---
+
+### Accessing Per-Page Content
+
+When page extraction is enabled, access individual pages and iterate over them:
+
+```typescript title="iterate_pages.ts"
+import { extractFileSync } from '@kreuzberg/node';
+
+const result = extractFileSync('document.pdf', null, {
+  pages: {
+    extractPages: true,
+    insertPageMarkers: true,
+    markerFormat: '\n\n--- Page {page_num} ---\n\n'
+  }
+});
+
+// Access combined content with page markers
+console.log('Combined content with markers:');
+console.log(result.content.substring(0, 500));
+console.log();
+
+// Access per-page content
+if (result.pages) {
+  for (const page of result.pages) {
+    console.log(`Page ${page.pageNumber}:`);
+    console.log(`  ${page.content.substring(0, 100)}...`);
+    if (page.tables.length > 0) {
+      console.log(`  Found ${page.tables.length} table(s)`);
+    }
+    if (page.images.length > 0) {
+      console.log(`  Found ${page.images.length} image(s)`);
+    }
+  }
 }
 ```
 
@@ -715,6 +786,65 @@ for (const table of result.tables) {
   console.log(`Table on page ${table.pageNumber}:`);
   console.log(table.markdown);
   console.log();
+}
+```
+
+---
+
+### ChunkMetadata
+
+Metadata for a single text chunk.
+
+**Type Definition:**
+
+```typescript title="TypeScript"
+interface ChunkMetadata {
+  byteStart: number;
+  byteEnd: number;
+  charCount: number;
+  tokenCount?: number;
+  firstPage?: number;
+  lastPage?: number;
+}
+```
+
+**Fields:**
+
+- `byteStart` (number): UTF-8 byte offset in content (inclusive)
+- `byteEnd` (number): UTF-8 byte offset in content (exclusive)
+- `charCount` (number): Number of characters in chunk
+- `tokenCount` (number | undefined): Estimated token count (if configured)
+- `firstPage` (number | undefined): First page this chunk appears on (1-indexed, only when page boundaries available)
+- `lastPage` (number | undefined): Last page this chunk appears on (1-indexed, only when page boundaries available)
+
+**Page tracking:** When `PageStructure.boundaries` is available and chunking is enabled, `firstPage` and `lastPage` are automatically calculated based on byte offsets.
+
+**Example:**
+
+```typescript title="chunk_metadata.ts"
+import { extractFileSync } from '@kreuzberg/node';
+
+const result = extractFileSync('document.pdf', null, {
+  chunking: { chunkSize: 500, chunkOverlap: 50 },
+  pages: { extractPages: true }
+});
+
+if (result.chunks) {
+  for (const chunk of result.chunks) {
+    const meta = chunk.metadata;
+    let pageInfo = '';
+    if (meta.firstPage !== undefined) {
+      if (meta.firstPage === meta.lastPage) {
+        pageInfo = ` (page ${meta.firstPage})`;
+      } else {
+        pageInfo = ` (pages ${meta.firstPage}-${meta.lastPage})`;
+      }
+    }
+
+    console.log(
+      `Chunk [${meta.byteStart}:${meta.byteEnd}]: ${meta.charCount} chars${pageInfo}`
+    );
+  }
 }
 ```
 

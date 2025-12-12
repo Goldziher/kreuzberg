@@ -11,28 +11,7 @@ require 'rspec/core'
 module E2ERuby
   module_function
 
-  def self.resolve_workspace_root
-    # Check CI environment variable (GitHub Actions)
-    github_workspace = ENV['GITHUB_WORKSPACE']
-    return Pathname.new(github_workspace) if github_workspace && File.directory?(github_workspace)
-
-    # Check local override
-    workspace_root = ENV['KREUZBERG_WORKSPACE_ROOT']
-    return Pathname.new(workspace_root) if workspace_root && File.directory?(workspace_root)
-
-    # Fall back to Cargo.toml search
-    current = Pathname.new(__dir__).expand_path
-
-    until current.root?
-      return current if current.join('Cargo.toml').exist?
-
-      current = current.parent
-    end
-
-    raise 'Could not find workspace root (Cargo.toml not found)'
-  end
-
-  WORKSPACE_ROOT = resolve_workspace_root
+  WORKSPACE_ROOT = Pathname.new(__dir__).join('..', '..', '..').expand_path
   TEST_DOCUMENTS = WORKSPACE_ROOT.join('test_documents')
 
   def resolve_document(relative)

@@ -77,6 +77,7 @@ fn build_archive_result(
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     }
 }
 

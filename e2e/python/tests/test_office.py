@@ -8,7 +8,6 @@ from kreuzberg import extract_file_sync
 from . import helpers
 
 
-@pytest.mark.slow
 def test_office_doc_legacy() -> None:
     """Legacy .doc document conversion via LibreOffice."""
 
@@ -24,7 +23,6 @@ def test_office_doc_legacy() -> None:
     helpers.assert_min_content_length(result, 20)
 
 
-@pytest.mark.slow
 def test_office_docx_basic() -> None:
     """DOCX document extraction baseline."""
 
@@ -40,7 +38,6 @@ def test_office_docx_basic() -> None:
     helpers.assert_min_content_length(result, 10)
 
 
-@pytest.mark.slow
 def test_office_docx_equations() -> None:
     """DOCX file containing equations to validate math extraction."""
 
@@ -56,7 +53,6 @@ def test_office_docx_equations() -> None:
     helpers.assert_min_content_length(result, 20)
 
 
-@pytest.mark.slow
 def test_office_docx_fake() -> None:
     """Simple DOCX document to verify baseline extraction."""
 
@@ -72,7 +68,6 @@ def test_office_docx_fake() -> None:
     helpers.assert_min_content_length(result, 20)
 
 
-@pytest.mark.slow
 def test_office_docx_formatting() -> None:
     """DOCX document heavy on formatting for style preservation."""
 
@@ -88,7 +83,6 @@ def test_office_docx_formatting() -> None:
     helpers.assert_min_content_length(result, 20)
 
 
-@pytest.mark.slow
 def test_office_docx_headers() -> None:
     """DOCX document with complex headers."""
 
@@ -104,7 +98,6 @@ def test_office_docx_headers() -> None:
     helpers.assert_min_content_length(result, 20)
 
 
-@pytest.mark.slow
 def test_office_docx_lists() -> None:
     """DOCX document emphasizing list formatting."""
 
@@ -120,7 +113,6 @@ def test_office_docx_lists() -> None:
     helpers.assert_min_content_length(result, 20)
 
 
-@pytest.mark.slow
 def test_office_docx_tables() -> None:
     """DOCX document containing tables for table-aware extraction."""
 
@@ -138,7 +130,6 @@ def test_office_docx_tables() -> None:
     helpers.assert_table_count(result, 1, None)
 
 
-@pytest.mark.slow
 def test_office_ppt_legacy() -> None:
     """Legacy PowerPoint .ppt file requiring LibreOffice conversion."""
 
@@ -154,7 +145,6 @@ def test_office_ppt_legacy() -> None:
     helpers.assert_min_content_length(result, 10)
 
 
-@pytest.mark.slow
 def test_office_pptx_basic() -> None:
     """PPTX deck should extract slides content."""
 
@@ -170,7 +160,6 @@ def test_office_pptx_basic() -> None:
     helpers.assert_min_content_length(result, 50)
 
 
-@pytest.mark.slow
 def test_office_pptx_images() -> None:
     """PPTX presentation containing images to ensure metadata extraction."""
 
@@ -186,7 +175,6 @@ def test_office_pptx_images() -> None:
     helpers.assert_min_content_length(result, 20)
 
 
-@pytest.mark.slow
 def test_office_pptx_pitch_deck() -> None:
     """Pitch deck PPTX used to validate large slide extraction."""
 
@@ -202,7 +190,6 @@ def test_office_pptx_pitch_deck() -> None:
     helpers.assert_min_content_length(result, 100)
 
 
-@pytest.mark.slow
 def test_office_xls_legacy() -> None:
     """Legacy XLS spreadsheet to ensure backward compatibility."""
 
@@ -218,7 +205,6 @@ def test_office_xls_legacy() -> None:
     helpers.assert_min_content_length(result, 10)
 
 
-@pytest.mark.slow
 def test_office_xlsx_basic() -> None:
     """XLSX spreadsheet should produce metadata and table content."""
 
@@ -235,10 +221,9 @@ def test_office_xlsx_basic() -> None:
     helpers.assert_content_contains_all(result, ["Team", "Location", "Stanley Cups"])
     helpers.assert_table_count(result, 1, None)
     helpers.assert_metadata_expectation(result, "sheet_count", {"gte": 2})
-    helpers.assert_metadata_expectation(result, "sheet_names", {"contains": "Stanley Cups"})
+    helpers.assert_metadata_expectation(result, "sheet_names", {"contains": ["Stanley Cups"]})
 
 
-@pytest.mark.slow
 def test_office_xlsx_multi_sheet() -> None:
     """XLSX workbook with multiple sheets."""
 
@@ -255,7 +240,6 @@ def test_office_xlsx_multi_sheet() -> None:
     helpers.assert_metadata_expectation(result, "sheet_count", {"gte": 2})
 
 
-@pytest.mark.slow
 def test_office_xlsx_office_example() -> None:
     """Simple XLSX spreadsheet shipped alongside office integration tests."""
 

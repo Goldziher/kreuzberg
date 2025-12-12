@@ -87,6 +87,7 @@ class KreuzbergTest {
                 result.getDetectedLanguages(),
                 result.getChunks(),
                 result.getImages(),
+                result.getPageStructure().orElse(null),
                 result.isSuccess()
             );
         };

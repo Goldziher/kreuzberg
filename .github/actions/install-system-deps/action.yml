@@ -6,7 +6,7 @@ runs:
     - name: Cache Tesseract data (macOS)
       if: runner.os == 'macOS'
       id: cache-tesseract-macos
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: /usr/local/opt/tesseract/share/tessdata/
         key: tesseract-data-${{ runner.os }}-v2
@@ -16,7 +16,7 @@ runs:
     - name: Cache LibreOffice (macOS)
       if: runner.os == 'macOS'
       id: cache-libreoffice-macos
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: /Applications/LibreOffice.app
         key: libreoffice-${{ runner.os }}-v2
@@ -50,7 +50,7 @@ runs:
     - name: Cache Tesseract data (Linux)
       if: runner.os == 'Linux'
       id: cache-tesseract-linux
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           /usr/share/tesseract-ocr/5/tessdata/
@@ -112,7 +112,7 @@ runs:
     - name: Cache Tesseract (Windows)
       if: runner.os == 'Windows'
       id: cache-tesseract-windows
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\Program Files\Tesseract-OCR
         key: tesseract-data-${{ runner.os }}-v2
@@ -122,7 +122,7 @@ runs:
     - name: Cache LibreOffice (Windows)
       if: runner.os == 'Windows'
       id: cache-libreoffice-windows
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: C:\Program Files\LibreOffice
         key: libreoffice-${{ runner.os }}-v2

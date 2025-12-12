@@ -9,7 +9,8 @@ import java.util.Optional;
 /**
  * Result of a document extraction operation.
  *
- * <p>Includes extracted content, tables, metadata, detected languages, text chunks, images, and success flag.</p>
+ * <p>Includes extracted content, tables, metadata, detected languages, text chunks, images,
+ * page structure information, and success flag.</p>
  */
 public final class ExtractionResult {
     private final String content;
@@ -19,6 +20,7 @@ public final class ExtractionResult {
     private final List<String> detectedLanguages;
     private final List<Chunk> chunks;
     private final List<ExtractedImage> images;
+    private final PageStructure pageStructure;
     private final boolean success;
     private final Optional<String> language;
     private final Optional<String> date;
@@ -32,6 +34,7 @@ public final class ExtractionResult {
         List<String> detectedLanguages,
         List<Chunk> chunks,
         List<ExtractedImage> images,
+        PageStructure pageStructure,
         boolean success
     ) {
         this.content = Objects.requireNonNull(content, "content must not be null");
@@ -45,6 +48,7 @@ public final class ExtractionResult {
         }
         this.chunks = Collections.unmodifiableList(chunks != null ? chunks : List.of());
         this.images = Collections.unmodifiableList(images != null ? images : List.of());
+        this.pageStructure = pageStructure;
         this.success = success;
         this.language = Optional.ofNullable((String) this.metadata.get("language"));
         this.date = Optional.ofNullable((String) this.metadata.get("date"));
@@ -77,6 +81,17 @@ public final class ExtractionResult {
 
     public List<ExtractedImage> getImages() {
         return images;
+    }
+
+    /**
+     * Get the page structure information (optional).
+     *
+     * Available when page tracking is enabled in the extraction configuration.
+     *
+     * @return page structure, or empty if not available
+     */
+    public Optional<PageStructure> getPageStructure() {
+        return Optional.ofNullable(pageStructure);
     }
 
     public boolean isSuccess() {

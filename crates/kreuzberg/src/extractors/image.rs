@@ -20,9 +20,14 @@ impl ImageExtractor {
         Self
     }
 
-    /// Extract text from image using OCR.
+    /// Extract text from image using OCR with optional page tracking for multi-frame TIFFs.
     #[cfg(feature = "ocr")]
-    async fn extract_with_ocr(&self, content: &[u8], config: &ExtractionConfig) -> Result<ExtractionResult> {
+    async fn extract_with_ocr(
+        &self,
+        content: &[u8],
+        mime_type: &str,
+        config: &ExtractionConfig,
+    ) -> Result<ExtractionResult> {
         use crate::plugins::registry::get_ocr_backend_registry;
 
         let ocr_config = config.ocr.as_ref().ok_or_else(|| crate::KreuzbergError::Parsing {
@@ -39,7 +44,22 @@ impl ImageExtractor {
             registry.get(&ocr_config.backend)?
         };
 
-        backend.process_image(content, ocr_config).await
+        let ocr_result = backend.process_image(content, ocr_config).await?;
+
+        // Extract text with optional page tracking for multi-frame TIFFs
+        let ocr_text = ocr_result.content.clone();
+        let ocr_extraction_result = crate::extraction::image::extract_text_from_image_with_ocr(
+            content,
+            mime_type,
+            ocr_text,
+            config.pages.as_ref(),
+        )?;
+
+        let mut result = ocr_result;
+        result.content = ocr_extraction_result.content;
+        result.pages = ocr_extraction_result.page_contents;
+
+        Ok(result)
     }
 }
 
@@ -102,7 +122,7 @@ impl DocumentExtractor for ImageExtractor {
         if config.ocr.is_some() {
             #[cfg(feature = "ocr")]
             {
-                let mut ocr_result = self.extract_with_ocr(content, config).await?;
+                let mut ocr_result = self.extract_with_ocr(content, mime_type, config).await?;
 
                 ocr_result.metadata.format = Some(crate::types::FormatMetadata::Image(image_metadata));
                 ocr_result.mime_type = mime_type.to_string();
@@ -123,6 +143,7 @@ impl DocumentExtractor for ImageExtractor {
                         format: Some(crate::types::FormatMetadata::Image(image_metadata)),
                         ..Default::default()
                     },
+                    pages: None,
                     tables: vec![],
                     detected_languages: None,
                     chunks: None,
@@ -141,6 +162,7 @@ impl DocumentExtractor for ImageExtractor {
                 format: Some(crate::types::FormatMetadata::Image(image_metadata)),
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,

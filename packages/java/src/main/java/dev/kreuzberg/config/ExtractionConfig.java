@@ -33,6 +33,7 @@ public final class ExtractionConfig {
   private final TokenReductionConfig tokenReduction;
   private final HtmlOptions htmlOptions;
   private final KeywordConfig keywords;
+  private final PageConfig pages;
   private final Integer maxConcurrentExtractions;
   private final Map<String, Object> rawConfigOverride;
 
@@ -50,6 +51,7 @@ public final class ExtractionConfig {
     this.tokenReduction = builder.tokenReduction;
     this.htmlOptions = builder.htmlOptions;
     this.keywords = builder.keywords;
+    this.pages = builder.pages;
     this.maxConcurrentExtractions = builder.maxConcurrentExtractions;
     this.rawConfigOverride = builder.rawConfigOverride != null
         ? Collections.unmodifiableMap(new LinkedHashMap<>(builder.rawConfigOverride))
@@ -110,6 +112,10 @@ public final class ExtractionConfig {
 
   public KeywordConfig getKeywords() {
     return keywords;
+  }
+
+  public PageConfig getPages() {
+    return pages;
   }
 
   public Integer getMaxConcurrentExtractions() {
@@ -199,6 +205,9 @@ public final class ExtractionConfig {
     if (keywords != null) {
       map.put("keywords", keywords.toMap());
     }
+    if (pages != null) {
+      map.put("pages", pages.toMap());
+    }
     if (maxConcurrentExtractions != null) {
       map.put("max_concurrent_extractions", maxConcurrentExtractions);
     }
@@ -260,6 +269,10 @@ public final class ExtractionConfig {
     if (keywordMap != null) {
       builder.keywords(KeywordConfig.fromMap(keywordMap));
     }
+    Map<String, Object> pageMap = asMap(raw.get("pages"));
+    if (pageMap != null) {
+      builder.pages(PageConfig.fromMap(pageMap));
+    }
     if (raw.containsKey("max_concurrent_extractions")) {
       builder.maxConcurrentExtractions(asInteger(raw.get("max_concurrent_extractions")));
     }
@@ -314,6 +327,7 @@ public final class ExtractionConfig {
     private TokenReductionConfig tokenReduction;
     private HtmlOptions htmlOptions;
     private KeywordConfig keywords;
+    private PageConfig pages;
     private Integer maxConcurrentExtractions;
     private Map<String, Object> rawConfigOverride;
 
@@ -382,6 +396,11 @@ public final class ExtractionConfig {
 
     public Builder keywords(KeywordConfig keywords) {
       this.keywords = keywords;
+      return this;
+    }
+
+    public Builder pages(PageConfig pages) {
+      this.pages = pages;
       return this;
     }
 

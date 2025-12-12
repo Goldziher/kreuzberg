@@ -373,6 +373,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -422,6 +423,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -488,6 +490,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -513,6 +516,7 @@ mod tests {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,
@@ -543,6 +547,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         assert_eq!(processor.estimated_duration_ms(&result), 0);
@@ -593,6 +598,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let txt_result = ExtractionResult {
@@ -603,6 +609,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         assert!(processor.should_process(&pdf_result, &config));
@@ -631,6 +638,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();

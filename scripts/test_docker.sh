@@ -122,7 +122,7 @@ fail_test() {
 }
 
 # Cleanup function
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 cleanup() {
 	log_info "Cleaning up test containers..."
 	docker ps -a --filter "name=${CONTAINER_PREFIX}" --format "{{.Names}}" | while read -r container; do
@@ -139,7 +139,7 @@ random_container_name() {
 }
 
 # Wait for container to be healthy
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 wait_for_container() {
 	local container=$1
 	local max_wait=${2:-30}

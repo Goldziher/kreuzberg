@@ -21,7 +21,7 @@ module Kreuzberg
   # rubocop:disable Metrics/ClassLength
   class Result
     attr_reader :content, :mime_type, :metadata, :metadata_json, :tables,
-                :detected_languages, :chunks, :images
+                :detected_languages, :chunks, :images, :pages
 
     # Table structure
     #
@@ -42,31 +42,39 @@ module Kreuzberg
     #
     # @!attribute [r] content
     #   @return [String] Chunk content
-    # @!attribute [r] char_start
-    #   @return [Integer] Starting character index
-    # @!attribute [r] char_end
-    #   @return [Integer] Ending character index
+    # @!attribute [r] byte_start
+    #   @return [Integer] Starting byte offset (UTF-8)
+    # @!attribute [r] byte_end
+    #   @return [Integer] Ending byte offset (UTF-8)
     # @!attribute [r] token_count
     #   @return [Integer, nil] Approximate token count (may be nil)
+    # @!attribute [r] first_page
+    #   @return [Integer, nil] First page number (1-indexed)
+    # @!attribute [r] last_page
+    #   @return [Integer, nil] Last page number (1-indexed)
     #
     Chunk = Struct.new(
       :content,
-      :char_start,
-      :char_end,
+      :byte_start,
+      :byte_end,
       :token_count,
       :chunk_index,
       :total_chunks,
+      :first_page,
+      :last_page,
       :embedding,
       keyword_init: true
     ) do
       def to_h
         {
           content: content,
-          char_start: char_start,
-          char_end: char_end,
+          byte_start: byte_start,
+          byte_end: byte_end,
           token_count: token_count,
           chunk_index: chunk_index,
           total_chunks: total_chunks,
+          first_page: first_page,
+          last_page: last_page,
           embedding: embedding
         }
       end
@@ -103,6 +111,28 @@ module Kreuzberg
       end
     end
 
+    # Per-page content
+    #
+    # @!attribute [r] page_number
+    #   @return [Integer] Page number (1-indexed)
+    # @!attribute [r] content
+    #   @return [String] Text content for this page
+    # @!attribute [r] tables
+    #   @return [Array<Table>] Tables on this page
+    # @!attribute [r] images
+    #   @return [Array<Image>] Images on this page
+    #
+    PageContent = Struct.new(:page_number, :content, :tables, :images, keyword_init: true) do
+      def to_h
+        {
+          page_number: page_number,
+          content: content,
+          tables: tables.map(&:to_h),
+          images: images.map(&:to_h)
+        }
+      end
+    end
+
     # Initialize from native hash result
     #
     # @param hash [Hash] Hash returned from native extension
@@ -117,6 +147,7 @@ module Kreuzberg
       @detected_languages = parse_detected_languages(get_value(hash, 'detected_languages'))
       @chunks = parse_chunks(get_value(hash, 'chunks'))
       @images = parse_images(get_value(hash, 'images'))
+      @pages = parse_pages(get_value(hash, 'pages'))
     end
 
     # Convert to hash
@@ -128,10 +159,11 @@ module Kreuzberg
         content: @content,
         mime_type: @mime_type,
         metadata: @metadata,
-        tables: @tables.map(&:to_h),
+        tables: serialize_tables,
         detected_languages: @detected_languages,
-        chunks: @chunks&.map(&:to_h),
-        images: @images&.map(&:to_h)
+        chunks: serialize_chunks,
+        images: serialize_images,
+        pages: serialize_pages
       }
     end
 
@@ -144,6 +176,22 @@ module Kreuzberg
     end
 
     private
+
+    def serialize_tables
+      @tables.map(&:to_h)
+    end
+
+    def serialize_chunks
+      @chunks&.map(&:to_h)
+    end
+
+    def serialize_images
+      @images&.map(&:to_h)
+    end
+
+    def serialize_pages
+      @pages&.map(&:to_h)
+    end
 
     def get_value(hash, key, default = nil)
       hash[key] || hash[key.to_sym] || default
@@ -180,11 +228,13 @@ module Kreuzberg
       chunks_data.map do |chunk_hash|
         Chunk.new(
           content: chunk_hash['content'],
-          char_start: chunk_hash['char_start'],
-          char_end: chunk_hash['char_end'],
+          byte_start: chunk_hash['byte_start'],
+          byte_end: chunk_hash['byte_end'],
           token_count: chunk_hash['token_count'],
           chunk_index: chunk_hash['chunk_index'],
           total_chunks: chunk_hash['total_chunks'],
+          first_page: chunk_hash['first_page'],
+          last_page: chunk_hash['last_page'],
           embedding: chunk_hash['embedding']
         )
       end
@@ -208,6 +258,19 @@ module Kreuzberg
           is_mask: image_hash['is_mask'],
           description: image_hash['description'],
           ocr_result: image_hash['ocr_result'] ? Result.new(image_hash['ocr_result']) : nil
+        )
+      end
+    end
+
+    def parse_pages(pages_data)
+      return nil if pages_data.nil?
+
+      pages_data.map do |page_hash|
+        PageContent.new(
+          page_number: page_hash['page_number'],
+          content: page_hash['content'],
+          tables: parse_tables(page_hash['tables']),
+          images: parse_images(page_hash['images'])
         )
       end
     end

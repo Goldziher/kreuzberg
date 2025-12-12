@@ -1108,6 +1108,9 @@ public final class Kreuzberg {
             String imagesJson = KreuzbergFFI.readCString(
                 result.get(ValueLayout.ADDRESS, KreuzbergFFI.IMAGES_OFFSET)
             );
+            String pageStructureJson = KreuzbergFFI.readCString(
+                result.get(ValueLayout.ADDRESS, KreuzbergFFI.PAGE_STRUCTURE_OFFSET)
+            );
             boolean success = result.get(ValueLayout.JAVA_BOOLEAN, KreuzbergFFI.SUCCESS_OFFSET);
 
             return ResultParser.parse(
@@ -1118,6 +1121,7 @@ public final class Kreuzberg {
                 metadataJson,
                 chunksJson,
                 imagesJson,
+                pageStructureJson,
                 success
             );
         } finally {
@@ -1149,6 +1153,7 @@ public final class Kreuzberg {
                             List.of(),
                             List.of(),
                             List.of(),
+                            null,
                             false
                         )
                     );

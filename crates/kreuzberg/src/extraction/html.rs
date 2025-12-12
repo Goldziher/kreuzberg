@@ -283,17 +283,30 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
         .map_err(|e| KreuzbergError::parsing(format!("Failed to parse YAML frontmatter: {}", e)))?;
 
     let mut metadata = HtmlMetadata::default();
+    let mut title: Option<String> = None;
+    let mut description: Option<String> = None;
+    let mut keywords: Option<Vec<String>> = None;
+    let mut author: Option<String> = None;
 
     if let serde_json::Value::Object(mapping) = yaml_value {
         for (key, value) in mapping {
             if let serde_json::Value::String(value_str) = value {
                 match key.as_str() {
-                    "title" => metadata.title = Some(value_str),
+                    "title" => title = Some(value_str),
                     "base-href" => metadata.base_href = Some(value_str),
                     "canonical" => metadata.canonical = Some(value_str),
-                    "meta-description" => metadata.description = Some(value_str),
-                    "meta-keywords" => metadata.keywords = Some(value_str),
-                    "meta-author" => metadata.author = Some(value_str),
+                    "meta-description" => description = Some(value_str),
+                    "meta-keywords" => {
+                        // Parse keywords as comma-separated list and store as Vec
+                        keywords = Some(
+                            value_str
+                                .split(',')
+                                .map(|k| k.trim().to_string())
+                                .filter(|k| !k.is_empty())
+                                .collect(),
+                        )
+                    }
+                    "meta-author" => author = Some(value_str),
                     "meta-og-title" | "meta-og:title" => metadata.og_title = Some(value_str),
                     "meta-og-description" | "meta-og:description" => metadata.og_description = Some(value_str),
                     "meta-og-image" | "meta-og:image" => metadata.og_image = Some(value_str),
@@ -319,10 +332,10 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
         }
     }
 
-    let has_metadata = metadata.title.is_some()
-        || metadata.description.is_some()
-        || metadata.keywords.is_some()
-        || metadata.author.is_some()
+    let has_metadata = title.is_some()
+        || description.is_some()
+        || keywords.is_some()
+        || author.is_some()
         || metadata.canonical.is_some()
         || metadata.base_href.is_some()
         || metadata.og_title.is_some()
@@ -331,6 +344,10 @@ pub fn parse_html_metadata(markdown: &str) -> Result<(Option<HtmlMetadata>, Stri
         || metadata.twitter_card.is_some();
 
     if has_metadata {
+        metadata.title = title;
+        metadata.description = description;
+        metadata.keywords = keywords.map(|kws| kws.join(", "));
+        metadata.author = author;
         Ok((Some(metadata), remaining_content.to_string()))
     } else {
         Ok((None, remaining_content.to_string()))

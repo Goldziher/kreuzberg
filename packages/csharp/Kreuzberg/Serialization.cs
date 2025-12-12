@@ -40,6 +40,7 @@ internal static class Serialization
         "image_preprocessing",
         "json_schema",
         "error",
+        "pages",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     internal static string SerializeResult(ExtractionResult result)
@@ -157,6 +158,11 @@ internal static class Serialization
             metadata.Error = DeserializeElement<ErrorMetadata>(error);
         }
 
+        if (root.TryGetProperty("pages", out var pages))
+        {
+            metadata.Pages = DeserializeElement<PageStructure>(pages);
+        }
+
         if (root.TryGetProperty("format_type", out var formatType))
         {
             metadata.FormatType = ParseFormat(formatType.GetString());
@@ -165,14 +171,18 @@ internal static class Serialization
         }
 
         ApplyFormatMetadata(root, metadata);
-        var additional = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+        var additional = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         foreach (var property in root.EnumerateObject())
         {
             if (CoreMetadataKeys.Contains(property.Name))
             {
                 continue;
             }
-            additional[property.Name] = ParseNode(property.Value);
+            var node = ParseNode(property.Value);
+            if (node != null)
+            {
+                additional[property.Name] = node;
+            }
         }
 
         if (additional.Count > 0)
@@ -254,6 +264,10 @@ internal static class Serialization
         {
             node["error"] = JsonSerializer.SerializeToNode(metadata.Error, Options);
         }
+        if (metadata.Pages != null)
+        {
+            node["pages"] = JsonSerializer.SerializeToNode(metadata.Pages, Options);
+        }
 
         AddFormatFields(metadata, node);
 
@@ -261,7 +275,7 @@ internal static class Serialization
         {
             foreach (var kvp in metadata.Additional)
             {
-                node[kvp.Key] = kvp.Value;
+                node[kvp.Key] = kvp.Value as JsonNode;
             }
         }
 

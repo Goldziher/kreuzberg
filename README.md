@@ -6,7 +6,7 @@
 [![RubyGems](https://badge.fury.io/rb/kreuzberg.svg)](https://rubygems.org/gems/kreuzberg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg)
 [![Maven Central](https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg)](https://central.sonatype.com/artifact/dev.kreuzberg/kreuzberg)
-[![NuGet](https://img.shields.io/nuget/v/Goldziher.Kreuzberg)](https://www.nuget.org/packages/Goldziher.Kreuzberg/)
+[![NuGet](https://img.shields.io/nuget/v/Kreuzberg)](https://www.nuget.org/packages/Kreuzberg/)
 [![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

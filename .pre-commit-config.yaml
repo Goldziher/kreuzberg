@@ -48,13 +48,13 @@ repos:
         args: ["--fix"]
         exclude: ^docs/snippets/
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.8
+    rev: v0.14.9
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
-        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
+        exclude: ^(v3/|docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
       - id: ruff-format
-        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
+        exclude: ^(v3/|docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.11.0
     hooks:
@@ -83,19 +83,48 @@ repos:
         exclude: "(crates/kreuzberg-tesseract/third_party/.*|^docs/snippets/)"
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
-        files: ^packages/java/src/.*\.java$
+        files: ^(packages/java|e2e/java)/src/.*\.java$
         exclude: "crates/kreuzberg-tesseract/third_party/.*"
   - repo: local
     hooks:
+      - id: taplo-format
+        name: taplo format
+        entry: bash -c 'scripts/toml_format.sh'
+        language: system
+        files: \.toml$
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
+        pass_filenames: false
+        require_serial: true
+      - id: taplo-format-check
+        name: taplo format check
+        entry: bash -c 'scripts/toml_format.sh --check'
+        language: system
+        files: \.toml$
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
+        pass_filenames: false
+        require_serial: true
+      - id: cargo-deny-licenses
+        name: cargo deny licenses
+        entry: cargo deny check licenses
+        language: system
+        files: ^(Cargo\.toml|Cargo\.lock|crates/.*/Cargo\.toml|tools/.*/Cargo\.toml|e2e/rust/Cargo\.toml|packages/ruby/ext/kreuzberg_rb/native/Cargo\.toml|deny\.toml)$
+        pass_filenames: false
+        require_serial: true
+      - id: go-fmt
+        name: go fmt (packages/go)
+        entry: bash -c 'cd packages/go && go fmt ./...'
+        language: system
+        files: ^packages/go/.*\.go$
+        pass_filenames: false
       - id: golangci-lint
         name: golangci-lint (packages/go)
-        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml ./...'
+        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml --fix ./...'
         language: system
         files: ^packages/go/
         pass_filenames: false
       - id: rubocop
         name: rubocop
-        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yaml'
+        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yml'
         require_serial: true
         language: system
         files: ^packages/ruby/.*\.rb$
@@ -107,13 +136,29 @@ repos:
         language: system
         files: ^packages/ruby/(lib|sig)/.*\.(rb|rbs)$
         pass_filenames: false
+      - id: java-pmd
+        name: pmd (packages/java)
+        entry: bash -c 'cd packages/java && mvn pmd:check'
+        require_serial: true
+        language: system
+        files: ^packages/java/src/.*\.java$
+        pass_filenames: false
       - id: mypy
         name: mypy
         entry: uv run python -m mypy
         require_serial: true
         language: system
         types: [python]
-        exclude: ^(v3|benchmarks|scripts|crates|examples|e2e|docs/snippets|packages/python|tools|packages/ruby)/
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
+        pass_filenames: false
+      - id: typescript-typecheck
+        name: typescript typecheck (crates/kreuzberg-node)
+        entry: bash -c 'cd crates/kreuzberg-node && pnpm typecheck'
+        require_serial: true
+        language: system
+        files: ^crates/kreuzberg-node/
+        exclude: ^docs/snippets/
+        pass_filenames: false
       - id: dotnet-format
         name: dotnet format (packages/csharp)
         entry: bash -c 'cd packages/csharp && dotnet format Kreuzberg/Kreuzberg.csproj --verify-no-changes && dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj --verify-no-changes && dotnet format Benchmark/Benchmark.csproj --verify-no-changes'

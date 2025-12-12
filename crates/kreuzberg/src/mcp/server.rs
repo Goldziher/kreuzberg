@@ -750,6 +750,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);
@@ -786,6 +787,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);
@@ -807,6 +809,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);
@@ -825,6 +828,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let formatted = format_extraction_result(&result);
@@ -1622,19 +1626,17 @@ mod tests {
 
             let result = server.batch_extract_files(Parameters(params)).await;
 
-            if result.is_ok() {
-                let call_result = result.unwrap();
-                if let Some(content) = call_result.content.first()
-                    && let RawContent::Text(text) = &content.raw
-                {
-                    assert!(text.text.contains("Document 1"));
-                    assert!(text.text.contains("Document 2"));
+            if let Ok(call_result) = result
+                && let Some(content) = call_result.content.first()
+                && let RawContent::Text(text) = &content.raw
+            {
+                assert!(text.text.contains("Document 1"));
+                assert!(text.text.contains("Document 2"));
 
-                    let doc1_pos = text.text.find("Document 1");
-                    let doc2_pos = text.text.find("Document 2");
-                    if let (Some(pos1), Some(pos2)) = (doc1_pos, doc2_pos) {
-                        assert!(pos1 < pos2, "Documents should be in order");
-                    }
+                let doc1_pos = text.text.find("Document 1");
+                let doc2_pos = text.text.find("Document 2");
+                if let (Some(pos1), Some(pos2)) = (doc1_pos, doc2_pos) {
+                    assert!(pos1 < pos2, "Documents should be in order");
                 }
             }
         }

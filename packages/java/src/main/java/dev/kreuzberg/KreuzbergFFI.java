@@ -75,6 +75,7 @@ final class KreuzbergFFI {
         ValueLayout.ADDRESS.withName("metadata_json"),
         ValueLayout.ADDRESS.withName("chunks_json"),
         ValueLayout.ADDRESS.withName("images_json"),
+        ValueLayout.ADDRESS.withName("page_structure_json"),
         ValueLayout.JAVA_BOOLEAN.withName("success"),
         MemoryLayout.paddingLayout(7)
     );
@@ -99,6 +100,8 @@ final class KreuzbergFFI {
         MemoryLayout.PathElement.groupElement("chunks_json"));
     static final long IMAGES_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("images_json"));
+    static final long PAGE_STRUCTURE_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
+        MemoryLayout.PathElement.groupElement("page_structure_json"));
     static final long SUCCESS_OFFSET = C_EXTRACTION_RESULT_LAYOUT.byteOffset(
         MemoryLayout.PathElement.groupElement("success"));
 

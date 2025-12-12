@@ -115,7 +115,7 @@ runs:
 
     - name: Cache Rust build artifacts
       id: cache-rust
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cargo/registry/index
@@ -127,7 +127,7 @@ runs:
           ${{ inputs.cache-key-prefix }}-v3-${{ runner.os }}-${{ inputs.target || 'default' }}-
 
     - name: Cache cargo-llvm-cov
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cargo/bin/cargo-llvm-cov
         key: cargo-llvm-cov-v2-${{ runner.os }}

@@ -569,6 +569,7 @@ impl DocumentExtractor for JatsExtractor {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         })
     }
 

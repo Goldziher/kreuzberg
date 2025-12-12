@@ -69,7 +69,7 @@ jobs:
     name: Node Build + Smoke (${{ matrix.target }})
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest
@@ -164,7 +164,7 @@ jobs:
     needs: build-and-smoke-node
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest
