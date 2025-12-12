@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
 
     <PackageId>Kreuzberg</PackageId>
-    <Version>4.0.0-rc.6</Version>
+    <Version>4.0.0-rc.7</Version>
     <Authors>kreuzberg.dev</Authors>
     <Company>kreuzberg.dev</Company>
     <Description>High-performance document intelligence library for .NET powered by Rust. Extract text, metadata, and structured content from 50+ file formats including PDF, Office documents, images, HTML, XML, and more. Features OCR support (Tesseract), metadata parsing, table extraction, and async/sync APIs. 10-50x faster than Python alternatives with 60-90% less memory usage.</Description>

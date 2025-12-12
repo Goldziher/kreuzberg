@@ -1754,4 +1754,4 @@ export function getLastPanicContext(): PanicContext | null {
 	return binding.getLastPanicContext();
 }
 
-export const __version__ = "4.0.0-rc.6";
+export const __version__ = "4.0.0-rc.7";
