@@ -3,11 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ExtractionConfig, extractBytesSync, extractFileSync } from "../../dist/index.js";
 import type { ExtractionConfig as ExtractionConfigType } from "../../src/types.js";
-
-function getTestDocumentPath(relativePath: string): string {
-	const workspaceRoot = join(process.cwd(), "../..");
-	return join(workspaceRoot, "test_documents", relativePath);
-}
+import { getTestDocumentPath } from "../helpers/index.js";
 
 describe("Configuration Options", () => {
 	const pdfPath = getTestDocumentPath("pdf/simple.pdf");

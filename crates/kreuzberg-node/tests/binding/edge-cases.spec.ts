@@ -1,11 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-
-function getTestDocumentPath(relativePath: string): string {
-	const workspaceRoot = join(process.cwd(), "../..");
-	return join(workspaceRoot, "test_documents", relativePath);
-}
+import { getTestDocumentPath } from "../helpers/index.js";
 
 describe("Edge Cases and Coverage", () => {
 	describe("Metadata parsing edge cases", () => {

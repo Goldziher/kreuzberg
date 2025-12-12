@@ -13,7 +13,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
 	batchExtractBytes,
@@ -25,11 +24,7 @@ import {
 	extractFile,
 	extractFileSync,
 } from "../../dist/index.js";
-
-function getTestDocumentPath(relativePath: string): string {
-	const workspaceRoot = join(process.cwd(), "../..");
-	return join(workspaceRoot, "test_documents", relativePath);
-}
+import { getTestDocumentPath } from "../helpers/index.js";
 
 let samplePdfPath: string;
 let samplePdfBytes: Uint8Array;
