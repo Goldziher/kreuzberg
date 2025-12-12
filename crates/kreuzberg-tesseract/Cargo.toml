@@ -25,7 +25,7 @@ image = { workspace = true }
 
 [build-dependencies]
 cc = { version = "1.2.49", optional = true }
-cmake = { version = "0.1.54", optional = true }
+cmake = { version = "0.1.55", optional = true }
 reqwest = { workspace = true, default-features = false, features = [
     "blocking",
     "rustls-tls",
