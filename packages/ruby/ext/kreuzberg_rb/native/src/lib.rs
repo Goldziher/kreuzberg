@@ -1,3 +1,5 @@
+#![allow(unpredictable_function_pointer_comparisons)]
+
 //! Kreuzberg Ruby Bindings (Magnus)
 //!
 //! High-performance document intelligence framework bindings for Ruby.
