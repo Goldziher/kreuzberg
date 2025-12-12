@@ -54,7 +54,7 @@ jobs:
       SCCACHE_GHA_ENABLED: "false"
       SCCACHE_PATH: ""
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest
@@ -170,7 +170,7 @@ jobs:
     needs: build-and-smoke-python
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest

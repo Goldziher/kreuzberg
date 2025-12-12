@@ -52,7 +52,7 @@ jobs:
     name: Ruby Gem (${{ matrix.os }}, Ruby ${{ matrix.ruby-version }})
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest
@@ -185,7 +185,7 @@ jobs:
     needs: build-ruby-gem
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest
