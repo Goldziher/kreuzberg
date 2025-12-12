@@ -171,14 +171,18 @@ internal static class Serialization
         }
 
         ApplyFormatMetadata(root, metadata);
-        var additional = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+        var additional = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         foreach (var property in root.EnumerateObject())
         {
             if (CoreMetadataKeys.Contains(property.Name))
             {
                 continue;
             }
-            additional[property.Name] = ParseNode(property.Value);
+            var node = ParseNode(property.Value);
+            if (node != null)
+            {
+                additional[property.Name] = node;
+            }
         }
 
         if (additional.Count > 0)
@@ -271,7 +275,7 @@ internal static class Serialization
         {
             foreach (var kvp in metadata.Additional)
             {
-                node[kvp.Key] = kvp.Value;
+                node[kvp.Key] = kvp.Value as JsonNode;
             }
         }
 
