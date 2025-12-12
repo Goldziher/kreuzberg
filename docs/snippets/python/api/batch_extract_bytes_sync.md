@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import batch_extract_bytes_sync, ExtractionConfig
 
 files: list[str] = ["doc1.pdf", "doc2.docx"]

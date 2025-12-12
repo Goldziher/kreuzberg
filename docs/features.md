@@ -532,8 +532,7 @@ Rust provides fine-grained control over included components via Cargo features:
 - `cli` - CLI features + common extractors
 
 **Example Cargo.toml:**
-```toml title="Cargo.toml"
-# Add kreuzberg with specific features enabled
+```toml title="Add kreuzberg with specific features enabled"
 [dependencies]
 kreuzberg = { version = "4.0", features = ["pdf", "ocr", "chunking"] }
 ```

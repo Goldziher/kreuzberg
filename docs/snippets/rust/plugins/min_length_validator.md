@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::plugins::{Plugin, Validator};
 use kreuzberg::{Result, ExtractionResult, ExtractionConfig, KreuzbergError};
 use async_trait::async_trait;

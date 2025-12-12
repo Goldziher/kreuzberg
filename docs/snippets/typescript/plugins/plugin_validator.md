@@ -1,4 +1,4 @@
-```ts
+```ts title="TypeScript"
 import {
 	extractFileSync,
 	registerValidator,

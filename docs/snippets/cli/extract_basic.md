@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Extract to stdout
 kreuzberg extract document.pdf
 

@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Start MCP server (stdio transport)
 kreuzberg mcp
 

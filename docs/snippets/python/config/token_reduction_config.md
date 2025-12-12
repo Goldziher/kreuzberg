@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import ExtractionConfig, TokenReductionConfig
 
 config: ExtractionConfig = ExtractionConfig(

@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 import dev.kreuzberg.Kreuzberg;
 
 try {

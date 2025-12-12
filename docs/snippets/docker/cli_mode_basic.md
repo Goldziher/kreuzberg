@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Extract a single file
 docker run -v $(pwd):/data goldziher/kreuzberg:latest \
   extract /data/document.pdf

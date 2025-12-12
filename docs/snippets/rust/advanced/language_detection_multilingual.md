@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_file, ExtractionConfig, LanguageDetectionConfig};
 
 let config = ExtractionConfig {

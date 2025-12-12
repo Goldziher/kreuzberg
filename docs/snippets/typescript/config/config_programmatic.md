@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { extractFileSync, type ExtractionConfig } from '@kreuzberg/node';
 
 const config: ExtractionConfig = {

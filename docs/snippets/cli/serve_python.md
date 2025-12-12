@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Start server via Python CLI proxy
 python -m kreuzberg serve
 

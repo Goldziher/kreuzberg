@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx']

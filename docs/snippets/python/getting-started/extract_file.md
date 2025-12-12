@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 import asyncio
 from pathlib import Path
 from kreuzberg import extract_file

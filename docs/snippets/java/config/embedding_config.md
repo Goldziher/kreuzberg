@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 import dev.kreuzberg.config.ChunkingConfig;
 import dev.kreuzberg.config.EmbeddingConfig;
 import dev.kreuzberg.config.EmbeddingModelType;

@@ -384,6 +384,22 @@
 	border-radius: 8px;
 }
 
+[data-md-color-scheme="slate"] .md-typeset .admonition p,
+[data-md-color-scheme="slate"] .md-typeset .admonition li,
+[data-md-color-scheme="slate"] .md-typeset details p,
+[data-md-color-scheme="slate"] .md-typeset details li {
+	color: var(--md-primary-fg-color);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition strong,
+[data-md-color-scheme="slate"] .md-typeset details strong {
+	color: #323040;
+}
+
+[data-md-color-scheme="slate"] details .highlight {
+	border: 1px solid var(--md-primary-fg-color);
+}
+
 .tabbed-set {
 	border-radius: 8px;
 	overflow: hidden;
@@ -391,16 +407,79 @@
 
 .tabbed-labels > label {
 	color: var(--md-default-fg-color);
-	transition: color 0.2s ease;
+	transition: all 0.2s ease;
+	border-radius: 6px;
+	padding: 8px 16px;
+	cursor: pointer;
+	background-color: transparent;
+	border: 1px solid rgba(0, 0, 0, 0.1);
+	font-weight: 500;
+}
+
+.tabbed-labels > label a {
+	text-decoration: none;
+	color: inherit;
+	font-size: 14px;
+	font-weight: inherit;
+	line-height: normal;
+	transition: all 0.2s ease;
+}
+
+[data-md-color-scheme="slate"] .tabbed-labels > label {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+[data-md-color-scheme="slate"] .tabbed-labels > label a {
+	color: #ffffff;
+	text-decoration: none;
+	transition: all 0.2s ease;
 }
 
 .tabbed-labels > label:hover {
+	background-color: rgba(218, 42, 224, 0.1);
+	border-color: var(--md-accent-fg-color);
 	color: var(--md-accent-fg-color);
+	transform: translateY(-1px);
 }
 
-.tabbed-labels > label[for]:hover,
+.tabbed-labels > label:hover a {
+	color: inherit;
+	text-decoration: none;
+}
+
+[data-md-color-scheme="slate"] .tabbed-labels > label:hover {
+	background-color: rgba(88, 251, 218, 0.1);
+	border-color: var(--md-accent-fg-color-opposite);
+	color: var(--md-accent-fg-color-opposite);
+}
+
+[data-md-color-scheme="slate"] .tabbed-labels > label:hover a {
+	color: var(--md-accent-fg-color-opposite);
+	text-decoration: none;
+}
+
 .tabbed-labels > label[for][aria-selected="true"] {
-	color: var(--md-primary-fg-color);
+	background-color: rgba(218, 42, 224, 0.1);
+	border-color: var(--md-accent-fg-color);
+	color: var(--md-accent-fg-color);
+	font-weight: 600;
+}
+
+.tabbed-labels > label[for][aria-selected="true"] a {
+	color: var(--md-accent-fg-color);
+	text-decoration: none;
+}
+
+[data-md-color-scheme="slate"] .tabbed-labels > label[for][aria-selected="true"] {
+	background-color: rgba(88, 251, 218, 0.1);
+	border-color: var(--md-accent-fg-color-opposite);
+	color: var(--md-accent-fg-color-opposite);
+}
+
+[data-md-color-scheme="slate"] .tabbed-labels > label[for][aria-selected="true"] a {
+	color: var(--md-accent-fg-color-opposite);
+	text-decoration: none;
 }
 
 .md-search__input {
@@ -897,4 +976,15 @@ nav.md-nav--secondary > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list 
 
 [data-md-color-scheme="slate"] .md-typeset .task-list-control [type="checkbox"]:checked + .task-list-indicator::before {
 	background-color: #58fbda;
+}
+
+[data-md-color-scheme="slate"] .mermaid {
+	--md-mermaid-label-fg-color: #4a4a4a;
+	--md-mermaid-node-bg-color: #e8e8e8;
+	--md-mermaid-label-bg-color: rgba(40, 40, 45, 0.95);
+}
+
+[data-md-color-scheme="slate"] {
+	--md-default-fg-color--lightest: rgba(240, 240, 245, 0.5);
+	--md-default-fg-color--lighter: rgba(220, 220, 230, 0.5);
 }

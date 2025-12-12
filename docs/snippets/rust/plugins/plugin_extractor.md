@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::plugins::{DocumentExtractor, Plugin};
 use kreuzberg::{Result, ExtractionResult, ExtractionConfig, Metadata};
 use async_trait::async_trait;

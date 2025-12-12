@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require "kreuzberg"
 
 # Custom validator ensuring extracted content meets minimum length requirement

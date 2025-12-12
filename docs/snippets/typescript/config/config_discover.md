@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { extractFile, ExtractionConfig } from '@kreuzberg/node';
 
 const config = ExtractionConfig.discover();

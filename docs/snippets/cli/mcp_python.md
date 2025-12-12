@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Start MCP server via Python CLI proxy
 python -m kreuzberg mcp
 

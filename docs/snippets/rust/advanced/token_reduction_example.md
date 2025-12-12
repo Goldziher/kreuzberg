@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_file, ExtractionConfig, TokenReductionConfig};
 
 let config = ExtractionConfig {

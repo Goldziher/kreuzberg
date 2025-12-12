@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 #[async_trait]
 impl Validator for QualityValidator {
     async fn validate(

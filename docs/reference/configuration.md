@@ -534,7 +534,6 @@ Configuration for reducing token count in extracted text, useful for optimizing 
 ### TOML Format
 
 ```toml title="kreuzberg.toml"
-# kreuzberg.toml
 use_cache = true
 enable_quality_processing = true
 force_ocr = false

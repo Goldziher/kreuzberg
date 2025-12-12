@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { extractFileSync, KreuzbergError } from '@kreuzberg/node';
 
 try {

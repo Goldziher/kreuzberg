@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import extract_bytes_sync, ExtractionConfig
 
 with open("document.pdf", "rb") as f:

@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using System;
 using System.Threading.Tasks;
 using Kreuzberg;

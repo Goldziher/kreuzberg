@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 // Multiple files
 const multipleFiles = new FormData();
 for (const file of fileInput.files) {

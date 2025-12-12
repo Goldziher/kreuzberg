@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 import dev.kreuzberg.*;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;

@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_file_sync, ChunkingConfig, ExtractionConfig, OcrConfig, TesseractConfig};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

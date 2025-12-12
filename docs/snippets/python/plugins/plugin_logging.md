@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 import logging
 
 logger = logging.getLogger(__name__)

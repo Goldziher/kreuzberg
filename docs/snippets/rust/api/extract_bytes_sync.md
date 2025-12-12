@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_bytes_sync, ExtractionConfig};
 use std::fs;
 

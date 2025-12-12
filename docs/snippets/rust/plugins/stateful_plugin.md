@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use kreuzberg::KreuzbergError;

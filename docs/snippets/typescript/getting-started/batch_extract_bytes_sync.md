@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { batchExtractBytesSync } from '@kreuzberg/node';
 import { readFileSync } from 'fs';
 

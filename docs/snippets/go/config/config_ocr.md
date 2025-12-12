@@ -1,4 +1,4 @@
-```go
+```go title="Go"
 package main
 
 import "github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg"

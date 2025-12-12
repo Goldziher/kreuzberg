@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 !!! note "Not Supported"
     The TypeScript binding is a thin FFI wrapper and does not currently support
     custom document extractors. Custom plugins must be implemented in Rust.

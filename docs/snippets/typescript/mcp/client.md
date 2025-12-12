@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { spawn } from "node:child_process";
 import * as readline from "node:readline";
 

@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { getVersion, extractFileSync } from '@kreuzberg/node';
 
 const version = getVersion();

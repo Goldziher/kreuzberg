@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from langchain.agents import initialize_agent, AgentType
 from langchain.tools import Tool
 from langchain_openai import ChatOpenAI

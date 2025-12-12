@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import (
     list_document_extractors,
     list_post_processors,

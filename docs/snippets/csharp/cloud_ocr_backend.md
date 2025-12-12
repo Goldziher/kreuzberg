@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 using System.Net.Http;
 using System.Text.Json;

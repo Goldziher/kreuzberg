@@ -246,7 +246,7 @@ Customize extraction behavior:
 
     **kreuzberg.toml:**
 
-    ```toml
+    ```toml title="TOML"
     [ocr]
     backend = "tesseract"
     language = "eng"

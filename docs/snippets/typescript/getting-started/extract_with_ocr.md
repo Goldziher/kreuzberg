@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { extractFileSync } from '@kreuzberg/node';
 
 const config = {

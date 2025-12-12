@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { describe, it, expect } from 'vitest';
 import {
 	registerPostProcessor,

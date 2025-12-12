@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { extractBytesSync } from '@kreuzberg/node';
 import { readFileSync } from 'fs';
 

@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use serde_json::json;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};

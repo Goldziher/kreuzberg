@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import register_ocr_backend
 import httpx
 

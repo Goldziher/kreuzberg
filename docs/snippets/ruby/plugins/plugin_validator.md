@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require "kreuzberg"
 
 validator = lambda do |result|

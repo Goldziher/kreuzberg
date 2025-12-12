@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 import httpx
 
 with httpx.Client() as client:

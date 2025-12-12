@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 
 var files = new[] { "doc1.pdf", "doc2.docx", "doc3.pptx" };

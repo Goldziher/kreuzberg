@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 ocr_config = Kreuzberg::Config::OCR.new(

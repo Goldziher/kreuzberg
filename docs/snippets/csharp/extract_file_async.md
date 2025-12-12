@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 
 var result = await KreuzbergClient.ExtractFileAsync("document.pdf");

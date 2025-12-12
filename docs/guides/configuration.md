@@ -60,8 +60,7 @@ Kreuzberg supports four ways to configure extraction:
 
 === "TOML File"
 
-    ```toml
-    # kreuzberg.toml
+    ```toml title="kreuzberg.toml"
     use_cache = true
     enable_quality_processing = true
 
@@ -709,8 +708,7 @@ Here's a complete example showing all configuration options together:
 
 === "TOML"
 
-    ```toml
-    # kreuzberg.toml
+    ```toml title="kreuzberg.toml"
     use_cache = true
     enable_quality_processing = true
     force_ocr = false

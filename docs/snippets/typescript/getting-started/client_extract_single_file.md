@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 // Using fetch API
 const formData = new FormData();
 formData.append("files", fileInput.files[0]);

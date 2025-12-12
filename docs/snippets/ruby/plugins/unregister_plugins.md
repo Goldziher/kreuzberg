@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 Kreuzberg.unregister_post_processor('word_count')

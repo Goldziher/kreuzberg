@@ -206,8 +206,7 @@ The server automatically discovers configuration files in this order:
 
 **Example kreuzberg.toml:**
 
-```toml title="kreuzberg.toml"
-# Configure OCR backend and language settings
+```toml title="Configure OCR backend and language settings"
 [ocr]
 backend = "tesseract"
 language = "eng"
@@ -809,8 +808,7 @@ The server handles concurrent requests efficiently using Tokio's async runtime. 
 
 Configure cache behavior via `kreuzberg.toml`:
 
-```toml title="kreuzberg.toml"
-# Enable caching for faster repeated extractions
+```toml title="Enable caching for faster repeated extractions"
 use_cache = true
 cache_dir = "/var/cache/kreuzberg"  # Custom cache location for production
 ```

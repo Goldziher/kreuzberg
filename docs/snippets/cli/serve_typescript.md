@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Start server via TypeScript CLI proxy
 npx kreuzberg serve
 

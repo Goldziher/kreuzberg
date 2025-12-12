@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { extractBytes } from '@kreuzberg/node';
 import { readFile } from 'fs/promises';
 

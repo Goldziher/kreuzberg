@@ -1,4 +1,4 @@
-```markdown
+```markdown title="Markdown"
 !!! note "Not Supported"
     The Go binding is a thin CGO wrapper and does not currently support
     custom document extractors. Custom plugins must be implemented in Rust.

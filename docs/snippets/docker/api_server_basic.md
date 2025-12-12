@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Start API server (default mode)
 docker run -p 8000:8000 goldziher/kreuzberg:latest
 

@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 import dev.kreuzberg.config.ExtractionConfig;
 import dev.kreuzberg.config.PdfConfig;
 import java.util.Arrays;

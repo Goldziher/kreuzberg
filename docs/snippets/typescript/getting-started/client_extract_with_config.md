@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 // With configuration
 const formDataWithConfig = new FormData();
 formDataWithConfig.append("files", fileInput.files[0]);

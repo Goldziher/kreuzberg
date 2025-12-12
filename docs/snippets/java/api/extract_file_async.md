@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 import dev.kreuzberg.Kreuzberg;
 import dev.kreuzberg.ExtractionResult;
 import java.nio.file.Path;
