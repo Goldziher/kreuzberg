@@ -34,6 +34,7 @@ internal static partial class NativeMethods
         public IntPtr MetadataJson;
         public IntPtr ChunksJson;
         public IntPtr ImagesJson;
+        public IntPtr PageStructureJson;
 
         [MarshalAs(UnmanagedType.I1)]
         public bool Success;

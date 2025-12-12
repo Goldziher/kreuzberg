@@ -1057,6 +1057,10 @@ public static class KreuzbergClient
             result.Chunks = DeserializeField<List<Chunk>>(cRes.ChunksJson);
             result.Images = DeserializeField<List<ExtractedImage>>(cRes.ImagesJson);
 
+            if (result.Metadata.Pages == null && cRes.PageStructureJson != IntPtr.Zero)
+            {
+                result.Metadata.Pages = DeserializeField<PageStructure>(cRes.PageStructureJson);
+            }
             if (result.Metadata.Language == null && cRes.Language != IntPtr.Zero)
             {
                 result.Metadata.Language = InteropUtilities.ReadUtf8(cRes.Language);

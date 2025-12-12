@@ -40,7 +40,6 @@ repos:
       - id: biome-format
         exclude: ^docs/snippets/
       - id: biome-lint
-        args: ["--write"]
         exclude: ^docs/snippets/
   - repo: https://github.com/oxc-project/mirrors-oxlint
     rev: v1.32.0
@@ -53,9 +52,9 @@ repos:
     hooks:
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
-        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
       - id: ruff-format
-        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.11.0
     hooks:
@@ -84,7 +83,7 @@ repos:
         exclude: "(crates/kreuzberg-tesseract/third_party/.*|^docs/snippets/)"
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
-        files: ^packages/java/src/.*\.java$
+        files: ^(packages/java|e2e/java)/src/.*\.java$
         exclude: "crates/kreuzberg-tesseract/third_party/.*"
   - repo: local
     hooks:
@@ -150,7 +149,16 @@ repos:
         require_serial: true
         language: system
         types: [python]
-        exclude: ^(v3|benchmarks|scripts|crates|examples|e2e|docs/snippets|packages/python|tools|packages/ruby)/
+        exclude: ^(docs/snippets/|crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
+        pass_filenames: false
+      - id: typescript-typecheck
+        name: typescript typecheck (crates/kreuzberg-node)
+        entry: bash -c 'cd crates/kreuzberg-node && pnpm typecheck'
+        require_serial: true
+        language: system
+        files: ^crates/kreuzberg-node/
+        exclude: ^docs/snippets/
+        pass_filenames: false
       - id: dotnet-format
         name: dotnet format (packages/csharp)
         entry: bash -c 'cd packages/csharp && dotnet format Kreuzberg/Kreuzberg.csproj --verify-no-changes && dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj --verify-no-changes && dotnet format Benchmark/Benchmark.csproj --verify-no-changes'

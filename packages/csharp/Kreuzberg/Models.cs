@@ -226,6 +226,9 @@ public sealed class Metadata
     [JsonPropertyName("error")]
     public ErrorMetadata? Error { get; set; }
 
+    [JsonPropertyName("pages")]
+    public PageStructure? Pages { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, JsonNode?>? Additional { get; set; }
 }
@@ -507,6 +510,96 @@ public sealed class OcrMetadata
 
     [JsonPropertyName("table_cols")]
     public int? TableCols { get; set; }
+}
+
+/// <summary>
+/// Represents the page structure of a document with metadata about pagination.
+/// </summary>
+public sealed class PageStructure
+{
+    /// <summary>
+    /// Total number of pages/slides/sheets in the document.
+    /// </summary>
+    [JsonPropertyName("total_count")]
+    public int TotalCount { get; set; }
+
+    /// <summary>
+    /// Type of paginated unit (e.g., page, slide, sheet).
+    /// </summary>
+    [JsonPropertyName("unit_type")]
+    public string UnitType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Character offset boundaries for each page. Maps character ranges in the extracted content to page numbers.
+    /// </summary>
+    [JsonPropertyName("boundaries")]
+    public List<PageBoundary>? Boundaries { get; set; }
+
+    /// <summary>
+    /// Detailed per-page metadata (optional, only when needed).
+    /// </summary>
+    [JsonPropertyName("pages")]
+    public List<PageInfo>? Pages { get; set; }
+}
+
+/// <summary>
+/// Represents a character offset boundary for a page.
+/// </summary>
+public sealed class PageBoundary
+{
+    /// <summary>
+    /// Page number (1-indexed).
+    /// </summary>
+    [JsonPropertyName("page_number")]
+    public int PageNumber { get; set; }
+
+    /// <summary>
+    /// Starting character offset in the document.
+    /// </summary>
+    [JsonPropertyName("start")]
+    public int Start { get; set; }
+
+    /// <summary>
+    /// Ending character offset in the document.
+    /// </summary>
+    [JsonPropertyName("end")]
+    public int End { get; set; }
+}
+
+/// <summary>
+/// Represents per-page metadata in a document.
+/// </summary>
+public sealed class PageInfo
+{
+    /// <summary>
+    /// Page number (1-indexed).
+    /// </summary>
+    [JsonPropertyName("page_number")]
+    public int PageNumber { get; set; }
+
+    /// <summary>
+    /// Page width (in points or pixels, depending on document type).
+    /// </summary>
+    [JsonPropertyName("width")]
+    public double? Width { get; set; }
+
+    /// <summary>
+    /// Page height (in points or pixels, depending on document type).
+    /// </summary>
+    [JsonPropertyName("height")]
+    public double? Height { get; set; }
+
+    /// <summary>
+    /// Optional text representation of the page.
+    /// </summary>
+    [JsonPropertyName("text")]
+    public string? Text { get; set; }
+
+    /// <summary>
+    /// Optional labels or notes for the page.
+    /// </summary>
+    [JsonPropertyName("labels")]
+    public List<string>? Labels { get; set; }
 }
 
 /// <summary>

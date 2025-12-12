@@ -40,6 +40,7 @@ internal static class Serialization
         "image_preprocessing",
         "json_schema",
         "error",
+        "pages",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     internal static string SerializeResult(ExtractionResult result)
@@ -157,6 +158,11 @@ internal static class Serialization
             metadata.Error = DeserializeElement<ErrorMetadata>(error);
         }
 
+        if (root.TryGetProperty("pages", out var pages))
+        {
+            metadata.Pages = DeserializeElement<PageStructure>(pages);
+        }
+
         if (root.TryGetProperty("format_type", out var formatType))
         {
             metadata.FormatType = ParseFormat(formatType.GetString());
@@ -253,6 +259,10 @@ internal static class Serialization
         if (metadata.Error != null)
         {
             node["error"] = JsonSerializer.SerializeToNode(metadata.Error, Options);
+        }
+        if (metadata.Pages != null)
+        {
+            node["pages"] = JsonSerializer.SerializeToNode(metadata.Pages, Options);
         }
 
         AddFormatFields(metadata, node);

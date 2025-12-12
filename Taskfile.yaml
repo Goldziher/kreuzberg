@@ -298,6 +298,7 @@ tasks:
     dir: crates/kreuzberg-node
     cmds:
       - pnpm lint
+      - pnpm typecheck
   typescript:format:
     desc: Format TypeScript code with modifications (biome)
     dir: crates/kreuzberg-node
