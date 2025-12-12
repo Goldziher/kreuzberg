@@ -1340,7 +1340,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '24'
+          java-version: '25'
           cache: 'maven'
 
       - name: Cache PDFium
@@ -2329,7 +2329,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "24"
+          java-version: "25"
           cache: maven
           server-id: ossrh
           server-username: MAVEN_USERNAME
