@@ -35,15 +35,13 @@ echo
 
 # Build list of Go packages that actually contain source files (skip empty module root)
 echo "Discovering Go packages (excluding empty roots)..."
-mapfile -t go_dirs < <(find . -name '*.go' -not -path './vendor/*' -print0 | xargs -0 -n1 dirname | sort -u)
 packages=()
-for dir in "${go_dirs[@]}"; do
+while IFS= read -r dir; do
 	# Skip the module root if it contains no Go sources
-	if [[ "$dir" == "." ]]; then
-		continue
+	if [[ "$dir" != "." ]]; then
+		packages+=("./$dir")
 	fi
-	packages+=("./${dir#./}")
-done
+done < <(find . -name '*.go' -not -path './vendor/*' -exec dirname {} \; | sort -u)
 
 echo "Found packages: $(printf '%s ' "${packages[@]}")"
 echo
