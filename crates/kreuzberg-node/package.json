@@ -27,11 +27,11 @@
 		}
 	},
 	"bin": {
-		"kreuzberg": "./dist/cli.js"
+		"kreuzberg": "dist/cli.js"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/kreuzberg-dev/kreuzberg.git"
+		"url": "git+https://github.com/kreuzberg-dev/kreuzberg.git"
 	},
 	"license": "MIT",
 	"keywords": [
@@ -118,7 +118,12 @@
 		"which": "^6.0.0"
 	},
 	"optionalDependencies": {
-		"@gutenye/ocr-node": "^1.4.8",
-		"sharp": "^0.34.5"
+		"@kreuzberg/node-darwin-x64": "4.0.0-rc.6",
+		"@kreuzberg/node-darwin-arm64": "4.0.0-rc.6",
+		"@kreuzberg/node-win32-x64-msvc": "4.0.0-rc.6",
+		"@kreuzberg/node-win32-arm64-msvc": "4.0.0-rc.6",
+		"@kreuzberg/node-linux-x64-gnu": "4.0.0-rc.6",
+		"@kreuzberg/node-linux-arm64-gnu": "4.0.0-rc.6",
+		"@kreuzberg/node-linux-arm-gnueabihf": "4.0.0-rc.6"
 	}
 }

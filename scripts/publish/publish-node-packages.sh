@@ -6,7 +6,6 @@
 # Includes idempotent handling for already-published versions.
 #
 # Environment Variables:
-#   - NODE_AUTH_TOKEN: npm registry authentication token (required)
 #   - NPM_PACKAGES_DIR: Directory containing packed npm packages (default: crates/kreuzberg-node/npm)
 
 set -euo pipefail
@@ -30,7 +29,7 @@ for pkg in "${pkgs[@]}"; do
 	echo "Publishing $(basename "$pkg")"
 	publish_log=$(mktemp)
 	set +e
-	npm publish "$pkg" --access public --ignore-scripts 2>&1 | tee "$publish_log"
+	npm publish "$pkg" --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
 	status=${PIPESTATUS[0]}
 	set -e
 

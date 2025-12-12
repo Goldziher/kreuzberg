@@ -61,6 +61,7 @@ use std::sync::Arc;
 ///             detected_languages: None,
 ///             chunks: None,
 ///             images: None,
+///             pages: None,
 ///         })
 ///     }
 ///
@@ -139,6 +140,7 @@ pub trait DocumentExtractor: Plugin {
     ///         detected_languages: None,
     ///         chunks: None,
     ///         images: None,
+    ///         pages: None,
     ///     })
     /// }
     /// # }
@@ -209,6 +211,7 @@ pub trait DocumentExtractor: Plugin {
     ///         detected_languages: None,
     ///         chunks: None,
     ///         images: None,
+    ///         pages: None,
     ///     })
     /// }
     /// # }
@@ -412,6 +415,7 @@ pub trait DocumentExtractor: Plugin {
 ///             detected_languages: None,
 ///             chunks: None,
 ///             images: None,
+///             pages: None,
 ///         })
 ///     }
 ///

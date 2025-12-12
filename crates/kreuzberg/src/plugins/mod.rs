@@ -47,6 +47,7 @@
 //! #             detected_languages: None,
 //! #             chunks: None,
 //! #             images: None,
+//! #             pages: None,
 //! #         })
 //! #     }
 //! #     async fn extract_file(&self, _: &std::path::Path, _: &str, _: &kreuzberg::ExtractionConfig)
@@ -59,6 +60,7 @@
 //! #             detected_languages: None,
 //! #             chunks: None,
 //! #             images: None,
+//! #             pages: None,
 //! #         })
 //! #     }
 //! #     fn supported_mime_types(&self) -> &[&str] { &[] }
@@ -120,6 +122,7 @@
 //!             detected_languages: None,
 //!             chunks: None,
 //!             images: None,
+//!             pages: None,
 //!         })
 //!     }
 //!

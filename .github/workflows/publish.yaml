@@ -2153,6 +2153,10 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org/
 
+      - name: Update NPM
+        run: npm install -g npm
+        shell: bash
+
       - name: Enable corepack
         run: corepack enable
 
@@ -2192,6 +2196,10 @@ jobs:
       - name: Install workspace dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         run: pnpm install -C crates/kreuzberg-node
+
+      - name: Build TypeScript bundle
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        run: pnpm -C crates/kreuzberg-node build:ts
 
       - name: Pack platform packages
         run: |
@@ -2400,6 +2408,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Download NuGet artifact
         uses: actions/download-artifact@v6
@@ -2430,7 +2439,6 @@ jobs:
         run: |
           dotnet nuget push "dist/*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
-            --api-key "${{ secrets.NUGET_API_KEY }}" \
             --skip-duplicate
           echo "NuGet package published." >> "$GITHUB_STEP_SUMMARY"
 
