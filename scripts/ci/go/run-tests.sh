@@ -80,7 +80,15 @@ else
 	ffiPath="$workspace/target/release"
 	export LD_LIBRARY_PATH="$ffiPath:${LD_LIBRARY_PATH:-}"
 	export DYLD_LIBRARY_PATH="$ffiPath:${DYLD_LIBRARY_PATH:-}"
-	export CGO_LDFLAGS="-L$ffiPath"
+	export DYLD_FALLBACK_LIBRARY_PATH="$ffiPath:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+
+	# Add rpath for runtime library resolution (critical for macOS with SIP)
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		export CGO_LDFLAGS="-L$ffiPath -Wl,-rpath,$ffiPath"
+	else
+		export CGO_LDFLAGS="-L$ffiPath -Wl,-rpath,$ffiPath"
+	fi
+
 	export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 	echo "=========================================="
@@ -90,6 +98,7 @@ else
 	echo "FFI library path: $ffiPath"
 	echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 	echo "DYLD_LIBRARY_PATH: $DYLD_LIBRARY_PATH"
+	echo "DYLD_FALLBACK_LIBRARY_PATH: $DYLD_FALLBACK_LIBRARY_PATH"
 	echo "CGO_LDFLAGS: $CGO_LDFLAGS"
 	echo "CGO_CFLAGS: ${CGO_CFLAGS:-<not set>}"
 	echo "CC: ${CC:-<not set>}"

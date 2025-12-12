@@ -203,7 +203,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: go-tests-${{ matrix.os }}
-          use-sccache: ${{ matrix.os != 'windows-latest' }}
+          use-sccache: false
           target: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-gnu' || '' }}
           toolchain: ${{ matrix.os == 'windows-latest' && 'stable-x86_64-pc-windows-gnu' || '' }}
 
@@ -381,11 +381,16 @@ jobs:
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             export PATH="${PWD}/target/x86_64-pc-windows-gnu/release:${PWD}/target/release:${PATH}"
-            export CGO_LDFLAGS="-L${PWD}/target/x86_64-pc-windows-gnu/release -L${PWD}/target/release"
+            export CGO_LDFLAGS="-L${PWD}/target/x86_64-pc-windows-gnu/release -L${PWD}/target/release -lkreuzberg_ffi -static-libgcc -static-libstdc++"
           else
             export LD_LIBRARY_PATH="${PWD}/target/release:${LD_LIBRARY_PATH:-}"
             export DYLD_LIBRARY_PATH="${PWD}/target/release:${DYLD_LIBRARY_PATH:-}"
             export DYLD_FALLBACK_LIBRARY_PATH="${PWD}/target/release:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+            if [[ "$RUNNER_OS" == "macOS" ]]; then
+              export CGO_LDFLAGS="-L${PWD}/target/release -Wl,-rpath,${PWD}/target/release"
+            else
+              export CGO_LDFLAGS="-L${PWD}/target/release -Wl,-rpath,${PWD}/target/release"
+            fi
           fi
           if [[ "$RUNNER_OS" == "macOS" ]]; then
             export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
