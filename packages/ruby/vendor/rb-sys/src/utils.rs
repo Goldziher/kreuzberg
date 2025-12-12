@@ -10,7 +10,6 @@
 ///
 /// Ruby 2.4 and below don't have a global VM pointer, so we can't check if it's
 /// null. Ruby 2.4 is EOL, and support will be dropped soon anyway.
-//
 /// In Ruby 3.3, the global VM pointer is no longer exported, so there's no
 /// simple way to check the global VM pointer, so instead we check if known
 /// static value is non-zero.
@@ -55,7 +54,7 @@ macro_rules! debug_ruby_assert_type {
         }
         #[cfg(not(ruby_ruby_debug = "true"))]
         {
-            let _ = ($obj, $type, $message); // Prevent unused variable warnings
+            let _ = ($obj, $type, $message);
         }
     };
 }

@@ -8,6 +8,47 @@ using System.Text.Json.Serialization;
 
 namespace Kreuzberg;
 
+/// <summary>
+/// Custom JSON converter for byte arrays that handles both base64-encoded strings and JSON arrays.
+/// This is needed because Rust serializes byte arrays as JSON arrays, while System.Text.Json expects base64 strings.
+/// </summary>
+internal class ByteArrayConverter : JsonConverter<byte[]>
+{
+    public override byte[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.String => Convert.FromBase64String(reader.GetString() ?? string.Empty),
+            JsonTokenType.StartArray => ReadArrayAsBytes(ref reader),
+            _ => throw new JsonException($"Unexpected token {reader.TokenType} when parsing byte array")
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, byte[] value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(Convert.ToBase64String(value));
+    }
+
+    private static byte[] ReadArrayAsBytes(ref Utf8JsonReader reader)
+    {
+        var bytes = new List<byte>();
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndArray)
+            {
+                break;
+            }
+
+            if (reader.TokenType == JsonTokenType.Number)
+            {
+                bytes.Add(reader.GetByte());
+            }
+        }
+
+        return bytes.ToArray();
+    }
+}
+
 internal static class Serialization
 {
     internal static readonly JsonSerializerOptions Options = new()
@@ -15,6 +56,7 @@ internal static class Serialization
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = false,
+        Converters = { new ByteArrayConverter() }
     };
 
     private static readonly FrozenDictionary<FormatType, string[]> FormatFields = new Dictionary<FormatType, string[]>

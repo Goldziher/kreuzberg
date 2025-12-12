@@ -15,17 +15,19 @@ echo "=== Vendoring kreuzberg core crate ==="
 # Remove and recreate vendor directory
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi"
-# Keep rb-sys - it's patched for Windows compatibility
+rm -rf "$REPO_ROOT/packages/ruby/vendor/rb-sys"
 mkdir -p "$REPO_ROOT/packages/ruby/vendor"
 
-# Copy core crate and FFI crate
+# Copy core crate, FFI crate, and rb-sys (patched for Windows compatibility)
 cp -R "$REPO_ROOT/crates/kreuzberg" "$REPO_ROOT/packages/ruby/vendor/kreuzberg"
 cp -R "$REPO_ROOT/crates/kreuzberg-ffi" "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi"
+cp -R "$REPO_ROOT/vendor/rb-sys" "$REPO_ROOT/packages/ruby/vendor/rb-sys"
 
 # Clean up build artifacts
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg/.fastembed_cache"
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg/target"
 rm -rf "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi/target"
+rm -rf "$REPO_ROOT/packages/ruby/vendor/rb-sys/target"
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg" -name '*.swp' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg" -name '*.bak' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg" -name '*.tmp' -delete
@@ -34,6 +36,10 @@ find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*.swp' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*.bak' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*.tmp' -delete
 find "$REPO_ROOT/packages/ruby/vendor/kreuzberg-ffi" -name '*~' -delete
+find "$REPO_ROOT/packages/ruby/vendor/rb-sys" -name '*.swp' -delete
+find "$REPO_ROOT/packages/ruby/vendor/rb-sys" -name '*.bak' -delete
+find "$REPO_ROOT/packages/ruby/vendor/rb-sys" -name '*.tmp' -delete
+find "$REPO_ROOT/packages/ruby/vendor/rb-sys" -name '*~' -delete
 
 # Extract core version from workspace Cargo.toml
 core_version=$(awk -F '"' '/^\[workspace.package\]/,/^version =/ {if ($0 ~ /^version =/) {print $2; exit}}' "$REPO_ROOT/Cargo.toml")
