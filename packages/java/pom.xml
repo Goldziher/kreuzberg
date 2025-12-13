@@ -360,6 +360,66 @@
                                     </arguments>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>copy-native-libraries</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>-c</argument>
+                                        <argument>
+                                            set -e
+                                            UNAME_S=$(uname -s)
+                                            UNAME_M=$(uname -m)
+
+                                            if [[ "$UNAME_S" == "Darwin" ]]; then
+                                                OS="macos"
+                                            elif [[ "$UNAME_S" == "Linux" ]]; then
+                                                OS="linux"
+                                            elif [[ "$UNAME_S" == MINGW* ]] || [[ "$UNAME_S" == MSYS* ]]; then
+                                                OS="windows"
+                                            else
+                                                OS="linux"
+                                            fi
+
+                                            if [[ "$UNAME_M" == "aarch64" ]] || [[ "$UNAME_M" == "arm64" ]]; then
+                                                ARCH="arm64"
+                                            elif [[ "$UNAME_M" == "x86_64" ]] || [[ "$UNAME_M" == "amd64" ]]; then
+                                                ARCH="x86_64"
+                                            else
+                                                ARCH="$UNAME_M"
+                                            fi
+
+                                            RID="${OS}-${ARCH}"
+                                            NATIVES_DIR="${project.basedir}/src/main/resources/natives/$RID"
+                                            SOURCE_DIR="${project.basedir}/../../target/release"
+
+                                            mkdir -p "$NATIVES_DIR"
+
+                                            # Copy native libraries based on OS
+                                            if [[ "$OS" == "macos" ]]; then
+                                                cp "$SOURCE_DIR"/libkreuzberg_ffi.dylib "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: libkreuzberg_ffi.dylib not found"
+                                                cp "$SOURCE_DIR"/libpdfium.dylib "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: libpdfium.dylib not found"
+                                                cp "$SOURCE_DIR"/libonnxruntime*.dylib "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: libonnxruntime libraries not found"
+                                            elif [[ "$OS" == "linux" ]]; then
+                                                cp "$SOURCE_DIR"/libkreuzberg_ffi.so "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: libkreuzberg_ffi.so not found"
+                                                cp "$SOURCE_DIR"/libpdfium.so* "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: libpdfium.so not found"
+                                                cp "$SOURCE_DIR"/libonnxruntime.so* "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: libonnxruntime libraries not found"
+                                            elif [[ "$OS" == "windows" ]]; then
+                                                cp "$SOURCE_DIR"/kreuzberg_ffi.dll "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: kreuzberg_ffi.dll not found"
+                                                cp "$SOURCE_DIR"/pdfium.dll "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: pdfium.dll not found"
+                                                cp "$SOURCE_DIR"/onnxruntime.dll "$NATIVES_DIR"/ 2>/dev/null || echo "Warning: onnxruntime.dll not found"
+                                            fi
+
+                                            echo "Native libraries copied to $NATIVES_DIR"
+                                            ls -la "$NATIVES_DIR" || echo "Directory creation failed"
+                                        </argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                 </plugins>
