@@ -85,33 +85,7 @@ jobs:
           EVENT_DISPATCH_DRY_RUN: ${{ github.event.client_payload.dry_run }}
           EVENT_DISPATCH_REF: ${{ github.event.client_payload.ref }}
           EVENT_DISPATCH_TARGETS: ${{ github.event.client_payload.targets }}
-        run: |
-          metadata=$(bash scripts/publish/validate-and-compute-release-metadata.sh)
-          echo "$metadata" > release-metadata.json
-
-          {
-            echo "tag=$(echo "$metadata" | jq -r '.tag')"
-            echo "version=$(echo "$metadata" | jq -r '.version')"
-            echo "ref=$(echo "$metadata" | jq -r '.ref')"
-            echo "dry_run=$(echo "$metadata" | jq -r '.dry_run')"
-            echo "checkout_ref=$(echo "$metadata" | jq -r '.checkout_ref')"
-            echo "target_sha=$(echo "$metadata" | jq -r '.target_sha')"
-            echo "matrix_ref=$(echo "$metadata" | jq -r '.matrix_ref')"
-            echo "is_tag=$(echo "$metadata" | jq -r '.is_tag')"
-            echo "release_targets=$(echo "$metadata" | jq -r '.release_targets')"
-            echo "release_any=$(echo "$metadata" | jq -r '.release_any')"
-            echo "release_python=$(echo "$metadata" | jq -r '.release_python')"
-            echo "release_node=$(echo "$metadata" | jq -r '.release_node')"
-            echo "release_ruby=$(echo "$metadata" | jq -r '.release_ruby')"
-            echo "release_cli=$(echo "$metadata" | jq -r '.release_cli')"
-            echo "release_crates=$(echo "$metadata" | jq -r '.release_crates')"
-            echo "release_docker=$(echo "$metadata" | jq -r '.release_docker')"
-            echo "release_homebrew=$(echo "$metadata" | jq -r '.release_homebrew')"
-            echo "release_java=$(echo "$metadata" | jq -r '.release_java')"
-            echo "release_csharp=$(echo "$metadata" | jq -r '.release_csharp')"
-            echo "release_go=$(echo "$metadata" | jq -r '.release_go')"
-            echo "release_wasm=$(echo "$metadata" | jq -r '.release_wasm')"
-          } >> "$GITHUB_OUTPUT"
+        run: bash scripts/publish/prepare-release-metadata.sh
 
       - name: Upload release metadata
         uses: actions/upload-artifact@v5
@@ -135,9 +109,7 @@ jobs:
 
       - name: Check PyPI for existing version
         id: check
-        run: |
-          output=$(bash scripts/publish/check_pypi.sh "${{ needs.prepare.outputs.version }}")
-          echo "$output" >> "$GITHUB_OUTPUT"
+        run: bash scripts/publish/check_pypi.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
 
   check-npm:
     name: Check if Node package exists on npm
@@ -154,9 +126,7 @@ jobs:
 
       - name: Check npm for existing version
         id: check
-        run: |
-          output=$(bash scripts/publish/check_npm.sh "${{ needs.prepare.outputs.version }}")
-          echo "$output" >> "$GITHUB_OUTPUT"
+        run: bash scripts/publish/check_npm.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
 
   check-rubygems:
     name: Check if Ruby gem exists on RubyGems
@@ -173,9 +143,7 @@ jobs:
 
       - name: Check RubyGems for existing version
         id: check
-        run: |
-          output=$(bash scripts/publish/check_rubygems.sh "${{ needs.prepare.outputs.version }}")
-          echo "$output" >> "$GITHUB_OUTPUT"
+        run: bash scripts/publish/check_rubygems.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
 
   check-maven:
     name: Check if Java package exists on Maven Central
@@ -192,9 +160,7 @@ jobs:
 
       - name: Check Maven Central for existing version
         id: check
-        run: |
-          output=$(bash scripts/publish/check_maven.sh "${{ needs.prepare.outputs.version }}")
-          echo "$output" >> "$GITHUB_OUTPUT"
+        run: bash scripts/publish/check_maven.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
 
   check-nuget:
     name: Check if C# package exists on NuGet
@@ -211,9 +177,7 @@ jobs:
 
       - name: Check NuGet for existing version
         id: check
-        run: |
-          output=$(bash scripts/publish/check_nuget.sh "${{ needs.prepare.outputs.version }}")
-          echo "$output" >> "$GITHUB_OUTPUT"
+        run: bash scripts/publish/check_nuget.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
 
   check-cli:
     name: Check if CLI assets already published
@@ -230,18 +194,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.prepare.outputs.tag }}
+          ASSET_PREFIX: kreuzberg-cli-
+          SUMMARY_LABEL: CLI
         run: |
-          set -euo pipefail
-          exists=false
-          if gh release view "$TAG" --json assets >/tmp/release.json 2>/dev/null; then
-            if jq -e '.assets[].name | select(startswith("kreuzberg-cli-"))' /tmp/release.json >/dev/null; then
-              exists=true
-            fi
-          fi
-          echo "exists=$exists" >> "$GITHUB_OUTPUT"
-          if [ "$exists" = "true" ]; then
-            echo "CLI artifacts already exist on release $TAG; skipping CLI build/publish." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          bash scripts/publish/check-release-assets.sh
 
   check-go:
     name: Check if Go FFI assets already published
@@ -258,18 +214,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.prepare.outputs.tag }}
+          ASSET_PREFIX: go-ffi-
+          SUMMARY_LABEL: Go FFI
         run: |
-          set -euo pipefail
-          exists=false
-          if gh release view "$TAG" --json assets >/tmp/release.json 2>/dev/null; then
-            if jq -e '.assets[].name | select(startswith("go-ffi-"))' /tmp/release.json >/dev/null; then
-              exists=true
-            fi
-          fi
-          echo "exists=$exists" >> "$GITHUB_OUTPUT"
-          if [ "$exists" = "true" ]; then
-            echo "Go FFI artifacts already exist on release $TAG; skipping Go publish." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          bash scripts/publish/check-release-assets.sh
 
   check-docker:
     name: Check if Docker image tag exists
@@ -284,27 +232,17 @@ jobs:
     steps:
       - name: Check core image tag
         id: core
-        run: |
-          set -euo pipefail
-          tag="${{ 'goldziher/kreuzberg' }}:${{ needs.prepare.outputs.version }}-core"
-          if docker manifest inspect "$tag" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Docker tag $tag already exists; core publish will be skipped." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+        env:
+          DOCKER_TAG: ${{ 'goldziher/kreuzberg' }}:${{ needs.prepare.outputs.version }}-core
+          SUMMARY_LABEL: core
+        run: bash scripts/publish/check-docker-tag.sh
 
       - name: Check full image tag
         id: full
-        run: |
-          set -euo pipefail
-          tag="${{ 'goldziher/kreuzberg' }}:${{ needs.prepare.outputs.version }}"
-          if docker manifest inspect "$tag" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Docker tag $tag already exists; full publish will be skipped." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+        env:
+          DOCKER_TAG: ${{ 'goldziher/kreuzberg' }}:${{ needs.prepare.outputs.version }}
+          SUMMARY_LABEL: full
+        run: bash scripts/publish/check-docker-tag.sh
 
   check-cratesio:
     name: Check if Rust crate exists on crates.io
@@ -324,20 +262,7 @@ jobs:
 
       - name: Check crates.io for existing versions
         id: check
-        run: |
-          output=$(bash scripts/publish/check_cratesio.sh "${{ needs.prepare.outputs.version }}")
-          echo "$output" >> "$GITHUB_OUTPUT"
-
-          # Set all_exist if all three crates exist
-          kreuzberg_exists=$(grep 'kreuzberg_exists=' "$GITHUB_OUTPUT" | tail -1 | cut -d'=' -f2 || echo false)
-          tesseract_exists=$(grep 'tesseract_exists=' "$GITHUB_OUTPUT" | tail -1 | cut -d'=' -f2 || echo false)
-          cli_exists=$(grep 'cli_exists=' "$GITHUB_OUTPUT" | tail -1 | cut -d'=' -f2 || echo false)
-
-          if [ "$kreuzberg_exists" = "true" ] && [ "$tesseract_exists" = "true" ] && [ "$cli_exists" = "true" ]; then
-            echo "all_exist=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "all_exist=false" >> "$GITHUB_OUTPUT"
-          fi
+        run: bash scripts/publish/check_cratesio.sh "${{ needs.prepare.outputs.version }}" >> "$GITHUB_OUTPUT"
 
   python-wheels:
     name: Build Python wheels (${{ matrix.label }})
@@ -422,24 +347,7 @@ jobs:
 
       - name: Free up disk space for wheel build
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          echo "=== Initial disk usage ==="
-          df -h /
-
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-
-          echo "=== Disk usage after cleanup ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Prepare wheel staging directory
         if: matrix.os == 'ubuntu-latest'
@@ -461,9 +369,7 @@ jobs:
 
       - name: Clean previous wheel artifacts
         shell: bash
-        run: |
-          rm -rf target/wheels target/maturin
-          rm -f packages/python/kreuzberg/_internal_bindings.*
+        run: rm -rf target/wheels target/maturin && rm -f packages/python/kreuzberg/_internal_bindings.*
 
       - name: Build Linux wheels
         if: matrix.os == 'ubuntu-latest'
@@ -531,12 +437,7 @@ jobs:
 
       - name: Clean up Docker resources (Ubuntu)
         if: matrix.os == 'ubuntu-latest' && always()
-        run: |
-          echo "=== Cleaning up Docker resources ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-          echo "=== Final disk space ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/docker-prune.sh
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v5
@@ -555,9 +456,7 @@ jobs:
       contents: read
     steps:
       - name: Show initial disk space
-        run: |
-          echo "=== Initial disk space ==="
-          df -h /
+        run: echo "=== Initial disk space ===" && df -h /
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -571,21 +470,7 @@ jobs:
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Free up disk space
-        run: |
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-
-          echo "=== Available disk space after cleanup ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-env
@@ -650,27 +535,11 @@ jobs:
 
       - name: Show initial disk space (Linux)
         if: runner.os == 'Linux'
-        run: |
-          echo "=== Initial disk space ==="
-          df -h /
+        run: echo "=== Initial disk space ===" && df -h /
 
       - name: Free up disk space (Linux)
         if: runner.os == 'Linux'
-        run: |
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-
-          echo "=== Available disk space after cleanup ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -707,10 +576,7 @@ jobs:
 
       - name: Install Node dependencies
         shell: bash
-        run: |
-          unset RUSTC_WRAPPER
-          corepack enable
-          pnpm install -C crates/kreuzberg-node
+        run: bash scripts/publish/node/install-deps.sh
 
       - name: Clean npm directory
         if: runner.os != 'Windows'
@@ -731,16 +597,7 @@ jobs:
           USE_CROSS: ${{ matrix.settings.use_cross }}
           USE_NAPI_CROSS: ${{ matrix.settings.use_napi_cross }}
         shell: bash
-        run: |
-          set -euo pipefail
-          args=(--platform --release --target "$TARGET" --output-dir ./artifacts)
-          if [ "${USE_NAPI_CROSS}" = "true" ]; then
-            args+=(--use-napi-cross)
-          fi
-          if [ "${USE_CROSS}" = "true" ]; then
-            args+=(--use-cross)
-          fi
-          pnpm --filter @kreuzberg/node exec napi build "${args[@]}"
+        run: bash scripts/publish/node/build-native-module.sh
 
       - name: Build native module (Windows)
         if: runner.os == 'Windows'
@@ -749,49 +606,29 @@ jobs:
           TARGET: ${{ matrix.settings.target }}
           USE_CROSS: ${{ matrix.settings.use_cross }}
           USE_NAPI_CROSS: ${{ matrix.settings.use_napi_cross }}
-        run: |
-          $args = @('--platform', '--release', '--target', $env:TARGET, '--output-dir', './artifacts')
-          if ($env:USE_NAPI_CROSS -eq 'true') { $args += '--use-napi-cross' }
-          if ($env:USE_CROSS -eq 'true') { $args += '--use-cross' }
-          pnpm --filter @kreuzberg/node exec napi build @args
+        run: ./scripts/publish/node/build-native-module.ps1
 
       - name: Build TypeScript wrapper
         shell: bash
-        run: |
-          cd crates/kreuzberg-node
-          pnpm build:ts
+        run: pnpm -C crates/kreuzberg-node build:ts
 
       - name: Package artifacts
         if: runner.os != 'Windows'
         env:
           TARGET: ${{ matrix.settings.target }}
         shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --filter @kreuzberg/node exec napi artifacts --output-dir ./artifacts
-          if [ ! -d crates/kreuzberg-node/npm ]; then
-            echo "npm artifact directory missing" >&2
-            exit 1
-          fi
-          tar -czf "node-bindings-${TARGET}.tar.gz" -C crates/kreuzberg-node npm
+        run: bash scripts/publish/node/package-artifacts.sh
 
       - name: Package artifacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           TARGET: ${{ matrix.settings.target }}
-        run: |
-          pnpm --filter @kreuzberg/node exec napi artifacts --output-dir ./artifacts
-          if (-Not (Test-Path crates/kreuzberg-node\npm)) { throw "npm artifact directory missing" }
-          tar -czf node-bindings-$env:TARGET.tar.gz -C crates/kreuzberg-node npm
+        run: ./scripts/publish/node/package-artifacts.ps1
 
       - name: Generate and upload TypeScript definitions
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
-        run: |
-          pnpm --filter @kreuzberg/node exec napi build --platform --dts index.d.ts
-          mkdir -p typescript-defs
-          cp crates/kreuzberg-node/index.d.ts typescript-defs/
-          cp crates/kreuzberg-node/index.js typescript-defs/ || true
+        run: bash scripts/publish/node/generate-typescript-defs.sh
 
       - name: Upload TypeScript definitions
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
@@ -845,27 +682,11 @@ jobs:
 
       - name: Show initial disk space (Linux)
         if: runner.os == 'Linux'
-        run: |
-          echo "=== Initial disk space ==="
-          df -h /
+        run: echo "=== Initial disk space ===" && df -h /
 
       - name: Free up disk space (Linux)
         if: runner.os == 'Linux'
-        run: |
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-
-          echo "=== Available disk space after cleanup ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-rust
@@ -878,24 +699,13 @@ jobs:
 
       - name: Install build dependencies
         if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          case "${{ matrix.target }}" in
-            aarch64-unknown-linux-gnu)
-              sudo apt-get install -y gcc-aarch64-linux-gnu
-              ;;
-          esac
+        env:
+          CLI_TARGET: ${{ matrix.target }}
+        run: bash scripts/publish/cli/install-build-deps.sh
 
       - name: Configure cross linker
         if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
-        run: |
-          {
-            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
-            echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++"
-            echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar"
-            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
-          } >> "$GITHUB_ENV"
+        run: bash scripts/publish/cli/configure-cross-linker.sh
 
       - name: Build CLI
         run: bash scripts/build_cli_binary.sh ${{ matrix.target }}
@@ -907,22 +717,9 @@ jobs:
       - name: Package CLI artifact (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $target = '${{ matrix.target }}'
-          $stage = "kreuzberg-cli-$target"
-          Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $stage | Out-Null
-          Copy-Item "target/$target/release/kreuzberg.exe" $stage
-          Copy-Item LICENSE $stage
-          Copy-Item README.md $stage
-
-          # Copy shared libraries if they exist
-          if (Test-Path "target/$target/release/pdfium.dll") {
-            Copy-Item "target/$target/release/pdfium.dll" $stage
-          }
-
-          Compress-Archive -Path "$stage/*" -DestinationPath "$stage.zip" -Force
-          Remove-Item -Recurse -Force $stage
+        env:
+          CLI_TARGET: ${{ matrix.target }}
+        run: ./scripts/publish/cli/package-cli-windows.ps1
 
       - name: Upload CLI artifact
         if: runner.os != 'Windows'
@@ -974,27 +771,11 @@ jobs:
 
       - name: Show initial disk space (Linux)
         if: runner.os == 'Linux'
-        run: |
-          echo "=== Initial disk space ==="
-          df -h /
+        run: echo "=== Initial disk space ===" && df -h /
 
       - name: Free up disk space (Linux)
         if: runner.os == 'Linux'
-        run: |
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-
-          echo "=== Available disk space after cleanup ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Install MSYS2 toolchain
         if: runner.os == 'Windows'
@@ -1015,45 +796,17 @@ jobs:
 
       - name: Install Bundler
         shell: bash
-        run: |
-          gem install bundler -v 4.0.0 --no-document || gem install bundler --no-document
-          bundler --version
+        run: (gem install bundler -v 4.0.0 --no-document || gem install bundler --no-document) && bundler --version
 
       - name: Configure short paths for Windows MAX_PATH mitigation
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path "C:\\t" -Force
-          New-Item -ItemType Directory -Path "C:\\b" -Force
-          New-Item -ItemType Directory -Path "C:\\g" -Force
-          cd packages/ruby
-          bundle config set path "C:\\b"
-          bundle config set no_prune true
-          Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_DIR=C:\\t"
-          Add-Content -Path $env:GITHUB_ENV -Value "BUNDLE_PATH=C:\\b"
-          Add-Content -Path $env:GITHUB_ENV -Value "GEM_HOME=C:\\g"
+        run: ./scripts/publish/ruby/windows-configure-short-paths.ps1
 
       - name: Configure bindgen compatibility headers (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $includeRoot = "$env:GITHUB_WORKSPACE\packages\ruby\ext\kreuzberg_rb\native\include"
-          $compat = "$includeRoot\msvc_compat"
-          $includeRoot = $includeRoot -replace '\\','/'
-          $compatForward = $compat -replace '\\','/'
-
-          if (-not $env:RI_DEVKIT) {
-            throw "RI_DEVKIT environment variable is not set"
-          }
-          $msysPrefix = ridk exec bash -lc 'printf %s "$MSYSTEM_PREFIX"'
-          $msysPrefix = $msysPrefix.Trim()
-          $riDevkit = $env:RI_DEVKIT -replace '\\','/'
-          $sysroot = "$riDevkit$msysPrefix"
-
-          $extra = "-I$includeRoot -I$compatForward -fms-extensions -fstack-protector-strong -fno-omit-frame-pointer -fno-fast-math --target=x86_64-pc-windows-gnu --sysroot=$sysroot"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc=$extra"
-          Add-Content -Path $env:GITHUB_ENV -Value "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc=$extra"
+        run: ./scripts/publish/ruby/windows-configure-bindgen-headers.ps1
 
       - name: Cache Pdfium binaries
         uses: ./.github/actions/cache-pdfium
@@ -1076,27 +829,7 @@ jobs:
       - name: Download ONNX Runtime (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $ortVersion = "${{ env.ORT_VERSION }}"
-          $ortDir = Join-Path $env:RUNNER_TEMP "onnxruntime\x86_64-pc-windows-gnu"
-          if (-Not (Test-Path (Join-Path $ortDir "onnxruntime-win-x64-$ortVersion\lib\onnxruntime.dll"))) {
-            New-Item -ItemType Directory -Force -Path $ortDir | Out-Null
-            $zipPath = Join-Path $ortDir "onnxruntime.zip"
-            $url = "https://github.com/microsoft/onnxruntime/releases/download/v$ortVersion/onnxruntime-win-x64-$ortVersion.zip"
-            Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
-            Expand-Archive -Path $zipPath -DestinationPath $ortDir -Force
-          }
-          $onnxRoot = Get-ChildItem -Path $ortDir -Directory | Where-Object { $_.Name -like "onnxruntime-win-x64-*" } | Select-Object -First 1
-          if (-not $onnxRoot) { throw "ONNX Runtime archive not found" }
-          $envLines = @(
-            "ORT_STRATEGY=system",
-            "ORT_LIB_LOCATION=$($onnxRoot.FullName)\lib",
-            "ORT_SKIP_DOWNLOAD=1",
-            "ORT_PREFER_DYNAMIC_LINK=1",
-            "ORT_DYLIB_PATH=$($onnxRoot.FullName)\lib"
-          )
-          $envLines | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $onnxRoot.FullName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        run: ./scripts/publish/ruby/windows-download-onnx-runtime.ps1
 
       - name: Install Ruby dependencies (Unix)
         if: runner.os != 'Windows'
@@ -1105,45 +838,22 @@ jobs:
       - name: Install Ruby dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
-          ridk exec bash -lc "cd $workspace && bash scripts/ci/ruby/install-ruby-deps.sh packages/ruby"
+        run: $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"; ridk exec bash -lc "cd $workspace && bash scripts/ci/ruby/install-ruby-deps.sh packages/ruby"
 
       - name: Vendor kreuzberg core crate
         shell: bash
-        run: |
-          set -euo pipefail
-          echo "Copying kreuzberg core crate to vendor directory..."
-          rm -rf packages/ruby/vendor/kreuzberg
-          mkdir -p packages/ruby/vendor
-          cp -R crates/kreuzberg packages/ruby/vendor/kreuzberg
-
-          # Clean up test artifacts and caches that shouldn't be in the gem
-          rm -rf packages/ruby/vendor/kreuzberg/.fastembed_cache
-          rm -rf packages/ruby/vendor/kreuzberg/target
-          find packages/ruby/vendor/kreuzberg -name '*.swp' -delete
-          find packages/ruby/vendor/kreuzberg -name '*.bak' -delete
-          find packages/ruby/vendor/kreuzberg -name '*.tmp' -delete
-          find packages/ruby/vendor/kreuzberg -name '*~' -delete
-
-          echo "Vendor files prepared successfully"
+        run: bash scripts/publish/ruby/vendor-kreuzberg-crate.sh
 
       - name: Build gem (Unix)
         if: runner.os != 'Windows'
         shell: bash
         working-directory: packages/ruby
-        run: |
-          set -euo pipefail
-          bundle exec rake clean
-          bundle exec rake build
+        run: bundle exec rake clean && bundle exec rake build
 
       - name: Build gem (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $workspace = ridk exec bash -lc "cygpath -au '$env:GITHUB_WORKSPACE'"
-          $gemdir = "$workspace/packages/ruby"
-          ridk exec bash -lc "cd $gemdir && export RUSTUP_TOOLCHAIN=stable-gnu CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ && bundle exec rake clean && bundle exec rake build"
+        run: ./scripts/publish/ruby/build-gem-windows.ps1
 
       - name: Upload gem artifacts
         uses: actions/upload-artifact@v5
@@ -1190,24 +900,12 @@ jobs:
 
       - name: Free up disk space (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          sudo apt-get clean
-          docker system prune -af --volumes || true
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Configure Windows GNU toolchain
         if: matrix.settings.os == 'windows-latest'
         shell: bash
-        run: |
-          {
-            echo "CC=gcc"
-            echo "AR=ar"
-            echo "RANLIB=ranlib"
-            echo "CXX=g++"
-            echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc"
-            echo "RUSTFLAGS=-C target-feature=+crt-static"
-            echo "CARGO_BUILD_TARGET=x86_64-pc-windows-gnu"
-          } >> "$GITHUB_ENV"
+        run: bash scripts/publish/go/configure-windows-gnu-toolchain.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1291,9 +989,7 @@ jobs:
 
       - name: Package FFI library
         shell: bash
-        run: |
-          cd artifact-staging
-          tar -czf "../go-ffi-${{ matrix.settings.label }}.tar.gz" kreuzberg-ffi/
+        run: tar -czf "go-ffi-${{ matrix.settings.label }}.tar.gz" -C artifact-staging kreuzberg-ffi/
 
       - name: Verify artifact completeness
         shell: bash
@@ -1406,9 +1102,7 @@ jobs:
       PDFIUM_VERSION: "7529"
     steps:
       - name: Show initial disk space
-        run: |
-          echo "=== Initial disk space ==="
-          df -h /
+        run: echo "=== Initial disk space ===" && df -h /
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -1422,21 +1116,7 @@ jobs:
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Free up disk space
-        run: |
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-
-          echo "=== Available disk space after cleanup ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1580,9 +1260,7 @@ jobs:
 
       - name: Setup Tesseract environment
         shell: bash
-        run: |
-          source scripts/ci/csharp/setup-tessdata.sh
-          echo "TESSDATA_PREFIX=${TESSDATA_PREFIX}" >> "$GITHUB_ENV"
+        run: source scripts/ci/csharp/setup-tessdata.sh && echo "TESSDATA_PREFIX=${TESSDATA_PREFIX}" >> "$GITHUB_ENV"
 
       - name: Build FFI library
         run: cargo build -p kreuzberg-ffi --release
@@ -1615,9 +1293,7 @@ jobs:
       contents: read
     steps:
       - name: Show initial disk space
-        run: |
-          echo "=== Initial disk space ==="
-          df -h /
+        run: echo "=== Initial disk space ===" && df -h /
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -1631,21 +1307,7 @@ jobs:
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Free up disk space
-        run: |
-          echo "=== Removing unnecessary packages ==="
-          sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-
-          echo "=== Cleaning apt cache ==="
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-          echo "=== Cleaning Docker ==="
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-
-          echo "=== Available disk space after cleanup ==="
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -1664,17 +1326,7 @@ jobs:
           dotnet-version: "10.x"
 
       - name: Ensure dotnet is available
-        run: |
-          set -euo pipefail
-          if ! command -v dotnet >/dev/null 2>&1; then
-            echo "dotnet not found on PATH; installing SDK from dotnet-install.sh (channel 10.0)"
-            curl -sSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
-            chmod +x dotnet-install.sh
-            ./dotnet-install.sh --channel 10.0 --quality ga --install-dir "$HOME/.dotnet"
-            echo "$HOME/.dotnet" >> "$GITHUB_PATH"
-            echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-          fi
-          dotnet --info
+        run: bash scripts/publish/csharp/ensure-dotnet.sh
 
       - name: Download native assets
         uses: actions/download-artifact@v6
@@ -1690,27 +1342,11 @@ jobs:
         run: dotnet build packages/csharp/Kreuzberg/Kreuzberg.csproj -c Release --no-restore
 
       - name: Pack NuGet package
-        run: |
-          dotnet pack packages/csharp/Kreuzberg/Kreuzberg.csproj \
-            -c Release \
-            --no-build \
-            -p:PackageVersion=${{ needs.prepare.outputs.version }} \
-            -o artifacts/csharp
+        run: dotnet pack packages/csharp/Kreuzberg/Kreuzberg.csproj -c Release --no-build -p:PackageVersion=${{ needs.prepare.outputs.version }} -o artifacts/csharp
 
       - name: Verify package contains native assets
         shell: bash
-        run: |
-          set -euo pipefail
-          pkg="$(find artifacts/csharp -maxdepth 1 -name '*.nupkg' -print | sort | head -n 1)"
-          if [ -z "$pkg" ]; then
-            echo "No .nupkg found under artifacts/csharp" >&2
-            exit 1
-          fi
-          for rid in linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64 win-arm64; do
-            unzip -l "$pkg" | rg -n "^\\s+\\d+\\s+\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\s+runtimes/${rid}/native/.*kreuzberg_ffi\\.(dll|so|dylib)$" >/dev/null
-            unzip -l "$pkg" | rg -n "^\\s+\\d+\\s+\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\s+runtimes/${rid}/native/(lib)?pdfium\\.(dll|so|dylib)$" >/dev/null
-            unzip -l "$pkg" | rg -n "^\\s+\\d+\\s+\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\s+runtimes/${rid}/native/.*onnxruntime" >/dev/null
-          done
+        run: bash scripts/publish/csharp/verify-nuget-native-assets.sh
 
       - name: Upload NuGet artifact
         uses: actions/upload-artifact@v5
@@ -1799,14 +1435,7 @@ jobs:
       - name: Install Linux cross toolchain (arm64)
         if: ${{ runner.os == 'Linux' && matrix.rid == 'linux-arm64' }}
         shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-          {
-            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
-            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
-          } >> "$GITHUB_ENV"
+        run: bash scripts/publish/csharp/install-linux-cross-toolchain-arm64.sh
 
       - name: Cache PDFium
         uses: ./.github/actions/cache-pdfium
@@ -1834,47 +1463,19 @@ jobs:
 
       - name: Add Rust target
         shell: bash
-        run: |
-          set -euo pipefail
-          rustup target add "${{ matrix.rust_target }}"
+        run: rustup target add "${{ matrix.rust_target }}"
 
       - name: Build FFI library
         shell: bash
-        run: |
-          set -euo pipefail
-          cargo build -p kreuzberg-ffi --release --target "${{ matrix.rust_target }}"
+        run: cargo build -p kreuzberg-ffi --release --target "${{ matrix.rust_target }}"
 
       - name: Assemble native assets for NuGet
         shell: bash
-        run: |
-          set -euo pipefail
-          out_root="runtimes/${{ matrix.rid }}/native"
-          mkdir -p "$out_root"
-
-          ffi_path="target/${{ matrix.rust_target }}/release/${{ matrix.ffi_name }}"
-          if [ ! -f "$ffi_path" ]; then
-            echo "FFI library missing at $ffi_path" >&2
-            ls -la "target/${{ matrix.rust_target }}/release" >&2 || true
-            exit 1
-          fi
-          cp -f "$ffi_path" "$out_root/${{ matrix.ffi_name }}"
-
-          deps_dir="target/csharp-native/${{ matrix.rid }}"
-          if [ -d "$deps_dir" ]; then
-            case "${RUNNER_OS}" in
-              Windows)
-                find "$deps_dir" -maxdepth 1 -type f -name '*.dll' -exec cp -f '{}' "$out_root/" ';'
-                ;;
-              macOS)
-                find "$deps_dir" -maxdepth 1 -type f -name '*.dylib' -exec cp -f '{}' "$out_root/" ';'
-                ;;
-              Linux)
-                find "$deps_dir" -maxdepth 1 -type f -name '*.so*' -exec cp -f '{}' "$out_root/" ';'
-                ;;
-            esac
-          fi
-
-          ls -la "$out_root"
+        env:
+          RID: ${{ matrix.rid }}
+          RUST_TARGET: ${{ matrix.rust_target }}
+          FFI_NAME: ${{ matrix.ffi_name }}
+        run: bash scripts/publish/csharp/assemble-native-assets.sh
 
       - name: Upload native assets artifact
         uses: actions/upload-artifact@v5
@@ -1909,48 +1510,9 @@ jobs:
 
       - name: Smoke test (load natives from NuGet)
         shell: bash
-        run: |
-          set -euo pipefail
-          version="${{ needs.prepare.outputs.version }}"
-          pkg_dir="$(pwd)/dist"
-          if command -v cygpath >/dev/null 2>&1; then
-            pkg_dir="$(cygpath -w "$pkg_dir")"
-          fi
-
-          tmp="$(mktemp -d)"
-          dotnet new console -n KreuzbergSmoke -o "$tmp/KreuzbergSmoke"
-
-          cat > "$tmp/KreuzbergSmoke/KreuzbergSmoke.csproj" <<EOF
-          <Project Sdk="Microsoft.NET.Sdk">
-            <PropertyGroup>
-              <OutputType>Exe</OutputType>
-              <TargetFramework>net10.0</TargetFramework>
-              <Nullable>enable</Nullable>
-              <ImplicitUsings>enable</ImplicitUsings>
-            </PropertyGroup>
-            <ItemGroup>
-              <PackageReference Include="Kreuzberg" Version="$version" />
-            </ItemGroup>
-          </Project>
-          EOF
-
-          cat > "$tmp/KreuzbergSmoke/Program.cs" <<'EOF'
-          using Kreuzberg;
-          using System;
-          using System.IO;
-
-          var pdfPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "test_documents", "pdf", "simple.pdf"));
-          if (!File.Exists(pdfPath))
-          {
-              throw new FileNotFoundException($"Missing test document: {pdfPath}");
-          }
-
-          var result = KreuzbergClient.ExtractFileSync(pdfPath);
-          Console.WriteLine($"mime={result.MimeType} len={result.Content.Length}");
-          EOF
-
-          dotnet restore "$tmp/KreuzbergSmoke" --source "$pkg_dir" --source "https://api.nuget.org/v3/index.json"
-          dotnet run --project "$tmp/KreuzbergSmoke" -c Release
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: bash scripts/publish/csharp/smoke-test-nuget.sh
 
   cargo-packages:
     name: Package Rust crates
@@ -1980,42 +1542,7 @@ jobs:
       - name: Package crates
         env:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          set -euo pipefail
-
-          # Package tesseract first (no dependencies)
-          tesseract_packaged=0
-          tesseract_status=0
-          cargo package -p kreuzberg-tesseract --allow-dirty || tesseract_status=$?
-
-          if [ "$tesseract_status" -eq 0 ]; then
-            tesseract_packaged=1
-          else
-            echo "::warning::Skipping kreuzberg-tesseract crate packaging."
-          fi
-
-          # Package kreuzberg (depends on tesseract if feature enabled)
-          cargo package -p kreuzberg --allow-dirty
-
-          # Package CLI (depends on kreuzberg)
-          cli_packaged=0
-          cli_status=0
-          cargo package -p kreuzberg-cli --allow-dirty --no-verify || cli_status=$?
-
-          if [ "$cli_status" -eq 0 ]; then
-            cli_packaged=1
-          else
-            echo "::warning::Skipping kreuzberg-cli crate packaging; kreuzberg ${RELEASE_VERSION:-unknown} is not yet available on crates.io."
-          fi
-
-          mkdir -p crate-artifacts
-          if [ "$tesseract_packaged" -eq 1 ]; then
-            cp target/package/kreuzberg-tesseract-*.crate crate-artifacts/
-          fi
-          cp target/package/kreuzberg-*.crate crate-artifacts/
-          if [ "$cli_packaged" -eq 1 ]; then
-            cp target/package/kreuzberg-cli-*.crate crate-artifacts/
-          fi
+        run: bash scripts/publish/cargo/package-crates.sh
 
       - name: Upload crate packages
         uses: actions/upload-artifact@v5
@@ -2057,17 +1584,7 @@ jobs:
 
       - name: Free up disk space
         if: ${{ needs.prepare.outputs.release_docker == 'true' }}
-        run: |
-          echo "Initial disk usage:"
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/lib/node_modules /opt/microsoft /usr/local/.ghcup
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
-          echo "Disk usage after cleanup:"
-          df -h /
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Checkout
         if: ${{ needs.prepare.outputs.release_docker == 'true' }}
@@ -2095,21 +1612,11 @@ jobs:
 
       - name: Build AMD64 test image
         if: ${{ needs.prepare.outputs.release_docker == 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
-        run: |
-          docker build \
-            -f ${{ matrix.dockerfile }} \
-            --build-arg PDFIUM_VERSION=${{ env.PDFIUM_VERSION }} \
-            -t kreuzberg-publish:${{ matrix.variant }}-test \
-            .
+        run: docker build -f ${{ matrix.dockerfile }} --build-arg PDFIUM_VERSION=${{ env.PDFIUM_VERSION }} -t kreuzberg-publish:${{ matrix.variant }}-test .
 
       - name: Run Docker feature tests
         if: ${{ needs.prepare.outputs.release_docker == 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
-        run: |
-          ./scripts/test_docker.sh \
-            --skip-build \
-            --image kreuzberg-publish:${{ matrix.variant }}-test \
-            --variant ${{ matrix.variant }} \
-            --verbose
+        run: ./scripts/test_docker.sh --skip-build --image kreuzberg-publish:${{ matrix.variant }}-test --variant ${{ matrix.variant }} --verbose
 
       - name: Log in to Docker Hub
         if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
@@ -2254,10 +1761,7 @@ jobs:
       - name: Upload Go FFI libraries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for file in dist/go/go-ffi-*.tar.gz; do
-            gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber
-          done
+        run: for file in dist/go/go-ffi-*.tar.gz; do gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber; done
 
   publish-crates:
     name: Publish crates.io packages
@@ -2284,70 +1788,19 @@ jobs:
           cache-key-prefix: publish-crates
 
       - name: Verify Cargo.toml version matches tag
-        run: |
-          cargo_version=$(grep '^\[workspace.package\]' -A 10 Cargo.toml | grep '^version = ' | head -1 | sed -E 's/version = "(.*)"/\1/')
-          tag_version="${{ needs.prepare.outputs.version }}"
-          if [ "$cargo_version" != "$tag_version" ]; then
-            echo "Version mismatch! Cargo: $cargo_version, tag: $tag_version" >&2
-            exit 1
-          fi
-          echo "Cargo.toml version matches tag: $cargo_version"
+        run: bash scripts/publish/verify-cargo-version.sh "${{ needs.prepare.outputs.version }}"
 
       - name: Check crates.io for existing release
         id: crate_check
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          import os
-          import sys
-          import urllib.request
-          version = os.environ["VERSION"]
-          crates = [
-              ("kreuzberg-tesseract", "tesseract_exists"),
-              ("kreuzberg", "core_exists"),
-              ("kreuzberg-cli", "cli_exists"),
-          ]
-          for crate, key in crates:
-              url = f"https://crates.io/api/v1/crates/{crate}"
-              try:
-                  with urllib.request.urlopen(url) as resp:
-                      data = json.load(resp)
-              except Exception as exc:
-                  print(f"::warning::{crate}: failed to query crates.io ({exc})", file=sys.stderr)
-                  exists = False
-              else:
-                  versions = [item.get("num") for item in data.get("versions", [])]
-                  exists = version in versions
-                  message = "already" if exists else "not yet"
-                  print(f"::notice::{crate} {version} {message} published", file=sys.stderr)
-              print(f"{key}={'true' if exists else 'false'}")
-          PY
+        run: bash scripts/publish/check_cratesio.sh "${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Publish kreuzberg-tesseract
         if: ${{ steps.crate_check.outputs.tesseract_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
           CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "$CARGO_TOKEN" ]; then
-            echo "::error::CARGO_TOKEN secret not set"
-            exit 1
-          fi
-          publish_log=$(mktemp)
-          set +e
-          cargo publish -p kreuzberg-tesseract --token "$CARGO_TOKEN" 2>&1 | tee "$publish_log"
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            if grep -qi "already uploaded" "$publish_log"; then
-              echo "::notice::kreuzberg-tesseract already published; skipping."
-              echo "kreuzberg-tesseract already published; skipping." >> "$GITHUB_STEP_SUMMARY"
-            else
-              exit "$status"
-            fi
-          fi
+        run: bash scripts/publish/publish-cargo-crate.sh kreuzberg-tesseract
 
       - name: Wait for tesseract indexing
         if: ${{ steps.crate_check.outputs.tesseract_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
@@ -2357,25 +1810,7 @@ jobs:
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
           CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "$CARGO_TOKEN" ]; then
-            echo "::error::CARGO_TOKEN secret not set"
-            exit 1
-          fi
-          publish_log=$(mktemp)
-          set +e
-          cargo publish -p kreuzberg --token "$CARGO_TOKEN" 2>&1 | tee "$publish_log"
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            if grep -qi "already uploaded" "$publish_log"; then
-              echo "::notice::kreuzberg already published; skipping."
-              echo "kreuzberg already published; skipping." >> "$GITHUB_STEP_SUMMARY"
-            else
-              exit "$status"
-            fi
-          fi
+        run: bash scripts/publish/publish-cargo-crate.sh kreuzberg
 
       - name: Wait for indexing
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
@@ -2385,30 +1820,11 @@ jobs:
         if: ${{ steps.crate_check.outputs.cli_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
           CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "$CARGO_TOKEN" ]; then
-            echo "::error::CARGO_TOKEN secret not set"
-            exit 1
-          fi
-          publish_log=$(mktemp)
-          set +e
-          cargo publish -p kreuzberg-cli --token "$CARGO_TOKEN" 2>&1 | tee "$publish_log"
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            if grep -qi "already uploaded" "$publish_log"; then
-              echo "::notice::kreuzberg-cli already published; skipping."
-              echo "kreuzberg-cli already published; skipping." >> "$GITHUB_STEP_SUMMARY"
-            else
-              exit "$status"
-            fi
-          fi
+        run: bash scripts/publish/publish-cargo-crate.sh kreuzberg-cli
 
       - name: Crates dry-run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        run: |
-          echo "Dry run requested; cargo publish skipped." >> "$GITHUB_STEP_SUMMARY"
+        run: echo "Dry run requested; cargo publish skipped." >> "$GITHUB_STEP_SUMMARY"
 
   publish-pypi:
     name: Publish Python packages to PyPI
@@ -2452,9 +1868,7 @@ jobs:
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        run: |
-          echo "Dry run requested; artifacts staged for PyPI:" >> "$GITHUB_STEP_SUMMARY"
-          ls -1 dist >> "$GITHUB_STEP_SUMMARY"
+        run: (echo "Dry run requested; artifacts staged for PyPI:" && ls -1 dist) >> "$GITHUB_STEP_SUMMARY"
 
   publish-rubygems:
     name: Publish Ruby gems
@@ -2484,103 +1898,22 @@ jobs:
 
       - name: Verify RubyGems credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: |
-          if [ ! -f "$HOME/.gem/credentials" ]; then
-            echo "::error::RubyGems credentials file not found at $HOME/.gem/credentials"
-            ls -la "$HOME/.gem/" || echo "$HOME/.gem directory does not exist"
-            exit 1
-          fi
-          chmod 600 "$HOME/.gem/credentials"
+        run: bash scripts/publish/verify-rubygems-credentials.sh
 
       - name: Rebuild gems with latest RubyGems
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        working-directory: dist
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-
-          # Ensure we're using latest RubyGems
-          if ! gem update --system; then
-            echo "::warning::Skipping RubyGems update; system RubyGems installation does not support self-update (apt-managed runner)." >&2
-          fi
-
-          mapfile -t gems < <(printf '%s\n' kreuzberg-*.gem | sort)
-          if [ ${#gems[@]} -eq 0 ]; then
-            echo "No gem artifacts found" >&2
-            exit 1
-          fi
-
-          # Rebuild each gem to ensure proper tar structure
-          for gem in "${gems[@]}"; do
-            echo "Rebuilding ${gem} to fix tar structure"
-
-            # Unpack the gem
-            gem unpack "${gem}"
-            gem_name=$(basename "${gem}" .gem)
-
-            # Extract gemspec from gem metadata
-            gem specification "${gem}" --ruby > "${gem_name}/${gem_name}.gemspec"
-
-            # Rebuild the gem (this creates proper tar structure)
-            (cd "${gem_name}" && gem build "${gem_name}.gemspec")
-
-            # Replace original gem with rebuilt one
-            mv "${gem_name}/${gem}" "./${gem}"
-
-            # Cleanup
-            rm -rf "${gem_name}"
-
-            echo "Rebuilt ${gem} successfully"
-          done
+        run: bash scripts/publish/rebuild-and-publish-gems.sh dist
 
       - name: Publish gems to RubyGems
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        working-directory: dist
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          mapfile -t gems < <(printf '%s\n' kreuzberg-*.gem | sort)
-          if [ ${#gems[@]} -eq 0 ]; then
-            echo "No gem artifacts found" >&2
-            exit 1
-          fi
-
-          failed_gems=()
-          for gem in "${gems[@]}"; do
-            echo "Pushing ${gem} to RubyGems"
-            publish_log=$(mktemp)
-            set +e
-            gem push "$gem" 2>&1 | tee "$publish_log"
-            status=${PIPESTATUS[0]}
-            set -e
-
-            if [ "$status" -ne 0 ]; then
-              if grep -qE "Repushing of gem versions is not allowed|already been pushed" "$publish_log"; then
-                echo "::notice::Gem $gem version already published on RubyGems; skipping."
-                echo "Gem $(basename "$gem") already published; skipping." >> "$GITHUB_STEP_SUMMARY"
-              else
-                failed_gems+=("$gem")
-              fi
-            fi
-            rm -f "$publish_log"
-          done
-
-          if [ ${#failed_gems[@]} -gt 0 ]; then
-            echo "::error::Failed to publish the following gems:" >&2
-            for gem in "${failed_gems[@]}"; do
-              echo "  - $gem" >&2
-            done
-            exit 1
-          fi
-
-          echo "Successfully published kreuzberg version ${{ needs.prepare.outputs.version }} to RubyGems" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          RUBYGEMS_VERSION: ${{ needs.prepare.outputs.version }}
+        run: bash scripts/publish/push-gems-to-rubygems.sh dist
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
         working-directory: dist
-        run: |
-          echo "Dry run requested; gem artifacts ready:" >> "$GITHUB_STEP_SUMMARY"
-          ls -1 kreuzberg-*.gem >> "$GITHUB_STEP_SUMMARY"
+        run: (echo "Dry run requested; gem artifacts ready:" && ls -1 kreuzberg-*.gem) >> "$GITHUB_STEP_SUMMARY"
 
   publish-node:
     name: Publish Node packages
@@ -2634,37 +1967,11 @@ jobs:
         run: corepack enable
 
       - name: Prepare artifact directory
-        run: |
-          set -euo pipefail
-          rm -rf crates/kreuzberg-node/npm
-          mkdir -p crates/kreuzberg-node/npm
-          shopt -s nullglob
-          for pkg in node-artifacts/*.tar.gz; do
-            echo "Unpacking $pkg"
-            tmpdir=$(mktemp -d)
-            tar -xzf "$pkg" -C "$tmpdir"
-            if [ ! -d "$tmpdir/npm" ]; then
-              echo "::warning::npm directory missing inside $pkg"
-              rm -rf "$tmpdir"
-              continue
-            fi
-            while IFS= read -r -d '' dir; do
-              name=$(basename "$dir")
-              dest="crates/kreuzberg-node/npm/$name"
-              rm -rf "$dest"
-              cp -R "$dir" "$dest"
-            done < <(find "$tmpdir/npm" -mindepth 1 -maxdepth 1 -type d -print0)
-            rm -rf "$tmpdir"
-          done
-          if [ -d typescript-defs ]; then
-            cp typescript-defs/index.js typescript-defs/index.d.ts crates/kreuzberg-node/ || true
-          fi
+        run: bash scripts/publish/prepare-node-artifacts.sh node-artifacts typescript-defs crates/kreuzberg-node
 
       - name: Node artifacts summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        run: |
-          echo "Dry run requested; Node binding tarballs staged:" >> "$GITHUB_STEP_SUMMARY"
-          find node-artifacts -name '*.tar.gz' -print >> "$GITHUB_STEP_SUMMARY"
+        run: (echo "Dry run requested; Node binding tarballs staged:" && find node-artifacts -name '*.tar.gz' -print) >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install workspace dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
@@ -2675,35 +1982,11 @@ jobs:
         run: pnpm -C crates/kreuzberg-node build:ts
 
       - name: Pack platform packages
-        run: |
-          cd crates/kreuzberg-node/npm
-          for dir in */; do
-            if [ -f "$dir/package.json" ]; then
-              (cd "$dir" && npm pack && mv ./*.tgz ..)
-            fi
-          done
+        run: bash scripts/publish/pack-node-platform-packages.sh crates/kreuzberg-node/npm
 
       - name: Publish native binary packages
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          for pkg in crates/kreuzberg-node/npm/*.tgz; do
-            echo "Publishing $pkg"
-            publish_log=$(mktemp)
-            set +e
-            npm publish "$pkg" --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
-            status=${PIPESTATUS[0]}
-            set -e
-            if [ "$status" -ne 0 ]; then
-              if grep -q "previously published versions" "$publish_log"; then
-                echo "::notice::Package $pkg already published; skipping."
-                echo "Package $(basename "$pkg") already published; skipping." >> "$GITHUB_STEP_SUMMARY"
-              else
-                exit "$status"
-              fi
-            fi
-          done
+        run: bash scripts/publish/publish-node-packages.sh crates/kreuzberg-node/npm
 
       - name: Wait for npm indexing
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
@@ -2711,21 +1994,7 @@ jobs:
 
       - name: Publish main Node package
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: |
-          cd crates/kreuzberg-node
-          publish_log=$(mktemp)
-          set +e
-          npm publish --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            if grep -q "previously published versions" "$publish_log"; then
-              echo "::notice::kreuzberg-node already published; skipping."
-              echo "kreuzberg-node already published; skipping." >> "$GITHUB_STEP_SUMMARY"
-            else
-              exit "$status"
-            fi
-          fi
+        run: bash scripts/publish/publish-main-node-package.sh crates/kreuzberg-node
 
   publish-wasm:
     name: Publish WASM package
@@ -2739,6 +2008,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -2751,7 +2021,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 22.6.0
           registry-url: https://registry.npmjs.org/
 
       - name: Enable corepack
@@ -2802,29 +2072,20 @@ jobs:
 
       - name: Extract version from package.json
         id: version
-        run: |
-          version=$(jq -r '.version' crates/kreuzberg-wasm/package.json)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r '.version' crates/kreuzberg-wasm/package.json)" >> "$GITHUB_OUTPUT"
 
       - name: Check if version already published to npm
         id: npm_check
         env:
           VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if npm view @kreuzberg/wasm@"$VERSION" version 2>/dev/null; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::@kreuzberg/wasm@$VERSION already published to npm; skipping."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+        run: bash scripts/publish/check-npm-version.sh "$VERSION" "@kreuzberg/wasm" >> "$GITHUB_OUTPUT"
 
       - name: Publish to npm
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          cd crates/kreuzberg-wasm
-          npm publish --access public --ignore-scripts
+        working-directory: crates/kreuzberg-wasm
+        run: npm publish --access public --provenance --ignore-scripts
 
       - name: Wait for npm indexing
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
@@ -2832,29 +2093,20 @@ jobs:
 
       - name: Package WASM artifacts
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
-        run: |
-          cd crates/kreuzberg-wasm
-          tar --exclude='node_modules' --exclude='target' --exclude='dist' --exclude='.git' \
-            -czf wasm-artifacts-${{ steps.version.outputs.version }}.tar.gz \
-            pkg-web pkg-bundler pkg-nodejs pkg-deno
+        working-directory: crates/kreuzberg-wasm
+        run: tar --exclude='node_modules' --exclude='target' --exclude='dist' --exclude='.git' -czf wasm-artifacts-${{ steps.version.outputs.version }}.tar.gz pkg-web pkg-bundler pkg-nodejs pkg-deno
 
       - name: Upload WASM artifacts to release
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload ${{ needs.prepare.outputs.tag }} \
-            crates/kreuzberg-wasm/wasm-artifacts-${{ steps.version.outputs.version }}.tar.gz \
-            --clobber
+        run: gh release upload ${{ needs.prepare.outputs.tag }} crates/kreuzberg-wasm/wasm-artifacts-${{ steps.version.outputs.version }}.tar.gz --clobber
 
       - name: Publish summary
-        run: |
-          if [ "${{ steps.npm_check.outputs.exists }}" = "true" ]; then
-            echo "WASM package @kreuzberg/wasm@${{ steps.version.outputs.version }} was already published; skipped republish." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Successfully published WASM package @kreuzberg/wasm@${{ steps.version.outputs.version }} to npm" >> "$GITHUB_STEP_SUMMARY"
-            echo "Uploaded WASM artifacts to GitHub release" >> "$GITHUB_STEP_SUMMARY"
-          fi
+        env:
+          WASM_ALREADY_PUBLISHED: ${{ steps.npm_check.outputs.exists }}
+          WASM_VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/publish/wasm/write-summary.sh
 
   publish-maven:
     name: Publish Maven packages
@@ -2882,27 +2134,7 @@ jobs:
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          set -euo pipefail
-          exists=$(python3 - <<'PY'
-          import json, os, sys
-          try:
-              import urllib.request
-              version = os.environ["VERSION"]
-              url = f"https://search.maven.org/solrsearch/select?q=g:dev.kreuzberg+AND+a:kreuzberg+AND+v:{version}&rows=1&wt=json"
-              with urllib.request.urlopen(url) as resp:
-                  data = json.load(resp)
-              exists = data.get("response", {}).get("numFound", 0) > 0
-              print("true" if exists else "false")
-          except Exception as e:
-              print(f"::warning::Failed to query Maven Central: {e}", file=sys.stderr)
-              print("false")
-          PY
-          )
-          echo "exists=$exists" >> "$GITHUB_OUTPUT"
-          if [ "$exists" = "true" ]; then
-            echo "::notice::Maven package version ${{ needs.prepare.outputs.version }} already published."
-          fi
+        run: echo "exists=$(bash scripts/publish/check_maven.sh "${VERSION}" | cut -d= -f2)" >> "$GITHUB_OUTPUT"
 
       - name: Install system dependencies
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
@@ -2920,12 +2152,7 @@ jobs:
 
       - name: Patch legacy Maven GPG arguments
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        run: |
-          set -euo pipefail
-          if grep -q '<arg>--pinentry-mode</arg>' packages/java/pom.xml; then
-            sed -i 's/<arg>--pinentry-mode<\/arg>\s*<arg>loopback<\/arg>/<arg>--pinentry-mode=loopback<\/arg>/g' packages/java/pom.xml
-            echo "Patched legacy GPG pinentry argument format in packages/java/pom.xml" >> "$GITHUB_STEP_SUMMARY"
-          fi
+        run: bash scripts/publish/patch-maven-gpg-args.sh packages/java/pom.xml
 
       - name: Setup Java
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
@@ -2964,15 +2191,7 @@ jobs:
 
       - name: Prefer gpg2 binary
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
-        run: |
-          set -euo pipefail
-          if command -v gpg2 >/dev/null 2>&1; then
-            mkdir -p "${HOME}/.local/bin"
-            printf '#!/usr/bin/env bash\nexec gpg2 "$@"\n' > "${HOME}/.local/bin/gpg"
-            chmod +x "${HOME}/.local/bin/gpg"
-            echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
-            echo "PATH=${HOME}/.local/bin:${PATH}" >> "$GITHUB_ENV"
-          fi
+        run: bash scripts/publish/prefer-gpg2-binary.sh
 
       - name: Release Maven package
         if: ${{ needs.prepare.outputs.dry_run != 'true' && steps.maven_check.outputs.exists != 'true' }}
@@ -2980,14 +2199,7 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPP_PASSPHRASE }}
-        run: |
-          set -euo pipefail
-          mvn -f packages/java/pom.xml \
-            --batch-mode \
-            --no-transfer-progress \
-            -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" \
-            -DskipTests \
-            clean deploy
+        run: mvn -f packages/java/pom.xml --batch-mode --no-transfer-progress -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" -DskipTests clean deploy
 
       - name: Maven already published summary
         if: ${{ steps.maven_check.outputs.exists == 'true' }}
@@ -3026,31 +2238,15 @@ jobs:
           dotnet-version: "10.x"
 
       - name: Ensure dotnet is available
-        run: |
-          set -euo pipefail
-          if ! command -v dotnet >/dev/null 2>&1; then
-            echo "dotnet not found on PATH; installing SDK from dotnet-install.sh (channel 10.0)"
-            curl -sSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
-            chmod +x dotnet-install.sh
-            ./dotnet-install.sh --channel 10.0 --quality ga --install-dir "$HOME/.dotnet"
-            echo "$HOME/.dotnet" >> "$GITHUB_PATH"
-            echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-          fi
-          dotnet --info
+        run: bash scripts/publish/csharp/ensure-dotnet.sh
 
       - name: Publish to NuGet
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: |
-          dotnet nuget push "dist/*.nupkg" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
-          echo "NuGet package published." >> "$GITHUB_STEP_SUMMARY"
+        run: dotnet nuget push "dist/*.nupkg" --source https://api.nuget.org/v3/index.json --skip-duplicate && echo "NuGet package published." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
-        run: |
-          echo "Dry run requested; NuGet publish skipped." >> "$GITHUB_STEP_SUMMARY"
-          ls -1 dist/*.nupkg >> "$GITHUB_STEP_SUMMARY"
+        run: (echo "Dry run requested; NuGet publish skipped." && ls -1 dist/*.nupkg) >> "$GITHUB_STEP_SUMMARY"
 
   publish-homebrew:
     name: Update Homebrew formula
@@ -3067,21 +2263,10 @@ jobs:
     steps:
       - name: Extract release info
         id: release
-        run: |
-          tag="${{ needs.prepare.outputs.tag }}"
-          version="${{ needs.prepare.outputs.version }}"
-          url="https://github.com/kreuzberg-dev/kreuzberg/archive/$tag.tar.gz"
-
-          {
-            echo "tag=$tag"
-            echo "version=$version"
-            echo "url=$url"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "Release info:"
-          echo "  Tag: $tag"
-          echo "  Version: $version"
-          echo "  URL: $url"
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: bash scripts/publish/homebrew/extract-release-info.sh
 
       - name: Update Homebrew formula
         uses: mislav/bump-homebrew-formula-action@v3
@@ -3126,74 +2311,22 @@ jobs:
     steps:
       - name: Aggregate release status
         id: status
-        run: |
-          python3 - <<'EOF'
-          import os
-
-          # Registry check results
-          registry_checks = {
-              "Python (PyPI)": "${{ needs.check-pypi.outputs.exists }}",
-              "Node (npm)": "${{ needs.check-npm.outputs.exists }}",
-              "Ruby (RubyGems)": "${{ needs.check-rubygems.outputs.exists }}",
-              "Java (Maven)": "${{ needs.check-maven.outputs.exists }}",
-              "C# (NuGet)": "${{ needs.check-nuget.outputs.exists }}",
-          }
-
-          # Publish job results
-          publish_results = {
-              "Python (PyPI)": "${{ needs.publish-pypi.result }}",
-              "Node (npm)": "${{ needs.publish-node.result }}",
-              "WASM (npm)": "${{ needs.publish-wasm.result }}",
-              "Ruby (RubyGems)": "${{ needs.publish-rubygems.result }}",
-              "Java (Maven)": "${{ needs.publish-maven.result }}",
-              "C# (NuGet)": "${{ needs.publish-nuget.result }}",
-              "Homebrew": "${{ needs.publish-homebrew.result }}",
-              "Docker": "${{ needs.publish-docker.result }}",
-              "CLI Release": "${{ needs.upload-cli-release.result }}",
-              "C# Release": "${{ needs.upload-csharp-release.result }}",
-              "Go FFI Libraries": "${{ needs.upload-go-release.result }}",
-          }
-
-          summary_lines = ["## Release Status for ${{ needs.prepare.outputs.tag }}", ""]
-
-          # Already published (skipped)
-          skipped = [k for k, v in registry_checks.items() if v == "true"]
-          if skipped:
-              summary_lines.append("### ⏭️  Already Published (Skipped)")
-              for item in skipped:
-                  summary_lines.append(f"- {item}")
-              summary_lines.append("")
-
-          # Newly published
-          success = [k for k, v in publish_results.items() if v == "success"]
-          if success:
-              summary_lines.append("### ✅ Published Successfully")
-              for item in success:
-                  summary_lines.append(f"- {item}")
-              summary_lines.append("")
-
-          # Failed
-          failed = [k for k, v in publish_results.items() if v == "failure"]
-          if failed:
-              summary_lines.append("### ❌ Failed")
-              for item in failed:
-                  summary_lines.append(f"- {item}")
-              summary_lines.append("")
-
-          # Skipped due to conditions
-          skipped_cond = [k for k, v in publish_results.items() if v == "skipped"]
-          if skipped_cond:
-              summary_lines.append("### ⊘ Skipped (Not Enabled)")
-              for item in skipped_cond:
-                  summary_lines.append(f"- {item}")
-              summary_lines.append("")
-
-          summary = "\n".join(summary_lines)
-
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
-              f.write(summary + "\n")
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              escaped = summary.replace("%", "%25").replace("\n", "%0A")
-              f.write(f"release_summary={escaped}\n")
-          EOF
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          CHECK_PYPI_EXISTS: ${{ needs.check-pypi.outputs.exists }}
+          CHECK_NPM_EXISTS: ${{ needs.check-npm.outputs.exists }}
+          CHECK_RUBYGEMS_EXISTS: ${{ needs.check-rubygems.outputs.exists }}
+          CHECK_MAVEN_EXISTS: ${{ needs.check-maven.outputs.exists }}
+          CHECK_NUGET_EXISTS: ${{ needs.check-nuget.outputs.exists }}
+          RESULT_PUBLISH_PYPI: ${{ needs.publish-pypi.result }}
+          RESULT_PUBLISH_NODE: ${{ needs.publish-node.result }}
+          RESULT_PUBLISH_WASM: ${{ needs.publish-wasm.result }}
+          RESULT_PUBLISH_RUBYGEMS: ${{ needs.publish-rubygems.result }}
+          RESULT_PUBLISH_MAVEN: ${{ needs.publish-maven.result }}
+          RESULT_PUBLISH_NUGET: ${{ needs.publish-nuget.result }}
+          RESULT_PUBLISH_HOMEBREW: ${{ needs.publish-homebrew.result }}
+          RESULT_PUBLISH_DOCKER: ${{ needs.publish-docker.result }}
+          RESULT_UPLOAD_CLI_RELEASE: ${{ needs.upload-cli-release.result }}
+          RESULT_UPLOAD_CSHARP_RELEASE: ${{ needs.upload-csharp-release.result }}
+          RESULT_UPLOAD_GO_RELEASE: ${{ needs.upload-go-release.result }}
+        run: python3 scripts/publish/aggregate-release-status.py

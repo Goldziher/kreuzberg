@@ -8,7 +8,7 @@
 set -euo pipefail
 
 version="${1:?VERSION argument required}"
-package="@kreuzberg/node"
+package="${2:-@kreuzberg/node}"
 
 # npm view returns non-zero if version doesn't exist
 if npm view "${package}@${version}" version >/dev/null 2>&1; then
