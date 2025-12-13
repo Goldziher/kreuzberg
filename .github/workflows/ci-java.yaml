@@ -173,10 +173,15 @@ jobs:
       - name: Install Task
         uses: ./.github/actions/install-task
 
-      - name: Run E2E tests
+      - name: Run E2E tests (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: task -vv e2e:java:test
+
+      - name: Run E2E tests (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          bash -lc "set -x; task -vv e2e:java:test"
+        run: task -vv e2e:java:test
 
       - name: Upload Java unit test reports
         if: always()
