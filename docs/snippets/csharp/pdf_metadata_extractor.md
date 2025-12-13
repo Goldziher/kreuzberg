@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 
 public class PdfMetadataExtractor : IPostProcessor

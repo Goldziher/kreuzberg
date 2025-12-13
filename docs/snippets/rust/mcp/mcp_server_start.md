@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{ExtractionConfig, mcp::start_mcp_server_with_config};
 
 #[tokio::main]

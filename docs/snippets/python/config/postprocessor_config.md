@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 import asyncio
 from kreuzberg import ExtractionConfig, PostProcessorConfig, extract_file
 

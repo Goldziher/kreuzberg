@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 using System;
 using System.Collections.Generic;

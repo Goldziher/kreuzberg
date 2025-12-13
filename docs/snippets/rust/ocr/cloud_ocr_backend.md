@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::plugins::{Plugin, OcrBackend, OcrBackendType};
 use kreuzberg::{Result, ExtractionResult, OcrConfig, Metadata};
 use async_trait::async_trait;

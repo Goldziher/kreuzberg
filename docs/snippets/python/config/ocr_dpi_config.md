@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import extract_file_sync, ExtractionConfig, OcrConfig, PdfConfig
 
 config: ExtractionConfig = ExtractionConfig(

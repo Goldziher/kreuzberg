@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { batchExtractFilesSync } from '@kreuzberg/node';
 
 const files = ['doc1.pdf', 'doc2.docx', 'doc3.pptx'];

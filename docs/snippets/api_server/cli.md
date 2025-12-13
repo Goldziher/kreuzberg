@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Default: http://127.0.0.1:8000
 kreuzberg serve
 

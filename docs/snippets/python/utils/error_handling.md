@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import extract_file_sync, extract_bytes_sync, ExtractionConfig
 from kreuzberg import (
     KreuzbergError,

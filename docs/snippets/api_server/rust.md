@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{ExtractionConfig, api::serve_with_config};
 
 #[tokio::main]

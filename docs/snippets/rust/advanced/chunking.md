@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{ChunkingConfig, EmbeddingConfig, EmbeddingModelType, ExtractionConfig};
 
 fn main() {

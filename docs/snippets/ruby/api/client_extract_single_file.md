@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'net/http'
 require 'uri'
 require 'json'

@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 import threading
 
 class StatefulPlugin:

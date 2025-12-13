@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_bytes, ExtractionConfig};
 use tokio::fs;
 

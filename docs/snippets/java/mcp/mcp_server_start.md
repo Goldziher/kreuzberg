@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 import java.io.IOException;
 
 public class McpServer {

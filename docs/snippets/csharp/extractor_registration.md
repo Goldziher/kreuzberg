@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 
 public class CustomExtractor : IDocumentExtractor

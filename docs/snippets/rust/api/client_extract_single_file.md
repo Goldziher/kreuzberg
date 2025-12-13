@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use reqwest::multipart;
 use std::fs::File;
 

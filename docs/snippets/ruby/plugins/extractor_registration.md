@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 # Register custom extractor with priority 50

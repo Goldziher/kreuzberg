@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use reqwest::Client;
 
 #[tokio::main]

@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import extract_file_sync, ExtractionConfig, ExtractedTable
 
 result = extract_file_sync("document.pdf", config=ExtractionConfig())

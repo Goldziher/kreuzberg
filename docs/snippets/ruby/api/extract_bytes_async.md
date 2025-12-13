@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 data = File.binread('document.pdf')

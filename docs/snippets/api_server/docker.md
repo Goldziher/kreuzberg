@@ -1,4 +1,4 @@
-```bash
+```bash title="Bash"
 # Run server on port 8000
 docker run -d \n  -p 8000:8000 \n  goldziher/kreuzberg:latest \n  serve -H 0.0.0.0 -p 8000
 

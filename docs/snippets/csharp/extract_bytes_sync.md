@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 
 var data = await File.ReadAllBytesAsync("document.pdf");

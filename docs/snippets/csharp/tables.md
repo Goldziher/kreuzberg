@@ -1,4 +1,4 @@
-```csharp
+```csharp title="C#"
 using Kreuzberg;
 
 var result = KreuzbergClient.ExtractFileSync("document.pdf", new ExtractionConfig());

@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 import pytest
 from kreuzberg import ExtractionResult
 

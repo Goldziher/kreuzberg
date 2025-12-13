@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 config = Kreuzberg::Config::Extraction.new(

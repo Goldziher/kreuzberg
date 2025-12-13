@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::plugins::registry::*;
 
 let registry = get_document_extractor_registry();

@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 result = Kreuzberg.extract_file_sync('document.pdf')

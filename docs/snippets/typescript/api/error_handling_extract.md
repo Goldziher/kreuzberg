@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 try {
     const response = await fetch("http://localhost:8000/extract", {
         method: "POST",

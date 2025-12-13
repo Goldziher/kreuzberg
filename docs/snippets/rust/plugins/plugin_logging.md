@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use log::{info, warn, error};
 
 impl Plugin for MyPlugin {

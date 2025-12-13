@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import ExtractionResult, register_post_processor
 
 class PdfOnlyProcessor:

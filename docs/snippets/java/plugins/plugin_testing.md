@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 import dev.kreuzberg.ExtractionResult;
 import dev.kreuzberg.PostProcessor;
 import org.junit.jupiter.api.Test;

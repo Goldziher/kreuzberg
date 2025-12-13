@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 # Ruby uses blocking APIs; async variants call into Tokio internally.

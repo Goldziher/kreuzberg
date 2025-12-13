@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import ValidationError, register_validator
 
 class QualityValidator:

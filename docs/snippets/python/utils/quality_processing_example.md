@@ -1,4 +1,4 @@
-```python
+```python title="Python"
 from kreuzberg import extract_file, ExtractionConfig
 
 config = ExtractionConfig(enable_quality_processing=True)

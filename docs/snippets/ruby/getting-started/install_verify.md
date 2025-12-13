@@ -1,4 +1,4 @@
-```ruby
+```ruby title="Ruby"
 require 'kreuzberg'
 
 puts "Kreuzberg version: #{Kreuzberg::VERSION}"

@@ -129,8 +129,7 @@ kreuzberg extract document.pdf --config my-config.toml
 
 **kreuzberg.toml:**
 
-```toml title="kreuzberg.toml"
-# OCR configuration
+```toml title="OCR configuration"
 [ocr]
 backend = "tesseract"
 language = "eng"

@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 #[cfg(test)]
 mod tests {
     use super::*;

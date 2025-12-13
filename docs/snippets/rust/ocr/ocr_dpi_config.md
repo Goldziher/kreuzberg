@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_file_sync, ExtractionConfig, OcrConfig, PdfConfig};
 
 fn main() -> kreuzberg::Result<()> {

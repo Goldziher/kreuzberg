@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 impl PostProcessor for PdfOnlyProcessor {
     async fn process(
         &self,

@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{ExtractionConfig, OcrConfig, TesseractConfig};
 
 fn main() {

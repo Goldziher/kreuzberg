@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{
     extract_file, ExtractionConfig, OcrConfig, TesseractConfig, ImagePreprocessingConfig,
     PdfConfig, ImageExtractionConfig, ChunkingConfig, TokenReductionConfig,

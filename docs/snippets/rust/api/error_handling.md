@@ -1,4 +1,4 @@
-```rust
+```rust title="Rust"
 use kreuzberg::{extract_file_sync, extract_bytes_sync, ExtractionConfig, KreuzbergError};
 
 fn main() -> kreuzberg::Result<()> {

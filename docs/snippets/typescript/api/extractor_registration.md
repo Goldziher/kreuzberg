@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { extractFileSync, listDocumentExtractors } from '@kreuzberg/node';
 
 const extractors = listDocumentExtractors();

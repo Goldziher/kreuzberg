@@ -1,4 +1,4 @@
-```go
+```go title="Go"
 package main
 
 /*

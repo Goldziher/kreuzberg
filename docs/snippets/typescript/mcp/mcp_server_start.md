@@ -1,4 +1,4 @@
-```typescript
+```typescript title="TypeScript"
 import { spawn } from 'child_process';
 
 const mcpProcess = spawn('kreuzberg', ['mcp']);

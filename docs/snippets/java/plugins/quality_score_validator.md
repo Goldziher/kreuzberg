@@ -1,4 +1,4 @@
-```java
+```java title="Java"
 Validator qualityValidator = result -> {
     double score = result.getMetadata().containsKey("quality_score")
         ? ((Number) result.getMetadata().get("quality_score")).doubleValue()
