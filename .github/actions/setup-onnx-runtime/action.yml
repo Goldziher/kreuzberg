@@ -153,6 +153,7 @@ runs:
         $ExtractRoot = Join-Path $env:TEMP "onnxruntime"
         $OrtRoot = Join-Path $ExtractRoot "onnxruntime-win-x64-$OrtVersion"
         $OrtBin = Join-Path $OrtRoot 'bin'
+        $OrtLib = Join-Path $OrtRoot 'lib'
 
         # Download only if not cached
         if (-Not (Test-Path $OrtRoot)) {
@@ -173,33 +174,41 @@ runs:
           exit 1
         }
 
-        # Verify runtime directory exists
-        if (!(Test-Path $OrtBin)) {
-          Write-Error "ERROR: ONNX Runtime bin directory missing at $OrtRoot\bin"
+        # Verify that library files actually exist
+        $LibFiles = Get-ChildItem -Path $OrtLib -Filter "*.lib" -ErrorAction SilentlyContinue
+        if ($LibFiles.Count -eq 0) {
+          Write-Error "ERROR: No ONNX Runtime library files found in $OrtRoot\lib"
+          Get-ChildItem -Path $OrtLib | Write-Host
+          exit 1
+        }
+
+        # Locate runtime DLLs (recent releases place them under lib/ instead of bin/)
+        $RuntimeDirs = @()
+        if (Test-Path $OrtBin) { $RuntimeDirs += $OrtBin }
+        if (Test-Path $OrtLib) { $RuntimeDirs += $OrtLib }
+        $RuntimeDirs += $OrtRoot
+
+        $DllFiles = @()
+        foreach ($dir in $RuntimeDirs) {
+          $DllFiles += Get-ChildItem -Path $dir -Filter "*.dll" -ErrorAction SilentlyContinue
+        }
+        if ($DllFiles.Count -eq 0) {
+          $DllFiles = Get-ChildItem -Path $OrtRoot -Recurse -Filter "*.dll" -ErrorAction SilentlyContinue
+        }
+        if ($DllFiles.Count -eq 0) {
+          Write-Error "ERROR: No ONNX Runtime runtime DLLs found under $OrtRoot"
           Get-ChildItem -Path $OrtRoot -Recurse | Write-Host
           exit 1
         }
-
-        # Verify that library files actually exist
-        $LibFiles = Get-ChildItem -Path (Join-Path $OrtRoot 'lib') -Filter "*.lib" -ErrorAction SilentlyContinue
-        if ($LibFiles.Count -eq 0) {
-          Write-Error "ERROR: No ONNX Runtime library files found in $OrtRoot\lib"
-          Get-ChildItem -Path (Join-Path $OrtRoot 'lib') | Write-Host
-          exit 1
-        }
-
-        # Verify that runtime DLL exists
-        $DllFiles = Get-ChildItem -Path $OrtBin -Filter "*.dll" -ErrorAction SilentlyContinue
-        if ($DllFiles.Count -eq 0) {
-          Write-Error "ERROR: No ONNX Runtime runtime DLLs found in $OrtRoot\bin"
-          Get-ChildItem -Path $OrtBin | Write-Host
-          exit 1
-        }
+        $DllDirs = $DllFiles | Select-Object -ExpandProperty DirectoryName -Unique
+        $DllPathPrefix = ($DllDirs -join ';')
 
         $Dest = Join-Path $env:GITHUB_WORKSPACE "${{ inputs.dest-dir }}"
         New-Item -ItemType Directory -Path $Dest -Force | Out-Null
         Copy-Item -Path (Join-Path $OrtRoot 'lib' '*') -Destination $Dest -Force
-        Copy-Item -Path (Join-Path $OrtBin '*.dll') -Destination $Dest -Force
+        foreach ($dir in $DllDirs) {
+          Copy-Item -Path (Join-Path $dir '*.dll') -Destination $Dest -Force
+        }
 
         # Append to existing RUSTFLAGS if present
         $RustFlags = if ($env:RUSTFLAGS) { "$env:RUSTFLAGS -L $OrtRoot\lib" } else { "-L $OrtRoot\lib" }
@@ -212,5 +221,5 @@ runs:
           "RUSTFLAGS=$RustFlags"
           "LIB=$OrtRoot\lib;$env:LIB"
           "LIBRARY_PATH=$OrtRoot\lib;$env:LIBRARY_PATH"
-          "PATH=$OrtBin;$Dest;$env:PATH"
+          "PATH=$DllPathPrefix;$Dest;$env:PATH"
         ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
