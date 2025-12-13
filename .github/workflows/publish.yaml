@@ -1602,10 +1602,6 @@ jobs:
         run: |
           echo "Docker release disabled via workflow targets (${{ needs.prepare.outputs.release_targets }})."
 
-      - name: Free up disk space
-        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
-        run: bash scripts/publish/ubuntu/free-disk-space.sh
-
       - name: Checkout
         if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: actions/checkout@v4
@@ -1613,6 +1609,10 @@ jobs:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
           fetch-depth: 0
           submodules: recursive
+
+      - name: Free up disk space
+        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
+        run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Ensure target commit
         if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.target_sha != '' }}
