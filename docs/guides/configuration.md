@@ -58,6 +58,10 @@ Kreuzberg supports four ways to configure extraction:
 
     --8<-- "docs/snippets/typescript/config/config_discover.md"
 
+=== "WASM"
+
+    --8<-- "docs/snippets/wasm/config/config_discover.md"
+
 === "TOML File"
 
     ```toml title="kreuzberg.toml"
@@ -164,6 +168,10 @@ Kreuzberg automatically discovers configuration files in the following locations
 
     --8<-- "docs/snippets/typescript/config/config_discover.md"
 
+=== "WASM"
+
+    --8<-- "docs/snippets/wasm/config/config_discover.md"
+
 ## ExtractionConfig
 
 The main configuration object controlling extraction behavior.
@@ -211,6 +219,10 @@ The main configuration object controlling extraction behavior.
 === "TypeScript"
 
     --8<-- "docs/snippets/typescript/config/config_basic.md"
+
+=== "WASM"
+
+    --8<-- "docs/snippets/wasm/config/config_basic.md"
 
 ## OcrConfig
 
@@ -643,6 +655,10 @@ Text chunking configuration for splitting extracted text into chunks.
 === "TypeScript"
 
     --8<-- "docs/snippets/typescript/utils/chunking.md"
+
+=== "WASM"
+
+    --8<-- "docs/snippets/wasm/config/chunking_config.md"
 
 ## EmbeddingConfig
 

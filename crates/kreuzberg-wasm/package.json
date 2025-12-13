@@ -1,0 +1,106 @@
+{
+	"name": "@kreuzberg/wasm",
+	"version": "4.0.0-rc.6",
+	"description": "Kreuzberg document intelligence - WebAssembly bindings",
+	"author": {
+		"name": "Na'aman Hirschfeld",
+		"email": "nhirschfeld@gmail.com",
+		"url": "https://kreuzberg.dev"
+	},
+	"homepage": "https://kreuzberg.dev",
+	"bugs": {
+		"url": "https://github.com/kreuzberg-dev/kreuzberg/issues"
+	},
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./runtime": {
+			"types": "./dist/runtime.d.ts",
+			"import": "./dist/runtime.mjs",
+			"require": "./dist/runtime.js"
+		},
+		"./adapters/wasm-adapter": {
+			"types": "./dist/adapters/wasm-adapter.d.ts",
+			"import": "./dist/adapters/wasm-adapter.mjs",
+			"require": "./dist/adapters/wasm-adapter.js"
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kreuzberg-dev/kreuzberg.git"
+	},
+	"license": "MIT",
+	"keywords": [
+		"wasm",
+		"webassembly",
+		"document-intelligence",
+		"document-extraction",
+		"text-extraction",
+		"pdf-extraction",
+		"ocr",
+		"pdf",
+		"docx",
+		"xlsx",
+		"pptx",
+		"office-documents",
+		"table-extraction",
+		"metadata-extraction",
+		"rust",
+		"binding",
+		"typescript"
+	],
+	"files": [
+		"dist",
+		"pkg",
+		"*.wasm",
+		"*.d.ts",
+		"README.md"
+	],
+	"engines": {
+		"node": ">= 16"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/",
+		"access": "public"
+	},
+	"scripts": {
+		"build:wasm:web": "wasm-pack build --target web --out-dir pkg --release",
+		"build:wasm:bundler": "wasm-pack build --target bundler --out-dir pkg --release",
+		"build:wasm:nodejs": "wasm-pack build --target nodejs --out-dir pkg --release",
+		"build:wasm:deno": "wasm-pack build --target deno --out-dir pkg --release",
+		"build:ts": "tsup",
+		"build": "npm run build:wasm:bundler && npm run build:ts",
+		"build:all": "npm run build:wasm:web && npm run build:wasm:bundler && npm run build:wasm:nodejs && npm run build:wasm:deno && npm run build:ts",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check typescript && oxlint typescript",
+		"lint:fix": "biome check --write typescript",
+		"format": "biome format --write typescript",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:ui": "vitest --ui",
+		"prepublishOnly": "npm run build"
+	},
+	"devDependencies": {
+		"@types/node": "^24.10.1",
+		"@vitest/coverage-v8": "^1.4.0",
+		"@vitest/ui": "^1.4.0",
+		"jsdom": "^24.0.0",
+		"oxlint": "^1.31.0",
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3",
+		"vitest": "^1.4.0"
+	},
+	"dependencies": {
+		"@kreuzberg/core": "workspace:*"
+	},
+	"optionalDependencies": {
+		"tesseract-wasm": "^0.11.0"
+	}
+}

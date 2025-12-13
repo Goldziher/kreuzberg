@@ -60,6 +60,10 @@ Extract text, tables, and metadata from a file on disk.
 
     --8<-- "snippets/csharp/extract_file_sync.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/extract_file_sync.md"
+
 ### Asynchronous
 
 === "Python"
@@ -89,6 +93,10 @@ Extract text, tables, and metadata from a file on disk.
 === "C#"
 
     --8<-- "snippets/csharp/extract_file_async.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/extract_file_async.md"
 
 ```mermaid
 flowchart TD
@@ -179,6 +187,10 @@ Extract from data already loaded in memory.
 
     --8<-- "snippets/csharp/extract_bytes_sync.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/extract_bytes_sync.md"
+
 ### Asynchronous
 
 === "Python"
@@ -208,6 +220,10 @@ Extract from data already loaded in memory.
 === "C#"
 
     --8<-- "snippets/csharp/extract_bytes_async.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/extract_bytes_async.md"
 
 !!! note "MIME Type Detection"
     Kreuzberg automatically detects MIME types from file extensions. When extracting from bytes, you must provide the MIME type explicitly.
@@ -246,6 +262,10 @@ Process multiple files concurrently for better performance.
 
     --8<-- "snippets/csharp/batch_extract_files_sync.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/batch_extract_files_sync.md"
+
 ### Batch Extract Bytes
 
 === "Python"
@@ -275,6 +295,10 @@ Process multiple files concurrently for better performance.
 === "C#"
 
     --8<-- "snippets/csharp/batch_extract_bytes_sync.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/batch_extract_bytes_sync.md"
 
 ```mermaid
 flowchart TD
@@ -410,6 +434,10 @@ All extraction functions raise exceptions on failure:
 === "C#"
 
     --8<-- "snippets/csharp/error_handling.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/error_handling_wasm.md"
 
 !!! warning "System Errors"
     `OSError` (Python), `IOException` (Rust), and system-level errors always bubble up to users. These indicate real system problems that need to be addressed (permissions, disk space, etc.).

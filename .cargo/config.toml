@@ -24,6 +24,29 @@ incremental = true
 linker = "x86_64-w64-mingw32-gcc"
 ar = "ar"
 
+[target.wasm32-unknown-unknown]
+rustflags = [
+    "-C",
+    "target-feature=+atomics,+bulk-memory",
+    "-C",
+    "link-arg=--shared-memory",
+    "-C",
+    "link-arg=--max-memory=2147483648",
+    "-C",
+    "link-arg=--import-memory",
+    "-C",
+    "link-arg=--export=__wasm_init_tls",
+    "-C",
+    "link-arg=--export=__tls_size",
+    "-C",
+    "link-arg=--export=__tls_align",
+    "-C",
+    "link-arg=--export=__tls_base",
+]
+
+[unstable]
+build-std = ["panic_abort", "std"]
+
 # Network settings for faster crate downloads
 [net]
 git-fetch-with-cli = false

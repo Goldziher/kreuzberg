@@ -47,6 +47,24 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
             let _ = crate::keywords::ensure_initialized();
         }
 
+        #[cfg(feature = "language-detection")]
+        {
+            let _ = crate::language_detection::ensure_initialized();
+        }
+
+        #[cfg(feature = "chunking")]
+        {
+            let _ = crate::chunking::ensure_initialized();
+        }
+
+        #[cfg(feature = "quality")]
+        {
+            let registry = crate::plugins::registry::get_post_processor_registry();
+            if let Ok(mut reg) = registry.write() {
+                let _ = reg.register(std::sync::Arc::new(crate::text::QualityProcessor), 30);
+            }
+        }
+
         let processor_registry = crate::plugins::registry::get_post_processor_registry();
 
         for stage in [ProcessingStage::Early, ProcessingStage::Middle, ProcessingStage::Late] {
@@ -225,6 +243,157 @@ pub async fn run_pipeline(mut result: ExtractionResult, config: &ExtractionConfi
                 validator.validate(&result, config).await?;
             }
         }
+    }
+
+    Ok(result)
+}
+
+/// Run the post-processing pipeline synchronously (WASM-compatible version).
+///
+/// This is a synchronous implementation for WASM and non-async contexts.
+/// It performs a subset of the full async pipeline, excluding async post-processors
+/// and validators.
+///
+/// # Arguments
+///
+/// * `result` - The extraction result to process
+/// * `config` - Extraction configuration
+///
+/// # Returns
+///
+/// The processed extraction result.
+///
+/// # Notes
+///
+/// This function is only available when the `tokio-runtime` feature is disabled.
+/// It handles:
+/// - Quality processing (if enabled)
+/// - Chunking (if enabled)
+/// - Language detection (if enabled)
+///
+/// It does NOT handle:
+/// - Async post-processors
+/// - Async validators
+#[cfg(not(feature = "tokio-runtime"))]
+pub fn run_pipeline_sync(mut result: ExtractionResult, config: &ExtractionConfig) -> Result<ExtractionResult> {
+    // Quality processing
+    #[cfg(feature = "quality")]
+    if config.enable_quality_processing {
+        let quality_score = crate::text::quality::calculate_quality_score(
+            &result.content,
+            Some(
+                &result
+                    .metadata
+                    .additional
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.to_string()))
+                    .collect(),
+            ),
+        );
+        result.metadata.additional.insert(
+            "quality_score".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(quality_score).unwrap_or(serde_json::Number::from(0)),
+            ),
+        );
+    }
+
+    #[cfg(not(feature = "quality"))]
+    if config.enable_quality_processing {
+        result.metadata.additional.insert(
+            "quality_processing_error".to_string(),
+            serde_json::Value::String("Quality processing feature not enabled".to_string()),
+        );
+    }
+
+    // Chunking
+    #[cfg(feature = "chunking")]
+    if let Some(ref chunking_config) = config.chunking {
+        let chunk_config = crate::chunking::ChunkingConfig {
+            max_characters: chunking_config.max_chars,
+            overlap: chunking_config.max_overlap,
+            trim: true,
+            chunker_type: crate::chunking::ChunkerType::Text,
+        };
+
+        match crate::chunking::chunk_text(&result.content, &chunk_config) {
+            Ok(chunking_result) => {
+                result.chunks = Some(chunking_result.chunks);
+
+                if let Some(ref chunks) = result.chunks {
+                    result.metadata.additional.insert(
+                        "chunk_count".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from(chunks.len())),
+                    );
+                }
+
+                #[cfg(feature = "embeddings")]
+                if let Some(ref embedding_config) = chunking_config.embedding
+                    && let Some(ref mut chunks) = result.chunks
+                {
+                    match crate::embeddings::generate_embeddings_for_chunks(chunks, embedding_config) {
+                        Ok(()) => {
+                            result
+                                .metadata
+                                .additional
+                                .insert("embeddings_generated".to_string(), serde_json::Value::Bool(true));
+                        }
+                        Err(e) => {
+                            result
+                                .metadata
+                                .additional
+                                .insert("embedding_error".to_string(), serde_json::Value::String(e.to_string()));
+                        }
+                    }
+                }
+
+                #[cfg(not(feature = "embeddings"))]
+                if chunking_config.embedding.is_some() {
+                    result.metadata.additional.insert(
+                        "embedding_error".to_string(),
+                        serde_json::Value::String("Embeddings feature not enabled".to_string()),
+                    );
+                }
+            }
+            Err(e) => {
+                result
+                    .metadata
+                    .additional
+                    .insert("chunking_error".to_string(), serde_json::Value::String(e.to_string()));
+            }
+        }
+    }
+
+    #[cfg(not(feature = "chunking"))]
+    if config.chunking.is_some() {
+        result.metadata.additional.insert(
+            "chunking_error".to_string(),
+            serde_json::Value::String("Chunking feature not enabled".to_string()),
+        );
+    }
+
+    // Language detection
+    #[cfg(feature = "language-detection")]
+    if let Some(ref lang_config) = config.language_detection {
+        match crate::language_detection::detect_languages(&result.content, lang_config) {
+            Ok(detected) => {
+                result.detected_languages = detected;
+            }
+            Err(e) => {
+                result.metadata.additional.insert(
+                    "language_detection_error".to_string(),
+                    serde_json::Value::String(e.to_string()),
+                );
+            }
+        }
+    }
+
+    #[cfg(not(feature = "language-detection"))]
+    if config.language_detection.is_some() {
+        result.metadata.additional.insert(
+            "language_detection_error".to_string(),
+            serde_json::Value::String("Language detection feature not enabled".to_string()),
+        );
     }
 
     Ok(result)

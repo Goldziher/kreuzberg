@@ -2,6 +2,7 @@
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
+use crate::extractors::SyncExtractor;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
@@ -193,21 +194,8 @@ impl Plugin for HtmlExtractor {
     }
 }
 
-#[async_trait]
-impl DocumentExtractor for HtmlExtractor {
-    #[cfg_attr(feature = "otel", tracing::instrument(
-        skip(self, content, config),
-        fields(
-            extractor.name = self.name(),
-            content.size_bytes = content.len(),
-        )
-    ))]
-    async fn extract_bytes(
-        &self,
-        content: &[u8],
-        mime_type: &str,
-        config: &ExtractionConfig,
-    ) -> Result<ExtractionResult> {
+impl SyncExtractor for HtmlExtractor {
+    fn extract_sync(&self, content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
         let html = std::str::from_utf8(content)
             .map(|s| s.to_string())
             .unwrap_or_else(|_| String::from_utf8_lossy(content).to_string());
@@ -232,6 +220,25 @@ impl DocumentExtractor for HtmlExtractor {
             images: None,
         })
     }
+}
+
+#[async_trait]
+impl DocumentExtractor for HtmlExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
+    async fn extract_bytes(
+        &self,
+        content: &[u8],
+        mime_type: &str,
+        config: &ExtractionConfig,
+    ) -> Result<ExtractionResult> {
+        self.extract_sync(content, mime_type, config)
+    }
 
     #[cfg(feature = "tokio-runtime")]
     #[cfg_attr(feature = "otel", tracing::instrument(
@@ -240,6 +247,7 @@ impl DocumentExtractor for HtmlExtractor {
             extractor.name = self.name(),
         )
     ))]
+    #[cfg(feature = "tokio-runtime")]
     async fn extract_file(&self, path: &Path, mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
         let bytes = tokio::fs::read(path).await?;
         self.extract_bytes(&bytes, mime_type, config).await
@@ -251,6 +259,10 @@ impl DocumentExtractor for HtmlExtractor {
 
     fn priority(&self) -> i32 {
         50
+    }
+
+    fn as_sync_extractor(&self) -> Option<&dyn crate::extractors::SyncExtractor> {
+        Some(self)
     }
 }
 

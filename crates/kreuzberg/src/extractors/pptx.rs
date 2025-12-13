@@ -1,3 +1,5 @@
+#![cfg(all(feature = "tokio-runtime", feature = "office"))]
+
 //! PowerPoint presentation extractor.
 
 use crate::Result;

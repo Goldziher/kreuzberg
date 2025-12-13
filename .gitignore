@@ -122,3 +122,10 @@ wheels/
 yarn-debug.log*
 yarn-error.log*
 packages/python/kreuzberg/kreuzberg-cli
+
+# WASM build artifacts
+libpdfium.a
+.wrangler/
+
+# E2E generated helpers (will be refactored to load fixtures)
+e2e/wasm-workers/helpers.ts

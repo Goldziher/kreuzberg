@@ -1,0 +1,46 @@
+[package]
+name = "kreuzberg-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Kreuzberg document intelligence - WebAssembly bindings"
+keywords = ["wasm", "webassembly", "document", "extraction", "bindings"]
+categories = ["api-bindings", "text-processing"]
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+kreuzberg = { path = "../kreuzberg", default-features = false, features = ["wasm-target"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+wasm-bindgen-rayon = "1.2"
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Blob", "File", "FileReader", "console"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
+uuid = { version = "1.19", features = ["js"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = "0.9"
+toml = "0.9"
+base64 = { workspace = true }
+async-trait = "0.1"
+futures = "0.3"
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[features]
+default = []
+embeddings = ["kreuzberg/embeddings"]
+ocr-wasm = []
+console_error_panic_hook = ["dep:console_error_panic_hook"]
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

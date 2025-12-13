@@ -47,7 +47,10 @@ cache-keys = [
 ]
 
 [tool.uv.workspace]
-members = [ "packages/python" ]
+members = [
+  "packages/python",
+  "examples/python",
+]
 
 [tool.ruff]
 target-version = "py310"

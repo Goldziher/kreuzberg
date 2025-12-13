@@ -45,7 +45,8 @@ impl Plugin for KeywordExtractor {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PostProcessor for KeywordExtractor {
     async fn process(&self, result: &mut ExtractionResult, config: &ExtractionConfig) -> Result<()> {
         let keyword_config = match &config.keywords {

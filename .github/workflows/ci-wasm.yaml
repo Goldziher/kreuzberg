@@ -1,0 +1,431 @@
+name: CI WASM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-wasm/**'
+      - 'crates/kreuzberg-core-types/**'
+      - 'crates/kreuzberg-ffi/**'
+      - 'packages/wasm/**'
+      - 'e2e/wasm/**'
+      - 'fixtures/**'
+      - 'tools/e2e-generator/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/cleanup-rust-cache/**'
+      - '.github/workflows/ci-wasm.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-wasm/**'
+      - 'crates/kreuzberg-core-types/**'
+      - 'crates/kreuzberg-ffi/**'
+      - 'packages/wasm/**'
+      - 'e2e/wasm/**'
+      - 'fixtures/**'
+      - 'tools/e2e-generator/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/actions/cleanup-rust-cache/**'
+      - '.github/workflows/ci-wasm.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-wasm-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+jobs:
+  lint-and-format:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: wasm-lint
+          target: wasm32-unknown-unknown
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Run cargo fmt check
+        run: cargo fmt --all -- --check
+        shell: bash
+
+      - name: Run cargo clippy
+        run: cargo clippy --all-targets --target wasm32-unknown-unknown -- -D warnings
+        working-directory: crates/kreuzberg-wasm
+        shell: bash
+
+      - name: Run biome check (TypeScript)
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm biome check typescript
+        shell: bash
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+          - os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: wasm-test-${{ matrix.os }}
+          target: wasm32-unknown-unknown
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Install wasm-pack
+        shell: bash
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Run Rust unit tests
+        run: cargo test --lib --target wasm32-unknown-unknown --no-fail-fast
+        working-directory: crates/kreuzberg-wasm
+        shell: bash
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Run TypeScript tests
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm test
+        shell: bash
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  build-wasm-targets:
+    name: Build WASM Targets
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: wasm-build-${{ matrix.target }}
+          target: wasm32-unknown-unknown
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Install wasm-pack
+        shell: bash
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM for Web
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:web
+        shell: bash
+
+      - name: Build WASM for Bundler
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:bundler
+        shell: bash
+
+      - name: Build WASM for Node.js
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:nodejs
+        shell: bash
+
+      - name: Build WASM for Deno
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:deno
+        shell: bash
+
+      - name: Validate build artifacts (Web)
+        shell: bash
+        run: |
+          PKG_DIR="crates/kreuzberg-wasm/pkg"
+          if [ ! -f "$PKG_DIR/kreuzberg_wasm_bg.wasm" ]; then
+            echo "ERROR: Web WASM artifact not found"
+            exit 1
+          fi
+          echo "Web WASM artifact validated: $PKG_DIR/kreuzberg_wasm_bg.wasm"
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: wasm-${{ matrix.target }}
+          path: crates/kreuzberg-wasm/pkg**/
+          retention-days: 7
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  bundle-size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: wasm-size
+          target: wasm32-unknown-unknown
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Install wasm-pack
+        shell: bash
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build release WASM (Bundler target)
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:bundler
+        shell: bash
+
+      - name: Check WASM file sizes
+        run: |
+          set -e
+          PKG_DIR="crates/kreuzberg-wasm/pkg"
+          WASM_FILE="$PKG_DIR/kreuzberg_wasm_bg.wasm"
+
+          if [ ! -f "$WASM_FILE" ]; then
+            echo "ERROR: WASM file not found at $WASM_FILE"
+            exit 1
+          fi
+
+          # Check uncompressed size
+          WASM_SIZE=$(wc -c < "$WASM_FILE")
+          WASM_SIZE_MB=$(echo "scale=2; $WASM_SIZE / 1048576" | bc)
+          echo "WASM size (uncompressed): ${WASM_SIZE_MB}MB (${WASM_SIZE} bytes)"
+
+          # Limit: 5MB uncompressed
+          LIMIT_UNCOMPRESSED=5242880
+          if [ "$WASM_SIZE" -gt "$LIMIT_UNCOMPRESSED" ]; then
+            echo "ERROR: WASM bundle exceeds 5MB limit: ${WASM_SIZE_MB}MB"
+            exit 1
+          fi
+
+          # Check gzipped size
+          gzip -c "$WASM_FILE" > "$WASM_FILE.gz"
+          GZIP_SIZE=$(wc -c < "$WASM_FILE.gz")
+          GZIP_SIZE_MB=$(echo "scale=2; $GZIP_SIZE / 1048576" | bc)
+          echo "WASM size (gzipped): ${GZIP_SIZE_MB}MB (${GZIP_SIZE} bytes)"
+
+          # Limit: 2MB gzipped
+          LIMIT_GZIPPED=2097152
+          if [ "$GZIP_SIZE" -gt "$LIMIT_GZIPPED" ]; then
+            echo "ERROR: Gzipped WASM exceeds 2MB limit: ${GZIP_SIZE_MB}MB"
+            exit 1
+          fi
+
+          echo ""
+          echo "Bundle size check passed!"
+          echo "- Uncompressed: ${WASM_SIZE_MB}MB / 5MB"
+          echo "- Gzipped: ${GZIP_SIZE_MB}MB / 2MB"
+        shell: bash
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  type-definitions:
+    name: Type Definitions Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: wasm-types
+          target: wasm32-unknown-unknown
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Install wasm-pack
+        shell: bash
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM (required for type generation)
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:bundler
+        shell: bash
+
+      - name: Run TypeScript type check
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm typecheck
+        shell: bash
+
+      - name: Verify .d.ts files exist
+        shell: bash
+        run: |
+          set -e
+          PKG_DIR="crates/kreuzberg-wasm/pkg"
+
+          echo "Checking for generated type definitions..."
+
+          REQUIRED_FILES=(
+            "$PKG_DIR/kreuzberg_wasm.d.ts"
+            "$PKG_DIR/index.d.ts"
+          )
+
+          for FILE in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$FILE" ]; then
+              echo "ERROR: Type definition file not found: $FILE"
+              exit 1
+            fi
+            echo "Found: $FILE"
+          done
+
+          echo ""
+          echo "Type definitions validation passed!"
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  integration-tests:
+    name: Integration Tests (Node ${{ matrix.node-version }})
+    needs: [build-wasm-targets]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["18", "20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: wasm-x86_64-unknown-linux-gnu
+          path: crates/kreuzberg-wasm/
+
+      - name: Install dependencies
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm install
+        shell: bash
+
+      - name: Build TypeScript wrapper
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:ts
+        shell: bash
+
+      - name: Run integration tests
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm test
+        shell: bash
+
+  all-checks-passed:
+    name: All WASM Checks Passed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - lint-and-format
+      - test
+      - build-wasm-targets
+      - bundle-size-check
+      - type-definitions
+      - integration-tests
+    steps:
+      - name: Decide whether all checks passed
+        run: |
+          if [[ "${{ needs.lint-and-format.result }}" == "failure" ||
+                "${{ needs.test.result }}" == "failure" ||
+                "${{ needs.build-wasm-targets.result }}" == "failure" ||
+                "${{ needs.bundle-size-check.result }}" == "failure" ||
+                "${{ needs.type-definitions.result }}" == "failure" ||
+                "${{ needs.integration-tests.result }}" == "failure" ]]; then
+            echo "One or more WASM CI checks failed"
+            exit 1
+          fi
+          echo "All WASM CI checks passed!"

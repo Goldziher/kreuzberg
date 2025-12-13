@@ -186,6 +186,10 @@ pip install "kreuzberg[paddleocr]"
 
     --8<-- "snippets/typescript/ocr/ocr_extraction.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/ocr/ocr_extraction.md"
+
 ### Multiple Languages
 
 === "Go"
@@ -211,6 +215,28 @@ pip install "kreuzberg[paddleocr]"
 === "TypeScript"
 
     --8<-- "snippets/typescript/ocr/ocr_multi_language.md"
+
+=== "WASM"
+
+    ```typescript
+    import { enableOcr, extractFromFile, initWasm } from '@kreuzberg/wasm';
+
+    await initWasm();
+    await enableOcr();
+
+    const fileInput = document.getElementById('file') as HTMLInputElement;
+    const file = fileInput.files?.[0];
+
+    if (file) {
+      const result = await extractFromFile(file, file.type, {
+        ocr: {
+          backend: 'tesseract-wasm',
+          language: 'eng+deu', // Multiple languages
+        },
+      });
+      console.log(result.content);
+    }
+    ```
 
 ### Force OCR on All Pages
 
@@ -239,6 +265,29 @@ Process PDFs with OCR even when they have a text layer:
 === "TypeScript"
 
     --8<-- "snippets/typescript/ocr/ocr_force_all_pages.md"
+
+=== "WASM"
+
+    ```typescript
+    import { enableOcr, extractFromFile, initWasm } from '@kreuzberg/wasm';
+
+    await initWasm();
+    await enableOcr();
+
+    const fileInput = document.getElementById('file') as HTMLInputElement;
+    const file = fileInput.files?.[0];
+
+    if (file) {
+      const result = await extractFromFile(file, file.type, {
+        force_ocr: true,
+        ocr: {
+          backend: 'tesseract-wasm',
+          language: 'eng',
+        },
+      });
+      console.log(result.content);
+    }
+    ```
 
 ### Using EasyOCR (Python Only)
 

@@ -1,3 +1,5 @@
+#![cfg(feature = "mcp")]
+
 //! Model Context Protocol (MCP) server implementation.
 //!
 //! Provides an MCP server that exposes Kreuzberg's document extraction

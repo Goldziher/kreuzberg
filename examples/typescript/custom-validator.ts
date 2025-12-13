@@ -121,7 +121,7 @@ class LanguageValidator implements ValidatorProtocol {
 		}
 
 		const primaryLanguage = result.detectedLanguages[0];
-		if (!this.allowedLanguages.includes(primaryLanguage)) {
+		if (primaryLanguage && !this.allowedLanguages.includes(primaryLanguage)) {
 			throw new Error(
 				`ValidationError: Detected language '${primaryLanguage}' not in allowed list: ${this.allowedLanguages.join(", ")}`,
 			);
@@ -176,16 +176,18 @@ class QualityValidator implements ValidatorProtocol {
 class ExternalValidator implements ValidatorProtocol {
 	constructor(
 		private apiUrl: string,
-		private apiKey: string,
+		private _apiKey: string,
 	) {}
 
 	name(): string {
 		return "external_validator";
 	}
 
-	async validate(result: ExtractionResult): Promise<void> {
+	async validate(_result: ExtractionResult): Promise<void> {
 		try {
 			console.log(`[ExternalValidator] Calling validation API: ${this.apiUrl}`);
+			// Note: _apiKey would be used for authentication headers in a real implementation
+			void this._apiKey;
 
 			console.log("[ExternalValidator] ✓ External validation passed");
 		} catch (error) {

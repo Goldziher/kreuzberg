@@ -84,12 +84,20 @@ pub use types::*;
 pub use core::extractor::{batch_extract_bytes, batch_extract_file};
 pub use core::extractor::{extract_bytes, extract_file};
 
-pub use core::extractor::{batch_extract_bytes_sync, batch_extract_file_sync, extract_bytes_sync, extract_file_sync};
+// Available in WASM (bytes-based)
+pub use core::extractor::{batch_extract_bytes_sync, extract_bytes_sync};
+
+// Only available with filesystem access
+#[cfg(feature = "tokio-runtime")]
+pub use core::extractor::{batch_extract_file_sync, extract_file_sync};
 
 pub use core::config::{
     ChunkingConfig, EmbeddingConfig, EmbeddingModelType, ExtractionConfig, ImageExtractionConfig,
-    LanguageDetectionConfig, OcrConfig, PdfConfig, PostProcessorConfig, TokenReductionConfig,
+    LanguageDetectionConfig, OcrConfig, PostProcessorConfig, TokenReductionConfig,
 };
+
+#[cfg(feature = "pdf")]
+pub use core::config::PdfConfig;
 
 pub use core::mime::{
     DOCX_MIME_TYPE, EXCEL_MIME_TYPE, HTML_MIME_TYPE, JSON_MIME_TYPE, MARKDOWN_MIME_TYPE, PDF_MIME_TYPE,

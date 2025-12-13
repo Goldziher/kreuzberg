@@ -3,6 +3,7 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::xml::parse_xml;
+use crate::extractors::SyncExtractor;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::ExtractionResult;
 use async_trait::async_trait;
@@ -51,21 +52,8 @@ impl Plugin for XmlExtractor {
     }
 }
 
-#[async_trait]
-impl DocumentExtractor for XmlExtractor {
-    #[cfg_attr(feature = "otel", tracing::instrument(
-        skip(self, content, _config),
-        fields(
-            extractor.name = self.name(),
-            content.size_bytes = content.len(),
-        )
-    ))]
-    async fn extract_bytes(
-        &self,
-        content: &[u8],
-        mime_type: &str,
-        _config: &ExtractionConfig,
-    ) -> Result<ExtractionResult> {
+impl SyncExtractor for XmlExtractor {
+    fn extract_sync(&self, content: &[u8], mime_type: &str, _config: &ExtractionConfig) -> Result<ExtractionResult> {
         let xml_result = parse_xml(content, false)?;
 
         Ok(ExtractionResult {
@@ -85,6 +73,25 @@ impl DocumentExtractor for XmlExtractor {
             pages: None,
         })
     }
+}
+
+#[async_trait]
+impl DocumentExtractor for XmlExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, _config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
+    async fn extract_bytes(
+        &self,
+        content: &[u8],
+        mime_type: &str,
+        config: &ExtractionConfig,
+    ) -> Result<ExtractionResult> {
+        self.extract_sync(content, mime_type, config)
+    }
 
     fn supported_mime_types(&self) -> &[&str] {
         &["application/xml", "text/xml", "image/svg+xml"]
@@ -92,6 +99,10 @@ impl DocumentExtractor for XmlExtractor {
 
     fn priority(&self) -> i32 {
         50
+    }
+
+    fn as_sync_extractor(&self) -> Option<&dyn crate::extractors::SyncExtractor> {
+        Some(self)
     }
 }
 

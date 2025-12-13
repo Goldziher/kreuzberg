@@ -182,6 +182,7 @@ nav:
   - API Reference:
       - Python: reference/api-python.md
       - TypeScript: reference/api-typescript.md
+      - WebAssembly: reference/api-wasm.md
       - Go: reference/api-go.md
       - Java: reference/api-java.md
       - Rust: reference/api-rust.md

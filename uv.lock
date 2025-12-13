@@ -23,6 +23,7 @@ resolution-markers = [
 [manifest]
 members = [
     "kreuzberg",
+    "kreuzberg-examples-python",
 ]
 
 [manifest.dependency-groups]
@@ -1294,6 +1295,17 @@ requires-dist = [
     { name = "torch", marker = "python_full_version < '3.14' and extra == 'easyocr'", specifier = ">=2.9.1" },
 ]
 provides-extras = ["all", "easyocr", "paddleocr"]
+
+[[package]]
+name = "kreuzberg-examples-python"
+version = "4.0.0rc6"
+source = { editable = "examples/python" }
+dependencies = [
+    { name = "kreuzberg" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "kreuzberg", editable = "packages/python" }]
 
 [[package]]
 name = "langdetect"

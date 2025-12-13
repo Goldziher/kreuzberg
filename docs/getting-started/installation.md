@@ -49,6 +49,111 @@ The package ships with prebuilt N-API binaries for Linux, macOS (Apple Silicon),
 
 Next steps: [TypeScript Quick Start](../guides/extraction.md#typescript-nodejs) • [TypeScript API Reference](../reference/api-typescript.md)
 
+## WebAssembly (WASM)
+
+WebAssembly bindings enable Kreuzberg to run in browsers, Cloudflare Workers, Deno, and other JavaScript runtimes without native dependencies.
+
+### Installation
+
+```bash title="Terminal"
+npm install @kreuzberg/wasm
+```
+
+```bash title="Terminal"
+pnpm add @kreuzberg/wasm
+```
+
+```bash title="Terminal"
+yarn add @kreuzberg/wasm
+```
+
+### Browser Usage
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="module">
+        import { initWasm, extractFromFile } from '@kreuzberg/wasm';
+
+        window.initKreuzberg = async () => {
+            await initWasm();
+            console.log('Kreuzberg initialized');
+        };
+
+        window.extractFile = async (file) => {
+            const result = await extractFromFile(file);
+            console.log(result.content);
+        };
+    </script>
+</head>
+<body>
+    <input type="file" id="file" />
+</body>
+</html>
+```
+
+### Deno
+
+```typescript
+import { initWasm, extractFile } from 'npm:@kreuzberg/wasm';
+
+await initWasm();
+const result = await extractFile('./document.pdf');
+console.log(result.content);
+```
+
+### Cloudflare Workers
+
+```typescript
+import { initWasm, extractBytes } from '@kreuzberg/wasm';
+
+export default {
+    async fetch(request: Request): Promise<Response> {
+        await initWasm();
+
+        const file = await request.arrayBuffer();
+        const bytes = new Uint8Array(file);
+        const result = await extractBytes(bytes, 'application/pdf');
+
+        return new Response(JSON.stringify({ content: result.content }));
+    },
+};
+```
+
+### Optional Features
+
+OCR support requires browser Web Workers and additional memory. Enable it selectively:
+
+```typescript
+import { initWasm, enableOcr, extractFromFile } from '@kreuzberg/wasm';
+
+await initWasm();
+
+const fileInput = document.getElementById('file');
+fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+
+    if (file.type.startsWith('image/')) {
+        // Enable OCR only for images
+        await enableOcr();
+    }
+
+    const result = await extractFromFile(file);
+    console.log(result.content);
+});
+```
+
+WASM bindings work in:
+- Modern browsers (Chrome 74+, Firefox 79+, Safari 14+, Edge 79+)
+- Node.js 18.17+ (with `--experimental-wasm-modules`)
+- Deno 1.35+
+- Bun 0.6+
+- Cloudflare Workers
+- Other JavaScript runtimes with WebAssembly support
+
+Next steps: [WASM Quick Start](quickstart.md#wasm) • [WASM API Reference](../reference/api-wasm.md)
+
 ## Ruby
 
 ```bash title="Terminal"

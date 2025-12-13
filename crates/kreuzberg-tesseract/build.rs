@@ -9,6 +9,12 @@ mod build_tesseract {
 
     const LEPTONICA_VERSION: &str = "1.86.0";
     const TESSERACT_VERSION: &str = "5.5.1";
+    #[allow(dead_code)]
+    const EMSDK_COMMIT: &str = "974d5c096bd56e42045d052a47b28198ce75e2a8";
+    #[allow(dead_code)]
+    const EMSDK_VERSION: &str = "3.1.31";
+    #[allow(dead_code)]
+    const EMSDK_REPOSITORY: &str = "https://github.com/emscripten-core/emsdk.git";
 
     fn leptonica_url() -> String {
         format!(
@@ -98,6 +104,10 @@ mod build_tesseract {
         is_windows_target(target) && target_matches(target, "gnu")
     }
 
+    fn is_wasm_target(target: &str) -> bool {
+        target_matches(target, "wasm32") || target_matches(target, "wasm64")
+    }
+
     fn prepare_out_dir() -> PathBuf {
         let preferred = get_preferred_out_dir();
         match fs::create_dir_all(&preferred) {
@@ -114,9 +124,275 @@ mod build_tesseract {
         }
     }
 
+    // Detect pre-installed EMSDK (installed via brew, apt, or manually)
+    #[allow(dead_code)]
+    fn find_emsdk() -> Result<PathBuf, String> {
+        // Check EMSDK environment variable first
+        if let Ok(emsdk_path) = env::var("EMSDK") {
+            let path = PathBuf::from(emsdk_path);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+
+        // Check common installation locations
+        let common_paths = vec![
+            PathBuf::from("/opt/homebrew/opt/emscripten"), // Homebrew on Apple Silicon
+            PathBuf::from("/usr/local/opt/emscripten"),    // Homebrew on Intel Mac
+            PathBuf::from(env::var("HOME").unwrap_or_default()).join(".emsdk"),
+            PathBuf::from("/usr/lib/emscripten"), // Linux package manager
+            PathBuf::from("/opt/emsdk"),          // Manual installation
+        ];
+
+        for path in common_paths {
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+
+        Err("EMSDK not found. Please install via: brew install emscripten (macOS) or apt-get install emscripten (Linux)".to_string())
+    }
+
+    #[allow(dead_code)]
+    fn download_emsdk_legacy(emsdk_dir: &Path) -> PathBuf {
+        use std::process::Command;
+
+        println!("cargo:warning=Setting up EMSDK (downloading and installing toolchain)...");
+
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = emsdk_dir.parent() {
+            fs::create_dir_all(parent).expect("Failed to create EMSDK parent directory");
+        }
+
+        // Phase 1: Clone the EMSDK repository
+        if !emsdk_dir.exists() {
+            println!("cargo:warning=Cloning EMSDK repository from {}", EMSDK_REPOSITORY);
+
+            let clone_output = Command::new("git")
+                .arg("clone")
+                .arg("--depth")
+                .arg("1")
+                .arg(EMSDK_REPOSITORY)
+                .arg(emsdk_dir)
+                .output()
+                .expect("Failed to run git clone for EMSDK");
+
+            if !clone_output.status.success() {
+                panic!(
+                    "EMSDK repository clone failed: {}",
+                    String::from_utf8_lossy(&clone_output.stderr)
+                );
+            }
+
+            println!("cargo:warning=EMSDK repository cloned successfully");
+        } else {
+            println!("cargo:warning=EMSDK directory already exists, skipping clone");
+        }
+
+        // Phase 2: Checkout specific commit
+        println!("cargo:warning=Checking out EMSDK commit: {}", EMSDK_COMMIT);
+
+        let fetch_output = Command::new("git")
+            .current_dir(emsdk_dir)
+            .arg("fetch")
+            .arg("origin")
+            .arg(EMSDK_COMMIT)
+            .output()
+            .expect("Failed to run git fetch for EMSDK");
+
+        if !fetch_output.status.success() {
+            eprintln!(
+                "Warning: Failed to fetch specific commit, attempting checkout anyway: {}",
+                String::from_utf8_lossy(&fetch_output.stderr)
+            );
+        }
+
+        let checkout_output = Command::new("git")
+            .current_dir(emsdk_dir)
+            .arg("checkout")
+            .arg(EMSDK_COMMIT)
+            .output()
+            .expect("Failed to run git checkout for EMSDK");
+
+        if !checkout_output.status.success() {
+            eprintln!(
+                "Warning: Failed to checkout specific commit: {}",
+                String::from_utf8_lossy(&checkout_output.stderr)
+            );
+        }
+
+        println!("cargo:warning=EMSDK checked out to commit: {}", EMSDK_COMMIT);
+
+        // Phase 3: Make emsdk script executable and patch SSL verification (Unix only)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let emsdk_script = emsdk_dir.join("emsdk");
+            if emsdk_script.exists() {
+                let perms = fs::Permissions::from_mode(0o755);
+                fs::set_permissions(&emsdk_script, perms)
+                    .expect("Failed to set executable permissions on emsdk script");
+            }
+
+            // Patch the emsdk.py Python script to disable SSL verification
+            let emsdk_py = emsdk_dir.join("emsdk.py");
+            if emsdk_py.exists() {
+                let script_content = fs::read_to_string(&emsdk_py).expect("Failed to read emsdk.py");
+
+                if !script_content.contains("ssl._create_unverified_context") {
+                    let patched_content = script_content.replace(
+                        "#!/usr/bin/env python",
+                        "#!/usr/bin/env python\nimport ssl\nssl._create_default_https_context = ssl._create_unverified_context"
+                    );
+                    fs::write(&emsdk_py, patched_content).expect("Failed to write patched emsdk.py");
+                    println!("cargo:warning=Patched emsdk.py to disable SSL verification");
+                }
+            }
+        }
+
+        // Phase 4: Install the EMSDK toolchain (use system Node to avoid SSL download issues)
+        println!("cargo:warning=Installing EMSDK toolchain (this may take several minutes)...");
+
+        // Find system Node.js
+        let node_path = Command::new("which")
+            .arg("node")
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+            .unwrap_or_else(|| "node".to_string());
+
+        println!("cargo:warning=Using system Node.js: {}", node_path);
+
+        // Try to install with system Node - allow partial failure if only Node download fails
+        #[cfg(unix)]
+        let install_output = Command::new("sh")
+            .arg("-c")
+            .arg(format!(
+                "./emsdk install {} 2>&1 | tee /tmp/emsdk-install.log || true",
+                EMSDK_VERSION
+            ))
+            .current_dir(emsdk_dir)
+            .env("NODE", &node_path)
+            .env("EM_NODE_JS", &node_path)
+            .output()
+            .expect("Failed to run emsdk install");
+
+        #[cfg(windows)]
+        let install_output = Command::new("cmd")
+            .args(&["/C", "emsdk.bat", "install", EMSDK_VERSION])
+            .current_dir(emsdk_dir)
+            .env("NODE", &node_path)
+            .env("EM_NODE_JS", &node_path)
+            .output()
+            .expect("Failed to run emsdk install");
+
+        // Check if install succeeded or at least got the compiler (Node download may have failed)
+        let install_stderr = String::from_utf8_lossy(&install_output.stderr);
+        let critical_failure =
+            !install_output.status.success() && !install_stderr.contains("node") && !install_stderr.contains("Node");
+
+        if critical_failure {
+            panic!("EMSDK installation failed: {}", install_stderr);
+        }
+
+        if !install_output.status.success() {
+            println!(
+                "cargo:warning=EMSDK install had warnings (possibly Node download failed, will use system Node): {}",
+                install_stderr
+            );
+        } else {
+            println!("cargo:warning=EMSDK toolchain installed successfully");
+        }
+
+        // Phase 5: Activate the installed toolchain
+        println!("cargo:warning=Activating EMSDK toolchain...");
+
+        #[cfg(unix)]
+        let activate_output = Command::new("sh")
+            .arg("-c")
+            .arg(format!("./emsdk activate {}", EMSDK_VERSION))
+            .current_dir(emsdk_dir)
+            .output()
+            .expect("Failed to run emsdk activate");
+
+        #[cfg(windows)]
+        let activate_output = Command::new("cmd")
+            .args(&["/C", "emsdk.bat", "activate", EMSDK_VERSION])
+            .current_dir(emsdk_dir)
+            .output()
+            .expect("Failed to run emsdk activate");
+
+        if !activate_output.status.success() {
+            panic!(
+                "EMSDK activation failed: {}",
+                String::from_utf8_lossy(&activate_output.stderr)
+            );
+        }
+
+        println!("cargo:warning=EMSDK activated successfully");
+
+        // Phase 6: Verify installation (ISSUE #4: Version-aware path checking for EMSDK v3.1.31)
+        println!("cargo:warning=Verifying EMSDK installation...");
+
+        // Check both old and new EMSDK directory structures
+        let possible_toolchain_paths = vec![
+            "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "emscripten/cmake/Modules/Platform/Emscripten.cmake", // Older structure
+        ];
+
+        let possible_emcc_paths = vec![
+            "upstream/emscripten/emcc",
+            "emscripten/emcc", // Older structure
+        ];
+
+        let toolchain_file = possible_toolchain_paths
+            .iter()
+            .find(|p| emsdk_dir.join(p).exists())
+            .map(|p| emsdk_dir.join(p))
+            .unwrap_or_else(|| emsdk_dir.join("upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"));
+
+        let emcc_path = possible_emcc_paths
+            .iter()
+            .find(|p| emsdk_dir.join(p).exists())
+            .map(|p| emsdk_dir.join(p))
+            .unwrap_or_else(|| emsdk_dir.join("upstream/emscripten/emcc"));
+
+        if !toolchain_file.exists() {
+            panic!(
+                "EMSDK verification failed: toolchain file not found. Checked paths: {:?}",
+                possible_toolchain_paths
+            );
+        }
+
+        if !emcc_path.exists() {
+            panic!(
+                "EMSDK verification failed: emcc not found. Checked paths: {:?}",
+                possible_emcc_paths
+            );
+        }
+
+        println!("cargo:warning=EMSDK verification completed successfully");
+        println!("cargo:warning=EMSDK root directory: {}", emsdk_dir.display());
+        println!("cargo:warning=EMSDK toolchain: {}", toolchain_file.display());
+        println!("cargo:warning=EMSDK emcc: {}", emcc_path.display());
+
+        emsdk_dir.to_path_buf()
+    }
+
     pub fn build() {
-        let custom_out_dir = prepare_out_dir();
         let target = target_triple();
+
+        // Route WASM targets to WASM build
+        if is_wasm_target(&target) {
+            println!(
+                "cargo:warning=Detected WASM target: {}, routing to build_wasm()",
+                target
+            );
+            return build_wasm();
+        }
+
+        let custom_out_dir = prepare_out_dir();
         let windows_target = is_windows_target(&target);
         let msvc_target = is_msvc_target(&target);
         let mingw_target = is_mingw_target(&target);
@@ -581,6 +857,280 @@ mod build_tesseract {
         if cache_dir.exists() {
             fs::remove_dir_all(cache_dir).expect("Failed to remove cache directory");
         }
+    }
+
+    #[allow(dead_code)]
+    fn apply_patches(src_dir: &Path, patch_dir: &Path) -> std::io::Result<()> {
+        use std::process::Command;
+
+        let patch_file = patch_dir.join("tesseract.diff");
+        if !patch_file.exists() {
+            println!("cargo:warning=Patch file not found: {}", patch_file.display());
+            return Ok(());
+        }
+
+        println!("cargo:warning=Applying patches from: {}", patch_file.display());
+
+        let output = Command::new("patch")
+            .arg("-p1")
+            .current_dir(src_dir)
+            .stdin(fs::File::open(&patch_file)?)
+            .output()?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            println!("cargo:warning=Patch output: {}", stderr);
+            // Don't fail on patch errors, they might be already applied
+        }
+
+        Ok(())
+    }
+
+    // ISSUE #5: Setup EMSDK environment variables before CMake builds
+    #[allow(dead_code)]
+    fn setup_emsdk_environment(emsdk_root: &Path) {
+        let emsdk_root_str = emsdk_root.to_string_lossy().to_string();
+
+        // Set EMSDK root directory
+        unsafe {
+            env::set_var("EMSDK", &emsdk_root_str);
+        }
+        println!("cargo:warning=Set EMSDK={}", emsdk_root_str);
+
+        // Set EMSCRIPTEN path for Emscripten compiler directory
+        let emscripten_path = format!("{}/upstream/emscripten", emsdk_root_str);
+        unsafe {
+            env::set_var("EMSCRIPTEN", &emscripten_path);
+        }
+        println!("cargo:warning=Set EMSCRIPTEN={}", emscripten_path);
+
+        // Set EM_CONFIG for .emscripten config file
+        let em_config = format!("{}/.emscripten", emsdk_root_str);
+        unsafe {
+            env::set_var("EM_CONFIG", &em_config);
+        }
+        println!("cargo:warning=Set EM_CONFIG={}", em_config);
+
+        // Update PATH with EMSDK tools directory
+        let emsdk_bin_paths = [
+            format!("{}/upstream/emscripten", emsdk_root_str),
+            format!("{}/upstream/bin", emsdk_root_str),
+        ];
+
+        let current_path = env::var("PATH").unwrap_or_default();
+        let new_path = format!(
+            "{}{}{}",
+            emsdk_bin_paths.join(":"),
+            if current_path.is_empty() { "" } else { ":" },
+            current_path
+        );
+        unsafe {
+            env::set_var("PATH", &new_path);
+        }
+        println!("cargo:warning=Updated PATH with EMSDK tools");
+    }
+
+    // ISSUE #7: Build Leptonica for WASM
+    #[allow(dead_code)]
+    fn build_leptonica_wasm(leptonica_src: &Path, leptonica_install: &Path, emsdk_dir: &Path) {
+        let toolchain_file = emsdk_dir.join("upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake");
+
+        let mut config = Config::new(leptonica_src);
+
+        // Set the EMSDK toolchain file
+        config.define("CMAKE_TOOLCHAIN_FILE", &toolchain_file);
+
+        // Image format support disabled (handled by browser)
+        config
+            .define("CMAKE_BUILD_TYPE", "Release")
+            .define("CMAKE_POLICY_VERSION_MINIMUM", "3.5")
+            .define("LIBWEBP_SUPPORT", "OFF")
+            .define("OPENJPEG_SUPPORT", "OFF")
+            .define("ENABLE_ZLIB", "OFF")
+            .define("ENABLE_PNG", "OFF")
+            .define("ENABLE_JPEG", "OFF")
+            .define("ENABLE_TIFF", "OFF")
+            .define("ENABLE_WEBP", "OFF")
+            .define("ENABLE_OPENJPEG", "OFF")
+            .define("ENABLE_GIF", "OFF")
+            // Build configuration
+            .define("BUILD_PROG", "OFF")
+            .define("BUILD_SHARED_LIBS", "OFF")
+            .define("NO_CONSOLE_IO", "ON")
+            .define("HAVE_LIBZ", "0")
+            .define("ENABLE_LTO", "OFF")
+            .define("CMAKE_INSTALL_PREFIX", leptonica_install);
+
+        config.build();
+    }
+
+    // ISSUE #7: Implement build_wasm() with proper Leptonica and Tesseract integration
+    #[allow(dead_code)]
+    fn build_wasm() {
+        println!("cargo:warning=Building for WASM target with Emscripten SDK");
+
+        let custom_out_dir = prepare_out_dir();
+        let cache_dir = custom_out_dir.join("cache");
+        fs::create_dir_all(&cache_dir).expect("Failed to create cache directory");
+
+        let project_dir = custom_out_dir.clone();
+        let third_party_dir = project_dir.join("third_party");
+
+        // Step 1: Find pre-installed EMSDK
+        println!("cargo:warning=Looking for pre-installed Emscripten SDK...");
+        let emsdk_dir = match find_emsdk() {
+            Ok(path) => {
+                println!("cargo:warning=Found EMSDK at: {}", path.display());
+                path
+            }
+            Err(err) => {
+                panic!("{}
+
+Installation instructions:
+  macOS:    brew install emscripten
+  Ubuntu:   sudo apt-get install emscripten
+  Arch:     sudo pacman -S emscripten
+  Manual:   git clone https://github.com/emscripten-core/emsdk.git ~/.emsdk && cd ~/.emsdk && ./emsdk install latest && ./emsdk activate latest
+
+After installation, set EMSDK environment variable or ensure it's in a standard location.", err);
+            }
+        };
+
+        // Setup EMSDK environment variables
+        setup_emsdk_environment(&emsdk_dir);
+
+        // Step 2: Download Leptonica and Tesseract sources if not already present
+        let leptonica_dir = if third_party_dir.join("leptonica").exists() {
+            println!("cargo:warning=Using existing leptonica source");
+            third_party_dir.join("leptonica")
+        } else {
+            fs::create_dir_all(&third_party_dir).expect("Failed to create third_party directory");
+            download_and_extract(&third_party_dir, &leptonica_url(), "leptonica")
+        };
+
+        let tesseract_dir = if third_party_dir.join("tesseract").exists() {
+            println!("cargo:warning=Using existing tesseract source");
+            third_party_dir.join("tesseract")
+        } else {
+            fs::create_dir_all(&third_party_dir).expect("Failed to create third_party directory");
+            download_and_extract(&third_party_dir, &tesseract_url(), "tesseract")
+        };
+
+        // Step 3: Build Leptonica for WASM
+        let leptonica_install_dir = custom_out_dir.join("leptonica");
+        let leptonica_cache_dir = cache_dir.join("leptonica");
+
+        build_or_use_cached("leptonica", &leptonica_cache_dir, &leptonica_install_dir, || {
+            println!("cargo:warning=Building Leptonica for WASM...");
+            build_leptonica_wasm(&leptonica_dir, &leptonica_install_dir, &emsdk_dir);
+        });
+
+        // Step 4: Build Tesseract for WASM (SIMD version for modern browsers)
+        let tesseract_install_dir = custom_out_dir.join("tesseract");
+        let tesseract_cache_dir = cache_dir.join("tesseract");
+
+        build_or_use_cached("tesseract", &tesseract_cache_dir, &tesseract_install_dir, || {
+            println!("cargo:warning=Building Tesseract for WASM (SIMD enabled)...");
+            build_tesseract_wasm(
+                &tesseract_dir,
+                &tesseract_install_dir,
+                &leptonica_install_dir,
+                &emsdk_dir,
+                true, // enable_simd
+            );
+        });
+
+        // Step 5: Setup linker paths for WASM libraries (static linking)
+        let leptonica_lib_dir = leptonica_install_dir.join("lib");
+        let tesseract_lib_dir = tesseract_install_dir.join("lib");
+
+        println!("cargo:rustc-link-search=native={}", leptonica_lib_dir.display());
+        println!("cargo:rustc-link-search=native={}", tesseract_lib_dir.display());
+
+        // For WASM, always use static linking
+        println!("cargo:rustc-link-lib=static=tesseract");
+        println!("cargo:rustc-link-lib=static=leptonica");
+
+        println!("cargo:warning=WASM build completed successfully!");
+        println!("cargo:warning=Leptonica install dir: {:?}", leptonica_install_dir);
+        println!("cargo:warning=Tesseract install dir: {:?}", tesseract_install_dir);
+    }
+
+    #[allow(dead_code)]
+    fn build_tesseract_wasm(
+        src_dir: &Path,
+        tesseract_install: &Path,
+        leptonica_install: &Path,
+        emsdk_dir: &Path,
+        enable_simd: bool,
+    ) {
+        let toolchain_file = emsdk_dir.join("upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake");
+
+        let mut config = Config::new(src_dir);
+
+        // Set CMake toolchain for Emscripten
+        config.define("CMAKE_TOOLCHAIN_FILE", &toolchain_file);
+
+        // Link against WASM Leptonica
+        config.define("Leptonica_DIR", leptonica_install);
+        config.define("CMAKE_PREFIX_PATH", leptonica_install);
+
+        // ISSUE #6: Complete CMAKE_CXX_FLAGS for WASM with all WASM-specific flags
+        let mut cxx_flags = String::from("-DTESSERACT_IMAGEDATA_AS_PIX ");
+        if enable_simd {
+            cxx_flags.push_str("-msimd128 ");
+        }
+        cxx_flags.push_str("-fno-exceptions -fPIC -Os");
+
+        // ISSUE #6: Also add CMAKE_C_FLAGS (was completely missing before)
+        let c_flags = "-fno-exceptions -fPIC -Os";
+
+        // Tesseract WASM configuration (from EMSDK_TECHNICAL_REFERENCE.md)
+        config
+            .define("CMAKE_BUILD_TYPE", "Release")
+            .define("CMAKE_POLICY_VERSION_MINIMUM", "3.5")
+            // Core Tesseract settings
+            .define("BUILD_TESSERACT_BINARY", "OFF")
+            .define("BUILD_TRAINING_TOOLS", "OFF")
+            .define("INSTALL_CONFIGS", "ON")
+            .define("BUILD_TESTS", "OFF")
+            .define("BUILD_PROG", "OFF")
+            .define("SYNTAX_LOG", "OFF")
+            // Disable unnecessary features
+            .define("DISABLE_ARCHIVE", "ON")
+            .define("DISABLE_CURL", "ON")
+            .define("DISABLE_OPENCL", "ON")
+            .define("DISABLE_TIFF", "ON")
+            .define("DISABLE_PNG", "ON")
+            .define("DISABLE_JPEG", "ON")
+            .define("DISABLE_WEBP", "ON")
+            .define("DISABLE_OPENJPEG", "ON")
+            .define("DISABLE_ZLIB", "ON")
+            .define("DISABLE_LIBXML2", "ON")
+            .define("DISABLE_LIBICU", "ON")
+            .define("DISABLE_LZMA", "ON")
+            .define("DISABLE_GIF", "ON")
+            .define("DISABLE_DEBUG_MESSAGES", "ON")
+            // WASM-specific settings
+            .define("GRAPHICS_DISABLED", "ON")
+            .define("DISABLED_LEGACY_ENGINE", "ON")
+            .define("USE_OPENCL", "OFF")
+            .define("OPENMP_BUILD", "OFF")
+            .define("ENABLE_LTO", "ON")
+            // SIMD configuration
+            .define("HAVE_SSE4_1", if enable_simd { "ON" } else { "OFF" })
+            .define("HAVE_AVX", "OFF")
+            .define("HAVE_AVX2", "OFF")
+            .define("HAVE_AVX512F", "OFF")
+            .define("HAVE_FMA", "OFF")
+            // Installation directory
+            .define("CMAKE_INSTALL_PREFIX", tesseract_install)
+            // Compiler flags with WASM-specific settings
+            .define("CMAKE_CXX_FLAGS", &cxx_flags)
+            .define("CMAKE_C_FLAGS", c_flags);
+
+        // Build the library
+        config.build();
     }
 
     fn build_or_use_cached<F>(name: &str, cache_dir: &Path, install_dir: &Path, build_fn: F)

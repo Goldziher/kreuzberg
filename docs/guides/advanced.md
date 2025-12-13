@@ -80,6 +80,10 @@ Kreuzberg uses the `text-splitter` library with two chunking strategies:
 
     --8<-- "docs/snippets/typescript/config/chunking_config.md"
 
+=== "WASM"
+
+    --8<-- "docs/snippets/wasm/config/chunking_config.md"
+
 ### Chunk Output
 
 Each chunk includes:
@@ -122,6 +126,32 @@ Each chunk includes:
 === "TypeScript"
 
     --8<-- "docs/snippets/typescript/utils/chunking_rag.md"
+
+=== "WASM"
+
+    ```typescript
+    import { initWasm, extractBytes } from '@kreuzberg/wasm';
+
+    await initWasm();
+
+    const config = {
+      chunking: {
+        maxChars: 1000,
+        chunkOverlap: 100,
+        embedding: {
+          model: { preset: 'all-MiniLM-L6-v2' }
+        }
+      }
+    };
+
+    const bytes = new Uint8Array(buffer);
+    const result = await extractBytes(bytes, 'application/pdf', config);
+
+    for (const chunk of result.chunks || []) {
+      console.log(`Chunk: ${chunk.content.substring(0, 100)}...`);
+      console.log(`Embedding: ${chunk.embedding?.slice(0, 5).join(', ')}...`);
+    }
+    ```
 
 ## Language Detection
 
@@ -192,6 +222,26 @@ Detect languages in extracted text using the fast `whatlang` library. Supports 6
 === "TypeScript"
 
     --8<-- "docs/snippets/typescript/config/language_detection_config.md"
+
+=== "WASM"
+
+    ```typescript
+    import { initWasm, extractBytes } from '@kreuzberg/wasm';
+
+    await initWasm();
+
+    const config = {
+      language_detection: {
+        detect_multiple: true,
+        min_confidence: 0.5
+      }
+    };
+
+    const bytes = new Uint8Array(buffer);
+    const result = await extractBytes(bytes, 'application/pdf', config);
+
+    console.log('Detected languages:', result.language);
+    ```
 
 ### Detection Modes
 

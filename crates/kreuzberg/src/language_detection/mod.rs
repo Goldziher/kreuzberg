@@ -4,7 +4,12 @@
 
 use crate::Result;
 use crate::core::config::LanguageDetectionConfig;
+use once_cell::sync::Lazy;
+use std::sync::Arc;
 use whatlang::{Lang, detect};
+
+pub mod processor;
+pub use processor::LanguageDetector;
 
 /// Detect languages in text using whatlang.
 ///
@@ -939,4 +944,42 @@ mod tests {
         let langs = result.unwrap();
         assert_eq!(langs[0], "eng");
     }
+}
+
+/// Lazy-initialized flag that ensures language detection processor is registered exactly once.
+///
+/// This static is accessed on first use to automatically register the
+/// language detection processor with the plugin registry.
+static PROCESSOR_INITIALIZED: Lazy<Result<()>> = Lazy::new(register_language_detection_processor);
+
+/// Ensure the language detection processor is registered.
+///
+/// This function is called automatically when needed.
+/// It's safe to call multiple times - registration only happens once.
+pub fn ensure_initialized() -> Result<()> {
+    PROCESSOR_INITIALIZED
+        .as_ref()
+        .map(|_| ())
+        .map_err(|e| crate::KreuzbergError::Plugin {
+            message: format!("Failed to register language detection processor: {}", e),
+            plugin_name: "language-detection".to_string(),
+        })
+}
+
+/// Register the language detection processor with the global registry.
+///
+/// This function should be called once at application startup to register
+/// the language detection post-processor.
+///
+/// **Note:** This is called automatically on first use.
+/// Explicit calling is optional.
+pub fn register_language_detection_processor() -> Result<()> {
+    let registry = crate::plugins::registry::get_post_processor_registry();
+    let mut registry = registry
+        .write()
+        .map_err(|e| crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e)))?;
+
+    registry.register(Arc::new(LanguageDetector), 40)?;
+
+    Ok(())
 }

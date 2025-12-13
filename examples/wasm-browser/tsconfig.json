@@ -1,0 +1,10 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"moduleResolution": "bundler",
+		"noEmit": true
+	},
+	"include": ["src/**/*.ts"],
+	"references": [{ "path": "./tsconfig.node.json" }]
+}

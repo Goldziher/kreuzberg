@@ -1,0 +1,25 @@
+{
+	"name": "kreuzberg-wasm-cloudflare-workers",
+	"description": "Cloudflare Workers WASM example with Kreuzberg document intelligence",
+	"version": "1.0.0",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev --ip 127.0.0.1",
+		"deploy": "wrangler deploy",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
+	},
+	"dependencies": {
+		"@kreuzberg/wasm": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20241127.0",
+		"@types/node": "^24.10.1",
+		"prettier": "^3.3.3",
+		"typescript": "^5.9.3",
+		"wrangler": "^3.88.0"
+	}
+}

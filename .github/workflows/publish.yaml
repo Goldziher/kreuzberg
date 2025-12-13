@@ -66,6 +66,7 @@ jobs:
       release_java: ${{ steps.meta.outputs.release_java }}
       release_csharp: ${{ steps.meta.outputs.release_csharp }}
       release_go: ${{ steps.meta.outputs.release_go }}
+      release_wasm: ${{ steps.meta.outputs.release_wasm }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -109,6 +110,7 @@ jobs:
             echo "release_java=$(echo "$metadata" | jq -r '.release_java')"
             echo "release_csharp=$(echo "$metadata" | jq -r '.release_csharp')"
             echo "release_go=$(echo "$metadata" | jq -r '.release_go')"
+            echo "release_wasm=$(echo "$metadata" | jq -r '.release_wasm')"
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload release metadata
@@ -2380,6 +2382,135 @@ jobs:
             fi
           fi
 
+  publish-wasm:
+    name: Publish WASM package
+    needs: [prepare, check-npm]
+    if: |
+      always() &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      needs.prepare.outputs.is_tag == 'true' &&
+      needs.prepare.outputs.release_wasm == 'true' &&
+      needs.check-npm.outputs.exists != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-wasm
+
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Run cargo audit
+        run: cargo audit --deny warnings
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Build WASM for web target
+        run: wasm-pack build --target web --out-dir pkg-web --release
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Build WASM for bundler target
+        run: wasm-pack build --target bundler --out-dir pkg-bundler --release
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Build WASM for Node.js target
+        run: wasm-pack build --target nodejs --out-dir pkg-nodejs --release
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Build WASM for Deno target
+        run: wasm-pack build --target deno --out-dir pkg-deno --release
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Build TypeScript wrapper
+        run: pnpm build
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        working-directory: crates/kreuzberg-wasm
+
+      - name: Extract version from package.json
+        id: version
+        run: |
+          version=$(jq -r '.version' crates/kreuzberg-wasm/package.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version already published to npm
+        id: npm_check
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if npm view @kreuzberg/wasm@"$VERSION" version 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::@kreuzberg/wasm@$VERSION already published to npm; skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        if: ${{ steps.npm_check.outputs.exists != 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd crates/kreuzberg-wasm
+          npm publish --access public --ignore-scripts
+
+      - name: Wait for npm indexing
+        if: ${{ steps.npm_check.outputs.exists != 'true' }}
+        run: sleep 30
+
+      - name: Package WASM artifacts
+        if: ${{ steps.npm_check.outputs.exists != 'true' }}
+        run: |
+          cd crates/kreuzberg-wasm
+          tar --exclude='node_modules' --exclude='target' --exclude='dist' --exclude='.git' \
+            -czf wasm-artifacts-${{ steps.version.outputs.version }}.tar.gz \
+            pkg-web pkg-bundler pkg-nodejs pkg-deno
+
+      - name: Upload WASM artifacts to release
+        if: ${{ steps.npm_check.outputs.exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.prepare.outputs.tag }} \
+            crates/kreuzberg-wasm/wasm-artifacts-${{ steps.version.outputs.version }}.tar.gz \
+            --clobber
+
+      - name: Publish summary
+        run: |
+          if [ "${{ steps.npm_check.outputs.exists }}" = "true" ]; then
+            echo "WASM package @kreuzberg/wasm@${{ steps.version.outputs.version }} was already published; skipped republish." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Successfully published WASM package @kreuzberg/wasm@${{ steps.version.outputs.version }} to npm" >> "$GITHUB_STEP_SUMMARY"
+            echo "Uploaded WASM artifacts to GitHub release" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   publish-maven:
     name: Publish Maven packages
     needs: [prepare, check-maven, java-package]
@@ -2632,6 +2763,7 @@ jobs:
       - check-cratesio
       - publish-pypi
       - publish-node
+      - publish-wasm
       - publish-rubygems
       - publish-maven
       - publish-nuget
@@ -2664,6 +2796,7 @@ jobs:
           publish_results = {
               "Python (PyPI)": "${{ needs.publish-pypi.result }}",
               "Node (npm)": "${{ needs.publish-node.result }}",
+              "WASM (npm)": "${{ needs.publish-wasm.result }}",
               "Ruby (RubyGems)": "${{ needs.publish-rubygems.result }}",
               "Java (Maven)": "${{ needs.publish-maven.result }}",
               "C# (NuGet)": "${{ needs.publish-nuget.result }}",

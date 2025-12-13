@@ -1,0 +1,188 @@
+name: CI WASM Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-wasm/**'
+      - 'crates/kreuzberg-core-types/**'
+      - 'e2e/wasm-workers/**'
+      - 'tools/e2e-generator/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/workflows/ci-wasm-workers.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/kreuzberg/**'
+      - 'crates/kreuzberg-wasm/**'
+      - 'crates/kreuzberg-core-types/**'
+      - 'e2e/wasm-workers/**'
+      - 'tools/e2e-generator/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/actions/install-system-deps/**'
+      - '.github/actions/setup-rust/**'
+      - '.github/actions/setup-node-workspace/**'
+      - '.github/workflows/ci-wasm-workers.yaml'
+
+concurrency:
+  group: ci-wasm-workers-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUST_BACKTRACE: short
+  RUST_MIN_STACK: 16777216
+
+jobs:
+  test-wasm-workers:
+    name: Test WASM with Cloudflare Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: wasm-workers
+          target: wasm32-unknown-unknown
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM package (size-optimized)
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:bundler
+
+      - name: Build TypeScript wrapper
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:ts
+
+      - name: Verify WASM size for Workers
+        run: |
+          cd crates/kreuzberg-wasm/pkg/bundler
+          WASM_SIZE=$(wc -c < kreuzberg_wasm_bg.wasm)
+          echo "WASM size: $(numfmt --to=iec-i --suffix=B "$WASM_SIZE")"
+
+          # Cloudflare Workers has 10MB limit (compressed)
+          # Our target is <5MB uncompressed for safety
+          if [ "$WASM_SIZE" -gt 5242880 ]; then
+            echo "WARNING: WASM bundle is larger than 5MB: $WASM_SIZE bytes"
+          fi
+
+          # Check compressed size (what actually matters for Workers)
+          gzip -c kreuzberg_wasm_bg.wasm > kreuzberg_wasm_bg.wasm.gz
+          GZIP_SIZE=$(wc -c < kreuzberg_wasm_bg.wasm.gz)
+          echo "WASM size (gzip): $(numfmt --to=iec-i --suffix=B "$GZIP_SIZE")"
+
+          if [ "$GZIP_SIZE" -gt 10485760 ]; then
+            echo "ERROR: Gzipped WASM exceeds Cloudflare Workers 10MB limit: $GZIP_SIZE bytes"
+            exit 1
+          fi
+
+      - name: Generate Workers E2E tests
+        run: |
+          cargo run -p kreuzberg-e2e-generator -- generate --lang wasm-workers --fixtures fixtures --output e2e
+
+      - name: Install Workers test dependencies
+        run: |
+          cd e2e/wasm-workers
+          pnpm install
+
+      - name: Run Miniflare tests
+        run: |
+          cd e2e/wasm-workers
+          pnpm test
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  build-wasm-all-targets:
+    name: Build WASM for all wasm-pack targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: wasm-all-targets
+          target: wasm32-unknown-unknown
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build for web target
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:web
+
+      - name: Build for bundler target
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:bundler
+
+      - name: Build for nodejs target
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:nodejs
+
+      - name: Build for deno target
+        run: |
+          cd crates/kreuzberg-wasm
+          pnpm run build:wasm:deno
+
+      - name: Verify all outputs
+        run: |
+          cd crates/kreuzberg-wasm
+          echo "Checking pkg/web:"
+          ls -lah pkg/web/ || echo "ERROR: web build failed"
+          echo ""
+          echo "Checking pkg/bundler:"
+          ls -lah pkg/bundler/ || echo "ERROR: bundler build failed"
+          echo ""
+          echo "Checking pkg/nodejs:"
+          ls -lah pkg/nodejs/ || echo "ERROR: nodejs build failed"
+          echo ""
+          echo "Checking pkg/deno:"
+          ls -lah pkg/deno/ || echo "ERROR: deno build failed"
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: wasm-all-targets
+          path: |
+            crates/kreuzberg-wasm/pkg/web/
+            crates/kreuzberg-wasm/pkg/bundler/
+            crates/kreuzberg-wasm/pkg/nodejs/
+            crates/kreuzberg-wasm/pkg/deno/
+          retention-days: 7
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache

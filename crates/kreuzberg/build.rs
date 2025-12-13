@@ -12,6 +12,12 @@ fn main() {
 
     println!("cargo::rustc-check-cfg=cfg(coverage)");
 
+    // Skip pdfium linking if the pdf feature is not enabled
+    if !cfg!(feature = "pdf") {
+        tracing::debug!("PDF feature not enabled, skipping pdfium linking");
+        return;
+    }
+
     let (download_url, lib_name) = get_pdfium_url_and_lib(&target);
 
     let pdfium_dir = out_dir.join("pdfium");
@@ -59,7 +65,10 @@ fn main() {
 
     let lib_dir = pdfium_dir.join("lib");
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
-    println!("cargo:rustc-link-lib=dylib={}", lib_name);
+
+    // WASM requires static linking
+    let link_type = if target.contains("wasm") { "static" } else { "dylib" };
+    println!("cargo:rustc-link-lib={}={}", link_type, lib_name);
 
     if target.contains("darwin") {
         println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path");
@@ -121,11 +130,12 @@ fn get_pdfium_url_and_lib(target: &str) -> (String, String) {
             .unwrap_or_else(|| get_latest_version("paulocoutinhox/pdfium-lib"));
         tracing::debug!("Using pdfium-lib version: {}", version);
 
-        let wasm_arch = if target.contains("wasm32") { "wasm32" } else { "wasm64" };
+        // WASM builds use a single 'wasm.tgz' asset regardless of architecture
+        // The archive contains both wasm32 and wasm64 if available
         return (
             format!(
-                "https://github.com/paulocoutinhox/pdfium-lib/releases/download/{}/pdfium-{}.tar.gz",
-                version, wasm_arch
+                "https://github.com/paulocoutinhox/pdfium-lib/releases/download/{}/wasm.tgz",
+                version
             ),
             "pdfium".to_string(),
         );
@@ -415,7 +425,9 @@ fn codesign_if_needed(target: &str, binary: &Path) {
 }
 
 fn runtime_library_info(target: &str) -> (String, &'static str) {
-    if target.contains("windows") {
+    if target.contains("wasm") {
+        ("libpdfium.a".to_string(), "lib")
+    } else if target.contains("windows") {
         ("pdfium.dll".to_string(), "bin")
     } else if target.contains("darwin") {
         ("libpdfium.dylib".to_string(), "lib")

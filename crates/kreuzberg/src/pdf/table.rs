@@ -2,9 +2,12 @@
 //!
 //! This module converts pdfium character data to HocrWord format,
 //! allowing us to reuse the existing table reconstruction logic.
+//!
+//! Note: Table extraction requires the "ocr" feature and is not available in WASM builds.
 
 use super::error::{PdfError, Result};
-use html_to_markdown_rs::hocr::HocrWord;
+#[cfg(feature = "ocr")]
+use crate::ocr::table::HocrWord;
 use pdfium_render::prelude::*;
 
 /// Spacing threshold for word boundary detection (in PDF units).
@@ -29,9 +32,14 @@ const MIN_WORD_LENGTH: usize = 1;
 ///
 /// Vector of HocrWord objects with text and bounding box information.
 ///
+/// # Note
+/// This function requires the "ocr" feature to be enabled. Without it, returns an error.
+///
 /// # Example
 ///
 /// ```rust,no_run
+/// # #[cfg(feature = "ocr")]
+/// # {
 /// use kreuzberg::pdf::table::extract_words_from_page;
 /// use pdfium_render::prelude::*;
 ///
@@ -42,7 +50,9 @@ const MIN_WORD_LENGTH: usize = 1;
 /// let words = extract_words_from_page(&page, 90.0)?;
 /// # Ok(())
 /// # }
+/// # }
 /// ```
+#[cfg(feature = "ocr")]
 pub fn extract_words_from_page(page: &PdfPage, min_confidence: f64) -> Result<Vec<HocrWord>> {
     let page_width = page.width().value as i32;
     let page_height = page.height().value as i32;
@@ -56,6 +66,17 @@ pub fn extract_words_from_page(page: &PdfPage, min_confidence: f64) -> Result<Ve
     let words = group_chars_into_words(chars, page_width, page_height, min_confidence)?;
 
     Ok(words)
+}
+
+/// Fallback implementation when OCR feature is disabled.
+///
+/// # Errors
+/// Always returns an error indicating that the OCR feature is required.
+#[cfg(not(feature = "ocr"))]
+pub fn extract_words_from_page(_page: &PdfPage, _min_confidence: f64) -> Result<Vec<()>> {
+    Err(PdfError::TextExtractionFailed(
+        "PDF table extraction requires the 'ocr' feature to be enabled".to_string(),
+    ))
 }
 
 /// Character with position information extracted from PDF.
@@ -80,6 +101,7 @@ struct CharInfo {
 /// * `page_width` - Page width in PDF units
 /// * `page_height` - Page height in PDF units
 /// * `min_confidence` - Minimum confidence threshold (PDF text uses 95.0)
+#[cfg(feature = "ocr")]
 fn group_chars_into_words(
     chars: PdfPageTextChars,
     _page_width: i32,
@@ -139,6 +161,7 @@ fn group_chars_into_words(
 ///
 /// Returns true if the character is far from the previous character
 /// (indicating a word boundary) or on a different line.
+#[cfg(feature = "ocr")]
 fn should_start_new_word(current_word_chars: &[CharInfo], new_char: &CharInfo) -> bool {
     if current_word_chars.is_empty() {
         return false;
@@ -159,6 +182,7 @@ fn should_start_new_word(current_word_chars: &[CharInfo], new_char: &CharInfo) -
 ///
 /// Calculates bounding box and confidence for the word.
 /// Returns None if the word doesn't meet minimum criteria.
+#[cfg(feature = "ocr")]
 fn finalize_word(chars: &[CharInfo], page_height: i32, min_confidence: f64) -> Option<HocrWord> {
     if chars.is_empty() {
         return None;
@@ -212,7 +236,7 @@ fn finalize_word(chars: &[CharInfo], page_height: i32, min_confidence: f64) -> O
     })
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "ocr"))]
 mod tests {
     use super::*;
 

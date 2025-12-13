@@ -523,6 +523,46 @@ tasks:
     cmds:
       - task: e2e:csharp:generate
       - task: e2e:csharp:test
+  wasm:build:
+    desc: Build WASM bindings for all targets
+    dir: crates/kreuzberg-wasm
+    cmds:
+      - pnpm run build
+  e2e:wasm-deno:generate:
+    desc: Generate Deno WASM E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang wasm-deno --fixtures fixtures --output e2e
+  e2e:wasm-deno:test:
+    desc: Run Deno WASM E2E tests
+    dir: e2e/wasm-deno
+    cmds:
+      - deno task test
+  e2e:wasm-deno:verify:
+    desc: Build, regenerate, and validate Deno WASM E2E suite
+    cmds:
+      - task: wasm:build
+      - task: e2e:wasm-deno:generate
+      - task: e2e:wasm-deno:test
+  e2e:wasm-workers:generate:
+    desc: Generate Cloudflare Workers WASM E2E tests from fixtures
+    cmds:
+      - cargo run -p kreuzberg-e2e-generator -- generate --lang wasm-workers --fixtures fixtures --output e2e
+  e2e:wasm-workers:test:
+    desc: Run Cloudflare Workers WASM E2E tests with Miniflare
+    dir: e2e/wasm-workers
+    cmds:
+      - pnpm test
+  e2e:wasm-workers:verify:
+    desc: Build, regenerate, and validate Cloudflare Workers WASM E2E suite
+    cmds:
+      - task: wasm:build
+      - task: e2e:wasm-workers:generate
+      - task: e2e:wasm-workers:test
+  e2e:wasm:verify:
+    desc: Verify all WASM test suites (Deno + Workers)
+    cmds:
+      - task: e2e:wasm-deno:verify
+      - task: e2e:wasm-workers:verify
   e2e:all:verify:
     desc: Regenerate and validate E2E suites for all languages
     cmds:
@@ -533,6 +573,7 @@ tasks:
       - task: e2e:java:verify
       - task: e2e:go:verify
       - task: e2e:csharp:verify
+      - task: e2e:wasm:verify
   cli:build:
     desc: Build CLI binary
     cmds:

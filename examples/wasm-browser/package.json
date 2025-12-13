@@ -1,0 +1,23 @@
+{
+	"name": "kreuzberg-wasm-browser",
+	"description": "Browser example for Kreuzberg WASM document extraction with Vite",
+	"version": "1.0.0",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
+	},
+	"dependencies": {
+		"@kreuzberg/wasm": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.3",
+		"vite": "^6.0.1"
+	}
+}

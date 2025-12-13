@@ -4,13 +4,68 @@
 //! All extractors implement the `DocumentExtractor` plugin trait.
 
 use crate::Result;
+use crate::core::config::ExtractionConfig;
 use crate::plugins::registry::get_document_extractor_registry;
+use crate::types::ExtractionResult;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 
-pub mod security;
+/// Trait for extractors that can work synchronously (WASM-compatible).
+///
+/// This trait defines the synchronous extraction interface for WASM targets and other
+/// environments where async/tokio runtimes are not available or desirable.
+///
+/// # Implementation
+///
+/// Extractors that need to support WASM should implement this trait in addition to
+/// the async `DocumentExtractor` trait. This allows the same extractor to work in both
+/// environments by delegating to the sync implementation.
+///
+/// # MIME Type Validation
+///
+/// The `mime_type` parameter is guaranteed to be already validated.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// impl SyncExtractor for PlainTextExtractor {
+///     fn extract_sync(&self, content: &[u8], config: &ExtractionConfig) -> Result<ExtractionResult> {
+///         let text = String::from_utf8_lossy(content).to_string();
+///         Ok(ExtractionResult {
+///             content: text,
+///             mime_type: "text/plain".to_string(),
+///             metadata: Metadata::default(),
+///             tables: vec![],
+///             detected_languages: None,
+///             chunks: None,
+///             images: None,
+///         })
+///     }
+/// }
+/// ```
+pub trait SyncExtractor {
+    /// Extract content from a byte array synchronously.
+    ///
+    /// This method performs extraction without requiring an async runtime.
+    /// It is called by `extract_bytes_sync()` when the `tokio-runtime` feature is disabled.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - Raw document bytes
+    /// * `mime_type` - MIME type of the document (already validated)
+    /// * `config` - Extraction configuration
+    ///
+    /// # Returns
+    ///
+    /// An `ExtractionResult` containing the extracted content and metadata.
+    fn extract_sync(&self, content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult>;
+}
+
 pub mod structured;
 pub mod text;
+
+#[cfg(feature = "archives")]
+pub mod security;
 
 #[cfg(feature = "ocr")]
 pub mod image;
@@ -30,7 +85,7 @@ pub mod html;
 #[cfg(feature = "office")]
 pub mod bibtex;
 
-#[cfg(feature = "office")]
+#[cfg(all(feature = "tokio-runtime", feature = "office"))]
 pub mod docx;
 
 #[cfg(feature = "office")]
@@ -54,7 +109,7 @@ pub mod jupyter;
 #[cfg(feature = "office")]
 pub mod orgmode;
 
-#[cfg(feature = "office")]
+#[cfg(all(feature = "tokio-runtime", feature = "office"))]
 pub mod odt;
 
 #[cfg(feature = "office")]
@@ -69,7 +124,7 @@ pub mod jats;
 #[cfg(feature = "pdf")]
 pub mod pdf;
 
-#[cfg(feature = "office")]
+#[cfg(all(feature = "tokio-runtime", feature = "office"))]
 pub mod pptx;
 
 #[cfg(feature = "office")]
@@ -102,7 +157,7 @@ pub use html::HtmlExtractor;
 #[cfg(feature = "office")]
 pub use bibtex::BibtexExtractor;
 
-#[cfg(feature = "office")]
+#[cfg(all(feature = "tokio-runtime", feature = "office"))]
 pub use docx::DocxExtractor;
 
 #[cfg(feature = "office")]
@@ -126,7 +181,7 @@ pub use jupyter::JupyterExtractor;
 #[cfg(feature = "office")]
 pub use orgmode::OrgModeExtractor;
 
-#[cfg(feature = "office")]
+#[cfg(all(feature = "tokio-runtime", feature = "office"))]
 pub use odt::OdtExtractor;
 
 #[cfg(feature = "xml")]
@@ -141,7 +196,7 @@ pub use typst::TypstExtractor;
 #[cfg(feature = "pdf")]
 pub use pdf::PdfExtractor;
 
-#[cfg(feature = "office")]
+#[cfg(all(feature = "tokio-runtime", feature = "office"))]
 pub use pptx::PptxExtractor;
 
 #[cfg(feature = "office")]
@@ -230,11 +285,8 @@ pub fn register_default_extractors() -> Result<()> {
     {
         registry.register(Arc::new(EnhancedMarkdownExtractor::new()))?;
         registry.register(Arc::new(BibtexExtractor::new()))?;
-        registry.register(Arc::new(DocxExtractor::new()))?;
         registry.register(Arc::new(EpubExtractor::new()))?;
         registry.register(Arc::new(FictionBookExtractor::new()))?;
-        registry.register(Arc::new(PptxExtractor::new()))?;
-        registry.register(Arc::new(OdtExtractor::new()))?;
         registry.register(Arc::new(RtfExtractor::new()))?;
         registry.register(Arc::new(RstExtractor::new()))?;
         registry.register(Arc::new(LatexExtractor::new()))?;
@@ -242,6 +294,13 @@ pub fn register_default_extractors() -> Result<()> {
         registry.register(Arc::new(OrgModeExtractor::new()))?;
         registry.register(Arc::new(OpmlExtractor::new()))?;
         registry.register(Arc::new(TypstExtractor::new()))?;
+    }
+
+    #[cfg(all(feature = "tokio-runtime", feature = "office"))]
+    {
+        registry.register(Arc::new(DocxExtractor::new()))?;
+        registry.register(Arc::new(PptxExtractor::new()))?;
+        registry.register(Arc::new(OdtExtractor::new()))?;
     }
 
     #[cfg(feature = "email")]
@@ -313,14 +372,11 @@ mod tests {
 
         #[cfg(feature = "office")]
         {
-            expected_count += 13;
+            expected_count += 10;
             assert!(extractor_names.contains(&"markdown-extractor".to_string()));
             assert!(extractor_names.contains(&"bibtex-extractor".to_string()));
-            assert!(extractor_names.contains(&"docx-extractor".to_string()));
             assert!(extractor_names.contains(&"epub-extractor".to_string()));
             assert!(extractor_names.contains(&"fictionbook-extractor".to_string()));
-            assert!(extractor_names.contains(&"pptx-extractor".to_string()));
-            assert!(extractor_names.contains(&"odt-extractor".to_string()));
             assert!(extractor_names.contains(&"rtf-extractor".to_string()));
             assert!(extractor_names.contains(&"rst-extractor".to_string()));
             assert!(extractor_names.contains(&"latex-extractor".to_string()));
@@ -328,6 +384,14 @@ mod tests {
             assert!(extractor_names.contains(&"orgmode-extractor".to_string()));
             assert!(extractor_names.contains(&"opml-extractor".to_string()));
             assert!(extractor_names.contains(&"typst-extractor".to_string()));
+        }
+
+        #[cfg(feature = "tokio-runtime")]
+        {
+            expected_count += 3;
+            assert!(extractor_names.contains(&"docx-extractor".to_string()));
+            assert!(extractor_names.contains(&"pptx-extractor".to_string()));
+            assert!(extractor_names.contains(&"odt-extractor".to_string()));
         }
 
         #[cfg(feature = "email")]

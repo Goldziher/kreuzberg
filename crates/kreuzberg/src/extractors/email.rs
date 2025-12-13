@@ -2,6 +2,7 @@
 
 use crate::Result;
 use crate::core::config::ExtractionConfig;
+use crate::extractors::SyncExtractor;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{EmailMetadata, ExtractionResult, Metadata};
 use async_trait::async_trait;
@@ -42,21 +43,8 @@ impl Plugin for EmailExtractor {
     }
 }
 
-#[async_trait]
-impl DocumentExtractor for EmailExtractor {
-    #[cfg_attr(feature = "otel", tracing::instrument(
-        skip(self, content, _config),
-        fields(
-            extractor.name = self.name(),
-            content.size_bytes = content.len(),
-        )
-    ))]
-    async fn extract_bytes(
-        &self,
-        content: &[u8],
-        mime_type: &str,
-        _config: &ExtractionConfig,
-    ) -> Result<ExtractionResult> {
+impl SyncExtractor for EmailExtractor {
+    fn extract_sync(&self, content: &[u8], mime_type: &str, _config: &ExtractionConfig) -> Result<ExtractionResult> {
         let email_result = crate::extraction::email::extract_email_content(content, mime_type)?;
 
         let text = crate::extraction::email::build_email_text_output(&email_result);
@@ -99,6 +87,25 @@ impl DocumentExtractor for EmailExtractor {
             pages: None,
         })
     }
+}
+
+#[async_trait]
+impl DocumentExtractor for EmailExtractor {
+    #[cfg_attr(feature = "otel", tracing::instrument(
+        skip(self, content, config),
+        fields(
+            extractor.name = self.name(),
+            content.size_bytes = content.len(),
+        )
+    ))]
+    async fn extract_bytes(
+        &self,
+        content: &[u8],
+        mime_type: &str,
+        config: &ExtractionConfig,
+    ) -> Result<ExtractionResult> {
+        self.extract_sync(content, mime_type, config)
+    }
 
     #[cfg(feature = "tokio-runtime")]
     #[cfg_attr(feature = "otel", tracing::instrument(
@@ -107,6 +114,7 @@ impl DocumentExtractor for EmailExtractor {
             extractor.name = self.name(),
         )
     ))]
+    #[cfg(feature = "tokio-runtime")]
     async fn extract_file(&self, path: &Path, mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
         let bytes = tokio::fs::read(path).await?;
         self.extract_bytes(&bytes, mime_type, config).await
@@ -118,6 +126,10 @@ impl DocumentExtractor for EmailExtractor {
 
     fn priority(&self) -> i32 {
         50
+    }
+
+    fn as_sync_extractor(&self) -> Option<&dyn crate::extractors::SyncExtractor> {
+        Some(self)
     }
 }
 

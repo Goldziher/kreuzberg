@@ -10,6 +10,9 @@ use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
 
+#[cfg(not(feature = "tokio-runtime"))]
+use crate::KreuzbergError;
+
 /// Trait for document extractor plugins.
 ///
 /// Implement this trait to add support for new document formats or to override
@@ -217,9 +220,20 @@ pub trait DocumentExtractor: Plugin {
     /// # }
     /// ```
     async fn extract_file(&self, path: &Path, mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
-        use crate::core::io;
-        let bytes = io::read_file_async(path).await?;
-        self.extract_bytes(&bytes, mime_type, config).await
+        #[cfg(feature = "tokio-runtime")]
+        {
+            use crate::core::io;
+            let bytes = io::read_file_async(path).await?;
+            self.extract_bytes(&bytes, mime_type, config).await
+        }
+        #[cfg(not(feature = "tokio-runtime"))]
+        {
+            // For WASM and non-tokio environments, file extraction is not supported
+            // through the default implementation. Implementations must provide their own.
+            Err(KreuzbergError::Other(
+                "File-based extraction requires the tokio-runtime feature".to_string(),
+            ))
+        }
     }
 
     /// Get the list of MIME types supported by this extractor.
@@ -361,6 +375,14 @@ pub trait DocumentExtractor: Plugin {
     /// ```
     fn can_handle(&self, _path: &Path, _mime_type: &str) -> bool {
         true
+    }
+
+    /// Attempt to get a reference to this extractor as a SyncExtractor.
+    ///
+    /// Returns None if the extractor doesn't support synchronous extraction.
+    /// This is used for WASM and other sync-only environments.
+    fn as_sync_extractor(&self) -> Option<&dyn crate::extractors::SyncExtractor> {
+        None
     }
 }
 

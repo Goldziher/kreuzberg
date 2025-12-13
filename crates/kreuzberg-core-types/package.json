@@ -1,0 +1,66 @@
+{
+	"name": "@kreuzberg/core",
+	"version": "4.0.0-rc.6",
+	"description": "Kreuzberg shared core types and utilities",
+	"author": {
+		"name": "Na'aman Hirschfeld",
+		"email": "nhirschfeld@gmail.com",
+		"url": "https://kreuzberg.dev"
+	},
+	"homepage": "https://kreuzberg.dev",
+	"bugs": {
+		"url": "https://github.com/kreuzberg-dev/kreuzberg/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kreuzberg-dev/kreuzberg.git"
+	},
+	"license": "MIT",
+	"type": "module",
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./types": {
+			"types": "./dist/types/index.d.ts",
+			"import": "./dist/types/index.mjs",
+			"require": "./dist/types/index.js"
+		},
+		"./utils": {
+			"types": "./dist/utils/index.d.ts",
+			"import": "./dist/utils/index.mjs",
+			"require": "./dist/utils/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"engines": {
+		"node": ">= 22"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsup",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest",
+		"test:watch": "vitest --watch",
+		"lint": "biome check src",
+		"lint:fix": "biome check --write src"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.8",
+		"@types/node": "^24.10.1",
+		"typescript": "^5.9.3",
+		"tsup": "^8.5.1",
+		"vitest": "^4.0.15"
+	}
+}

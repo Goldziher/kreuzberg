@@ -19,12 +19,14 @@ crate-type = ["rlib"]
 [features]
 default = ["tokio-runtime"]
 
-tokio-runtime = []
 profiling = ["dep:pprof"]
+
+# Runtime features
+tokio-runtime = ["dep:tokio"]
 
 # Format extractors
 pdf = ["dep:pdfium-render", "dep:lopdf", "dep:image"]
-excel = ["dep:calamine", "dep:polars"]
+excel = ["dep:calamine", "dep:polars", "tokio-runtime"]
 office = [
     "dep:roxmltree",
     "dep:zip",
@@ -37,7 +39,8 @@ office = [
     "dep:rst_parser",
     "dep:fb2",
     "dep:typst-syntax",
-    "html",               # EPUB needs HTML parsing (zip + roxmltree + html-to-markdown-rs)
+    "html",  # EPUB needs HTML parsing (zip + roxmltree + html-to-markdown-rs)
+    "tokio-runtime",
 ]
 email = ["dep:mail-parser", "dep:msg_parser"]
 html = ["dep:html-to-markdown-rs"]
@@ -56,7 +59,7 @@ ocr = [
 ]
 language-detection = ["dep:whatlang"]
 chunking = ["dep:text-splitter"]
-embeddings = ["dep:fastembed", "chunking"]
+embeddings = ["dep:fastembed", "dep:reqwest", "chunking", "tokio-runtime"]
 stopwords = [] # Stopwords for keyword extraction and token reduction
 quality = ["dep:unicode-normalization", "dep:chardetng", "dep:encoding_rs", "stopwords"]
 
@@ -66,11 +69,14 @@ keywords-rake = ["dep:rake", "stopwords"]
 keywords = ["keywords-yake", "keywords-rake"]
 
 # Server features
-api = ["dep:axum", "dep:tower", "dep:tower-http"]
-mcp = ["dep:rmcp"]
+api = ["dep:axum", "dep:tower", "dep:tower-http", "tokio-runtime"]
+mcp = ["dep:rmcp", "tokio-runtime"]
 
 # Observability features
 otel = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:tracing-opentelemetry"]
+
+# WASM-compatible feature bundle
+wasm-target = ["html", "xml", "email", "language-detection", "chunking", "quality"]
 
 # Convenience bundles
 full = [
@@ -115,11 +121,11 @@ toml = "0.9.8"
 mime_guess = "2.0"
 rmp-serde = "1.3"
 thiserror = { workspace = true }
-tokio = { workspace = true }
-uuid = { version = "1.19.0", features = ["v4"] }
+tokio = { workspace = true, optional = true }
+uuid = { version = "1.19.0", features = ["v4", "js"] }
 indexmap = "2.12.1"
 tracing = { workspace = true }
-reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls"], optional = true }
 # Format extractors (optional)
 pdfium-render = { version = "0.8.37", features = ["thread_safe", "image"], optional = true }
 lopdf = { version = "0.38.0", optional = true }
@@ -204,3 +210,6 @@ harness = false
 # Only build profiling tooling on non-Windows targets (pprof depends on Unix APIs)
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 pprof = { version = "0.15.0", features = ["flamegraph"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-rayon = "1.2"

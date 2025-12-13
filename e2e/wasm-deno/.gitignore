@@ -1,0 +1,7 @@
+# Deno
+.deno/
+deno.lock
+
+# Test outputs
+*.log
+coverage/

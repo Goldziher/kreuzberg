@@ -8,7 +8,13 @@ pub mod string_utils;
 pub mod token_reduction;
 
 #[cfg(feature = "quality")]
+pub mod quality_processor;
+
+#[cfg(feature = "quality")]
 pub use quality::{calculate_quality_score, clean_extracted_text, normalize_spaces};
+
+#[cfg(feature = "quality")]
+pub use quality_processor::QualityProcessor;
 
 #[cfg(feature = "quality")]
 pub use string_utils::{calculate_text_confidence, fix_mojibake, get_encoding_cache_key, safe_decode};

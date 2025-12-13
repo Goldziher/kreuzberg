@@ -1,3 +1,5 @@
+#![cfg(all(feature = "tokio-runtime", feature = "office"))]
+
 //! ODT (OpenDocument Text) extractor using native Rust parsing.
 //!
 //! Supports: OpenDocument Text (.odt)
