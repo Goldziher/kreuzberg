@@ -94,6 +94,80 @@ jobs:
           path: release-metadata.json
           retention-days: 14
 
+  validate-versions:
+    name: Validate version consistency
+    needs: [prepare]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Check version consistency
+        run: |
+          EXPECTED="${{ needs.prepare.outputs.version }}"
+          ERRORS=0
+
+          echo "Expected version: $EXPECTED"
+          echo "----------------------------------------"
+
+          # Rust workspace (Cargo.toml)
+          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
+          echo "Cargo.toml: $CARGO_VERSION"
+          [ "$CARGO_VERSION" = "$EXPECTED" ] || { echo "❌ Cargo.toml mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # Root package.json
+          ROOT_VERSION=$(jq -r '.version' package.json)
+          echo "package.json (root): $ROOT_VERSION"
+          [ "$ROOT_VERSION" = "$EXPECTED" ] || { echo "❌ package.json (root) mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # WASM package.json
+          WASM_VERSION=$(jq -r '.version' crates/kreuzberg-wasm/package.json)
+          echo "crates/kreuzberg-wasm/package.json: $WASM_VERSION"
+          [ "$WASM_VERSION" = "$EXPECTED" ] || { echo "❌ WASM package.json mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # Node package.json
+          NODE_VERSION=$(jq -r '.version' crates/kreuzberg-node/package.json)
+          echo "crates/kreuzberg-node/package.json: $NODE_VERSION"
+          [ "$NODE_VERSION" = "$EXPECTED" ] || { echo "❌ Node package.json mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # Python pyproject.toml
+          PYTHON_VERSION=$(grep '^version' packages/python/pyproject.toml | head -1 | cut -d'"' -f2)
+          echo "packages/python/pyproject.toml: $PYTHON_VERSION"
+          [ "$PYTHON_VERSION" = "$EXPECTED" ] || { echo "❌ Python pyproject.toml mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # Ruby version.rb
+          RUBY_VERSION=$(grep "VERSION =" packages/ruby/lib/kreuzberg/version.rb | cut -d"'" -f2)
+          echo "packages/ruby/lib/kreuzberg/version.rb: $RUBY_VERSION"
+          [ "$RUBY_VERSION" = "$EXPECTED" ] || { echo "❌ Ruby version.rb mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # Java pom.xml (first <version> tag is the project version)
+          JAVA_VERSION=$(grep '<version>' packages/java/pom.xml | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          echo "packages/java/pom.xml: $JAVA_VERSION"
+          [ "$JAVA_VERSION" = "$EXPECTED" ] || { echo "❌ Java pom.xml mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # C# Kreuzberg.csproj
+          CSHARP_VERSION=$(grep '<Version>' packages/csharp/Kreuzberg/Kreuzberg.csproj | head -1 | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/')
+          echo "packages/csharp/Kreuzberg/Kreuzberg.csproj: $CSHARP_VERSION"
+          [ "$CSHARP_VERSION" = "$EXPECTED" ] || { echo "❌ C# csproj mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          # Go doc.go version comment
+          GO_VERSION=$(grep 'This binding targets Kreuzberg' packages/go/kreuzberg/doc.go | sed 's/.*Kreuzberg \([^ ]*\).*/\1/')
+          echo "packages/go/kreuzberg/doc.go: $GO_VERSION"
+          [ "$GO_VERSION" = "$EXPECTED" ] || { echo "❌ Go doc.go mismatch"; ERRORS=$((ERRORS + 1)); }
+
+          echo "----------------------------------------"
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ $ERRORS version mismatches found"
+            exit 1
+          fi
+
+          echo "✅ All 9 version sources consistent: $EXPECTED"
+
+
   check-pypi:
     name: Check if Python package exists on PyPI
     needs: prepare
@@ -1575,7 +1649,10 @@ jobs:
     name: Publish Docker image (${{ matrix.variant }})
     needs:
       - prepare
+      - validate-versions
       - check-docker
+      - publish-crates
+      - publish-pypi
     runs-on: ubuntu-latest
     timeout-minutes: 180
     permissions:
@@ -1597,13 +1674,7 @@ jobs:
             extra_tag: "latest"
     if: ${{ needs.prepare.outputs.release_docker == 'true' }}
     steps:
-      - name: Skip Docker release
-        if: ${{ needs.prepare.outputs.release_docker != 'true' }}
-        run: |
-          echo "Docker release disabled via workflow targets (${{ needs.prepare.outputs.release_targets }})."
-
       - name: Checkout
-        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
@@ -1611,19 +1682,16 @@ jobs:
           submodules: recursive
 
       - name: Free up disk space
-        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         run: bash scripts/publish/ubuntu/free-disk-space.sh
 
       - name: Ensure target commit
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.target_sha != '' }}
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
         run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
 
       - name: Set up QEMU
-        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        if: ${{ needs.prepare.outputs.release_docker == 'true' }}
         uses: docker/setup-buildx-action@v3
 
       - name: Skip because tag already exists
@@ -1631,22 +1699,22 @@ jobs:
         run: echo "Docker tag already exists for variant ${{ matrix.variant }}; skipping publish." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build AMD64 test image
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         run: docker build -f ${{ matrix.dockerfile }} --build-arg PDFIUM_VERSION=${{ env.PDFIUM_VERSION }} -t kreuzberg-publish:${{ matrix.variant }}-test .
 
       - name: Run Docker feature tests
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         run: ./scripts/test_docker.sh --skip-build --image kreuzberg-publish:${{ matrix.variant }}-test --variant ${{ matrix.variant }} --verbose
 
       - name: Log in to Docker Hub
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
@@ -1656,7 +1724,7 @@ jobs:
             type=raw,value=${{ matrix.extra_tag }}
 
       - name: Build and push multi-arch image
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -1669,17 +1737,17 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Docker dry-run summary
-        if: ${{ needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run == 'true' }}
+        if: ${{ needs.prepare.outputs.dry_run == 'true' }}
         run: |
           echo "Dry run requested; Docker image ${{ matrix.image }}:${{ needs.prepare.outputs.version }}${{ matrix.tag_suffix }} tested but not pushed." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Clean up local Docker images
-        if: ${{ always() && needs.prepare.outputs.release_docker == 'true' }}
+        if: ${{ always() }}
         run: docker rmi kreuzberg-publish:${{ matrix.variant }}-test || true
 
   upload-cli-release:
     name: Upload CLI binaries to GitHub Release
-    needs: [prepare, check-cli, cli-binaries]
+    needs: [prepare, validate-versions, check-cli, cli-binaries]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -1715,7 +1783,7 @@ jobs:
 
   upload-csharp-release:
     name: Upload C# NuGet to GitHub Release
-    needs: [prepare, csharp-package]
+    needs: [prepare, validate-versions, csharp-package]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -1749,7 +1817,7 @@ jobs:
 
   upload-go-release:
     name: Upload Go FFI libraries to GitHub Release
-    needs: [prepare, check-go, go-ffi-libraries]
+    needs: [prepare, validate-versions, check-go, go-ffi-libraries]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -1785,7 +1853,7 @@ jobs:
 
   publish-crates:
     name: Publish crates.io packages
-    needs: [prepare, check-cratesio]
+    needs: [prepare, validate-versions, check-cratesio]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -1824,7 +1892,7 @@ jobs:
 
       - name: Wait for tesseract indexing
         if: ${{ steps.crate_check.outputs.tesseract_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
-        run: sleep 60
+        run: bash scripts/publish/wait-for-package.sh cratesio "kreuzberg-tesseract" "${{ needs.prepare.outputs.version }}" 10
 
       - name: Publish kreuzberg
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
@@ -1834,7 +1902,7 @@ jobs:
 
       - name: Wait for indexing
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
-        run: sleep 30
+        run: bash scripts/publish/wait-for-package.sh cratesio "kreuzberg" "${{ needs.prepare.outputs.version }}" 10
 
       - name: Publish kreuzberg-cli
         if: ${{ steps.crate_check.outputs.cli_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
@@ -1848,7 +1916,7 @@ jobs:
 
   publish-pypi:
     name: Publish Python packages to PyPI
-    needs: [prepare, check-pypi, python-wheels, python-sdist]
+    needs: [prepare, validate-versions, check-pypi, python-wheels, python-sdist]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -1892,7 +1960,7 @@ jobs:
 
   publish-rubygems:
     name: Publish Ruby gems
-    needs: [prepare, check-rubygems, ruby-gem]
+    needs: [prepare, validate-versions, check-rubygems, ruby-gem]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -1939,7 +2007,7 @@ jobs:
 
   publish-node:
     name: Publish Node packages
-    needs: [prepare, check-npm, node-bindings]
+    needs: [prepare, validate-versions, check-npm, node-bindings]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -2012,7 +2080,7 @@ jobs:
 
       - name: Wait for npm indexing
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: sleep 30
+        run: bash scripts/publish/wait-for-package.sh npm "@kreuzberg/node" "${{ needs.prepare.outputs.version }}" 10
 
       - name: Publish main Node package
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
@@ -2020,7 +2088,7 @@ jobs:
 
   publish-wasm:
     name: Publish WASM package
-    needs: [prepare, check-npm]
+    needs: [prepare, validate-versions, check-npm, publish-node]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -2111,7 +2179,7 @@ jobs:
 
       - name: Wait for npm indexing
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
-        run: sleep 30
+        run: bash scripts/publish/wait-for-package.sh npm "@kreuzberg/wasm" "${{ needs.prepare.outputs.version }}" 10
 
       - name: Package WASM artifacts
         if: ${{ steps.npm_check.outputs.exists != 'true' }}
@@ -2132,7 +2200,7 @@ jobs:
 
   publish-maven:
     name: Publish Maven packages
-    needs: [prepare, check-maven, java-package]
+    needs: [prepare, validate-versions, check-maven, java-package]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -2233,7 +2301,7 @@ jobs:
 
   publish-nuget:
     name: Publish NuGet package
-    needs: [prepare, check-nuget, csharp-tests, csharp-package, csharp-smoke]
+    needs: [prepare, validate-versions, check-nuget, csharp-tests, csharp-package, csharp-smoke]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
@@ -2279,7 +2347,7 @@ jobs:
 
   publish-homebrew:
     name: Update Homebrew formula
-    needs: [prepare, upload-cli-release]
+    needs: [prepare, validate-versions, upload-cli-release]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
