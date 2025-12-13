@@ -6,7 +6,7 @@
 # Includes handling for "already uploaded" case.
 #
 # Environment Variables:
-#   - CARGO_TOKEN: crates.io registry token (required)
+#   - CARGO_REGISTRY_TOKEN: crates.io registry token (required)
 #
 # Arguments:
 #   $1: Crate package name (e.g., kreuzberg-tesseract)
@@ -17,8 +17,8 @@ set -euo pipefail
 crate="${1:?Crate name argument required}"
 wait_seconds="${2:-0}"
 
-if [ -z "${CARGO_TOKEN:-}" ]; then
-	echo "::error::CARGO_TOKEN secret not set"
+if [ -z "${CARGO_REGISTRY_TOKEN:-}" ]; then
+	echo "::error::CARGO_REGISTRY_TOKEN secret not set"
 	exit 1
 fi
 
@@ -29,7 +29,7 @@ fi
 
 publish_log=$(mktemp)
 set +e
-cargo publish -p "$crate" --token "$CARGO_TOKEN" 2>&1 | tee "$publish_log"
+cargo publish -p "$crate" --token "$CARGO_REGISTRY_TOKEN" 2>&1 | tee "$publish_log"
 status=${PIPESTATUS[0]}
 set -e
 

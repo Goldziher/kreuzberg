@@ -1864,6 +1864,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -1874,6 +1875,10 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           cache-key-prefix: publish-crates
+
+      - name: Request OIDC token for crates.io
+        id: oidc
+        uses: rust-lang/crates-io-auth-action@v1
 
       - name: Verify Cargo.toml version matches tag
         run: bash scripts/publish/verify-cargo-version.sh "${{ needs.prepare.outputs.version }}"
@@ -1887,7 +1892,7 @@ jobs:
       - name: Publish kreuzberg-tesseract
         if: ${{ steps.crate_check.outputs.tesseract_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
-          CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.oidc.outputs.token }}
         run: bash scripts/publish/publish-cargo-crate.sh kreuzberg-tesseract
 
       - name: Wait for tesseract indexing
@@ -1897,7 +1902,7 @@ jobs:
       - name: Publish kreuzberg
         if: ${{ steps.crate_check.outputs.core_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
-          CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.oidc.outputs.token }}
         run: bash scripts/publish/publish-cargo-crate.sh kreuzberg
 
       - name: Wait for indexing
@@ -1907,7 +1912,7 @@ jobs:
       - name: Publish kreuzberg-cli
         if: ${{ steps.crate_check.outputs.cli_exists != 'true' && needs.prepare.outputs.dry_run != 'true' }}
         env:
-          CARGO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.oidc.outputs.token }}
         run: bash scripts/publish/publish-cargo-crate.sh kreuzberg-cli
 
       - name: Crates dry-run summary
