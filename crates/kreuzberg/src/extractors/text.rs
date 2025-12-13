@@ -95,7 +95,7 @@ impl DocumentExtractor for PlainTextExtractor {
     }
 
     fn supported_mime_types(&self) -> &[&str] {
-        &["text/plain"]
+        &["text/plain", "text/csv", "text/tab-separated-values"]
     }
 
     fn priority(&self) -> i32 {
@@ -247,7 +247,10 @@ mod tests {
         let extractor = PlainTextExtractor::new();
         assert_eq!(extractor.name(), "plain-text-extractor");
         assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
-        assert_eq!(extractor.supported_mime_types(), &["text/plain"]);
+        assert_eq!(
+            extractor.supported_mime_types(),
+            &["text/plain", "text/csv", "text/tab-separated-values"]
+        );
         assert_eq!(extractor.priority(), 50);
     }
 

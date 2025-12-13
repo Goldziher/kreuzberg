@@ -1,6 +1,6 @@
 # Java API Reference
 
-Complete reference for the Kreuzberg Java bindings using Java 22+ Foreign Function & Memory API (FFM/Panama).
+Complete reference for the Kreuzberg Java bindings using Java 25+ Foreign Function & Memory API (FFM/Panama).
 
 ## Installation
 
@@ -23,7 +23,7 @@ dependencies {
 ```
 
 **Requirements:**
-- Java 22 or later
+- Java 25 or later
 - libkreuzberg_ffi native library (auto-loaded)
 - Optional: Tesseract or EasyOCR/PaddleOCR for OCR functionality
 

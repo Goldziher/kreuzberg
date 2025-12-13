@@ -1281,9 +1281,97 @@ jobs:
           path: go-ffi-${{ matrix.settings.label }}.tar.gz
           retention-days: 14
 
+  java-natives:
+    name: Build Java native libs (${{ matrix.settings.label }})
+    needs: [prepare, check-maven]
+    if: ${{ needs.prepare.outputs.release_java == 'true' && (needs.check-maven.outputs.exists != 'true' || needs.prepare.outputs.dry_run == 'true') }}
+    runs-on: ${{ matrix.settings.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            rid: linux-x86_64
+          - os: macos-13
+            label: macos-x86_64
+            rid: macos-x86_64
+          - os: macos-14
+            label: macos-arm64
+            rid: macos-arm64
+          - os: windows-latest
+            label: windows-x86_64
+            rid: windows-x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-java-natives-${{ matrix.settings.label }}
+          use-sccache: ${{ runner.os != 'Windows' }}
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage PDFium into target/release
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
+
+      - name: Setup ONNX Runtime (embeddings)
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+          dest-dir: target/release
+
+      - name: Build FFI library
+        shell: bash
+        run: cargo build -p kreuzberg-ffi --release
+
+      - name: Fix macOS dylib references
+        shell: bash
+        run: bash scripts/ci/java/fix-macos-dylib-references.sh
+
+      - name: Collect native artifacts
+        shell: bash
+        run: bash scripts/ci/java/collect-native-artifacts.sh "${{ matrix.settings.rid }}" "java-natives/${{ matrix.settings.rid }}"
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: java-natives-${{ matrix.settings.label }}
+          path: java-natives/${{ matrix.settings.rid }}
+          retention-days: 14
+
   java-package:
     name: Build Java package
-    needs: [prepare, check-maven]
+    needs: [prepare, check-maven, java-natives]
     if: ${{ needs.prepare.outputs.release_java == 'true' && needs.check-maven.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -1358,6 +1446,17 @@ jobs:
         with:
           ort-version: ${{ env.ORT_VERSION }}
 
+      - name: Download Java native artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: java-natives-*
+          path: artifacts/java-natives
+          merge-multiple: false
+
+      - name: Stage Java native resources
+        shell: bash
+        run: bash scripts/ci/java/stage-native-resources.sh "artifacts/java-natives" "packages/java/src/main/resources/natives"
+
       - name: Build and package
         working-directory: packages/java
         run: mvn clean package -DskipTests
@@ -1368,6 +1467,33 @@ jobs:
           name: maven-packages
           path: packages/java/target/*.jar
           retention-days: 14
+
+  java-smoke:
+    name: Java Smoke Test (${{ matrix.os }})
+    needs: [prepare, java-package]
+    if: ${{ needs.prepare.outputs.release_java == 'true' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: maven-packages
+          path: artifacts/java
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Smoke test (load natives from JAR)
+        shell: bash
+        run: bash scripts/ci/java/smoke.sh "artifacts/java"
 
   csharp-package:
     name: Build C# package

@@ -143,79 +143,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Exec Maven Plugin for building native FFI and fixing dylib references -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>${exec-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>build-rust-ffi</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>cargo</executable>
-                            <workingDirectory>${project.basedir}/../../</workingDirectory>
-                            <arguments>
-                                <argument>build</argument>
-                                <argument>--release</argument>
-                                <argument>-p</argument>
-                                <argument>kreuzberg-ffi</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>fix-macos-dylib-references</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>sh</executable>
-                            <arguments>
-                                <argument>-c</argument>
-                                <argument>
-                                    if [ -f ${project.build.directory}/classes/libkreuzberg_ffi.dylib ]; then
-                                        install_name_tool -change @rpath/libpdfium.dylib @loader_path/libpdfium.dylib ${project.build.directory}/classes/libkreuzberg_ffi.dylib 2>/dev/null || true
-                                    fi
-                                </argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Maven Resources Plugin for copying native libraries -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>${maven-resources-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>copy-native-libs</id>
-                        <phase>process-sources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/classes</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>../../target/release</directory>
-                                    <includes>
-                                        <include>*.dylib</include>
-                                        <include>*.so</include>
-                                        <include>*.dll</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- Checkstyle Plugin for code style checks -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -399,4 +326,38 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>build-native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${exec-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>build-rust-ffi</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>cargo</executable>
+                                    <workingDirectory>${project.basedir}/../../</workingDirectory>
+                                    <arguments>
+                                        <argument>build</argument>
+                                        <argument>--release</argument>
+                                        <argument>-p</argument>
+                                        <argument>kreuzberg-ffi</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

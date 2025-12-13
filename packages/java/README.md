@@ -16,7 +16,10 @@ High-performance document intelligence library for Java with native Rust binding
 ## Requirements
 
 - Java 25 or higher
-- Native libraries are bundled with the package
+- Native libraries are bundled with the package (Linux/macOS/Windows)
+
+If you need to override native discovery (e.g., custom builds), set `KREUZBERG_FFI_DIR` to a directory containing the
+native libraries (`libkreuzberg_ffi` and `libpdfium` for your platform).
 
 ## Installation
 
@@ -40,20 +43,18 @@ implementation 'dev.kreuzberg:kreuzberg:4.0.0-rc.7'
 
 ```java
 import dev.kreuzberg.Kreuzberg;
-import dev.kreuzberg.config.KreuzbergConfig;
-import dev.kreuzberg.model.ExtractionResult;
+import dev.kreuzberg.KreuzbergException;
+import java.io.IOException;
 
 public class Example {
     public static void main(String[] args) {
-        // Initialize with default configuration
-        try (var kreuzberg = new Kreuzberg(KreuzbergConfig.builder().build())) {
-            // Extract from a file
-            ExtractionResult result = kreuzberg.extractFile("document.pdf");
-
-            System.out.println(result.getContent());
-            System.out.println(result.getTables());
-            System.out.println(result.getMetadata());
-        } catch (Exception e) {
+        try {
+            var result = Kreuzberg.extractFile("document.pdf");
+            System.out.println(result.content());
+            System.out.println(result.mimeType());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (KreuzbergException e) {
             e.printStackTrace();
         }
     }
@@ -63,19 +64,26 @@ public class Example {
 ### With Custom Configuration
 
 ```java
-import dev.kreuzberg.config.KreuzbergConfig;
+import dev.kreuzberg.Kreuzberg;
+import dev.kreuzberg.KreuzbergException;
+import dev.kreuzberg.config.ExtractionConfig;
 import dev.kreuzberg.config.OcrConfig;
+import java.io.IOException;
 
-KreuzbergConfig config = KreuzbergConfig.builder()
-    .withOcr(OcrConfig.builder()
+ExtractionConfig config = ExtractionConfig.builder()
+    .ocr(OcrConfig.builder()
         .backend("tesseract")
         .language("eng")
         .build())
     .build();
 
-try (var kreuzberg = new Kreuzberg(config)) {
-    ExtractionResult result = kreuzberg.extractFile("scanned.pdf");
-    System.out.println(result.getContent());
+try {
+    var result = Kreuzberg.extractFile(java.nio.file.Path.of("scanned.pdf"), config);
+    System.out.println(result.content());
+} catch (IOException e) {
+    e.printStackTrace();
+} catch (KreuzbergException e) {
+    e.printStackTrace();
 }
 ```
 

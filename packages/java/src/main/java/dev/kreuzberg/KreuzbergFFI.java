@@ -9,7 +9,17 @@ import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.StructLayout;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Locale;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * Low-level FFI bindings to the Kreuzberg C library.
@@ -24,6 +34,10 @@ final class KreuzbergFFI {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup LOOKUP;
     private static final long C_STRING_MAX_SIZE = 1048576L;
+    private static final String NATIVES_RESOURCE_ROOT = "/natives";
+    private static final Object NATIVE_EXTRACT_LOCK = new Object();
+    private static String cachedExtractKey;
+    private static Path cachedExtractDir;
 
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC;
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG;
@@ -400,35 +414,44 @@ final class KreuzbergFFI {
      */
     private static void loadNativeLibrary() {
         String osName = System.getProperty("os.name").toLowerCase(Locale.ROOT);
+        String osArch = System.getProperty("os.arch").toLowerCase(Locale.ROOT);
         String libName;
         String libExt;
         String pdfiumLibName;
+        String ortExt;
 
         if (osName.contains("mac") || osName.contains("darwin")) {
             libName = "libkreuzberg_ffi";
             pdfiumLibName = "libpdfium";
             libExt = ".dylib";
+            ortExt = ".dylib";
         } else if (osName.contains("win")) {
             libName = "kreuzberg_ffi";
             pdfiumLibName = "pdfium";
             libExt = ".dll";
+            ortExt = ".dll";
         } else {
             libName = "libkreuzberg_ffi";
             pdfiumLibName = "libpdfium";
             libExt = ".so";
+            ortExt = ".so";
         }
+
+        String nativesRid = resolveNativesRid(osName, osArch);
+        String nativesDir = NATIVES_RESOURCE_ROOT + "/" + nativesRid;
 
         String ffiDir = System.getenv("KREUZBERG_FFI_DIR");
         if (ffiDir != null && !ffiDir.isEmpty()) {
-            java.nio.file.Path ffiPath = java.nio.file.Path.of(ffiDir);
-            java.nio.file.Path libPath = ffiPath.resolve(libName + libExt);
-            java.nio.file.Path pdfiumPath = ffiPath.resolve(pdfiumLibName + libExt);
+            Path ffiPath = Path.of(ffiDir);
+            Path libPath = ffiPath.resolve(libName + libExt);
+            Path pdfiumPath = ffiPath.resolve(pdfiumLibName + libExt);
 
-            if (java.nio.file.Files.exists(libPath)) {
+            if (Files.exists(libPath)) {
                 try {
-                    if (java.nio.file.Files.exists(pdfiumPath)) {
+                    if (Files.exists(pdfiumPath)) {
                         System.load(pdfiumPath.toAbsolutePath().toString());
                     }
+                    loadOnnxRuntimeRequiredFromDirectory(ffiPath, ortExt);
                     System.load(libPath.toAbsolutePath().toString());
                     return;
                 } catch (UnsatisfiedLinkError e) {
@@ -438,52 +461,19 @@ final class KreuzbergFFI {
             }
         }
 
-        String resourcePath = "/" + libName + libExt;
-        String pdfiumResourcePath = "/" + pdfiumLibName + libExt;
-        var resource = KreuzbergFFI.class.getResource(resourcePath);
-
-        if (resource != null) {
-            try (java.io.InputStream in = KreuzbergFFI.class.getResourceAsStream(resourcePath)) {
-                java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("kreuzberg_native");
-                tempDir.toFile().deleteOnExit();
-
-                java.nio.file.Path tempPdfium = null;
-                var pdfiumResource = KreuzbergFFI.class.getResource(pdfiumResourcePath);
-                if (pdfiumResource != null) {
-                    var pdfiumStream = KreuzbergFFI.class.getResourceAsStream(pdfiumResourcePath);
-                    try (java.io.InputStream pdfiumIn = pdfiumStream) {
-                        tempPdfium = tempDir.resolve(pdfiumLibName + libExt);
-                        tempPdfium.toFile().deleteOnExit();
-                        var replaceExisting = java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-                        java.nio.file.Files.copy(pdfiumIn, tempPdfium, replaceExisting);
-                    }
-                }
-
-                java.nio.file.Path tempLib = tempDir.resolve(libName + libExt);
-                tempLib.toFile().deleteOnExit();
-                java.nio.file.Files.copy(in, tempLib, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-
-                if (tempPdfium != null) {
-                    System.load(tempPdfium.toAbsolutePath().toString());
-                }
-
-                System.load(tempLib.toAbsolutePath().toString());
-                return;
-            } catch (Exception e) {
-                System.err.println("[KreuzbergFFI] Failed to extract and load native libraries "
-                    + "from resources: " + e.getMessage());
-                e.printStackTrace();
-            }
+        Path extracted = tryExtractAndLoadFromResources(nativesDir, libName, pdfiumLibName, libExt);
+        if (extracted != null) {
+            return;
         }
 
         String projectRoot = System.getProperty("user.dir");
-        java.nio.file.Path targetLib = java.nio.file.Path.of(
+        Path targetLib = Path.of(
             projectRoot, "target", "classes", libName + libExt);
-        java.nio.file.Path targetPdfium = java.nio.file.Path.of(
+        Path targetPdfium = Path.of(
             projectRoot, "target", "classes", pdfiumLibName + libExt);
 
-        if (java.nio.file.Files.exists(targetLib)) {
-            if (java.nio.file.Files.exists(targetPdfium)) {
+        if (Files.exists(targetLib)) {
+            if (Files.exists(targetPdfium)) {
                 System.load(targetPdfium.toAbsolutePath().toString());
             }
             System.load(targetLib.toAbsolutePath().toString());
@@ -493,9 +483,285 @@ final class KreuzbergFFI {
         try {
             System.loadLibrary("pdfium");
         } catch (UnsatisfiedLinkError e) {
-            System.err.println("[KreuzbergFFI] Failed to load optional pdfium library: " + e.getMessage());
+            if (isDebugEnabled()) {
+                System.err.println("[KreuzbergFFI] Failed to load optional pdfium library: " + e.getMessage());
+            }
         }
-        System.loadLibrary("kreuzberg_ffi");
+        try {
+            System.loadLibrary("kreuzberg_ffi");
+        } catch (UnsatisfiedLinkError e) {
+            String msg = "Failed to load Kreuzberg native library. Expected resource: "
+                + nativesDir + "/" + libName + libExt + " (RID: " + nativesRid + "). "
+                + "Set KREUZBERG_FFI_DIR to a directory containing " + libName + libExt
+                + " and " + pdfiumLibName + libExt + ", or ensure the libraries are on the system library path.";
+            UnsatisfiedLinkError out = new UnsatisfiedLinkError(msg + " Original error: " + e.getMessage());
+            out.initCause(e);
+            throw out;
+        }
+    }
+
+    private static Path tryExtractAndLoadFromResources(
+        String nativesDir,
+        String ffiLibraryBaseName,
+        String pdfiumLibraryBaseName,
+        String libExt
+    ) {
+        String ffiResourcePath = nativesDir + "/" + ffiLibraryBaseName + libExt;
+        URL ffiResource = KreuzbergFFI.class.getResource(ffiResourcePath);
+        if (ffiResource == null) {
+            return null;
+        }
+
+        try {
+            Path tempDir = extractOrReuseNativeDirectory(nativesDir);
+            List<Path> extractedFiles = listExtractedFiles(tempDir);
+            if (extractedFiles.isEmpty()) {
+                return null;
+            }
+
+            Path pdfiumPath = tempDir.resolve(pdfiumLibraryBaseName + libExt);
+            if (Files.exists(pdfiumPath)) {
+                System.load(pdfiumPath.toAbsolutePath().toString());
+            }
+
+            loadOnnxRuntimeRequired(extractedFiles, libExt);
+
+            Path ffiPath = tempDir.resolve(ffiLibraryBaseName + libExt);
+            if (!Files.exists(ffiPath)) {
+                throw new UnsatisfiedLinkError("Missing extracted FFI library: " + ffiPath);
+            }
+            System.load(ffiPath.toAbsolutePath().toString());
+            return ffiPath;
+        } catch (Exception e) {
+            System.err.println("[KreuzbergFFI] Failed to extract and load native libraries from resources: "
+                + e.getMessage());
+            if (isDebugEnabled()) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
+
+    private static Path extractOrReuseNativeDirectory(String nativesDir) throws Exception {
+        URL location = KreuzbergFFI.class.getProtectionDomain().getCodeSource().getLocation();
+        if (location == null) {
+            throw new IllegalStateException("Missing code source location for Kreuzberg JAR");
+        }
+
+        Path codePath = Path.of(location.toURI());
+        String key = codePath.toAbsolutePath() + "::" + nativesDir;
+
+        synchronized (NATIVE_EXTRACT_LOCK) {
+            Path existing = cachedExtractDir;
+            if (existing != null && key.equals(cachedExtractKey)) {
+                return existing;
+            }
+            Path tempDir = Files.createTempDirectory("kreuzberg_native");
+            tempDir.toFile().deleteOnExit();
+            List<Path> extracted = extractNativeDirectory(codePath, nativesDir, tempDir);
+            if (extracted.isEmpty()) {
+                throw new IllegalStateException("No native files extracted from resources dir: " + nativesDir);
+            }
+            cachedExtractKey = key;
+            cachedExtractDir = tempDir;
+            return tempDir;
+        }
+    }
+
+    private static List<Path> listExtractedFiles(Path dir) throws Exception {
+        if (!Files.exists(dir) || !Files.isDirectory(dir)) {
+            return List.of();
+        }
+        List<Path> out = new ArrayList<>();
+        try (var walk = Files.walk(dir)) {
+            for (Path p : (Iterable<Path>) walk::iterator) {
+                if (Files.isRegularFile(p)) {
+                    out.add(p);
+                }
+            }
+        }
+        return out;
+    }
+
+    private static List<Path> extractNativeDirectory(Path codePath, String nativesDir, Path destDir) throws Exception {
+        if (!Files.exists(destDir) || !Files.isDirectory(destDir)) {
+            throw new IllegalArgumentException("Destination directory does not exist: " + destDir);
+        }
+
+        String prefix = nativesDir.startsWith("/") ? nativesDir.substring(1) : nativesDir;
+        if (!prefix.endsWith("/")) {
+            prefix = prefix + "/";
+        }
+
+        if (Files.isDirectory(codePath)) {
+            Path nativesPath = codePath.resolve(prefix);
+            if (!Files.exists(nativesPath) || !Files.isDirectory(nativesPath)) {
+                return List.of();
+            }
+            return copyDirectory(nativesPath, destDir);
+        }
+
+        List<Path> extracted = new ArrayList<>();
+        try (JarFile jar = new JarFile(codePath.toFile())) {
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String name = entry.getName();
+                if (!name.startsWith(prefix) || entry.isDirectory()) {
+                    continue;
+                }
+                String relative = name.substring(prefix.length());
+                Path out = safeResolve(destDir, relative);
+                Files.createDirectories(out.getParent());
+                try (var in = jar.getInputStream(entry)) {
+                    Files.copy(in, out, StandardCopyOption.REPLACE_EXISTING);
+                }
+                out.toFile().deleteOnExit();
+                extracted.add(out);
+            }
+        }
+        return extracted;
+    }
+
+    private static List<Path> copyDirectory(Path srcDir, Path destDir) throws Exception {
+        List<Path> copied = new ArrayList<>();
+        try (var paths = Files.walk(srcDir)) {
+            for (Path src : (Iterable<Path>) paths::iterator) {
+                if (Files.isDirectory(src)) {
+                    continue;
+                }
+                Path relative = srcDir.relativize(src);
+                Path out = safeResolve(destDir, relative.toString());
+                Files.createDirectories(out.getParent());
+                Files.copy(src, out, StandardCopyOption.REPLACE_EXISTING);
+                out.toFile().deleteOnExit();
+                copied.add(out);
+            }
+        }
+        return copied;
+    }
+
+    private static Path safeResolve(Path destDir, String relative) throws Exception {
+        Path normalizedDest = destDir.toAbsolutePath().normalize();
+        Path out = normalizedDest.resolve(relative).normalize();
+        if (!out.startsWith(normalizedDest)) {
+            throw new SecurityException("Blocked extracting native file outside destination directory: " + relative);
+        }
+        return out;
+    }
+
+    private static void loadOnnxRuntimeRequiredFromDirectory(Path dir, String ortExt) {
+        if (!Files.exists(dir) || !Files.isDirectory(dir)) {
+            throw new UnsatisfiedLinkError("KREUZBERG_FFI_DIR does not exist or is not a directory: " + dir);
+        }
+        try {
+            List<Path> files = listExtractedFiles(dir);
+            loadOnnxRuntimeRequired(files, ortExt);
+        } catch (UnsatisfiedLinkError e) {
+            throw e;
+        } catch (Exception e) {
+            UnsatisfiedLinkError out = new UnsatisfiedLinkError("Failed to scan ORT libraries in " + dir);
+            out.initCause(e);
+            throw out;
+        }
+    }
+
+    private static void loadOnnxRuntimeRequired(List<Path> extractedFiles, String ortExt) {
+        Path core = findOnnxRuntimeCoreLibrary(extractedFiles, ortExt);
+        if (core == null) {
+            String expected = switch (ortExt) {
+                case ".dll" -> "onnxruntime.dll (and optionally onnxruntime*.dll)";
+                case ".dylib" -> "libonnxruntime*.dylib";
+                default -> "libonnxruntime.so*";
+            };
+            throw new UnsatisfiedLinkError("ONNX Runtime is required (embeddings enabled) but was not found. "
+                + "Expected " + expected + " alongside the bundled natives or in KREUZBERG_FFI_DIR.");
+        }
+
+        try {
+            System.load(core.toAbsolutePath().toString());
+        } catch (UnsatisfiedLinkError e) {
+            UnsatisfiedLinkError out = new UnsatisfiedLinkError("Failed to load ONNX Runtime core library: " + core);
+            out.initCause(e);
+            throw out;
+        }
+
+        List<Path> candidates = extractedFiles.stream()
+            .filter(path -> {
+                String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+                return name.contains("onnxruntime") && !path.equals(core);
+            })
+            .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+            .toList();
+
+        for (Path candidate : candidates) {
+            try {
+                System.load(candidate.toAbsolutePath().toString());
+            } catch (UnsatisfiedLinkError e) {
+                UnsatisfiedLinkError out = new UnsatisfiedLinkError("Failed to load ONNX Runtime dependency: "
+                    + candidate);
+                out.initCause(e);
+                throw out;
+            }
+        }
+    }
+
+    private static Path findOnnxRuntimeCoreLibrary(List<Path> files, String ortExt) {
+        List<Path> candidates = files.stream()
+            .filter(Files::isRegularFile)
+            .filter(path -> {
+                String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+                if (!name.endsWith(ortExt)) {
+                    return false;
+                }
+                if (".dll".equals(ortExt)) {
+                    return "onnxruntime.dll".equals(name);
+                }
+                if (!name.contains("onnxruntime")) {
+                    return false;
+                }
+                if (name.contains("providers") || name.contains("provider")) {
+                    return false;
+                }
+                if (".so".equals(ortExt)) {
+                    return name.startsWith("libonnxruntime.so");
+                }
+                return ".dylib".equals(ortExt) && name.startsWith("libonnxruntime");
+            })
+            .sorted(Comparator.comparing(path -> path.getFileName().toString().length()))
+            .toList();
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        return candidates.getFirst();
+    }
+
+    private static boolean isDebugEnabled() {
+        String env = System.getenv("KREUZBERG_JAVA_DEBUG");
+        return env != null && "true".equalsIgnoreCase(env);
+    }
+
+    private static String resolveNativesRid(String osName, String osArch) {
+        String arch;
+        if (osArch.contains("aarch64") || osArch.contains("arm64")) {
+            arch = "arm64";
+        } else if (osArch.contains("x86_64") || osArch.contains("amd64")) {
+            arch = "x86_64";
+        } else {
+            arch = osArch.replaceAll("[^a-z0-9_]+", "");
+        }
+
+        String os;
+        if (osName.contains("mac") || osName.contains("darwin")) {
+            os = "macos";
+        } else if (osName.contains("win")) {
+            os = "windows";
+        } else {
+            os = "linux";
+        }
+
+        return os + "-" + arch;
     }
 
     /**

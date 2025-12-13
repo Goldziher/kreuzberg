@@ -164,17 +164,9 @@ class ExtractionTest {
         String content = "Name,Age,City\nAlice,30,New York\nBob,25,Los Angeles";
         Files.writeString(testFile, content);
 
-        try {
-            ExtractionResult result = Kreuzberg.extractFile(testFile);
-            assertNotNull(result.getContent(), "CSV content should be extracted");
-            assertTrue(result.isSuccess(), "CSV extraction should succeed");
-        } catch (KreuzbergException e) {
-            if (e.getMessage().contains("Unsupported format")) {
-                System.out.println("Skipping test: CSV extraction not supported");
-                return;
-            }
-            throw e;
-        }
+        ExtractionResult result = Kreuzberg.extractFile(testFile);
+        assertNotNull(result.getContent(), "CSV content should be extracted");
+        assertTrue(result.isSuccess(), "CSV extraction should succeed");
     }
 
     @Test
@@ -256,18 +248,10 @@ class ExtractionTest {
         String content = "Header1,Header2\nValue1,Value2";
         Files.writeString(testFile, content);
 
-        try {
-            ExtractionResult result = Kreuzberg.extractFile(testFile);
+        ExtractionResult result = Kreuzberg.extractFile(testFile);
 
-            assertNotNull(result.getTables(), "Tables list should not be null");
-            assertTrue(result.getTables().isEmpty() || result.getTables().size() > 0, "Tables list should be valid");
-        } catch (KreuzbergException e) {
-            if (e.getMessage().contains("Unsupported format")) {
-                System.out.println("Skipping test: CSV extraction not supported");
-                return;
-            }
-            throw e;
-        }
+        assertNotNull(result.getTables(), "Tables list should not be null");
+        assertTrue(result.getTables().isEmpty() || result.getTables().size() > 0, "Tables list should be valid");
     }
 
     @Test
@@ -276,20 +260,12 @@ class ExtractionTest {
         String content = "A,B,C\n1,2,3\n4,5,6";
         Files.writeString(testFile, content);
 
-        try {
-            ExtractionResult result = Kreuzberg.extractFile(testFile);
+        ExtractionResult result = Kreuzberg.extractFile(testFile);
 
-            List<Table> tables = result.getTables();
-            assertNotNull(tables, "Tables list should not be null");
-            for (Table table : tables) {
-                assertNotNull(table.cells(), "Table cells should not be null");
-            }
-        } catch (KreuzbergException e) {
-            if (e.getMessage().contains("Unsupported format")) {
-                System.out.println("Skipping test: CSV extraction not supported");
-                return;
-            }
-            throw e;
+        List<Table> tables = result.getTables();
+        assertNotNull(tables, "Tables list should not be null");
+        for (Table table : tables) {
+            assertNotNull(table.cells(), "Table cells should not be null");
         }
     }
 
