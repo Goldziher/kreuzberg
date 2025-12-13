@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-${GOLANGCI_LINT_VERSION:-2.6.2}}"
+VERSION="${1:-${GOLANGCI_LINT_VERSION:-2.7.2}}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 echo "Updating golangci-lint to v${VERSION}..."

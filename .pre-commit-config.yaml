@@ -103,7 +103,7 @@ repos:
         pass_filenames: false
       - id: golangci-lint
         name: golangci-lint (packages/go)
-        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml --fix ./...'
+        entry: bash -c 'export PKG_CONFIG_PATH="$(cd . && pwd -P)/crates/kreuzberg-ffi:${PKG_CONFIG_PATH}" && cd packages/go && golangci-lint run --config ../../.golangci.yml --fix ./...'
         language: system
         files: ^packages/go/
         pass_filenames: false

@@ -81,7 +81,6 @@ docker-compose.yaml
 docker-logs/
 docs/_build/
 docs/build/
-e2e/java/src/test/java/com/kreuzberg/e2e/package-info.java
 examples.txt
 GEMINI.md
 htmlcov/
