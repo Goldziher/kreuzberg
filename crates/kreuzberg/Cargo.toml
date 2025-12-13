@@ -26,6 +26,9 @@ tokio-runtime = ["dep:tokio"]
 
 # Format extractors
 pdf = ["dep:pdfium-render", "dep:lopdf", "dep:image"]
+pdf-static = ["pdf"] # Download + static link (no runtime dependency)
+pdf-bundled = ["pdf"] # Embed library in binary (self-contained)
+pdf-system = ["pdf"] # Use system-installed pdfium via pkg-config
 excel = ["dep:calamine", "dep:polars", "tokio-runtime"]
 office = [
     "dep:roxmltree",
@@ -98,6 +101,7 @@ cli = ["pdf", "excel", "office", "html", "ocr", "language-detection", "chunking"
 
 [build-dependencies]
 tracing = { workspace = true }
+pkg-config = "0.3"             # For system pdfium detection
 
 [dependencies]
 # Core dependencies (always included)

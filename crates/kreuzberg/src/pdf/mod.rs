@@ -35,6 +35,8 @@
 //!
 //! This module requires the `pdf` feature. The `ocr` feature enables additional
 //! functionality in the PDF extractor for rendering pages to images.
+#[cfg(all(feature = "pdf", feature = "pdf-bundled"))]
+pub mod bundled;
 #[cfg(feature = "pdf")]
 pub mod error;
 #[cfg(feature = "pdf")]
@@ -48,6 +50,8 @@ pub mod table;
 #[cfg(feature = "pdf")]
 pub mod text;
 
+#[cfg(all(feature = "pdf", feature = "pdf-bundled"))]
+pub use bundled::extract_bundled_pdfium;
 #[cfg(feature = "pdf")]
 pub use error::PdfError;
 #[cfg(feature = "pdf")]

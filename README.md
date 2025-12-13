@@ -68,6 +68,39 @@ Each language binding provides comprehensive documentation with examples and bes
 - **[Rust](crates/kreuzberg/README.md)** – Crate usage, features, async/sync APIs
 - **[CLI](https://kreuzberg.dev/cli/usage/)** – Command-line usage, batch processing, options
 
+## PDFium Linking Options (Rust Crate Only)
+
+The Rust crate offers flexible PDFium linking strategies for different deployment scenarios. Language bindings (Python, TypeScript, Ruby, Java, Go, C#) always bundle PDFium automatically—no configuration needed.
+
+| Strategy | Feature Flag | Use Case |
+|----------|--------------|----------|
+| **Default (Dynamic)** | None | Download at build time, link dynamically. Simplest option. |
+| **Static** | `pdf-static` | Download at build time, link statically. Useful for isolated deployments. |
+| **Bundled** | `pdf-bundled` | Embed PDFium in binary. Largest binary, but zero external dependencies. |
+| **System** | `pdf-system` | Use system-installed PDFium via `pkg-config`. Best for package managers. |
+
+**Example Cargo.toml configurations:**
+
+```toml
+# Default (dynamic linking)
+[dependencies]
+kreuzberg = "4.0"
+
+# Static linking
+[dependencies]
+kreuzberg = { version = "4.0", features = ["pdf-static"] }
+
+# Bundled in binary
+[dependencies]
+kreuzberg = { version = "4.0", features = ["pdf-bundled"] }
+
+# System library
+[dependencies]
+kreuzberg = { version = "4.0", features = ["pdf-system"] }
+```
+
+**[Complete PDFium Linking Guide →](docs/guides/pdfium-linking.md)** for detailed configuration, trade-offs, and troubleshooting.
+
 ## Supported Formats
 
 ### Documents & Productivity
