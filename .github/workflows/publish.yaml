@@ -2428,6 +2428,22 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Create Go module tag
+        if: ${{ needs.prepare.outputs.release_go == 'true' }}
+        run: |
+          # Create lightweight tag for Go module in subdirectory
+          # This enables: go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@v<version>
+          MODULE_TAG="packages/go/v${{ needs.prepare.outputs.version }}"
+          git tag "$MODULE_TAG" "${{ needs.prepare.outputs.tag }}"
+          git push origin "$MODULE_TAG"
+          echo "✅ Go module tag created: $MODULE_TAG"
+
       - name: Aggregate release status
         id: status
         env:

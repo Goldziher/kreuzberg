@@ -32,4 +32,6 @@ if [ -d "$deps_dir" ]; then
 	esac
 fi
 
-ls -la "$out_root"
+ls -lah "$out_root"
+echo "Native assets directory structure:"
+find "$out_root" -type f -exec file {} \;
