@@ -144,7 +144,7 @@ fb2 = { version = "0.4", optional = true }
 typst-syntax = { version = "0.14", optional = true }
 
 # Processing features (optional)
-kreuzberg-tesseract = { version = "4.0.0-rc.6", optional = true }
+kreuzberg-tesseract = { version = "4.0.0-rc.7", optional = true }
 image = { workspace = true, default-features = false, features = [
     "png",
     "jpeg",

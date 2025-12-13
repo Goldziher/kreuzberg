@@ -118,12 +118,12 @@
 		"which": "^6.0.0"
 	},
 	"optionalDependencies": {
-		"@kreuzberg/node-darwin-arm64": "4.0.0-rc.7",
-		"@kreuzberg/node-darwin-x64": "4.0.0-rc.7",
-		"@kreuzberg/node-linux-arm-gnueabihf": "4.0.0-rc.7",
-		"@kreuzberg/node-linux-arm64-gnu": "4.0.0-rc.7",
-		"@kreuzberg/node-linux-x64-gnu": "4.0.0-rc.7",
-		"@kreuzberg/node-win32-arm64-msvc": "4.0.0-rc.7",
-		"@kreuzberg/node-win32-x64-msvc": "4.0.0-rc.7"
+		"@kreuzberg/node-darwin-arm64": "4.0.0-rc.6",
+		"@kreuzberg/node-darwin-x64": "4.0.0-rc.6",
+		"@kreuzberg/node-linux-arm-gnueabihf": "4.0.0-rc.6",
+		"@kreuzberg/node-linux-arm64-gnu": "4.0.0-rc.6",
+		"@kreuzberg/node-linux-x64-gnu": "4.0.0-rc.6",
+		"@kreuzberg/node-win32-arm64-msvc": "4.0.0-rc.6",
+		"@kreuzberg/node-win32-x64-msvc": "4.0.0-rc.6"
 	}
 }
