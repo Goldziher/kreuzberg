@@ -163,12 +163,12 @@ jobs:
           name: java-jar-${{ matrix.os }}
           path: packages/java/target/
 
-      - name: Run Java tests
-        run: scripts/ci/java/run-tests.sh
-
       - name: Build native FFI library
         shell: bash
         run: cargo build -p kreuzberg-ffi --release
+
+      - name: Run Java tests
+        run: scripts/ci/java/run-tests.sh
 
       - name: Install Task
         uses: ./.github/actions/install-task
