@@ -14,7 +14,9 @@ build/
 
 # WASM pack output
 pkg/
+pkg-*/
 wasm-pack.log
+*.tgz
 
 # Editor
 .vscode/

@@ -1,7 +1,13 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-	entry: ["typescript/index.ts", "typescript/runtime.ts", "typescript/adapters/wasm-adapter.ts"],
+	entry: [
+		"typescript/index.ts",
+		"typescript/runtime.ts",
+		"typescript/adapters/wasm-adapter.ts",
+		"typescript/ocr/registry.ts",
+		"typescript/ocr/tesseract-wasm-backend.ts",
+	],
 	format: ["esm", "cjs"],
 	bundle: false,
 	dts: {

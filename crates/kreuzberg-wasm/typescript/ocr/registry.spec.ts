@@ -1,4 +1,4 @@
-import type { OcrBackendProtocol } from "@kreuzberg/core";
+import type { OcrBackendProtocol } from "../types.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	clearOcrBackends,

@@ -16,19 +16,54 @@
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.mjs",
-			"require": "./dist/index.js"
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
 		},
 		"./runtime": {
-			"types": "./dist/runtime.d.ts",
-			"import": "./dist/runtime.mjs",
-			"require": "./dist/runtime.js"
+			"import": {
+				"types": "./dist/runtime.d.mts",
+				"default": "./dist/runtime.mjs"
+			},
+			"require": {
+				"types": "./dist/runtime.d.ts",
+				"default": "./dist/runtime.js"
+			}
 		},
 		"./adapters/wasm-adapter": {
-			"types": "./dist/adapters/wasm-adapter.d.ts",
-			"import": "./dist/adapters/wasm-adapter.mjs",
-			"require": "./dist/adapters/wasm-adapter.js"
+			"import": {
+				"types": "./dist/adapters/wasm-adapter.d.mts",
+				"default": "./dist/adapters/wasm-adapter.mjs"
+			},
+			"require": {
+				"types": "./dist/adapters/wasm-adapter.d.ts",
+				"default": "./dist/adapters/wasm-adapter.js"
+			}
+		},
+		"./ocr/registry": {
+			"import": {
+				"types": "./dist/ocr/registry.d.mts",
+				"default": "./dist/ocr/registry.mjs"
+			},
+			"require": {
+				"types": "./dist/ocr/registry.d.ts",
+				"default": "./dist/ocr/registry.js"
+			}
+		},
+		"./ocr/tesseract-wasm-backend": {
+			"import": {
+				"types": "./dist/ocr/tesseract-wasm-backend.d.mts",
+				"default": "./dist/ocr/tesseract-wasm-backend.mjs"
+			},
+			"require": {
+				"types": "./dist/ocr/tesseract-wasm-backend.d.ts",
+				"default": "./dist/ocr/tesseract-wasm-backend.js"
+			}
 		}
 	},
 	"repository": {
@@ -75,7 +110,7 @@
 		"build:wasm:nodejs": "wasm-pack build --target nodejs --out-dir pkg --release",
 		"build:wasm:deno": "wasm-pack build --target deno --out-dir pkg --release",
 		"build:ts": "tsup",
-		"build": "npm run build:wasm:bundler && npm run build:ts",
+		"build": "npm run build:wasm:nodejs && npm run build:ts",
 		"build:all": "npm run build:wasm:web && npm run build:wasm:bundler && npm run build:wasm:nodejs && npm run build:wasm:deno && npm run build:ts",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check typescript && oxlint typescript",
@@ -96,9 +131,6 @@
 		"tsup": "^8.5.1",
 		"typescript": "^5.9.3",
 		"vitest": "^1.4.0"
-	},
-	"dependencies": {
-		"@kreuzberg/core": "workspace:*"
 	},
 	"optionalDependencies": {
 		"tesseract-wasm": "^0.11.0"

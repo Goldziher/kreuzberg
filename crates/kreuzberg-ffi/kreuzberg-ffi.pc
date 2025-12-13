@@ -1,7 +1,7 @@
-prefix=/Users/naamanhirschfeld/workspace/kreuzberg-dev/worktrees/fix-go-bindings
+prefix=/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg
 exec_prefix=${prefix}
-libdir=/Users/naamanhirschfeld/workspace/kreuzberg-dev/worktrees/fix-go-bindings/target/release
-includedir=/Users/naamanhirschfeld/workspace/kreuzberg-dev/worktrees/fix-go-bindings/crates/kreuzberg-ffi
+libdir=/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/target/release
+includedir=/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/crates/kreuzberg-ffi
 
 Name: kreuzberg-ffi
 Description: C FFI bindings for Kreuzberg document intelligence library

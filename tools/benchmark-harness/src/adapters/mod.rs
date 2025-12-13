@@ -15,7 +15,8 @@ pub use external::{
 pub use kreuzberg::{
     create_csharp_sync_adapter, create_go_batch_adapter, create_go_sync_adapter, create_java_sync_adapter,
     create_node_async_adapter, create_node_batch_adapter, create_python_async_adapter, create_python_batch_adapter,
-    create_python_sync_adapter, create_ruby_batch_adapter, create_ruby_sync_adapter,
+    create_python_sync_adapter, create_ruby_batch_adapter, create_ruby_sync_adapter, create_wasm_async_adapter,
+    create_wasm_batch_adapter,
 };
 pub use native::NativeAdapter;
 pub use node::NodeAdapter;

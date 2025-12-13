@@ -213,6 +213,33 @@ pub fn create_node_batch_adapter() -> Result<SubprocessAdapter> {
     ))
 }
 
+/// Create WASM async adapter (extractFile via @kreuzberg/wasm)
+pub fn create_wasm_async_adapter() -> Result<SubprocessAdapter> {
+    let script_path = get_script_path("kreuzberg_extract_wasm.ts")?;
+    let (command, mut args) = find_node()?;
+
+    args.push(script_path.to_string_lossy().to_string());
+    args.push("async".to_string());
+
+    Ok(SubprocessAdapter::new("kreuzberg-wasm-async", command, args, vec![]))
+}
+
+/// Create WASM batch adapter (Promise.all extractFile via @kreuzberg/wasm)
+pub fn create_wasm_batch_adapter() -> Result<SubprocessAdapter> {
+    let script_path = get_script_path("kreuzberg_extract_wasm.ts")?;
+    let (command, mut args) = find_node()?;
+
+    args.push(script_path.to_string_lossy().to_string());
+    args.push("batch".to_string());
+
+    Ok(SubprocessAdapter::with_batch_support(
+        "kreuzberg-wasm-batch",
+        command,
+        args,
+        vec![],
+    ))
+}
+
 /// Create Ruby sync adapter (extract_file)
 pub fn create_ruby_sync_adapter() -> Result<SubprocessAdapter> {
     let script_path = get_script_path("kreuzberg_extract.rb")?;

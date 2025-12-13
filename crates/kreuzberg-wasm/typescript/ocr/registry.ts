@@ -17,7 +17,7 @@
  * ```
  */
 
-import type { OcrBackendProtocol } from "@kreuzberg/core";
+import type { OcrBackendProtocol } from "../types.js";
 
 /** Global registry of OCR backends */
 const ocrBackendRegistry = new Map<string, OcrBackendProtocol>();

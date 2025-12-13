@@ -94,7 +94,7 @@
  * ```
  */
 
-import type { ExtractionConfig as ExtractionConfigType, ExtractionResult } from "@kreuzberg/core";
+import type { ExtractionConfig as ExtractionConfigType, ExtractionResult } from "./types.js";
 
 import { configToJS, fileToUint8Array, jsToExtractionResult, wrapWasmError } from "./adapters/wasm-adapter.js";
 import { registerOcrBackend } from "./ocr/registry.js";
@@ -108,9 +108,9 @@ export type {
 	ExtractionConfig,
 	ExtractionResult,
 	Table,
-} from "@kreuzberg/core";
+} from "./types.js";
 
-export * from "@kreuzberg/core";
+export type * from "./types.js";
 
 // Re-export adapter utilities for convenient access
 export {
@@ -296,9 +296,17 @@ export async function initWasm(): Promise<void> {
 			}
 
 			// Dynamic WASM import and initialization
-			// @ts-expect-error - Dynamic import of WASM module generated at build time
-			const wasmModule = (await import("../../pkg/kreuzberg_wasm")) as unknown as WasmModule;
-			wasm = wasmModule;
+			let wasmModule: unknown;
+			try {
+				// Try importing from pkg directory (development/monorepo layout)
+				// @ts-expect-error - Path may not exist at type-check time
+				wasmModule = await import("../../pkg/kreuzberg_wasm");
+			} catch {
+				// Fallback to dist-relative path (published package layout)
+				// @ts-expect-error - Dynamic import path
+				wasmModule = await import("./kreuzberg_wasm");
+			}
+			wasm = wasmModule as unknown as WasmModule;
 
 			// Call default initialization if available (for some wasm-pack targets)
 			if (wasm && typeof wasm.default === "function") {

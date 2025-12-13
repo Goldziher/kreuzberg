@@ -119,7 +119,7 @@ pub fn version() -> String {
 
 /// Initialize the WASM module
 /// This function should be called once at application startup
-#[wasm_bindgen(start)]
+#[wasm_bindgen]
 pub fn init() {
     // Set panic hook for better error messages in development
     #[cfg(feature = "console_error_panic_hook")]

@@ -26,7 +26,7 @@
  * ```
  */
 
-import type { Chunk, ExtractedImage, ExtractionConfig, ExtractionResult, Table } from "@kreuzberg/core";
+import type { Chunk, ExtractedImage, ExtractionConfig, ExtractionResult, Table } from "../types.js";
 
 /**
  * Maximum file size for processing (512 MB)

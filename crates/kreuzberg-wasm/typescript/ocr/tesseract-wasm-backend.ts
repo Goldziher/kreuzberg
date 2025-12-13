@@ -61,7 +61,7 @@
  * ```
  */
 
-import type { OcrBackendProtocol } from "@kreuzberg/core";
+import type { OcrBackendProtocol } from "../types.js";
 
 /**
  * Tesseract WASM Client interface

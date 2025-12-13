@@ -1,4 +1,4 @@
-import type { ExtractionConfig } from "@kreuzberg/core";
+import type { ExtractionConfig } from "../types.js";
 import { describe, expect, it } from "vitest";
 import {
 	configToJS,

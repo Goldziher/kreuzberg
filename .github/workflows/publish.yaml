@@ -1892,17 +1892,14 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
       - name: Configure trusted publishing credentials
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         uses: rubygems/configure-rubygems-credentials@v1.0.0
-
-      - name: Verify RubyGems credentials
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: bash scripts/publish/verify-rubygems-credentials.sh
-
-      - name: Rebuild gems with latest RubyGems
-        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: bash scripts/publish/rebuild-and-publish-gems.sh dist
 
       - name: Publish gems to RubyGems
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
@@ -2240,9 +2237,16 @@ jobs:
       - name: Ensure dotnet is available
         run: bash scripts/publish/csharp/ensure-dotnet.sh
 
+      - name: NuGet login (OIDC → temp API key)
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        uses: NuGet/login@v1
+        id: nuget_login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Publish to NuGet
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        run: dotnet nuget push "dist/*.nupkg" --source https://api.nuget.org/v3/index.json --skip-duplicate && echo "NuGet package published." >> "$GITHUB_STEP_SUMMARY"
+        run: dotnet nuget push "dist/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" --skip-duplicate && echo "NuGet package published." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dry run summary
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
