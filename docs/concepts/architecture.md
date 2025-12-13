@@ -16,13 +16,15 @@ The architecture follows three key principles:
 graph TB
     subgraph "Language Bindings"
         Python["Python Package<br/>(packages/python)"]
-        TypeScript["TypeScript Package<br/>(packages/typescript)"]
+        TypeScriptNode["TypeScript/Node.js Package<br/>(packages/typescript)"]
+        TypeScriptWasm["TypeScript/WASM Package<br/>(packages/wasm)"]
         Ruby["Ruby Gem<br/>(packages/ruby)"]
     end
 
     subgraph "FFI Bridges"
         PyO3["PyO3 Bridge<br/>(crates/kreuzberg-py)"]
         NAPIRS["NAPI-RS Bridge<br/>(crates/kreuzberg-node)"]
+        WasmBindgen["wasm-bindgen<br/>(crates/kreuzberg-wasm)"]
         Magnus["Magnus Bridge<br/>(crates/kreuzberg-ruby)"]
     end
 
@@ -31,17 +33,29 @@ graph TB
     end
 
     Python --> PyO3
-    TypeScript --> NAPIRS
+    TypeScriptNode --> NAPIRS
+    TypeScriptWasm --> WasmBindgen
     Ruby --> Magnus
     PyO3 --> Core
     NAPIRS --> Core
+    WasmBindgen --> Core
     Magnus --> Core
 
     style Core fill:#e1f5ff
     style PyO3 fill:#ffe1e1
     style NAPIRS fill:#ffe1e1
+    style WasmBindgen fill:#fff3e0
     style Magnus fill:#ffe1e1
 ```
+
+### TypeScript Bindings: Native vs WASM
+
+Kreuzberg provides two TypeScript implementations optimized for different environments:
+
+- **Native (`@kreuzberg/node`)**: Uses NAPI-RS to compile native C++ bindings. Provides maximum performance on Node.js, Bun, and Deno. Requires compilation but delivers native speeds.
+- **WASM (`@kreuzberg/wasm`)**: Uses wasm-bindgen to compile pure WebAssembly. Works in browsers, Cloudflare Workers, and any JavaScript runtime. 60-80% of native speed with zero native dependencies.
+
+See [Installation Guide](../getting-started/installation.md#which-package-should-i-install) for which to use in your environment.
 
 ## Rust Core Structure
 

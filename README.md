@@ -2,8 +2,8 @@
 
 [![Rust](https://img.shields.io/crates/v/kreuzberg?label=Rust)](https://crates.io/crates/kreuzberg)
 [![Python](https://img.shields.io/pypi/v/kreuzberg?label=Python)](https://pypi.org/project/kreuzberg/)
-[![TypeScript](https://img.shields.io/npm/v/@kreuzberg/node?label=TypeScript)](https://www.npmjs.com/package/@kreuzberg/node)
-[![WASM](https://img.shields.io/npm/v/@kreuzberg/wasm?label=WASM)](https://www.npmjs.com/package/@kreuzberg/wasm)
+[![TypeScript/Node.js](https://img.shields.io/npm/v/@kreuzberg/node?label=TypeScript%2FNode.js&color=3178c6)](https://www.npmjs.com/package/@kreuzberg/node)
+[![Browser/WASM](https://img.shields.io/npm/v/@kreuzberg/wasm?label=Browser%2FWASM&color=654ff0)](https://www.npmjs.com/package/@kreuzberg/wasm)
 [![Ruby](https://img.shields.io/gem/v/kreuzberg?label=Ruby)](https://rubygems.org/gems/kreuzberg)
 [![Java](https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg?label=Java)](https://central.sonatype.com/artifact/dev.kreuzberg/kreuzberg)
 [![Go](https://img.shields.io/github/v/tag/kreuzberg-dev/kreuzberg?label=Go)](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg)
@@ -42,9 +42,25 @@ Don't want to manage Rust infrastructure? **Kreuzberg Cloud** is a managed docum
 
 Each language binding provides comprehensive documentation with examples and best practices. Choose your platform to get started:
 
+### JavaScript/TypeScript
+
+- **[@kreuzberg/node](crates/kreuzberg-node/README.md)** (Recommended for Node.js/Bun) – Native NAPI-RS bindings, fastest performance, direct system calls
+- **[@kreuzberg/wasm](packages/typescript/README.md)** (Browser/Workers/Deno) – Pure WebAssembly, no native dependencies, cross-platform consistency
+
+**TypeScript Decision Matrix:**
+
+| Platform | Package | Performance | Setup | Use Case |
+|----------|---------|-------------|-------|----------|
+| Node.js | `@kreuzberg/node` | Fastest (100%) | Native build toolchain | Production servers, backends |
+| Bun | `@kreuzberg/node` | Fastest (100%) | Native build toolchain | High-performance backends |
+| Browser | `@kreuzberg/wasm` | Good (60-80% of native) | Zero dependencies | Web apps, no build complexity |
+| Cloudflare Workers | `@kreuzberg/wasm` | Good (60-80% of native) | Zero dependencies | Serverless edge computing |
+| Deno | `@kreuzberg/wasm` | Good (60-80% of native) | Zero dependencies | Deno runtime |
+
+### Other Languages
+
 - **[Python](packages/python/README.md)** – Installation, basic usage, async/sync APIs
 - **[Ruby](packages/ruby/README.md)** – Installation, basic usage, configuration
-- **[TypeScript/Node.js](crates/kreuzberg-node/README.md)** – Installation, types, promises
 - **[Go](packages/go/README.md)** – Installation, native library setup, sync/async extraction + batch APIs
   _Note: Windows builds use MinGW and don't support embeddings (ONNX Runtime requires MSVC)_
 - **[Java](packages/java/README.md)** – Installation, FFM API usage, Maven/Gradle setup
@@ -123,6 +139,33 @@ Automatic language detection in extracted text using fast-langdetect. Configure 
 Extract comprehensive metadata from all supported formats: authors, titles, creation dates, page counts, EXIF data, and format-specific properties.
 
 **[Metadata Guide →](https://kreuzberg.dev/snippets/go/pdf_metadata_extractor/)**
+
+## Performance: Native vs WASM Bindings
+
+Kreuzberg offers two JavaScript/TypeScript options with different performance characteristics:
+
+| Metric | @kreuzberg/node (Native) | @kreuzberg/wasm (WASM) |
+|--------|--------------------------|------------------------|
+| **Single document extraction** | ~150ms (PDF, 10 pages) | ~240-250ms (60-80% of native) |
+| **Batch processing (10 docs)** | ~850ms | ~1400-1800ms |
+| **Memory usage** | Direct system calls | Browser/WASM runtime overhead |
+| **Native dependencies** | Required (OS libraries) | None |
+| **Browser support** | Node.js, Bun only | Browser, Workers, Deno |
+| **Setup complexity** | Native build toolchain | Zero dependencies |
+
+**Use @kreuzberg/node when:**
+- Running on Node.js or Bun backend servers
+- Performance is critical (2-3x faster than WASM)
+- You have or can install native build toolchain
+- Processing high document volumes
+
+**Use @kreuzberg/wasm when:**
+- Running in browser or web workers
+- Deploying to serverless edge (Cloudflare, Vercel)
+- Using Deno or similar runtimes
+- Need absolute zero native dependencies
+- Cross-platform consistency is important
+- Trade-off: ~20-40% slower but still good performance
 
 ## Deployment Options
 

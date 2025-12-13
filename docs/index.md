@@ -23,16 +23,60 @@ Kreuzberg is a document intelligence platform with a high‑performance Rust cor
 
 ## Supported Platforms
 
-| Binding / Interface | Package | Docs |
-|--------------------|---------|------|
-| Python             | `pip install kreuzberg` | [Python API Reference](reference/api-python.md) |
-| TypeScript/Node.js | `npm install @kreuzberg/node` | [TypeScript API Reference](reference/api-typescript.md) |
-| WebAssembly        | `npm install @kreuzberg/wasm` | [WASM API Reference](reference/api-wasm.md) |
-| Ruby               | `gem install kreuzberg` | [Ruby API Reference](reference/api-ruby.md) |
-| Go                 | `go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest` | [Go API Reference](reference/api-go.md) |
-| Rust               | `cargo add kreuzberg` | [Rust API Reference](reference/api-rust.md) |
-| CLI                | `brew install kreuzberg-dev/tap/kreuzberg` or `cargo install kreuzberg-cli` | [CLI Usage](cli/usage.md) |
-| API Server / MCP   | Docker image `goldziher/kreuzberg:core` | [API Server Guide](guides/api-server.md) |
+| Binding / Interface | Package | Use Case | Docs |
+|-------|---------|---------|------|
+| Python             | `pip install kreuzberg` | Server-side, data processing | [Python API Reference](reference/api-python.md) |
+| **TypeScript/Node.js (Native)** | `npm install @kreuzberg/node` | **Node.js servers, command-line tools, native performance** | **[TypeScript API Reference](reference/api-typescript.md)** |
+| **WebAssembly (WASM)** | `npm install @kreuzberg/wasm` | **Browsers, Cloudflare Workers, Deno, Bun, serverless** | **[WASM API Reference](reference/api-wasm.md)** |
+| Ruby               | `gem install kreuzberg` | Server-side, Rails applications | [Ruby API Reference](reference/api-ruby.md) |
+| Go                 | `go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest` | Server-side, systems tools | [Go API Reference](reference/api-go.md) |
+| Rust               | `cargo add kreuzberg` | System libraries, performance-critical | [Rust API Reference](reference/api-rust.md) |
+| CLI                | `brew install kreuzberg-dev/tap/kreuzberg` or `cargo install kreuzberg-cli` | Terminal automation, scripting | [CLI Usage](cli/usage.md) |
+| API Server / MCP   | Docker image `goldziher/kreuzberg:core` | Containerized services, MCP integration | [API Server Guide](guides/api-server.md) |
+
+### Choosing Between TypeScript Packages
+
+Kreuzberg provides **two distinct TypeScript packages** optimized for different runtimes:
+
+#### Native TypeScript/Node.js (`@kreuzberg/node`)
+
+Use **`@kreuzberg/node`** if you're targeting:
+
+- **Node.js** servers and applications
+- **Command-line tools** and scripts
+- Environments requiring **maximum performance** (near-native speeds)
+- Server-side batch processing and data pipelines
+
+Native bindings compile to C++ N-API and deliver the best performance across all platforms.
+
+```bash title="Terminal"
+npm install @kreuzberg/node
+```
+
+#### WebAssembly (`@kreuzberg/wasm`)
+
+Use **`@kreuzberg/wasm`** if you're targeting:
+
+- **Web browsers** (Chrome, Firefox, Safari, Edge)
+- **Cloudflare Workers** and other edge computing platforms
+- **Deno**, **Bun**, and other JavaScript runtimes
+- Serverless environments (AWS Lambda, Vercel, etc.)
+- In-browser document processing without server dependencies
+
+WASM bindings run entirely in WebAssembly and work in any JavaScript runtime with WASM support. See [Performance](#performance-comparison) for tradeoffs.
+
+```bash title="Terminal"
+npm install @kreuzberg/wasm
+```
+
+### Performance Comparison
+
+| Binding | Speed Relative to Native | Memory | Platform Support | Use Case |
+|---------|-------------------------|--------|------------------|----------|
+| **Native (`@kreuzberg/node`)** | **100% (baseline)** | Efficient | Node.js only | Server-side, high-performance |
+| **WASM (`@kreuzberg/wasm`)** | **60-80%** | Higher | Browsers, Workers, Deno, Bun | In-browser, edge, serverless |
+
+WASM provides broad platform compatibility at the cost of performance. For server-side Node.js applications, always use native `@kreuzberg/node`.
 
 ## Getting Help
 

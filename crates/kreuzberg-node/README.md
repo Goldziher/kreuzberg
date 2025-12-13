@@ -17,7 +17,11 @@ High-performance document intelligence for Node.js and TypeScript, powered by Ru
 
 Extract text, tables, images, and metadata from 56 file formats including PDF, DOCX, PPTX, XLSX, images, and more.
 
-> **🚀 Version 4.0.0 Release Candidate**
+> **Recommended for Node.js and Bun** - Native NAPI-RS bindings provide the best performance (2-3x faster than WASM).
+>
+> For browser, Deno, or Cloudflare Workers, use [@kreuzberg/wasm](../kreuzberg-wasm/) instead.
+
+> **Version 4.0.0 Release Candidate**
 > This is a pre-release version. We invite you to test the library and [report any issues](https://github.com/kreuzberg-dev/kreuzberg/issues) you encounter.
 
 ## Features
@@ -25,7 +29,8 @@ Extract text, tables, images, and metadata from 56 file formats including PDF, D
 - **56 File Formats**: PDF, DOCX, PPTX, XLSX, images, HTML, Markdown, XML, JSON, and more
 - **OCR Support**: Built-in Tesseract, EasyOCR, and PaddleOCR backends for scanned documents
 - **Table Extraction**: Advanced table detection and structured data extraction
-- **High Performance**: Native Rust core provides 10-50x performance improvements over pure JavaScript
+- **Native Performance**: 2-3x faster than WASM; 10-50x faster than pure JavaScript
+- **Zero-Copy Operations**: Direct system calls and minimal data copying
 - **Type-Safe**: Full TypeScript definitions for all methods, configurations, and return types
 - **Async/Sync APIs**: Both asynchronous and synchronous extraction methods
 - **Batch Processing**: Process multiple documents in parallel with optimized concurrency
@@ -33,6 +38,27 @@ Extract text, tables, images, and metadata from 56 file formats including PDF, D
 - **Text Chunking**: Split long documents into manageable chunks for LLM processing
 - **Caching**: Built-in result caching for faster repeated extractions
 - **Zero Configuration**: Works out of the box with sensible defaults
+
+## Why Use This Package?
+
+Choose `@kreuzberg/node` if you're building with:
+
+- **Node.js 18+** - Native bindings provide direct access to system resources
+- **Bun** - Full compatibility with Bun's Node.js API
+- **Performance-critical applications** - Processing large document batches or real-time extraction
+- **Server-side extraction** - APIs, microservices, document processing pipelines
+
+### Comparison with @kreuzberg/wasm
+
+| Aspect | `@kreuzberg/node` | `@kreuzberg/wasm` |
+|--------|------------------|-------------------|
+| **Performance** | 2-3x faster (native) | Standard baseline |
+| **Environment** | Node.js, Bun | Browser, Deno, Workers, Node.js |
+| **Bundle Size** | 10-15 MB (prebuilt binary) | 2-4 MB (WASM module) |
+| **System Access** | Direct system calls | Sandboxed via WASM |
+| **Best For** | Server-side, batch processing | Client-side, edge computing |
+
+Use `@kreuzberg/wasm` for browser applications, Cloudflare Workers, Deno, or when you need a smaller bundle size.
 
 ## Requirements
 
