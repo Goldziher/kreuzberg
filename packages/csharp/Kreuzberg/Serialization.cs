@@ -26,7 +26,12 @@ internal class ByteArrayConverter : JsonConverter<byte[]>
 
     public override void Write(Utf8JsonWriter writer, byte[] value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(Convert.ToBase64String(value));
+        writer.WriteStartArray();
+        foreach (var b in value)
+        {
+            writer.WriteNumberValue(b);
+        }
+        writer.WriteEndArray();
     }
 
     private static byte[] ReadArrayAsBytes(ref Utf8JsonReader reader)
@@ -213,10 +218,10 @@ internal static class Serialization
         }
 
         ApplyFormatMetadata(root, metadata);
-        var additional = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        var additional = new JsonObject();
         foreach (var property in root.EnumerateObject())
         {
-            if (CoreMetadataKeys.Contains(property.Name))
+            if (recognized.Contains(property.Name))
             {
                 continue;
             }
@@ -317,7 +322,7 @@ internal static class Serialization
         {
             foreach (var kvp in metadata.Additional)
             {
-                node[kvp.Key] = kvp.Value as JsonNode;
+                node[kvp.Key] = kvp.Value?.DeepClone();
             }
         }
 

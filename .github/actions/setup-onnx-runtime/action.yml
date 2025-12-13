@@ -8,6 +8,10 @@ inputs:
     description: Directory (relative to workspace) where libraries should be copied
     required: false
     default: crates/kreuzberg-node
+  arch-id:
+    description: Override architecture (x64|arm64). Defaults to runner architecture.
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -17,7 +21,7 @@ runs:
       with:
         path: |
           ${{ runner.temp }}/onnxruntime
-        key: onnx-v2-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ort-version }}
+        key: onnx-v2-${{ runner.os }}-${{ inputs.arch-id != '' && inputs.arch-id || runner.arch }}-${{ inputs.ort-version }}
 
     - name: Prepare ONNX Runtime (Linux)
       if: runner.os == 'Linux'
@@ -27,17 +31,40 @@ runs:
         ort_version="${{ inputs.ort-version }}"
         extract_dir="$RUNNER_TEMP/onnxruntime"
 
+        arch_id="${{ inputs.arch-id }}"
+        if [ -z "$arch_id" ]; then
+          case "$(uname -m)" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported Linux architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+        fi
+
+        case "$arch_id" in
+          x64)
+            ort_dir_name="onnxruntime-linux-x64-${ort_version}"
+            archive="onnxruntime-linux-x64-${ort_version}.tgz"
+            ;;
+          arm64)
+            ort_dir_name="onnxruntime-linux-aarch64-${ort_version}"
+            archive="onnxruntime-linux-aarch64-${ort_version}.tgz"
+            ;;
+          *)
+            echo "Unsupported Linux arch-id: $arch_id" >&2
+            exit 1
+            ;;
+        esac
+
         # Download only if not cached
-        if [ ! -d "$extract_dir/onnxruntime-linux-x64-${ort_version}" ]; then
+        if [ ! -d "$extract_dir/$ort_dir_name" ]; then
           echo "Cache miss: Downloading ONNX Runtime ${ort_version}"
-          archive="onnxruntime-linux-x64-${ort_version}.tgz"
           curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$RUNNER_TEMP/$archive" "https://github.com/microsoft/onnxruntime/releases/download/v${ort_version}/$archive"
           mkdir -p "$extract_dir"
           tar -xzf "$RUNNER_TEMP/$archive" -C "$extract_dir"
         else
           echo "Cache hit: Using cached ONNX Runtime ${ort_version}"
         fi
-        ort_root="$extract_dir/onnxruntime-linux-x64-${ort_version}"
+        ort_root="$extract_dir/$ort_dir_name"
 
         # Verify library directory exists and contains libraries
         if [ ! -d "$ort_root/lib" ]; then
@@ -85,14 +112,22 @@ runs:
         ort_version="${{ inputs.ort-version }}"
         extract_dir="$RUNNER_TEMP/onnxruntime"
 
-        # Detect macOS architecture (arm64 or x86_64)
-        arch=$(uname -m)
-        if [ "$arch" = "arm64" ]; then
-          ort_arch="arm64"
-        else
-          ort_arch="x86_64"
+        arch_id="${{ inputs.arch-id }}"
+        if [ -z "$arch_id" ]; then
+          arch="$(uname -m)"
+          if [ "$arch" = "arm64" ]; then
+            arch_id="arm64"
+          else
+            arch_id="x64"
+          fi
         fi
-        echo "Detected macOS architecture: $arch -> $ort_arch"
+
+        case "$arch_id" in
+          arm64) ort_arch="arm64" ;;
+          x64) ort_arch="x86_64" ;;
+          *) echo "Unsupported macOS arch-id: $arch_id" >&2; exit 1 ;;
+        esac
+        echo "Using macOS ONNX Runtime arch: $ort_arch"
 
         # Download only if not cached
         if [ ! -d "$extract_dir/onnxruntime-osx-${ort_arch}-${ort_version}" ]; then
@@ -151,14 +186,19 @@ runs:
       run: |
         $OrtVersion = "${{ inputs.ort-version }}"
         $ExtractRoot = Join-Path $env:TEMP "onnxruntime"
-        $OrtRoot = Join-Path $ExtractRoot "onnxruntime-win-x64-$OrtVersion"
+        $ArchId = "${{ inputs.arch-id }}"
+        if ([string]::IsNullOrWhiteSpace($ArchId)) {
+          $ArchId = "x64"
+        }
+
+        $OrtRoot = Join-Path $ExtractRoot "onnxruntime-win-$ArchId-$OrtVersion"
         $OrtBin = Join-Path $OrtRoot 'bin'
         $OrtLib = Join-Path $OrtRoot 'lib'
 
         # Download only if not cached
         if (-Not (Test-Path $OrtRoot)) {
           Write-Host "Cache miss: Downloading ONNX Runtime $OrtVersion"
-          $Archive = "onnxruntime-win-x64-$OrtVersion.zip"
+          $Archive = "onnxruntime-win-$ArchId-$OrtVersion.zip"
           $DownloadPath = Join-Path $env:TEMP $Archive
           Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v$OrtVersion/$Archive" -OutFile $DownloadPath -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 5
           New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null

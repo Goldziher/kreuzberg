@@ -9,7 +9,6 @@ using System.Text.Json.Nodes;
 using Kreuzberg;
 using Xunit;
 using Xunit.Sdk;
-using SkipException = Xunit.SkipException;
 
 namespace Kreuzberg.E2E;
 
@@ -59,7 +58,7 @@ public static class TestHelpers
             }
         }
 
-        throw new SkipException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
+        throw new XunitException($"Native library not found. Expected at: {string.Join(", ", candidates)}");
     }
 
     private static string LibraryFileName()
@@ -82,7 +81,7 @@ public static class TestHelpers
         {
             if (skipIfMissing)
             {
-                throw new SkipException($"Missing document {path}");
+                throw new XunitException($"Missing document {path}");
             }
             throw new FileNotFoundException($"Document unavailable: {path}");
         }

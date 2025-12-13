@@ -11,10 +11,10 @@ version="${1:?VERSION argument required}"
 package="Kreuzberg"
 
 # Query NuGet API
-url="https://api.nuget.org/v3/registration5-semver1/${package,,}/index.json"
-response=$(curl -s "$url")
+url="https://api.nuget.org/v3/registration5-gz-semver2/${package,,}/index.json"
+response="$(curl -sSL --compressed "$url" 2>/dev/null || echo "")"
 
-if echo "$response" | jq -e ".items[].items[]?.catalogEntry | select(.version == \"${version}\")" >/dev/null 2>&1; then
+if [ -n "$response" ] && echo "$response" | jq -e ".items[].items[]?.catalogEntry | select(.version == \"${version}\")" >/dev/null 2>&1; then
 	echo "exists=true"
 	echo "::notice::NuGet package ${package} ${version} already exists"
 else

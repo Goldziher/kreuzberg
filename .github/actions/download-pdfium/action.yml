@@ -4,6 +4,14 @@ inputs:
   pdfium-version:
     description: Pdfium version to download
     required: true
+  platform-id:
+    description: Override platform id (linux|mac|win). Defaults to runner platform.
+    required: false
+    default: ""
+  arch-id:
+    description: Override arch id (x64|arm64). Defaults to runner architecture.
+    required: false
+    default: ""
 outputs:
   pdfium-path:
     description: Path to the extracted Pdfium runtime
@@ -17,20 +25,26 @@ runs:
       run: |
         set -euo pipefail
 
-        platform="$(uname -s)"
-        case "$platform" in
-          Linux*) platform_id="linux" ;;
-          Darwin*) platform_id="mac" ;;
-          MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
-          *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
-        esac
+        platform_id="${{ inputs.platform-id }}"
+        if [ -z "$platform_id" ]; then
+          platform="$(uname -s)"
+          case "$platform" in
+            Linux*) platform_id="linux" ;;
+            Darwin*) platform_id="mac" ;;
+            MINGW*|MSYS*|CYGWIN*) platform_id="win" ;;
+            *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+          esac
+        fi
 
-        arch="$(uname -m)"
-        case "$arch" in
-          x86_64|amd64) arch_id="x64" ;;
-          arm64|aarch64) arch_id="arm64" ;;
-          *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
-        esac
+        arch_id="${{ inputs.arch-id }}"
+        if [ -z "$arch_id" ]; then
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+        fi
 
         version="${PDFIUM_VERSION:-${{ inputs.pdfium-version }}}"
         tmpdir="$(mktemp -d)"

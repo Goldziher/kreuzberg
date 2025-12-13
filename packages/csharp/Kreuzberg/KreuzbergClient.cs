@@ -626,11 +626,18 @@ public static class KreuzbergClient
 
         NativeMethods.PostProcessorCallback callback = jsonPtr =>
         {
-            var inputJson = InteropUtilities.ReadUtf8(jsonPtr) ?? "{}";
-            var result = Serialization.ParseResult(inputJson);
-            var processed = processor.Process(result);
-            var serialized = Encoding.UTF8.GetBytes(Serialization.SerializeResult(processed));
-            return AllocateReturnString(serialized);
+            try
+            {
+                var inputJson = InteropUtilities.ReadUtf8(jsonPtr) ?? "{}";
+                var result = Serialization.ParseResult(inputJson);
+                var processed = processor.Process(result);
+                var serialized = Serialization.SerializeResult(processed);
+                return AllocateReturnString(serialized);
+            }
+            catch
+            {
+                return IntPtr.Zero;
+            }
         };
 
         var namePtr = InteropUtilities.AllocUtf8(processor.Name);
@@ -744,17 +751,16 @@ public static class KreuzbergClient
 
         NativeMethods.ValidatorCallback callback = jsonPtr =>
         {
-            var inputJson = InteropUtilities.ReadUtf8(jsonPtr) ?? "{}";
-            var result = Serialization.ParseResult(inputJson);
             try
             {
+                var inputJson = InteropUtilities.ReadUtf8(jsonPtr) ?? "{}";
+                var result = Serialization.ParseResult(inputJson);
                 validator.Validate(result);
                 return IntPtr.Zero;
             }
             catch (Exception ex)
             {
-                var bytes = Encoding.UTF8.GetBytes(ex.Message);
-                return AllocateReturnString(bytes);
+                return AllocateReturnString(ex.Message);
             }
         };
 
@@ -841,14 +847,20 @@ public static class KreuzbergClient
 
         NativeMethods.OcrBackendCallback callback = (bytesPtr, length, configPtr) =>
         {
-            var resultSpan = ConvertOcrInput(bytesPtr, length);
-            var configJson = InteropUtilities.ReadUtf8(configPtr);
-            var ocrConfig = string.IsNullOrWhiteSpace(configJson)
-                ? null
-                : JsonSerializer.Deserialize<OcrConfig>(configJson!, Serialization.Options);
-            var output = backend.Process(resultSpan, ocrConfig);
-            var bytes = Encoding.UTF8.GetBytes(output);
-            return AllocateReturnString(bytes);
+            try
+            {
+                var resultSpan = ConvertOcrInput(bytesPtr, length);
+                var configJson = InteropUtilities.ReadUtf8(configPtr);
+                var ocrConfig = string.IsNullOrWhiteSpace(configJson)
+                    ? null
+                    : JsonSerializer.Deserialize<OcrConfig>(configJson!, Serialization.Options);
+                var output = backend.Process(resultSpan, ocrConfig);
+                return AllocateReturnString(output);
+            }
+            catch
+            {
+                return IntPtr.Zero;
+            }
         };
 
         var namePtr = InteropUtilities.AllocUtf8(backend.Name);
@@ -1145,12 +1157,25 @@ public static class KreuzbergClient
         throw ErrorMapper.FromNativeError(message);
     }
 
-    private static unsafe IntPtr AllocateReturnString(byte[] bytes)
+    private static unsafe IntPtr AllocateReturnString(string value)
     {
-        var buffer = (byte*)NativeMemory.Alloc((nuint)(bytes.Length + 1));
-        bytes.CopyTo(new Span<byte>(buffer, bytes.Length));
-        buffer[bytes.Length] = 0;
-        return (IntPtr)buffer;
+        if (value == null)
+        {
+            return IntPtr.Zero;
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(value);
+        var tmp = (byte*)NativeMemory.Alloc((nuint)(bytes.Length + 1));
+        try
+        {
+            bytes.CopyTo(new Span<byte>(tmp, bytes.Length));
+            tmp[bytes.Length] = 0;
+            return NativeMethods.CloneString((IntPtr)tmp);
+        }
+        finally
+        {
+            NativeMemory.Free(tmp);
+        }
     }
 
     private static IReadOnlyList<string> ParseStringListAndFree(IntPtr ptr)

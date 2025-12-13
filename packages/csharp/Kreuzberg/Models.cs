@@ -230,7 +230,7 @@ public sealed class Metadata
     public PageStructure? Pages { get; set; }
 
     [JsonExtensionData]
-    public Dictionary<string, object>? Additional { get; set; }
+    public JsonObject? Additional { get; set; }
 }
 
 public sealed class ImagePreprocessingMetadata

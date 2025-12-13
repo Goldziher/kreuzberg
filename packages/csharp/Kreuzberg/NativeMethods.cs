@@ -106,6 +106,9 @@ internal static partial class NativeMethods
     [DllImport(LibraryName, EntryPoint = "kreuzberg_free_string", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void FreeString(IntPtr ptr);
 
+    [DllImport(LibraryName, EntryPoint = "kreuzberg_clone_string", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern IntPtr CloneString(IntPtr ptr);
+
     [DllImport(LibraryName, EntryPoint = "kreuzberg_free_result", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void FreeResult(IntPtr result);
 
@@ -177,11 +180,18 @@ internal static partial class NativeMethods
     [DllImport(LibraryName, EntryPoint = "kreuzberg_get_embedding_preset", CallingConvention = CallingConvention.Cdecl)]
     internal static extern IntPtr GetEmbeddingPreset(IntPtr name);
 
-    private static IntPtr ResolveLibrary(string libraryName, Assembly assembly, DllImportSearchPath? _)
+    private static IntPtr ResolveLibrary(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
         if (!string.Equals(libraryName, LibraryName, StringComparison.Ordinal))
         {
             return IntPtr.Zero;
+        }
+
+        // Prefer .NET's built-in resolution first (e.g., NuGet native assets under runtimes/<rid>/native).
+        var effectiveSearchPath = searchPath ?? DllImportSearchPath.AssemblyDirectory;
+        if (NativeLibrary.TryLoad(libraryName, assembly, effectiveSearchPath, out var defaultHandle))
+        {
+            return defaultHandle;
         }
 
         return LibraryHandle.Value;
@@ -206,6 +216,7 @@ internal static partial class NativeMethods
 
         foreach (var path in probePaths)
         {
+            TryPreloadSiblingNativeDependencies(Path.GetDirectoryName(path), debug);
             if (NativeLibrary.TryLoad(path, out var handle))
             {
                 if (debug)
@@ -230,6 +241,13 @@ internal static partial class NativeMethods
 
         // Current base directory (e.g., test bin)
         yield return Path.Combine(AppContext.BaseDirectory, fileName);
+
+        // Common NuGet layout when native assets are not copied to the base directory.
+        var rid = GetStableRuntimeIdentifier();
+        if (!string.IsNullOrWhiteSpace(rid))
+        {
+            yield return Path.Combine(AppContext.BaseDirectory, "runtimes", rid!, "native", fileName);
+        }
 
         var cwd = Directory.GetCurrentDirectory();
         yield return Path.Combine(cwd, fileName);
@@ -267,6 +285,78 @@ internal static partial class NativeMethods
         }
     }
 
+    private static void TryPreloadSiblingNativeDependencies(string? directory, bool debug)
+    {
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+        {
+            return;
+        }
+
+        var pdfium = GetPdfiumFileName();
+        var candidates = new List<string> { Path.Combine(directory!, pdfium) };
+
+        if (OperatingSystem.IsWindows())
+        {
+            candidates.AddRange(Directory.EnumerateFiles(directory!, "onnxruntime*.dll"));
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            candidates.AddRange(Directory.EnumerateFiles(directory!, "libonnxruntime*.dylib"));
+        }
+        else
+        {
+            candidates.AddRange(Directory.EnumerateFiles(directory!, "libonnxruntime*.so*"));
+        }
+
+        foreach (var candidate in candidates.Distinct(StringComparer.Ordinal))
+        {
+            if (!File.Exists(candidate))
+            {
+                continue;
+            }
+
+            if (NativeLibrary.TryLoad(candidate, out _))
+            {
+                if (debug)
+                {
+                    System.Console.Error.WriteLine($"[DEBUG] Preloaded native dependency: {candidate}");
+                }
+            }
+        }
+    }
+
+    private static string? GetStableRuntimeIdentifier()
+    {
+        var arch = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => "x64",
+            Architecture.Arm64 => "arm64",
+            _ => null,
+        };
+
+        if (arch is null)
+        {
+            return null;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            return $"win-{arch}";
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return $"osx-{arch}";
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            return $"linux-{arch}";
+        }
+
+        return null;
+    }
+
     private static string GetLibraryFileName()
     {
         if (OperatingSystem.IsWindows())
@@ -280,5 +370,20 @@ internal static partial class NativeMethods
         }
 
         return "libkreuzberg_ffi.so";
+    }
+
+    private static string GetPdfiumFileName()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return "pdfium.dll";
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return "libpdfium.dylib";
+        }
+
+        return "libpdfium.so";
     }
 }

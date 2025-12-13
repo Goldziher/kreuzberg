@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using Kreuzberg;
@@ -88,19 +89,8 @@ public class ExtractionTests
             Images = new ImageExtractionConfig { ExtractImages = true }
         };
 
-        try
-        {
-            var result = KreuzbergClient.ExtractFileSync(pdfPath, config);
-
-            Assert.NotNull(result);
-            // May or may not have images depending on PDF content
-            Assert.NotNull(result.Images);
-        }
-        catch (InvalidOperationException)
-        {
-            // JSON serialization issues are acceptable to skip
-            Assert.True(true);
-        }
+        var result = KreuzbergClient.ExtractFileSync(pdfPath, config);
+        Assert.NotNull(result);
     }
 
     #endregion
@@ -158,18 +148,23 @@ public class ExtractionTests
     [Fact]
     public void ExtractImageFileSync_WithPng_DetectsMimeType()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.png");
         try
         {
-            var imagePath = NativeTestHelper.GetDocumentPath("images/test.png");
-            var mime = KreuzbergClient.DetectMimeTypeFromPath(imagePath);
+            var pngBytes = Convert.FromBase64String(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X1lQAAAAASUVORK5CYII=");
+            File.WriteAllBytes(tempPath, pngBytes);
 
+            var mime = KreuzbergClient.DetectMimeTypeFromPath(tempPath);
             Assert.NotNull(mime);
-            Assert.Contains("image", mime);
+            Assert.Contains("image", mime, StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -192,19 +187,22 @@ public class ExtractionTests
     [Fact]
     public void ExtractTextFileSync_WithPlainText_ReturnsContent()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            var textPath = NativeTestHelper.GetDocumentPath("text/simple.txt");
-            var result = KreuzbergClient.ExtractFileSync(textPath);
+            File.WriteAllText(tempPath, "hello world");
 
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
             Assert.NotNull(result);
             Assert.True(result.Success);
             Assert.NotEmpty(result.Content);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -221,18 +219,21 @@ public class ExtractionTests
     [Fact]
     public void ExtractCsvFileSync_WithValidCsv_ExtractsData()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.csv");
         try
         {
-            var csvPath = NativeTestHelper.GetDocumentPath("pandoc/data_table.csv");
-            var result = KreuzbergClient.ExtractFileSync(csvPath);
+            File.WriteAllText(tempPath, "a,b,c\n1,2,3\n");
 
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
             Assert.NotNull(result);
             Assert.NotEmpty(result.Content);
         }
-        catch (Exception)
+        finally
         {
-            // CSV format might not be supported or test document missing
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -263,18 +264,21 @@ public class ExtractionTests
     [Fact]
     public void ExtractXmlFileSync_WithValidXml_ParsesStructure()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.xml");
         try
         {
-            var xmlPath = NativeTestHelper.GetDocumentPath("data_formats/test.xml");
-            var result = KreuzbergClient.ExtractFileSync(xmlPath);
+            File.WriteAllText(tempPath, "<root><item>value</item></root>");
 
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
             Assert.NotNull(result);
             Assert.NotNull(result.Metadata);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -341,58 +345,53 @@ public class ExtractionTests
     [Fact]
     public void ExtractTextFileSync_WithUtf8Encoding_CorrectlyDecodes()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            var textPath = NativeTestHelper.GetDocumentPath("text/utf8_content.txt");
-            var result = KreuzbergClient.ExtractFileSync(textPath);
+            File.WriteAllText(tempPath, "café — 你好", new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
             Assert.NotNull(result);
-            Assert.NotEmpty(result.Content);
+            Assert.Contains("你好", result.Content);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
     [Fact]
     public void ExtractTextFileSync_WithMultibyteCharacters_PreservesContent()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            var textPath = NativeTestHelper.GetDocumentPath("text/unicode_text.txt");
-            var result = KreuzbergClient.ExtractFileSync(textPath);
+            File.WriteAllText(tempPath, "こんにちは世界", new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
             Assert.NotNull(result);
-            // Content should preserve special characters
-            Assert.NotEmpty(result.Content);
+            Assert.Contains("こんにちは", result.Content);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
     [Fact]
     public void ExtractBytesSync_WithDifferentEncodings_HandlesCorrectly()
     {
-        try
-        {
-            var textPath = NativeTestHelper.GetDocumentPath("text/simple.txt");
-            var bytes = File.ReadAllBytes(textPath);
+        var bytes = Encoding.UTF8.GetBytes("hello ünicode");
+        var result = KreuzbergClient.ExtractBytesSync(bytes, "text/plain");
 
-            var result = KreuzbergClient.ExtractBytesSync(bytes, "text/plain");
-
-            Assert.NotNull(result);
-            Assert.NotEmpty(result.Content);
-        }
-        catch (Exception)
-        {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
-        }
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.Content);
     }
 
     #endregion
@@ -530,9 +529,10 @@ public class ExtractionTests
     [Fact]
     public void ExtractFileSync_WithLanguageDetectionEnabled_ReturnsDetectedLanguages()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            var textPath = NativeTestHelper.GetDocumentPath("text/multilingual.txt");
+            File.WriteAllText(tempPath, "Hello world. 你好世界。", new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             var config = new ExtractionConfig
             {
                 LanguageDetection = new LanguageDetectionConfig
@@ -542,34 +542,38 @@ public class ExtractionTests
                 }
             };
 
-            var result = KreuzbergClient.ExtractFileSync(textPath, config);
-
+            var result = KreuzbergClient.ExtractFileSync(tempPath, config);
             Assert.NotNull(result);
-            // May or may not detect languages depending on file content
-            Assert.NotNull(result.DetectedLanguages);
+            // The native library only returns detected languages when non-empty.
+            Assert.True(result.DetectedLanguages == null || result.DetectedLanguages.Count > 0);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
     [Fact]
     public void ExtractFileSync_DefaultLanguageDetection_MayReturnLanguages()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            var textPath = NativeTestHelper.GetDocumentPath("text/simple.txt");
-            var result = KreuzbergClient.ExtractFileSync(textPath);
+            File.WriteAllText(tempPath, "Hello world", new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.DetectedLanguages);
+            Assert.True(result.DetectedLanguages == null || result.DetectedLanguages.Count > 0);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -596,9 +600,10 @@ public class ExtractionTests
     [Fact]
     public void ExtractFileSync_WithChunkingConfig_SplitsContent()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            var textPath = NativeTestHelper.GetDocumentPath("text/long_document.txt");
+            File.WriteAllText(tempPath, string.Join(" ", Enumerable.Repeat("lorem ipsum", 5000)));
             var config = new ExtractionConfig
             {
                 Chunking = new ChunkingConfig
@@ -609,46 +614,37 @@ public class ExtractionTests
                 }
             };
 
-            var result = KreuzbergClient.ExtractFileSync(textPath, config);
-
+            var result = KreuzbergClient.ExtractFileSync(tempPath, config);
             Assert.NotNull(result);
-            // Chunks may or may not be present depending on extraction
             Assert.NotNull(result.Chunks);
+            Assert.NotEmpty(result.Chunks);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
     [Fact]
     public void ExtractFileSync_WithImageExtractionConfig_ConfiguresImageProcessing()
     {
-        try
+        var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
+        var config = new ExtractionConfig
         {
-            var pdfPath = NativeTestHelper.GetDocumentPath("pdf/with_images.pdf");
-            var config = new ExtractionConfig
+            Images = new ImageExtractionConfig
             {
-                Images = new ImageExtractionConfig
-                {
-                    ExtractImages = true,
-                    TargetDpi = 150,
-                    MaxImageDimension = 2000,
-                    AutoAdjustDpi = true
-                }
-            };
+                ExtractImages = true,
+                TargetDpi = 150,
+                MaxImageDimension = 2000,
+                AutoAdjustDpi = true
+            }
+        };
 
-            var result = KreuzbergClient.ExtractFileSync(pdfPath, config);
-
-            Assert.NotNull(result);
-            Assert.NotNull(result.Images);
-        }
-        catch (Exception)
-        {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
-        }
+        var result = KreuzbergClient.ExtractFileSync(pdfPath, config);
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -664,18 +660,21 @@ public class ExtractionTests
     [Fact]
     public void LoadExtractionConfigFromFile_WithValidTomlConfig_ParsesCorrectly()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.toml");
         try
         {
-            var configPath = NativeTestHelper.GetDocumentPath("config/kreuzberg.toml");
-            var config = KreuzbergClient.LoadExtractionConfigFromFile(configPath);
+            File.WriteAllText(tempPath, "use_cache = false\n");
 
+            var config = KreuzbergClient.LoadExtractionConfigFromFile(tempPath);
             Assert.NotNull(config);
-            Assert.IsType<ExtractionConfig>(config);
+            Assert.False(config.UseCache);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -768,26 +767,20 @@ public class ExtractionTests
     [Fact]
     public void ExtractLargeFile_WithLargeSize_HandlesSuccessfully()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            // This test uses actual large documents or creates temporary ones
-            var largeFilePath = NativeTestHelper.GetDocumentPath("large/large_document.pdf");
-
-            if (File.Exists(largeFilePath))
-            {
-                var result = KreuzbergClient.ExtractFileSync(largeFilePath);
-                Assert.NotNull(result);
-            }
-            else
-            {
-                // Test document missing - acceptable
-                Assert.True(true);
-            }
+            File.WriteAllText(tempPath, new string('a', 2_000_000));
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
+            Assert.NotNull(result);
+            Assert.NotEmpty(result.Content);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -809,19 +802,21 @@ public class ExtractionTests
     [Fact]
     public void ExtractFileSync_ContentNotEmpty_ForNonEmptyFiles()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.txt");
         try
         {
-            var textPath = NativeTestHelper.GetDocumentPath("text/simple.txt");
-            var result = KreuzbergClient.ExtractFileSync(textPath);
+            File.WriteAllText(tempPath, "not empty");
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
 
             Assert.NotNull(result);
-            // Content should not be empty for non-empty files
             Assert.NotEmpty(result.Content);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
@@ -832,7 +827,7 @@ public class ExtractionTests
         var result = KreuzbergClient.ExtractFileSync(pdfPath);
 
         Assert.NotNull(result);
-        Assert.True(result.Success || !result.Success); // Either success or failure is valid
+        Assert.True(result.Success);
         Assert.NotNull(result.Content);
     }
 
@@ -866,19 +861,27 @@ public class ExtractionTests
     [Fact]
     public void ExtractArchiveFileSync_WithZip_ReturnsContent()
     {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"kreuzberg-test-{Guid.NewGuid():N}.zip");
         try
         {
-            var zipPath = NativeTestHelper.GetDocumentPath("archives/sample.zip");
-            var result = KreuzbergClient.ExtractFileSync(zipPath);
+            using (var archive = ZipFile.Open(tempPath, ZipArchiveMode.Create))
+            {
+                var entry = archive.CreateEntry("hello.txt");
+                using var stream = entry.Open();
+                using var writer = new StreamWriter(stream, Encoding.UTF8);
+                writer.Write("hello");
+            }
 
+            var result = KreuzbergClient.ExtractFileSync(tempPath);
             Assert.NotNull(result);
-            // Archive handling may vary
             Assert.NotNull(result.Metadata);
         }
-        catch (Exception)
+        finally
         {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 

@@ -21,7 +21,7 @@ fi
 
 version="$1"
 package="Kreuzberg"
-url="https://api.nuget.org/v3/registration5-semver1/${package,,}/index.json"
+url="https://api.nuget.org/v3/registration5-gz-semver2/${package,,}/index.json"
 max_attempts=3
 attempt=1
 response=""
@@ -33,6 +33,8 @@ while [ $attempt -le $max_attempts ]; do
 	response=$(curl \
 		--silent \
 		--show-error \
+		--location \
+		--compressed \
 		--retry 3 \
 		--retry-delay 5 \
 		--connect-timeout 30 \

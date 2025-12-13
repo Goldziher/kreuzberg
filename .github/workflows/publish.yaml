@@ -1520,9 +1520,94 @@ jobs:
         shell: bash
         run: bash scripts/ci/java/smoke.sh "artifacts/java"
 
+  csharp-tests:
+    name: Test C# bindings (${{ matrix.os }})
+    needs: [prepare, check-nuget]
+    if: ${{ needs.prepare.outputs.release_csharp == 'true' && needs.check-nuget.outputs.exists != 'true' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-csharp-tests-${{ matrix.os }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.x"
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Stage PDFium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/release
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+
+      - name: Setup Tesseract environment
+        shell: bash
+        run: |
+          source scripts/ci/csharp/setup-tessdata.sh
+          echo "TESSDATA_PREFIX=${TESSDATA_PREFIX}" >> "$GITHUB_ENV"
+
+      - name: Build FFI library
+        run: cargo build -p kreuzberg-ffi --release
+
+      - name: Run C# tests
+        shell: bash
+        env:
+          KREUZBERG_FFI_DIR: ${{ github.workspace }}/target/release
+        run: scripts/ci/csharp/run-tests.sh
+
+      - name: Install Task
+        uses: ./.github/actions/install-task
+
+      - name: Run E2E tests
+        shell: bash
+        env:
+          KREUZBERG_FFI_DIR: ${{ github.workspace }}/target/release
+          LD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${{ env.LD_LIBRARY_PATH }}
+          DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/release:${{ env.DYLD_LIBRARY_PATH }}
+        run: |
+          task e2e:csharp:test
+
   csharp-package:
     name: Build C# package
-    needs: [prepare, check-nuget]
+    needs: [prepare, check-nuget, csharp-tests, csharp-native-assets]
     if: ${{ needs.prepare.outputs.release_csharp == 'true' && needs.check-nuget.outputs.exists != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -1591,23 +1676,12 @@ jobs:
           fi
           dotnet --info
 
-      - name: Cache PDFium
-        uses: ./.github/actions/cache-pdfium
+      - name: Download native assets
+        uses: actions/download-artifact@v6
         with:
-          pdfium-version: ${{ env.PDFIUM_VERSION }}
-
-      - name: Download PDFium
-        uses: ./.github/actions/download-pdfium
-        with:
-          pdfium-version: ${{ env.PDFIUM_VERSION }}
-
-      - name: Setup ONNX Runtime
-        uses: ./.github/actions/setup-onnx-runtime
-        with:
-          ort-version: ${{ env.ORT_VERSION }}
-
-      - name: Build FFI library
-        run: cargo build -p kreuzberg-ffi --release
+          pattern: csharp-native-assets-*
+          path: packages/csharp/Kreuzberg
+          merge-multiple: true
 
       - name: Restore C# dependencies
         run: dotnet restore packages/csharp/Kreuzberg/Kreuzberg.csproj
@@ -1623,12 +1697,260 @@ jobs:
             -p:PackageVersion=${{ needs.prepare.outputs.version }} \
             -o artifacts/csharp
 
+      - name: Verify package contains native assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(find artifacts/csharp -maxdepth 1 -name '*.nupkg' -print | sort | head -n 1)"
+          if [ -z "$pkg" ]; then
+            echo "No .nupkg found under artifacts/csharp" >&2
+            exit 1
+          fi
+          for rid in linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64 win-arm64; do
+            unzip -l "$pkg" | rg -n "^\\s+\\d+\\s+\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\s+runtimes/${rid}/native/.*kreuzberg_ffi\\.(dll|so|dylib)$" >/dev/null
+            unzip -l "$pkg" | rg -n "^\\s+\\d+\\s+\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\s+runtimes/${rid}/native/(lib)?pdfium\\.(dll|so|dylib)$" >/dev/null
+            unzip -l "$pkg" | rg -n "^\\s+\\d+\\s+\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\s+runtimes/${rid}/native/.*onnxruntime" >/dev/null
+          done
+
       - name: Upload NuGet artifact
         uses: actions/upload-artifact@v5
         with:
           name: csharp-nuget
           path: artifacts/csharp/*.nupkg
           retention-days: 14
+
+  csharp-native-assets:
+    name: Build C# native assets (${{ matrix.rid }})
+    needs: [prepare, check-nuget]
+    if: ${{ needs.prepare.outputs.release_csharp == 'true' && needs.check-nuget.outputs.exists != 'true' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - rid: linux-x64
+            os: ubuntu-latest
+            rust_target: x86_64-unknown-linux-gnu
+            ort_arch: x64
+            pdfium_platform: linux
+            pdfium_arch: x64
+            ffi_name: libkreuzberg_ffi.so
+          - rid: linux-arm64
+            os: ubuntu-latest
+            rust_target: aarch64-unknown-linux-gnu
+            ort_arch: arm64
+            pdfium_platform: linux
+            pdfium_arch: arm64
+            ffi_name: libkreuzberg_ffi.so
+          - rid: osx-x64
+            os: macos-latest
+            rust_target: x86_64-apple-darwin
+            ort_arch: x64
+            pdfium_platform: mac
+            pdfium_arch: x64
+            ffi_name: libkreuzberg_ffi.dylib
+          - rid: osx-arm64
+            os: macos-latest
+            rust_target: aarch64-apple-darwin
+            ort_arch: arm64
+            pdfium_platform: mac
+            pdfium_arch: arm64
+            ffi_name: libkreuzberg_ffi.dylib
+          - rid: win-x64
+            os: windows-latest
+            rust_target: x86_64-pc-windows-msvc
+            ort_arch: x64
+            pdfium_platform: win
+            pdfium_arch: x64
+            ffi_name: kreuzberg_ffi.dll
+          - rid: win-arm64
+            os: windows-latest
+            rust_target: aarch64-pc-windows-msvc
+            ort_arch: arm64
+            pdfium_platform: win
+            pdfium_arch: arm64
+            ffi_name: kreuzberg_ffi.dll
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Ensure target commit
+        if: ${{ needs.prepare.outputs.target_sha != '' }}
+        run: git checkout --progress --force ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Setup OpenSSL
+        uses: ./.github/actions/setup-openssl
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: publish-csharp-native-${{ matrix.rid }}
+
+      - name: Install Linux cross toolchain (arm64)
+        if: ${{ runner.os == 'Linux' && matrix.rid == 'linux-arm64' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          {
+            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
+          } >> "$GITHUB_ENV"
+
+      - name: Cache PDFium
+        uses: ./.github/actions/cache-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+
+      - name: Download PDFium
+        uses: ./.github/actions/download-pdfium
+        with:
+          pdfium-version: ${{ env.PDFIUM_VERSION }}
+          platform-id: ${{ matrix.pdfium_platform }}
+          arch-id: ${{ matrix.pdfium_arch }}
+
+      - name: Setup ONNX Runtime
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: ${{ env.ORT_VERSION }}
+          arch-id: ${{ matrix.ort_arch }}
+          dest-dir: target/csharp-native/${{ matrix.rid }}
+
+      - name: Stage PDFium runtime
+        uses: ./.github/actions/stage-pdfium-runtime
+        with:
+          destination: target/csharp-native/${{ matrix.rid }}
+
+      - name: Add Rust target
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup target add "${{ matrix.rust_target }}"
+
+      - name: Build FFI library
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -p kreuzberg-ffi --release --target "${{ matrix.rust_target }}"
+
+      - name: Assemble native assets for NuGet
+        shell: bash
+        run: |
+          set -euo pipefail
+          out_root="runtimes/${{ matrix.rid }}/native"
+          mkdir -p "$out_root"
+
+          ffi_path="target/${{ matrix.rust_target }}/release/${{ matrix.ffi_name }}"
+          if [ ! -f "$ffi_path" ]; then
+            echo "FFI library missing at $ffi_path" >&2
+            ls -la "target/${{ matrix.rust_target }}/release" >&2 || true
+            exit 1
+          fi
+          cp -f "$ffi_path" "$out_root/${{ matrix.ffi_name }}"
+
+          deps_dir="target/csharp-native/${{ matrix.rid }}"
+          if [ -d "$deps_dir" ]; then
+            case "${RUNNER_OS}" in
+              Windows)
+                find "$deps_dir" -maxdepth 1 -type f -name '*.dll' -exec cp -f '{}' "$out_root/" ';'
+                ;;
+              macOS)
+                find "$deps_dir" -maxdepth 1 -type f -name '*.dylib' -exec cp -f '{}' "$out_root/" ';'
+                ;;
+              Linux)
+                find "$deps_dir" -maxdepth 1 -type f -name '*.so*' -exec cp -f '{}' "$out_root/" ';'
+                ;;
+            esac
+          fi
+
+          ls -la "$out_root"
+
+      - name: Upload native assets artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: csharp-native-assets-${{ matrix.rid }}
+          path: runtimes/${{ matrix.rid }}/native/*
+          retention-days: 14
+
+  csharp-smoke:
+    name: C# NuGet smoke (${{ matrix.os }})
+    needs: [prepare, check-nuget, csharp-package]
+    if: ${{ needs.prepare.outputs.release_csharp == 'true' && needs.check-nuget.outputs.exists != 'true' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.x"
+
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: csharp-nuget
+          path: dist
+
+      - name: Smoke test (load natives from NuGet)
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          pkg_dir="$(pwd)/dist"
+          if command -v cygpath >/dev/null 2>&1; then
+            pkg_dir="$(cygpath -w "$pkg_dir")"
+          fi
+
+          tmp="$(mktemp -d)"
+          dotnet new console -n KreuzbergSmoke -o "$tmp/KreuzbergSmoke"
+
+          cat > "$tmp/KreuzbergSmoke/KreuzbergSmoke.csproj" <<EOF
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0</TargetFramework>
+              <Nullable>enable</Nullable>
+              <ImplicitUsings>enable</ImplicitUsings>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Kreuzberg" Version="$version" />
+            </ItemGroup>
+          </Project>
+          EOF
+
+          cat > "$tmp/KreuzbergSmoke/Program.cs" <<'EOF'
+          using Kreuzberg;
+          using System;
+          using System.IO;
+
+          var pdfPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "test_documents", "pdf", "simple.pdf"));
+          if (!File.Exists(pdfPath))
+          {
+              throw new FileNotFoundException($"Missing test document: {pdfPath}");
+          }
+
+          var result = KreuzbergClient.ExtractFileSync(pdfPath);
+          Console.WriteLine($"mime={result.MimeType} len={result.Content.Length}");
+          EOF
+
+          dotnet restore "$tmp/KreuzbergSmoke" --source "$pkg_dir" --source "https://api.nuget.org/v3/index.json"
+          dotnet run --project "$tmp/KreuzbergSmoke" -c Release
 
   cargo-packages:
     name: Package Rust crates
@@ -2677,14 +2999,16 @@ jobs:
 
   publish-nuget:
     name: Publish NuGet package
-    needs: [prepare, check-nuget, csharp-package]
+    needs: [prepare, check-nuget, csharp-tests, csharp-package, csharp-smoke]
     if: |
       always() &&
       needs.prepare.outputs.dry_run != 'true' &&
       needs.prepare.outputs.is_tag == 'true' &&
       needs.prepare.outputs.release_csharp == 'true' &&
       needs.check-nuget.outputs.exists != 'true' &&
-      needs.csharp-package.result == 'success'
+      needs.csharp-package.result == 'success' &&
+      needs.csharp-tests.result == 'success' &&
+      needs.csharp-smoke.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read

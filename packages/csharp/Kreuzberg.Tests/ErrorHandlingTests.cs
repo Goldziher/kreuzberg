@@ -102,17 +102,8 @@ public class ErrorHandlingTests
     public void ExtractBytesSync_WithInvalidMimeFormat_HandlesGracefully()
     {
         var bytes = new byte[] { 1, 2, 3 };
-        // Invalid MIME format but structurally valid
-        try
-        {
-            var result = KreuzbergClient.ExtractBytesSync(bytes, "invalid/mime/type");
-            Assert.NotNull(result);
-        }
-        catch (KreuzbergException)
-        {
-            // Graceful error handling - acceptable outcome
-            Assert.True(true);
-        }
+        var ex = Record.Exception(() => KreuzbergClient.ExtractBytesSync(bytes, "invalid/mime/type"));
+        Assert.True(ex == null || ex is KreuzbergException);
     }
 
     [Fact]
@@ -196,14 +187,8 @@ public class ErrorHandlingTests
 
         try
         {
-            var result = KreuzbergClient.ExtractFileSync(tempPath);
-            // Extraction may fail gracefully
-            Assert.NotNull(result);
-        }
-        catch (KreuzbergException)
-        {
-            // Corrupted file should raise KreuzbergException
-            Assert.True(true);
+            var ex = Record.Exception(() => KreuzbergClient.ExtractFileSync(tempPath));
+            Assert.True(ex == null || ex is KreuzbergException);
         }
         finally
         {
@@ -219,17 +204,8 @@ public class ErrorHandlingTests
     {
         var invalidPdfBytes = new byte[] { 0x00, 0x01, 0x02, 0x03 };
 
-        try
-        {
-            var result = KreuzbergClient.ExtractBytesSync(invalidPdfBytes, "application/pdf");
-            // Should either fail gracefully or return empty result
-            Assert.NotNull(result);
-        }
-        catch (KreuzbergParsingException)
-        {
-            // Parsing error for invalid PDF is expected
-            Assert.True(true);
-        }
+        var ex = Record.Exception(() => KreuzbergClient.ExtractBytesSync(invalidPdfBytes, "application/pdf"));
+        Assert.True(ex == null || ex is KreuzbergException);
     }
 
     [Fact]
@@ -241,17 +217,8 @@ public class ErrorHandlingTests
 
         try
         {
-            try
-            {
-                var result = KreuzbergClient.ExtractFileSync(tempPath);
-                // Should handle incomplete file
-                Assert.NotNull(result);
-            }
-            catch (KreuzbergException)
-            {
-                // Parsing error for incomplete file is acceptable
-                Assert.True(true);
-            }
+            var ex = Record.Exception(() => KreuzbergClient.ExtractFileSync(tempPath));
+            Assert.True(ex == null || ex is KreuzbergException);
         }
         finally
         {
@@ -311,16 +278,8 @@ public class ErrorHandlingTests
             MaxConcurrentExtractions = -5
         };
 
-        try
-        {
-            var result = KreuzbergClient.ExtractFileSync(pdfPath, config);
-            Assert.NotNull(result);
-        }
-        catch (KreuzbergRuntimeException)
-        {
-            // Runtime error for invalid config is expected
-            Assert.True(true);
-        }
+        var ex = Record.Exception(() => KreuzbergClient.ExtractFileSync(pdfPath, config));
+        Assert.True(ex == null || ex is IKreuzbergError);
     }
 
     #endregion
@@ -674,8 +633,8 @@ public class ErrorHandlingTests
             // Change permissions (platform-specific)
             if (OperatingSystem.IsWindows())
             {
-                // Windows permission test would require different approach
-                Assert.True(true);
+                using var stream = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.None);
+                Assert.Throws<KreuzbergIOException>(() => KreuzbergClient.ExtractFileSync(tempPath));
             }
             else
             {
@@ -721,17 +680,10 @@ public class ErrorHandlingTests
     {
         var paths = new[] { "/nonexistent/path.pdf" };
 
-        try
-        {
-            var result = await KreuzbergClient.BatchExtractFilesAsync(paths);
-            // Async batch extraction might not throw - just verify it completes
-            Assert.NotNull(result);
-        }
-        catch (KreuzbergValidationException)
-        {
-            // Validation error is acceptable
-            Assert.True(true);
-        }
+        var results = await KreuzbergClient.BatchExtractFilesAsync(paths);
+        Assert.NotNull(results);
+        Assert.Single(results);
+        Assert.NotNull(results[0].Metadata.Error);
     }
 
     #endregion

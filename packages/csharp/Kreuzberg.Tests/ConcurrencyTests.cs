@@ -567,10 +567,7 @@ public class ConcurrencyTests
     public async Task ThreadSafety_EmbeddingPresetRetrieval_WithConcurrentRequests()
     {
         var presets = KreuzbergClient.ListEmbeddingPresets();
-        if (presets.Count == 0)
-        {
-            return; // Skip if no presets available
-        }
+        Assert.NotEmpty(presets);
 
         var presetName = presets[0];
         var results = new ConcurrentBag<EmbeddingPreset?>();
@@ -635,23 +632,14 @@ public class ConcurrencyTests
     [Fact]
     public async Task AsyncAwaitPattern_CancellationToken_PreventsExecution()
     {
-        try
-        {
-            var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
-            var cts = new CancellationTokenSource();
+        var pdfPath = NativeTestHelper.GetDocumentPath("pdf/simple.pdf");
+        var cts = new CancellationTokenSource();
 
-            // Cancel immediately
-            cts.Cancel();
+        cts.Cancel();
 
-            await Assert.ThrowsAsync<OperationCanceledException>(() =>
-                KreuzbergClient.ExtractFileAsync(pdfPath, cancellationToken: cts.Token)
-            );
-        }
-        catch (Exception)
-        {
-            // Test document missing - acceptable for this test
-            Assert.True(true);
-        }
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            KreuzbergClient.ExtractFileAsync(pdfPath, cancellationToken: cts.Token)
+        );
     }
 
     #endregion
