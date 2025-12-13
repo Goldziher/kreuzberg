@@ -80,6 +80,7 @@ vendor_files = Dir.chdir(__dir__) do
                       Dir.glob('vendor/kreuzberg/**/*', File::FNM_DOTMATCH)
                          .reject { |f| File.directory?(f) }
                          .reject { |f| f.include?('/.fastembed_cache/') }
+                         .reject { |f| f.include?('/.kreuzberg/') }
                          .reject { |f| f.include?('/target/') }
                          .grep_v(/\.(swp|bak|tmp)$/)
                          .grep_v(/~$/)

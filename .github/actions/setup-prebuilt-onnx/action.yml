@@ -28,15 +28,35 @@ runs:
         ort_dir="${GITHUB_WORKSPACE}/target/onnxruntime/${target}"
         ort_root="${ort_dir}/onnxruntime"
         ort_lib="${ort_root}/lib"
+
         if [ ! -f "${ort_lib}/libonnxruntime.a" ]; then
           rm -rf "${ort_dir}"
           mkdir -p "${ort_lib}"
-          curl -fsSL "${ort_url}" | tar -xz -C "${ort_lib}"
-        fi
 
-        {
-          echo "ORT_STRATEGY=system"
-          echo "ORT_LIB_LOCATION=${ort_lib}"
-          echo "ORT_SKIP_DOWNLOAD=1"
-          echo "ORT_PREFER_DYNAMIC_LINK=1"
-        } >> "${GITHUB_ENV}"
+          # Try to download prebuilt ONNX Runtime from CDN
+          echo "Attempting to download prebuilt ONNX Runtime for ${target}..."
+          if curl -fsSL --max-time 30 -o /tmp/ort.tgz "${ort_url}" 2>/dev/null; then
+            echo "Successfully downloaded ONNX Runtime archive"
+            tar -xz -C "${ort_lib}" -f /tmp/ort.tgz
+            rm -f /tmp/ort.tgz
+
+            {
+              echo "ORT_STRATEGY=system"
+              echo "ORT_LIB_LOCATION=${ort_lib}"
+              echo "ORT_SKIP_DOWNLOAD=1"
+              echo "ORT_PREFER_DYNAMIC_LINK=1"
+            } >> "${GITHUB_ENV}"
+          else
+            echo "Warning: Prebuilt ONNX Runtime not available for ${target}"
+            echo "Will download and build ONNX Runtime during compilation"
+            # Don't set ORT env vars, let ort-rs handle the download and build
+          fi
+        else
+          echo "Using existing ONNX Runtime at ${ort_lib}"
+          {
+            echo "ORT_STRATEGY=system"
+            echo "ORT_LIB_LOCATION=${ort_lib}"
+            echo "ORT_SKIP_DOWNLOAD=1"
+            echo "ORT_PREFER_DYNAMIC_LINK=1"
+          } >> "${GITHUB_ENV}"
+        fi

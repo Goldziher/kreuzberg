@@ -13,7 +13,7 @@ keywords = ["document", "extraction", "cli", "tool", "parser"]
 categories = ["command-line-utilities", "text-processing"]
 
 [dependencies]
-kreuzberg = { path = "../kreuzberg", version = "4.0.0-rc.3", features = ["cli"] }
+kreuzberg = { path = "../kreuzberg", version = "4.0.0-rc.7", features = ["cli"] }
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
