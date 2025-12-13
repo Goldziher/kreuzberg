@@ -1,5 +1,3 @@
-#![cfg(feature = "embeddings")]
-
 //! Embedding generation support for RAG (Retrieval-Augmented Generation) systems.
 //!
 //! This module provides text embedding generation using ONNX models via fastembed-rs.

@@ -6,6 +6,7 @@ use crate::extractors::SyncExtractor;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
+#[cfg(feature = "tokio-runtime")]
 use std::path::Path;
 
 // NOTE: scraper dependency has been removed in favor of html-to-markdown-rs

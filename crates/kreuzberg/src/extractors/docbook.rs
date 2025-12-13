@@ -23,6 +23,7 @@ use crate::types::{ExtractionResult, Metadata, Table};
 use async_trait::async_trait;
 use quick_xml::Reader;
 use quick_xml::events::Event;
+#[cfg(feature = "tokio-runtime")]
 use std::path::Path;
 
 /// Strip namespace prefix from XML tag names.

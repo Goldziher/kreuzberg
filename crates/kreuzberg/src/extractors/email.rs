@@ -6,6 +6,7 @@ use crate::extractors::SyncExtractor;
 use crate::plugins::{DocumentExtractor, Plugin};
 use crate::types::{EmailMetadata, ExtractionResult, Metadata};
 use async_trait::async_trait;
+#[cfg(feature = "tokio-runtime")]
 use std::path::Path;
 
 /// Email message extractor.

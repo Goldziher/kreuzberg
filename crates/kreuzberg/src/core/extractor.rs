@@ -20,6 +20,7 @@ use crate::types::ExtractionResult;
 #[cfg(feature = "office")]
 use crate::types::LibreOfficeConversionResult;
 use crate::{KreuzbergError, Result};
+#[cfg(feature = "tokio-runtime")]
 use once_cell::sync::Lazy;
 #[cfg(feature = "office")]
 use serde_json::json;
