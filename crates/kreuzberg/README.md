@@ -169,6 +169,47 @@ kreuzberg = { version = "4.0", features = ["server"] }
 kreuzberg = { version = "4.0", features = ["cli"] }
 ```
 
+## PDFium Linking Options
+
+When using the `pdf` feature, you can choose how PDFium is linked to your binary. Four strategies are supported:
+
+| Strategy | Feature | Use Case |
+|----------|---------|----------|
+| **Dynamic (default)** | `pdf` | Fast builds, runtime library dependency |
+| **Static** | `pdf`, `pdf-static` | Embed PDFium in binary, larger binary size |
+| **Bundled** | `pdf`, `pdf-bundled` | Self-contained per-binary copies |
+| **System** | `pdf`, `pdf-system` | Use system-installed PDFium |
+
+### Examples
+
+**Default (dynamic linking)** - Fastest compilation, requires libpdfium at runtime:
+```toml
+[dependencies]
+kreuzberg = { version = "4.0", features = ["pdf"] }
+```
+
+**Static linking** - Larger binary, no runtime dependency:
+```toml
+[dependencies]
+kreuzberg = { version = "4.0", features = ["pdf", "pdf-static"] }
+```
+
+**Bundled** - Each binary extracts its own copy:
+```toml
+[dependencies]
+kreuzberg = { version = "4.0", features = ["pdf", "pdf-bundled"] }
+```
+
+**System-installed** - Use pkg-config or manual paths:
+```toml
+[dependencies]
+kreuzberg = { version = "4.0", features = ["pdf", "pdf-system"] }
+```
+
+For comprehensive guidance on linking strategies, environment variables, and troubleshooting, see the [PDFium Linking Guide](../../docs/guides/pdfium-linking.md).
+
+**Note:** Language bindings (Python, TypeScript, Ruby, Java, Go) bundle PDFium automatically and do not expose linking options.
+
 ## Documentation
 
 **[API Documentation](https://docs.rs/kreuzberg)** – Complete API reference with examples

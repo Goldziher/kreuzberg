@@ -2809,6 +2809,7 @@ dependencies = [
  "org",
  "paste",
  "pdfium-render",
+ "pkg-config",
  "polars",
  "pprof",
  "pulldown-cmark",

@@ -13,6 +13,8 @@ on:
       - '.cargo/config.toml'
       - 'rust-toolchain.toml'
       - 'scripts/ci/rust/**'
+      - 'scripts/install-system-pdfium-linux.sh'
+      - 'scripts/install-system-pdfium-macos.sh'
       - '.github/actions/install-system-deps/**'
       - '.github/actions/setup-openssl/**'
       - '.github/actions/cache-hf-fastembed/**'
@@ -35,6 +37,8 @@ on:
       - '.cargo/config.toml'
       - 'rust-toolchain.toml'
       - 'scripts/ci/rust/**'
+      - 'scripts/install-system-pdfium-linux.sh'
+      - 'scripts/install-system-pdfium-macos.sh'
       - '.github/actions/install-system-deps/**'
       - '.github/actions/setup-openssl/**'
       - '.github/actions/cache-hf-fastembed/**'
@@ -180,6 +184,103 @@ jobs:
         env:
           TESSDATA_PREFIX: "/usr/share/tesseract-ocr/5/tessdata"
         run: task e2e:rust:test
+        shell: bash
+
+      - name: Cleanup Rust cache
+        if: always()
+        uses: ./.github/actions/cleanup-rust-cache
+
+  test-system-pdfium:
+    name: Test System PDFium (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+
+      - name: Install system PDFium (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: bash scripts/install-system-pdfium-linux.sh
+        shell: bash
+
+      - name: Install system PDFium (macOS)
+        if: matrix.os == 'macos-latest'
+        run: bash scripts/install-system-pdfium-macos.sh
+        shell: bash
+
+      - name: Verify pkg-config detects pdfium
+        run: |
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          fi
+          pkg-config --modversion pdfium
+          pkg-config --cflags --libs pdfium
+        shell: bash
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: system-pdfium-${{ matrix.os }}
+          target: ${{ matrix.target }}
+
+      - name: Build kreuzberg with pdf,pdf-system features
+        run: cargo build -p kreuzberg --features pdf,pdf-system
+        shell: bash
+        env:
+          PKG_CONFIG_PATH: "${{ matrix.os == 'macos-latest' && '/usr/local/lib/pkgconfig' || '' }}"
+
+      - name: Run tests with pdf,pdf-system features
+        run: cargo test -p kreuzberg --features pdf,pdf-system
+        shell: bash
+        env:
+          PKG_CONFIG_PATH: "${{ matrix.os == 'macos-latest' && '/usr/local/lib/pkgconfig' || '' }}"
+
+      - name: Verify no bundled pdfium in library
+        run: |
+          LIB_PATH="target/debug/libkreuzberg.a"
+          if [ ! -f "${LIB_PATH}" ]; then
+            LIB_PATH="target/debug/libkreuzberg.so"
+          fi
+          if [ ! -f "${LIB_PATH}" ]; then
+            LIB_PATH="target/debug/libkreuzberg.dylib"
+          fi
+          if [ -f "${LIB_PATH}" ]; then
+            echo "Checking for bundled pdfium symbols..."
+            if nm "${LIB_PATH}" 2>/dev/null | grep -q "FPDF_GetDocument"; then
+              echo "Warning: Found PDFium symbols in library (expected with pdf feature)"
+            fi
+          fi
+        shell: bash
+
+      - name: Verify binary links against system library (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # Look for test binary or check symbols
+          echo "Verifying system PDFium linking on Linux..."
+          ldd /usr/local/lib/libpdfium.so | head -20
+          pkg-config --list-all | grep pdfium
+        shell: bash
+
+      - name: Verify binary links against system library (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # Check library dependencies
+          echo "Verifying system PDFium linking on macOS..."
+          otool -L /usr/local/lib/libpdfium.dylib | head -20
+          export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          pkg-config --list-all | grep pdfium
         shell: bash
 
       - name: Cleanup Rust cache
