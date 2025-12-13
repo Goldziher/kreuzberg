@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [4.0.0-rc.7] - 2025-12-12
 
 ### Added
+- **Configurable PDFium linking for Rust crate** via Cargo features
+  - `pdf-static`: Download and statically link PDFium (no runtime dependency)
+  - `pdf-bundled`: Embed library in binary (self-contained executables)
+  - `pdf-system`: Use system-installed PDFium via pkg-config
+  - System installation scripts for Linux and macOS with pkg-config support
+  - Runtime extraction module for bundled PDFium libraries
+  - Comprehensive documentation in `docs/guides/pdfium-linking.md`
+  - CI testing for system PDFium installation on Linux and macOS
+  - Default behavior unchanged (backward compatible)
+  - Language bindings continue to bundle PDFium automatically
 - **WebAssembly bindings** (`@kreuzberg/wasm` npm package) for browser, Cloudflare Workers, Deno, and Bun
   - Full TypeScript API with sync and async extraction methods
   - Multi-threading support via `wasm-bindgen-rayon` and SharedArrayBuffer
