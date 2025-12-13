@@ -1,4 +1,5 @@
 #![allow(rustdoc::bare_urls)]
+#![allow(unpredictable_function_pointer_comparisons)]
 #![doc = include_str!("../readme.md")]
 
 pub mod bindings;
