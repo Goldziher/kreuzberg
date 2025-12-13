@@ -23,6 +23,7 @@ import java.util.Locale;
 final class KreuzbergFFI {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup LOOKUP;
+    private static final long C_STRING_MAX_SIZE = 1048576L;
 
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC;
     static final MethodHandle KREUZBERG_EXTRACT_FILE_SYNC_WITH_CONFIG;
@@ -507,7 +508,7 @@ final class KreuzbergFFI {
         if (address == null || address.address() == 0) {
             return null;
         }
-        return address.reinterpret(Long.MAX_VALUE).getString(0);
+        return address.reinterpret(C_STRING_MAX_SIZE).getString(0);
     }
 
     /**
