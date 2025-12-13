@@ -58,6 +58,8 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	ffiPathGnu="$workspace/target/x86_64-pc-windows-gnu/release"
 	ffiPathRelease="$workspace/target/release"
 	export PATH="$ffiPathGnu:$ffiPathRelease:$PATH"
+	# Ensure pkg-config can find the dev .pc file for kreuzberg-ffi
+	export PKG_CONFIG_PATH="$workspace/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
 	# Set CGO_LDFLAGS to help linker find the library
 	export CGO_LDFLAGS="-L$ffiPathGnu -L$ffiPathRelease"
 	export CGO_ENABLED=1
@@ -99,6 +101,8 @@ else
 	# Unix paths (Linux/macOS)
 	workspace=$(cd ../.. && pwd)
 	ffiPath="$workspace/target/release"
+	# Ensure pkg-config can find the dev .pc file for kreuzberg-ffi
+	export PKG_CONFIG_PATH="$workspace/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
 	export LD_LIBRARY_PATH="$ffiPath:${LD_LIBRARY_PATH:-}"
 	export DYLD_LIBRARY_PATH="$ffiPath:${DYLD_LIBRARY_PATH:-}"
 	export DYLD_FALLBACK_LIBRARY_PATH="$ffiPath:${DYLD_FALLBACK_LIBRARY_PATH:-}"
@@ -126,6 +130,7 @@ else
 	echo "CGO_CFLAGS: ${CGO_CFLAGS:-<not set>}"
 	echo "CC: ${CC:-<not set>}"
 	echo "CXX: ${CXX:-<not set>}"
+	echo "PKG_CONFIG_PATH: ${PKG_CONFIG_PATH:-<not set>}"
 	echo "TESSDATA_PREFIX: $TESSDATA_PREFIX"
 	echo
 

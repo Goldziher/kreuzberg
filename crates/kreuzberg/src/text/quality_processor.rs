@@ -101,14 +101,15 @@ mod tests {
         };
 
         let mut result = ExtractionResult {
-            content: "This is a well-written paragraph with proper structure. It contains multiple sentences. The quality should be good.".to_string(),
-            mime_type: "text/plain".to_string(),
-            metadata: Metadata::default(),
-            tables: vec![],
-            detected_languages: None,
-            chunks: None,
-            images: None,
-        };
+	            content: "This is a well-written paragraph with proper structure. It contains multiple sentences. The quality should be good.".to_string(),
+	            mime_type: "text/plain".to_string(),
+	            metadata: Metadata::default(),
+	            tables: vec![],
+	            detected_languages: None,
+	            chunks: None,
+	            images: None,
+	            pages: None,
+	        };
 
         processor.process(&mut result, &config).await.unwrap();
 
@@ -133,6 +134,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         // When disabled, the processor should not run, so no quality_score should be added
@@ -167,6 +169,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config_with_quality = ExtractionConfig {
@@ -194,6 +197,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let long_result = ExtractionResult {
@@ -204,6 +208,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let short_duration = processor.estimated_duration_ms(&short_result);

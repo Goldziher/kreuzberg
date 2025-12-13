@@ -103,14 +103,15 @@ mod tests {
         };
 
         let mut result = ExtractionResult {
-            content: "This is a longer text that should be split into multiple chunks to test the chunking processor functionality.".to_string(),
-            mime_type: "text/plain".to_string(),
-            metadata: Metadata::default(),
-            tables: vec![],
-            detected_languages: None,
-            chunks: None,
-            images: None,
-        };
+	            content: "This is a longer text that should be split into multiple chunks to test the chunking processor functionality.".to_string(),
+	            mime_type: "text/plain".to_string(),
+	            metadata: Metadata::default(),
+	            tables: vec![],
+	            detected_languages: None,
+	            chunks: None,
+	            images: None,
+	            pages: None,
+	        };
 
         processor.process(&mut result, &config).await.unwrap();
 
@@ -132,6 +133,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         processor.process(&mut result, &config).await.unwrap();
@@ -166,6 +168,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config_with_chunking = ExtractionConfig {
@@ -195,6 +198,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let long_result = ExtractionResult {
@@ -205,6 +209,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let short_duration = processor.estimated_duration_ms(&short_result);

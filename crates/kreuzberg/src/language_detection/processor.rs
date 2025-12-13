@@ -109,6 +109,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         processor.process(&mut result, &config).await.unwrap();
@@ -132,6 +133,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         processor.process(&mut result, &config).await.unwrap();
@@ -166,6 +168,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config_with_lang = ExtractionConfig {
@@ -194,6 +197,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let long_result = ExtractionResult {
@@ -204,6 +208,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let short_duration = processor.estimated_duration_ms(&short_result);

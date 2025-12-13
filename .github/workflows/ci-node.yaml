@@ -245,9 +245,9 @@ jobs:
         run: |
           source scripts/ci/node/setup-library-paths.sh
           if [ "${{ matrix.coverage }}" = "true" ]; then
-            pnpm vitest run --root e2e/typescript --config e2e/typescript/vitest.config.ts --coverage
+            pnpm vitest run --root e2e/typescript --config vitest.config.ts --coverage
           else
-            pnpm vitest run --root e2e/typescript --config e2e/typescript/vitest.config.ts
+            pnpm vitest run --root e2e/typescript --config vitest.config.ts
           fi
 
       - name: Upload coverage
