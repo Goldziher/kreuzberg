@@ -165,8 +165,5 @@ runs:
         Write-Output "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         $env:PATH = "C:\Program Files\LibreOffice\program;C:\Program Files\Tesseract-OCR;" + $env:PATH
 
-        # Install python-magic-bin for Windows compatibility
-        python -m pip install python-magic-bin
-
         soffice --version
         tesseract --version
