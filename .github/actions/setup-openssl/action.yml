@@ -95,9 +95,9 @@ runs:
       id: cache-windows
       with:
         path: |
-          C:\Program Files\OpenSSL-Win64
-          C:\Program Files\OpenSSL
-        key: openssl-${{ runner.os }}-${{ hashFiles('C:\Program Files\Git\cmd\git.exe') }}-v2
+          C:\vcpkg\installed\x64-windows-static-md
+          C:\vcpkg\downloads
+        key: openssl-${{ runner.os }}-${{ hashFiles('C:\vcpkg\vcpkg.exe') }}-v3
         restore-keys: |
           openssl-${{ runner.os }}-
 
@@ -105,46 +105,33 @@ runs:
       if: runner.os == 'Windows' && steps.cache-windows.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
-        choco install openssl -y
+        $vcpkg = (Get-Command vcpkg -ErrorAction SilentlyContinue)?.Source
+        if (-not $vcpkg) {
+          $candidate = "C:\vcpkg\vcpkg.exe"
+          if (Test-Path $candidate) {
+            $vcpkg = $candidate
+          }
+        }
+
+        if (-not $vcpkg) {
+          Write-Error "vcpkg not found (expected in PATH or at C:\vcpkg\vcpkg.exe)"
+          exit 1
+        }
+
+        & $vcpkg install openssl:x64-windows-static-md
 
     - name: Configure OpenSSL environment (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        $opensslDirs = @(
-          "C:\Program Files\OpenSSL-Win64",
-          "C:\Program Files\OpenSSL",
-          "C:\ProgramData\chocolatey\lib\openssl\tools",
-          "C:\Strawberry\c"
-        )
-
-        $selected = $null
-        foreach ($dir in $opensslDirs) {
-          if (Test-Path $dir) {
-            $libPath = Join-Path $dir "lib"
-            $includePath = Join-Path $dir "include"
-            if ((Test-Path $libPath) -and (Test-Path $includePath)) {
-              $selected = $dir
-              break
-            }
-          }
+        $vcpkgRoot = "C:\vcpkg\installed\x64-windows-static-md"
+        if (-not (Test-Path $vcpkgRoot)) {
+          Write-Error "vcpkg OpenSSL installation not found at $vcpkgRoot"
+          exit 1
         }
 
-        if ($null -ne $selected) {
-          Write-Host "Using OpenSSL at $selected"
-          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_DIR=$selected"
-          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_LIB_DIR=$selected\lib"
-          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_INCLUDE_DIR=$selected\include"
-        } else {
-          Write-Host "OpenSSL not found in standard locations, installing via vcpkg..."
-          vcpkg install openssl:x64-windows-static-md
-          $vcpkgRoot = "C:\vcpkg\installed\x64-windows-static-md"
-          if (-not (Test-Path $vcpkgRoot)) {
-            Write-Error "vcpkg OpenSSL installation not found at $vcpkgRoot"
-            exit 1
-          }
-          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_DIR=$vcpkgRoot"
-          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_LIB_DIR=$vcpkgRoot\lib"
-          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_INCLUDE_DIR=$vcpkgRoot\include"
-          Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_STATIC=1"
-        }
+        Add-Content -Path $env:GITHUB_ENV -Value "VCPKG_ROOT=C:\vcpkg"
+        Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_DIR=$vcpkgRoot"
+        Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_LIB_DIR=$vcpkgRoot\lib"
+        Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_INCLUDE_DIR=$vcpkgRoot\include"
+        Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_STATIC=1"
