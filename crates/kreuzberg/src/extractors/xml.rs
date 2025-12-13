@@ -78,7 +78,7 @@ impl SyncExtractor for XmlExtractor {
 #[async_trait]
 impl DocumentExtractor for XmlExtractor {
     #[cfg_attr(feature = "otel", tracing::instrument(
-        skip(self, content, _config),
+        skip(self, content, config),
         fields(
             extractor.name = self.name(),
             content.size_bytes = content.len(),
