@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/actions/**'
       - 'crates/kreuzberg/**'
       - 'crates/kreuzberg-ffi/**'
       - 'crates/kreuzberg-tesseract/**'
@@ -18,6 +19,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - '.github/actions/**'
       - 'crates/kreuzberg/**'
       - 'crates/kreuzberg-ffi/**'
       - 'crates/kreuzberg-tesseract/**'

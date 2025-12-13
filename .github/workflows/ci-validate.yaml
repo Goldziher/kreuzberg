@@ -7,6 +7,7 @@ on:
       - 'crates/**'
       - 'packages/**'
       - 'tools/**'
+      - '.github/actions/**'
       - '.cargo/config.toml'
       - '.github/workflows/ci-validate.yaml'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'crates/**'
       - 'packages/**'
       - 'tools/**'
+      - '.github/actions/**'
       - '.cargo/config.toml'
       - '.github/workflows/ci-validate.yaml'
 
