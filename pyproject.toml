@@ -4,6 +4,7 @@ dev = [
   "maturin>=1.10.2",
   "mypy>=1.19.0",
   "prek>=0.2.21",
+  "pyproject-fmt>=2.11.1",
   "pytest>=9.0.2",
   "pytest-asyncio>=1.3.0",
   "pytest-cov>=7.0.0",
@@ -13,6 +14,7 @@ dev = [
   "ruff>=0.14.8",
   "types-pillow>=10.2",
   "types-psutil>=7.1.3.20251202",
+  "validate-pyproject>=0.24.1",
 ]
 docs = [
   "mkdocs>=1.6.1",
