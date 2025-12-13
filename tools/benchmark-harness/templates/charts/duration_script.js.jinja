@@ -1,0 +1,70 @@
+{# Duration Chart - p95 and p50 latency comparison #}
+new Chart(document.getElementById('duration-chart'), {
+    type: 'bar',
+    data: {
+        labels: {{ data.frameworks|tojson }},
+        datasets: [
+            {
+                label: 'p95 Duration (ms)',
+                data: [
+                    {%- for fw in data.frameworks -%}
+                        {%- if data.framework_metrics[fw] -%}
+                            {{ data.framework_metrics[fw].p95_duration_ms }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: 'rgba(66, 153, 225, 0.8)',
+                borderColor: 'rgba(66, 153, 225, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'p50 Duration (ms)',
+                data: [
+                    {%- for fw in data.frameworks -%}
+                        {%- if data.framework_metrics[fw] -%}
+                            {{ data.framework_metrics[fw].median_duration_ms }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: 'rgba(72, 187, 120, 0.8)',
+                borderColor: 'rgba(72, 187, 120, 1)',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Processing Duration Comparison (Lower is Better)'
+            },
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' ms';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Duration (ms)'
+                }
+            }
+        }
+    }
+});

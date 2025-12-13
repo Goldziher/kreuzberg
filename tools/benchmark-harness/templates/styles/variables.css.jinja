@@ -1,0 +1,95 @@
+{# CSS Variables - Matches MkDocs Material Theme #}
+{# Single source of truth for all colors and typography #}
+
+:root {
+  /* MkDocs Light Mode - Exact variable names from MkDocs Material theme */
+  --md-primary-fg-color: #323040;
+  --md-primary-fg-color--light: #4a4858;
+  --md-primary-fg-color--dark: #1a1926;
+
+  --md-accent-fg-color: #da2ae0;  /* Purple - primary accent */
+  --md-accent-fg-color-opposite: #58fbda;  /* Cyan - dark mode accent */
+
+  --md-default-bg-color: #ffffff;  /* White background */
+  --md-default-bg-color--light: #f7fafc;  /* Light gray background */
+  --md-default-bg-color--dark: #f2f2f4;  /* Slightly darker gray */
+
+  --md-default-fg-color: #323040;  /* Primary text */
+  --md-default-fg-color--light: #5b5966;  /* Secondary text */
+  --md-default-fg-color--lighter: #718096;  /* Tertiary text */
+
+  /* Typography */
+  --font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-headings: "Exo 2", var(--font-family);
+
+  /* Chart colors - Friendly palette that works in light mode */
+  --chart-color-1: #4299e1;  /* Blue */
+  --chart-color-2: #48bb78;  /* Green */
+  --chart-color-3: #ed8936;  /* Orange */
+  --chart-color-4: #9f7aea;  /* Purple */
+  --chart-color-5: #f56565;  /* Red */
+  --chart-color-6: #38b2ac;  /* Teal */
+  --chart-color-7: #ecc94b;  /* Yellow */
+  --chart-color-8: #ed64a6;  /* Pink */
+  --chart-color-9: #667eea;  /* Indigo */
+  --chart-color-10: #fc8181; /* Light red */
+
+  /* Semantic aliases - Use these in components for clearer intent */
+  --accent-color: var(--md-accent-fg-color);
+  --background-color: var(--md-default-bg-color);
+  --background-color-light: var(--md-default-bg-color--light);
+  --text-color: var(--md-default-fg-color);
+  --text-color-secondary: var(--md-default-fg-color--light);
+  --text-color-tertiary: var(--md-default-fg-color--lighter);
+
+  /* Component-specific */
+  --border-color: #e2e8f0;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --hover-bg-color: rgba(218, 42, 224, 0.1);  /* Light accent tint */
+
+  /* Spacing scale */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+{# Dark mode overrides - Automatic via OS/browser preference #}
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* MkDocs Dark Mode - Exact variable names */
+    --md-accent-fg-color: #58fbda;  /* Cyan - primary accent in dark mode */
+    --md-accent-fg-color-opposite: #da2ae0;  /* Purple - light mode accent */
+
+    --md-default-bg-color: #23232c;  /* Dark background */
+    --md-default-bg-color--light: #2a2836;  /* Slightly lighter */
+    --md-default-bg-color--dark: #1a1820;  /* Even darker */
+
+    --md-default-fg-color: #ffffff;  /* White text */
+    --md-default-fg-color--light: rgba(255, 255, 255, 0.8);  /* Semi-transparent white */
+    --md-default-fg-color--lighter: rgba(255, 255, 255, 0.6);
+
+    /* Dark mode chart colors - Slightly adjusted for better contrast */
+    --chart-color-1: #63b3ed;  /* Lighter blue */
+    --chart-color-2: #68d391;  /* Lighter green */
+    --chart-color-3: #f6ad55;  /* Lighter orange */
+    --chart-color-4: #b794f4;  /* Lighter purple */
+    --chart-color-5: #fc8181;  /* Lighter red */
+    --chart-color-6: #4fd1c5;  /* Lighter teal */
+    --chart-color-7: #f6e05e;  /* Lighter yellow */
+    --chart-color-8: #f687b3;  /* Lighter pink */
+    --chart-color-9: #7f9cf5;  /* Lighter indigo */
+    --chart-color-10: #feb2b2; /* Very light red */
+
+    /* Component-specific dark mode */
+    --border-color: rgba(255, 255, 255, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --hover-bg-color: rgba(88, 251, 218, 0.1);  /* Light cyan tint */
+  }
+}

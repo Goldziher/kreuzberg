@@ -1,0 +1,115 @@
+{# Layout and Grid Styles #}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: var(--background-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+header h1 {
+  font-family: var(--font-family-headings);
+  font-size: 2.5rem;
+  color: var(--text-color);
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+}
+
+.metadata {
+  color: var(--text-color-tertiary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.tab-content {
+  display: none;
+  padding: var(--spacing-lg);
+  background: var(--background-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  margin-top: var(--spacing-md);
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.tab-content h2 {
+  font-family: var(--font-family-headings);
+  font-size: 1.75rem;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.tab-content p {
+  color: var(--text-color-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+canvas {
+  max-height: 500px;
+  margin-top: var(--spacing-sm);
+}
+
+.success-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding: var(--spacing-sm);
+  }
+
+  header h1 {
+    font-size: 1.75rem;
+  }
+
+  .tab-content {
+    padding: var(--spacing-sm);
+  }
+
+  canvas {
+    max-height: 300px;
+  }
+
+  .success-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  .metadata {
+    font-size: 0.8rem;
+  }
+}

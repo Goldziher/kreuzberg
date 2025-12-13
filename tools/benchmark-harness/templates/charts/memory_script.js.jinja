@@ -1,0 +1,86 @@
+{# Memory Chart - Peak, p95, p99 memory usage #}
+new Chart(document.getElementById('memory-chart'), {
+    type: 'bar',
+    data: {
+        labels: {{ data.frameworks|tojson }},
+        datasets: [
+            {
+                label: 'Peak Memory (MB)',
+                data: [
+                    {%- for fw in data.frameworks -%}
+                        {%- if data.framework_metrics[fw] -%}
+                            {{ data.framework_metrics[fw].peak_memory_mb }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: 'rgba(159, 122, 234, 0.8)',
+                borderColor: 'rgba(159, 122, 234, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'p95 Memory (MB)',
+                data: [
+                    {%- for fw in data.frameworks -%}
+                        {%- if data.framework_metrics[fw] -%}
+                            {{ data.framework_metrics[fw].p95_memory_mb }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: 'rgba(56, 178, 172, 0.8)',
+                borderColor: 'rgba(56, 178, 172, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'p99 Memory (MB)',
+                data: [
+                    {%- for fw in data.frameworks -%}
+                        {%- if data.framework_metrics[fw] -%}
+                            {{ data.framework_metrics[fw].p99_memory_mb }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: 'rgba(236, 201, 75, 0.8)',
+                borderColor: 'rgba(236, 201, 75, 1)',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Memory Usage Analysis (Lower is Better)'
+            },
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' MB';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Memory (MB)'
+                }
+            }
+        }
+    }
+});

@@ -1,0 +1,55 @@
+{# Success Rate Chart - Success percentage per framework #}
+new Chart(document.getElementById('success-chart'), {
+    type: 'bar',
+    data: {
+        labels: {{ data.frameworks|tojson }},
+        datasets: [
+            {
+                label: 'Success Rate (%)',
+                data: [
+                    {%- for fw in data.frameworks -%}
+                        {%- if data.framework_metrics[fw] -%}
+                            {{ (data.framework_metrics[fw].success_rate * 100)|round(1) }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: 'rgba(72, 187, 120, 0.8)',
+                borderColor: 'rgba(72, 187, 120, 1)',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Framework Success Rates'
+            },
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        return 'Success Rate: ' + context.parsed.y.toFixed(1) + '%';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                title: {
+                    display: true,
+                    text: 'Success Rate (%)'
+                }
+            }
+        }
+    }
+});

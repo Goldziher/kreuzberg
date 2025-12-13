@@ -1,0 +1,53 @@
+{# Chart-Specific Styles #}
+
+/* Chart containers */
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 500px;
+}
+
+/* Chart section spacing */
+.tab-content canvas {
+  margin-top: var(--spacing-md);
+}
+
+/* Success dashboard layout */
+#success .summary-cards {
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Ensure charts are responsive */
+@media (max-width: 768px) {
+  canvas {
+    max-height: 350px;
+  }
+}
+
+@media (max-width: 480px) {
+  canvas {
+    max-height: 250px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .tabs {
+    display: none;
+  }
+
+  .tab-content {
+    display: block !important;
+    page-break-after: always;
+  }
+
+  .tab-content:last-child {
+    page-break-after: auto;
+  }
+
+  canvas {
+    max-height: none;
+    page-break-inside: avoid;
+  }
+}

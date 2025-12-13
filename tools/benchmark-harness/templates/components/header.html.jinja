@@ -1,0 +1,12 @@
+<header>
+    <h1>Kreuzberg Benchmark Results</h1>
+    <p class="metadata">
+        {% if data.benchmark_run_date -%}
+        Benchmark Run: {{ data.benchmark_run_date }}<br>
+        Visualization Generated: {{ data.generated_at }}<br>
+        {%- else -%}
+        Generated: {{ data.generated_at }}<br>
+        {%- endif %}
+        Frameworks: {{ data.frameworks|length }} | File Extensions: {{ data.extensions|length }}
+    </p>
+</header>
