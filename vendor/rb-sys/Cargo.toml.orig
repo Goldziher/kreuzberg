@@ -1,7 +1,7 @@
 [package]
 build = "build/main.rs"
 name = "rb-sys"
-version = "0.9.117"
+version = "0.9.119"
 edition = "2018"
 readme = "readme.md"
 categories = ["external-ffi-bindings"]
@@ -11,14 +11,14 @@ homepage = "https://github.com/oxidize-rb/rb-sys"
 license = "MIT OR Apache-2.0"
 links = "rb"
 repository = "https://github.com/oxidize-rb/rb-sys"
-rust-version = "1.65"
+rust-version = "1.71"
 
 [build-dependencies]
-rb-sys-build = { version = "0.9.117", path = "../rb-sys-build" }
+rb-sys-build = { version = "0.9.119", path = "../rb-sys-build" }
 
 [dev-dependencies]
 rb-sys = { path = ".", features = ["link-ruby"] }
-rusty-fork = "0.3.0"
+rusty-fork = "0.3.1"
 
 [features]
 default = ["stable-api-compiled-fallback"]

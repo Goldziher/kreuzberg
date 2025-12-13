@@ -1,5 +1,5 @@
 use super::StableApiDefinition;
-use crate::{RUBY_API_VERSION_MAJOR, RUBY_API_VERSION_MINOR, VALUE, ruby_value_type, timeval};
+use crate::{ruby_value_type, timeval, RUBY_API_VERSION_MAJOR, RUBY_API_VERSION_MINOR, VALUE};
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_long},
@@ -81,6 +81,7 @@ extern "C" {
     #[link_name = "impl_thread_sleep"]
     fn impl_thread_sleep(interval: timeval);
 
+    // RTypedData functions
     #[link_name = "impl_rtypeddata_p"]
     fn impl_rtypeddata_p(obj: VALUE) -> bool;
 

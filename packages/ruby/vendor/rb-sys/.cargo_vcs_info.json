@@ -1,6 +1,6 @@
 {
-	"git": {
-		"sha1": "99078677bdd36b9e84828518792e13e8e8e5c114"
-	},
-	"path_in_vcs": "crates/rb-sys"
+  "git": {
+    "sha1": "86bb3cea2fe032ee14b8fae7d335ad2f36e21e22"
+  },
+  "path_in_vcs": "crates/rb-sys"
 }

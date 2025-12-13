@@ -1,4 +1,4 @@
-use rb_sys_build::{RbConfig, utils::is_mswin_or_mingw};
+use rb_sys_build::{utils::is_mswin_or_mingw, RbConfig};
 
 use crate::version::Version;
 
@@ -45,7 +45,10 @@ pub(crate) fn is_ruby_static_enabled(rbconfig: &RbConfig) -> bool {
         Ok(val) => val == "true" || val == "1",
         _ => {
             is_env_variable_defined("CARGO_FEATURE_RUBY_STATIC")
-                || rbconfig.get("ENABLE_SHARED").map(|v| v == "no").unwrap_or(false)
+                || rbconfig
+                    .get("ENABLE_SHARED")
+                    .map(|v| v == "no")
+                    .unwrap_or(false)
         }
     }
 }

@@ -4388,6 +4388,8 @@ dependencies = [
 [[package]]
 name = "rb-sys"
 version = "0.9.119"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4519fc8de033923105f512c504a8f27714ef38648ccc30969362194c50b2ed08"
 dependencies = [
  "rb-sys-build",
 ]
@@ -6719,3 +6721,7 @@ checksum = "dc6fb7703e32e9a07fb3f757360338b3a567a5054f21b5f52a666752e333d58e"
 dependencies = [
  "zune-core 0.5.0",
 ]
+
+[[patch.unused]]
+name = "rb-sys"
+version = "4.0.0-rc.6"

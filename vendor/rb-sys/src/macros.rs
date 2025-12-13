@@ -13,11 +13,11 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
 
-use crate::StableApiDefinition;
-use crate::VALUE;
 use crate::rb_data_type_t;
 use crate::ruby_value_type;
 use crate::stable_api::get_default as api;
+use crate::StableApiDefinition;
+use crate::VALUE;
 use std::ffi::c_void;
 use std::os::raw::{c_char, c_long};
 
@@ -266,7 +266,7 @@ pub unsafe fn RB_TYPE(value: VALUE) -> ruby_value_type {
 /// This function is unsafe because it could dereference a raw pointer when
 /// attemping to access the underlying [`RBasic`] struct.
 #[inline]
-#[cfg(ruby_engine = "mri")]
+#[cfg(ruby_engine = "mri")] // truffleruby provides its own implementation
 pub unsafe fn RB_TYPE_P(obj: VALUE, ty: ruby_value_type) -> bool {
     api().type_p(obj, ty)
 }

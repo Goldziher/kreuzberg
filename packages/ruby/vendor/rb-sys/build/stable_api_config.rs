@@ -2,7 +2,7 @@ use rb_sys_build::{RbConfig, RubyEngine};
 
 use crate::{
     features::is_env_variable_defined,
-    version::{MIN_SUPPORTED_STABLE_VERSION, Version},
+    version::{Version, MIN_SUPPORTED_STABLE_VERSION},
 };
 use std::{convert::TryFrom, error::Error, path::Path};
 
@@ -27,7 +27,9 @@ enum Strategy {
 impl TryFrom<(RubyEngine, Version)> for Strategy {
     type Error = Box<dyn Error>;
 
-    fn try_from((engine, current_ruby_version): (RubyEngine, Version)) -> Result<Self, Self::Error> {
+    fn try_from(
+        (engine, current_ruby_version): (RubyEngine, Version),
+    ) -> Result<Self, Self::Error> {
         let mut strategy = None;
 
         match engine {

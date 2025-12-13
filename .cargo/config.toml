@@ -15,6 +15,11 @@ incremental = true
 [target.aarch64-apple-darwin]
 # macOS ARM64 specific settings
 
+[target.aarch64-unknown-linux-gnu]
+# Cross-compilation for Linux ARM64
+linker = "aarch64-linux-gnu-gcc"
+ar = "aarch64-linux-gnu-ar"
+
 [target.x86_64-pc-windows-msvc]
 # Windows MSVC specific settings
 

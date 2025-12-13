@@ -37,8 +37,12 @@ if [ -n "${ORT_LIB_LOCATION:-}" ] && [ "${BUILD_FEATURES}" = "default" ]; then
 	ort_libs_dylib=("${ORT_LIB_LOCATION}"/libonnxruntime*.dylib)
 	ort_count=$((${#ort_libs_so[@]} + ${#ort_libs_dylib[@]}))
 	if [ $ort_count -gt 0 ]; then
-		[ ${#ort_libs_so[@]} -gt 0 ] && cp -L "${ort_libs_so[@]}" "${STAGING_DIR}/lib/" 2>/dev/null || true
-		[ ${#ort_libs_dylib[@]} -gt 0 ] && cp -L "${ort_libs_dylib[@]}" "${STAGING_DIR}/lib/" 2>/dev/null || true
+		if [ ${#ort_libs_so[@]} -gt 0 ]; then
+			cp -L "${ort_libs_so[@]}" "${STAGING_DIR}/lib/" 2>/dev/null || true
+		fi
+		if [ ${#ort_libs_dylib[@]} -gt 0 ]; then
+			cp -L "${ort_libs_dylib[@]}" "${STAGING_DIR}/lib/" 2>/dev/null || true
+		fi
 		echo "✓ Staged ONNX Runtime libraries"
 	fi
 fi

@@ -12,6 +12,7 @@
 #error "RUBY_API_VERSION_MINOR is not defined, Ruby headers might not be configured correctly"
 #endif
 
+// Define a macro to check for Ruby 3.3+
 #if RUBY_API_VERSION_MAJOR > 3 || (RUBY_API_VERSION_MAJOR == 3 && RUBY_API_VERSION_MINOR >= 3)
 #define RUBY_VERSION_AT_LEAST_3_3 1
 #else
@@ -145,6 +146,7 @@ void impl_thread_sleep(struct timeval time)
   rb_thread_wait_for(time);
 }
 
+// RTypedData implementations
 int impl_rtypeddata_p(VALUE obj)
 {
   return RTYPEDDATA_P(obj);
@@ -155,6 +157,7 @@ int impl_rtypeddata_embedded_p(VALUE obj)
 #if RUBY_VERSION_AT_LEAST_3_3
   return RTYPEDDATA_EMBEDDED_P(obj);
 #else
+  // On Ruby versions before 3.3, embedded typed data is not supported
   return 0;
 #endif
 }

@@ -132,7 +132,7 @@ jobs:
   test-csharp:
     name: C# Tests (${{ matrix.os }})
     needs: build-csharp
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: true
       matrix:

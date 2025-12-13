@@ -1,4 +1,5 @@
 use std::env;
+use std::path::PathBuf;
 
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -25,8 +26,11 @@ fn main() {
         _ => "",
     };
 
+    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
+    let profile_dir = out_dir.ancestors().nth(3).expect("OUT_DIR did not have expected depth");
+
     // Development version (for monorepo use) - use actual monorepo paths
-    let dev_libdir = format!("{}/target/release", dev_prefix);
+    let dev_libdir = profile_dir.to_string_lossy();
     let dev_includedir = format!("{}/crates/kreuzberg-ffi", dev_prefix);
     let dev_pc = format!(
         r#"prefix={}

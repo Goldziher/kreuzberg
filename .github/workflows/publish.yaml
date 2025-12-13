@@ -189,6 +189,11 @@ jobs:
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
       - name: Check release for existing CLI assets
         id: check
         env:
@@ -209,6 +214,11 @@ jobs:
     outputs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
       - name: Check release for existing Go artifacts
         id: check
         env:
@@ -230,6 +240,11 @@ jobs:
       core_exists: ${{ steps.core.outputs.exists }}
       full_exists: ${{ steps.full.outputs.exists }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
       - name: Check core image tag
         id: core
         env:
@@ -1017,7 +1032,7 @@ jobs:
           - os: ubuntu-latest
             label: linux-x86_64
             rid: linux-x86_64
-          - os: macos-13
+          - os: macos-15-intel
             label: macos-x86_64
             rid: macos-x86_64
           - os: macos-14
@@ -1885,6 +1900,11 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
       - name: Download Ruby gem artifacts
         uses: actions/download-artifact@v6
         with:

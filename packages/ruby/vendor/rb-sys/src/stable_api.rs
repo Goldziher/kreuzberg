@@ -226,7 +226,6 @@ mod compiled;
 use compiled as api;
 
 #[cfg(stable_api_include_rust_impl)]
-#[cfg_attr(ruby_eq_2_6, path = "stable_api/ruby_2_6.rs")]
 #[cfg_attr(ruby_eq_2_7, path = "stable_api/ruby_2_7.rs")]
 #[cfg_attr(ruby_eq_3_0, path = "stable_api/ruby_3_0.rs")]
 #[cfg_attr(ruby_eq_3_1, path = "stable_api/ruby_3_1.rs")]

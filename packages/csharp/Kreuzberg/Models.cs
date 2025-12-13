@@ -108,11 +108,11 @@ public sealed class Chunk
 
 public sealed class ChunkMetadata
 {
-    [JsonPropertyName("char_start")]
-    public int CharStart { get; set; }
+    [JsonPropertyName("byte_start")]
+    public long ByteStart { get; set; }
 
-    [JsonPropertyName("char_end")]
-    public int CharEnd { get; set; }
+    [JsonPropertyName("byte_end")]
+    public long ByteEnd { get; set; }
 
     [JsonPropertyName("token_count")]
     public int? TokenCount { get; set; }
@@ -122,6 +122,12 @@ public sealed class ChunkMetadata
 
     [JsonPropertyName("total_chunks")]
     public int TotalChunks { get; set; }
+
+    [JsonPropertyName("first_page")]
+    public int? FirstPage { get; set; }
+
+    [JsonPropertyName("last_page")]
+    public int? LastPage { get; set; }
 }
 
 public sealed class ExtractedImage

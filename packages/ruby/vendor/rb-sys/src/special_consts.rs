@@ -9,7 +9,7 @@
 
 use std::ffi::c_long;
 
-use crate::{VALUE, ruby_special_consts};
+use crate::{ruby_special_consts, VALUE};
 
 pub const Qfalse: ruby_special_consts = ruby_special_consts::RUBY_Qfalse;
 pub const Qtrue: ruby_special_consts = ruby_special_consts::RUBY_Qtrue;

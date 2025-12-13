@@ -3,8 +3,8 @@
 use std::{
     fmt::Formatter,
     sync::{
-        Arc,
         atomic::{AtomicIsize, Ordering},
+        Arc,
     },
 };
 
@@ -64,7 +64,6 @@ mod mri {
 
                     #[cfg(not(all(target_pointer_width = "64", target_os = "windows")))]
                     rb_gc_adjust_memory_usage(delta);
-
                     delta as isize
                 } else {
                     0

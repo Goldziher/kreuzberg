@@ -39,7 +39,7 @@ office = [
     "dep:rst_parser",
     "dep:fb2",
     "dep:typst-syntax",
-    "html",  # EPUB needs HTML parsing (zip + roxmltree + html-to-markdown-rs)
+    "html",               # EPUB needs HTML parsing (zip + roxmltree + html-to-markdown-rs)
     "tokio-runtime",
 ]
 email = ["dep:mail-parser", "dep:msg_parser"]
@@ -125,7 +125,10 @@ tokio = { workspace = true, optional = true }
 uuid = { version = "1.19.0", features = ["v4", "js"] }
 indexmap = "2.12.1"
 tracing = { workspace = true }
-reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls"], optional = true }
+reqwest = { workspace = true, default-features = false, features = [
+    "json",
+    "rustls-tls",
+], optional = true }
 # Format extractors (optional)
 pdfium-render = { version = "0.8.37", features = ["thread_safe", "image"], optional = true }
 lopdf = { version = "0.38.0", optional = true }

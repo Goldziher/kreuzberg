@@ -4,7 +4,7 @@ mod stable_api_config;
 mod version;
 
 use features::*;
-use rb_sys_build::{RbConfig, RubyEngine, bindings};
+use rb_sys_build::{bindings, RbConfig, RubyEngine};
 use std::io::Write;
 use std::{
     env,
@@ -42,10 +42,17 @@ fn main() {
         println!("cargo:rerun-if-changed={}", file.unwrap().path().display());
     }
 
-    let bindings_path = bindings::generate(&rbconfig, is_ruby_static_enabled(&rbconfig), &mut cfg_capture_file)
-        .expect("generate bindings");
+    let bindings_path = bindings::generate(
+        &rbconfig,
+        is_ruby_static_enabled(&rbconfig),
+        &mut cfg_capture_file,
+    )
+    .expect("generate bindings");
     println!("Bindings generated at: {}", bindings_path.display());
-    println!("cargo:rustc-env=RB_SYS_BINDINGS_PATH={}", bindings_path.display());
+    println!(
+        "cargo:rustc-env=RB_SYS_BINDINGS_PATH={}",
+        bindings_path.display()
+    );
     export_cargo_cfg(&mut rbconfig, &mut cfg_capture_file);
 
     #[cfg(feature = "stable-api")]
@@ -115,7 +122,6 @@ fn link_libruby(rbconfig: &mut RbConfig) {
 }
 
 fn export_cargo_cfg(rbconfig: &mut RbConfig, cap: &mut File) {
-    println!("cargo:rustc-check-cfg=cfg(has_fn_ptr_eq_lint)");
     rustc_cfg(rbconfig, "ruby_major", "MAJOR");
     rustc_cfg(rbconfig, "ruby_minor", "MINOR");
     rustc_cfg(rbconfig, "ruby_teeny", "TEENY");
@@ -148,7 +154,11 @@ fn export_cargo_cfg(rbconfig: &mut RbConfig, cap: &mut File) {
     for v in SUPPORTED_RUBY_VERSIONS.iter() {
         let v = v.to_owned();
 
-        println!("cargo:rustc-check-cfg=cfg(ruby_lt_{}_{})", v.major(), v.minor());
+        println!(
+            "cargo:rustc-check-cfg=cfg(ruby_lt_{}_{})",
+            v.major(),
+            v.minor()
+        );
         if version < v {
             println!(r#"cargo:rustc-cfg=ruby_lt_{}_{}"#, v.major(), v.minor());
             cfg_capture!(cap, r#"cargo:version_lt_{}_{}=true"#, v.major(), v.minor());
@@ -156,15 +166,28 @@ fn export_cargo_cfg(rbconfig: &mut RbConfig, cap: &mut File) {
             cfg_capture!(cap, r#"cargo:version_lt_{}_{}=false"#, v.major(), v.minor());
         }
 
-        println!("cargo:rustc-check-cfg=cfg(ruby_lte_{}_{})", v.major(), v.minor());
+        println!(
+            "cargo:rustc-check-cfg=cfg(ruby_lte_{}_{})",
+            v.major(),
+            v.minor()
+        );
         if version <= v {
             println!(r#"cargo:rustc-cfg=ruby_lte_{}_{}"#, v.major(), v.minor());
             cfg_capture!(cap, r#"cargo:version_lte_{}_{}=true"#, v.major(), v.minor());
         } else {
-            cfg_capture!(cap, r#"cargo:version_lte_{}_{}=false"#, v.major(), v.minor());
+            cfg_capture!(
+                cap,
+                r#"cargo:version_lte_{}_{}=false"#,
+                v.major(),
+                v.minor()
+            );
         }
 
-        println!("cargo:rustc-check-cfg=cfg(ruby_eq_{}_{})", v.major(), v.minor());
+        println!(
+            "cargo:rustc-check-cfg=cfg(ruby_eq_{}_{})",
+            v.major(),
+            v.minor()
+        );
         if version == v {
             println!(r#"cargo:rustc-cfg=ruby_eq_{}_{}"#, v.major(), v.minor());
             cfg_capture!(cap, r#"cargo:version_eq_{}_{}=true"#, v.major(), v.minor());
@@ -172,15 +195,28 @@ fn export_cargo_cfg(rbconfig: &mut RbConfig, cap: &mut File) {
             cfg_capture!(cap, r#"cargo:version_eq_{}_{}=false"#, v.major(), v.minor());
         }
 
-        println!("cargo:rustc-check-cfg=cfg(ruby_gte_{}_{})", v.major(), v.minor());
+        println!(
+            "cargo:rustc-check-cfg=cfg(ruby_gte_{}_{})",
+            v.major(),
+            v.minor()
+        );
         if version >= v {
             println!(r#"cargo:rustc-cfg=ruby_gte_{}_{}"#, v.major(), v.minor());
             cfg_capture!(cap, r#"cargo:version_gte_{}_{}=true"#, v.major(), v.minor());
         } else {
-            cfg_capture!(cap, r#"cargo:version_gte_{}_{}=false"#, v.major(), v.minor());
+            cfg_capture!(
+                cap,
+                r#"cargo:version_gte_{}_{}=false"#,
+                v.major(),
+                v.minor()
+            );
         }
 
-        println!("cargo:rustc-check-cfg=cfg(ruby_gt_{}_{})", v.major(), v.minor());
+        println!(
+            "cargo:rustc-check-cfg=cfg(ruby_gt_{}_{})",
+            v.major(),
+            v.minor()
+        );
         if version > v {
             println!(r#"cargo:rustc-cfg=ruby_gt_{}_{}"#, v.major(), v.minor());
             cfg_capture!(cap, r#"cargo:version_gt_{}_{}=true"#, v.major(), v.minor());
@@ -201,7 +237,12 @@ fn export_cargo_cfg(rbconfig: &mut RbConfig, cap: &mut File) {
     cfg_capture!(cap, "cargo:engine={}", rbconfig.ruby_engine());
 
     for key in rbconfig.all_keys() {
-        cfg_capture!(cap, "cargo:rbconfig_{}={}", key, rbconfig.get(key).expect("key"));
+        cfg_capture!(
+            cap,
+            "cargo:rbconfig_{}={}",
+            key,
+            rbconfig.get(key).expect("key")
+        );
     }
 
     if is_ruby_static_enabled(rbconfig) {
@@ -220,6 +261,7 @@ fn rustc_cfg(rbconfig: &RbConfig, name: &str, key: &str) {
 }
 
 fn enable_dynamic_lookup(rbconfig: &mut RbConfig) {
+    // See https://github.com/oxidize-rb/rb-sys/issues/88
     if cfg!(target_os = "macos") {
         rbconfig.push_dldflags("-Wl,-undefined,dynamic_lookup");
     } else if matches!(rbconfig.ruby_engine(), RubyEngine::TruffleRuby) {
@@ -239,8 +281,6 @@ fn expose_cargo_features(cap: &mut File) {
 
 fn warn_deprecated_feature_flags() {
     if cfg!(feature = "ruby-macros") {
-        println!(
-            "cargo:warning=The \"ruby-macros\" feature flag is deprecated and will be removed in a future release. Please use \"stable-api\" instead."
-        );
+        println!("cargo:warning=The \"ruby-macros\" feature flag is deprecated and will be removed in a future release. Please use \"stable-api\" instead.");
     }
 }

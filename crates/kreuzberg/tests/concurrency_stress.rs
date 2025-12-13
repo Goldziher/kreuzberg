@@ -244,6 +244,7 @@ async fn test_concurrent_ocr_processing() {
 #[test]
 fn test_concurrent_ocr_cache_stress() {
     use helpers::{get_test_file_path, skip_if_missing};
+    use std::sync::atomic::Ordering;
 
     if skip_if_missing("images/ocr_image.jpg") {
         tracing::debug!("Skipping OCR cache stress test: test file not available");

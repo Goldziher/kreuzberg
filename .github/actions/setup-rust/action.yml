@@ -87,6 +87,16 @@ runs:
           echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
         fi
         base="${RUSTFLAGS:-"-D warnings -A unpredictable-function-pointer-comparisons"}"
+        if [ "${{ inputs.target }}" = "wasm32-unknown-unknown" ]; then
+          base+=" -C target-feature=+atomics,+bulk-memory"
+          base+=" -C link-arg=--shared-memory"
+          base+=" -C link-arg=--max-memory=2147483648"
+          base+=" -C link-arg=--import-memory"
+          base+=" -C link-arg=--export=__wasm_init_tls"
+          base+=" -C link-arg=--export=__tls_size"
+          base+=" -C link-arg=--export=__tls_align"
+          base+=" -C link-arg=--export=__tls_base"
+        fi
         if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W fn_ptr_eq - 2>&1)"; then
           :
         fi

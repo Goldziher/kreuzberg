@@ -1,9 +1,9 @@
 use super::StableApiDefinition;
 use crate::{
-    VALUE, debug_ruby_assert_type,
+    debug_ruby_assert_type,
     internal::{RArray, RString},
     ruby_value_type::RUBY_T_DATA,
-    value_type,
+    value_type, VALUE,
 };
 use std::{
     os::raw::{c_char, c_long},
@@ -275,14 +275,20 @@ impl StableApiDefinition for Definition {
     unsafe fn rtypeddata_p(&self, obj: VALUE) -> bool {
         debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_p called on non-T_DATA object");
 
+        // Access the RTypedData struct
         let rdata = obj as *const crate::internal::RTypedData;
         let typed_flag = (*rdata).typed_flag;
+        // Valid typed_flag values are 1, 2, or 3
         typed_flag != 0 && typed_flag <= 3
     }
 
     #[inline]
     unsafe fn rtypeddata_embedded_p(&self, obj: VALUE) -> bool {
-        debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_embedded_p called on non-T_DATA object");
+        debug_ruby_assert_type!(
+            obj,
+            RUBY_T_DATA,
+            "rtypeddata_embedded_p called on non-T_DATA object"
+        );
 
         let rdata = obj as *const crate::internal::RTypedData;
         let typed_flag = (*rdata).typed_flag;
@@ -296,7 +302,11 @@ impl StableApiDefinition for Definition {
 
     #[inline]
     unsafe fn rtypeddata_type(&self, obj: VALUE) -> *const crate::rb_data_type_t {
-        debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_type called on non-T_DATA object");
+        debug_ruby_assert_type!(
+            obj,
+            RUBY_T_DATA,
+            "rtypeddata_type called on non-T_DATA object"
+        );
 
         let rdata = obj as *const crate::internal::RTypedData;
         (*rdata).type_
@@ -304,14 +314,24 @@ impl StableApiDefinition for Definition {
 
     #[inline]
     unsafe fn rtypeddata_get_data(&self, obj: VALUE) -> *mut std::ffi::c_void {
-        debug_ruby_assert_type!(obj, RUBY_T_DATA, "rtypeddata_get_data called on non-T_DATA object");
+        debug_ruby_assert_type!(
+            obj,
+            RUBY_T_DATA,
+            "rtypeddata_get_data called on non-T_DATA object"
+        );
 
         if self.rtypeddata_embedded_p(obj) {
+            // For embedded data, calculate pointer based on struct layout
+            // The formula matches Ruby's implementation:
+            // embedded_typed_data_size = sizeof(RTypedData) - sizeof(void *)
             const EMBEDDED_TYPED_DATA_SIZE: usize =
-                std::mem::size_of::<crate::internal::RTypedData>() - std::mem::size_of::<*mut std::ffi::c_void>();
+                std::mem::size_of::<crate::internal::RTypedData>()
+                    - std::mem::size_of::<*mut std::ffi::c_void>();
 
+            // Return address after the header as the data pointer
             (obj as *mut u8).add(EMBEDDED_TYPED_DATA_SIZE) as *mut std::ffi::c_void
         } else {
+            // For non-embedded data, return the data field directly
             let rdata = obj as *const crate::internal::RTypedData;
             (*rdata).data
         }

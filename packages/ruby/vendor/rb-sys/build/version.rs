@@ -23,8 +23,11 @@ impl Version {
 
     pub fn current(rbconfig: &RbConfig) -> Version {
         match (rbconfig.get("MAJOR"), rbconfig.get("MINOR")) {
-            (Some(major), Some(minor)) => Version::new(major.parse::<u32>().unwrap(), minor.parse::<u32>().unwrap()),
+            (Some(major), Some(minor)) => {
+                Version::new(major.parse::<u32>().unwrap(), minor.parse::<u32>().unwrap())
+            }
             _ => {
+                // Try to parse out the first 3 components of the version string (for truffleruby)
                 let version_string = rbconfig.get("ruby_version").expect("ruby_version");
                 let mut parts = version_string.split('.').map(|s| s.parse::<u32>());
                 let major = parts.next().expect("major").unwrap();
