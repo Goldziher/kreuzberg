@@ -13,6 +13,17 @@ enum CliMode {
     Batch,
 }
 
+/// CLI enum for output format
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum OutputFormat {
+    /// JSON format (default)
+    Json,
+    /// HTML format with interactive visualizations
+    Html,
+    /// Both JSON and HTML formats
+    Both,
+}
+
 impl From<CliMode> for BenchmarkMode {
     fn from(mode: CliMode) -> Self {
         match mode {
@@ -87,6 +98,15 @@ enum Commands {
         /// Enable quality assessment
         #[arg(long, default_value = "true")]
         measure_quality: bool,
+
+        /// Output format: json, html, or both
+        #[arg(long, value_enum, default_value = "json")]
+        format: OutputFormat,
+
+        /// Benchmark execution date (e.g., "2025-12-13 14:30:00 UTC")
+        /// Used for marking when the benchmark was run in the HTML output
+        #[arg(long)]
+        benchmark_date: Option<String>,
     },
 }
 
@@ -141,6 +161,8 @@ async fn main() -> Result<()> {
             iterations,
             ocr,
             measure_quality,
+            format,
+            benchmark_date,
         } => {
             use benchmark_harness::{AdapterRegistry, BenchmarkRunner, NativeAdapter};
             use kreuzberg::{ExtractionConfig, OcrConfig};
@@ -467,14 +489,37 @@ async fn main() -> Result<()> {
             println!("  Failed: {}", failure_count);
             println!("  Total: {}", results.len());
 
-            use benchmark_harness::{write_by_extension_analysis, write_json};
-            let output_file = output.join("results.json");
-            write_json(&results, &output_file)?;
-            println!("\nResults written to: {}", output_file.display());
+            use benchmark_harness::{write_by_extension_analysis, write_html, write_json};
 
-            let by_ext_file = output.join("by-extension.json");
-            write_by_extension_analysis(&results, &by_ext_file)?;
-            println!("Per-extension analysis written to: {}", by_ext_file.display());
+            match format {
+                OutputFormat::Json => {
+                    let output_file = output.join("results.json");
+                    write_json(&results, &output_file)?;
+                    println!("\nResults written to: {}", output_file.display());
+
+                    let by_ext_file = output.join("by-extension.json");
+                    write_by_extension_analysis(&results, &by_ext_file)?;
+                    println!("Per-extension analysis written to: {}", by_ext_file.display());
+                }
+                OutputFormat::Html => {
+                    let html_file = output.join("index.html");
+                    write_html(&results, &html_file, benchmark_date.as_deref())?;
+                    println!("\nHTML report written to: {}", html_file.display());
+                }
+                OutputFormat::Both => {
+                    let output_file = output.join("results.json");
+                    write_json(&results, &output_file)?;
+                    println!("\nResults written to: {}", output_file.display());
+
+                    let by_ext_file = output.join("by-extension.json");
+                    write_by_extension_analysis(&results, &by_ext_file)?;
+                    println!("Per-extension analysis written to: {}", by_ext_file.display());
+
+                    let html_file = output.join("index.html");
+                    write_html(&results, &html_file, benchmark_date.as_deref())?;
+                    println!("HTML report written to: {}", html_file.display());
+                }
+            }
 
             Ok(())
         }

@@ -81,6 +81,7 @@ docker-compose.yaml
 docker-logs/
 docs/_build/
 docs/build/
+docs/benchmarks/charts/
 examples.txt
 GEMINI.md
 htmlcov/

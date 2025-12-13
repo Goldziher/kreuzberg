@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `char_start` → `byte_start` (UTF-8 byte offset)
   - `char_end` → `byte_end` (UTF-8 byte offset)
   - Existing code using `char_start`/`char_end` must be updated
-  - See [migration guide](docs/migration/v3-to-v4.md#byte-offset-changes) for details
+  - See [migration guide](docs/migration/v3-to-v4/#field-renames-character-to-byte-offsets) for details
 
 ### Fixed
 - Comprehensive lint cleanup across the crate and tests (clippy warnings resolved).

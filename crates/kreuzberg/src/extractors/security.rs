@@ -1,5 +1,3 @@
-#![cfg(feature = "archives")]
-
 //! Security utilities for document extractors.
 //!
 //! This module provides validation and protection mechanisms against common attacks:

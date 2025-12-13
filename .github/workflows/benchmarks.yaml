@@ -1406,3 +1406,44 @@ jobs:
           name: benchmarks-tika-batch-${{ matrix.mode }}-${{ github.run_id }}
           path: benchmark-results/
           retention-days: 30
+
+  aggregate-results:
+    name: Aggregate Results & Generate Visualizations
+    needs: [setup, bench-native, bench-python-sync, bench-python-async, bench-python-batch, bench-node-async, bench-node-batch, bench-wasm-async, bench-wasm-batch, bench-ruby-sync, bench-ruby-batch, bench-go-sync, bench-go-batch, bench-java-sync, bench-csharp-sync, bench-docling, bench-docling-batch, bench-markitdown, bench-unstructured, bench-tika-sync, bench-tika-batch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "benchmarks-*"
+          path: benchmark-results/
+          merge-multiple: true
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key-prefix: benchmarks-aggregate
+
+      - name: Build benchmark harness
+        run: cargo build --release -p benchmark-harness
+
+      - name: Generate HTML visualization
+        run: |
+          ./target/release/benchmark-harness run \
+            --fixtures benchmark-results/ \
+            --output benchmark-output/ \
+            --format html
+
+      - name: Upload visualization artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmark-visualization-html
+          path: benchmark-output/
+          retention-days: 90

@@ -479,6 +479,7 @@ version = "4.0.0-rc.7"
 dependencies = [
  "ahash",
  "async-trait",
+ "chrono",
  "clap",
  "kreuzberg",
  "num_cpus",

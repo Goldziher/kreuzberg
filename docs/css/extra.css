@@ -992,3 +992,31 @@ nav.md-nav--secondary > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list 
 	--md-default-fg-color--lightest: rgba(240, 240, 245, 0.5);
 	--md-default-fg-color--lighter: rgba(220, 220, 230, 0.5);
 }
+
+/* Benchmark dashboard styling */
+.benchmark-dashboard {
+	margin: 2rem 0;
+}
+
+.benchmark-dashboard iframe {
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	border-radius: 8px;
+}
+
+.full-width {
+	margin: 0 -2rem;
+	padding: 2rem;
+	background: var(--md-default-bg-color);
+}
+
+/* Chart container responsive adjustments */
+@media (max-width: 768px) {
+	.full-width {
+		margin: 0 -1rem;
+		padding: 1rem;
+	}
+
+	.benchmark-dashboard iframe {
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+}

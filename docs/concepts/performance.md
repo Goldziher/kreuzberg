@@ -336,6 +336,20 @@ pub fn supported_mime_types(&self) -> Vec<&str> {
 }
 ```
 
+## Benchmarks
+
+For detailed performance comparisons against alternative libraries, see:
+
+- [Benchmark Overview](../benchmarks/index.md) - Introduction to benchmark suite
+- [Latest Results](../benchmarks/latest.md) - Interactive charts and data visualization
+
+Interactive charts show:
+
+- Duration (p95, p50 latency)
+- Throughput (MB/s)
+- Memory usage (peak, percentiles)
+- Success rates across file types
+
 ## Related Documentation
 
 - [Architecture](architecture.md) - System design enabling performance

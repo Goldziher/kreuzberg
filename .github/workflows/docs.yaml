@@ -50,6 +50,103 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Find latest benchmark workflow run
+        id: find-benchmark
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Find the last successful benchmark workflow run
+          RUN_ID=$(gh run list \
+            --workflow=benchmarks.yaml \
+            --status=success \
+            --limit=1 \
+            --json databaseId \
+            --jq '.[0].databaseId')
+
+          if [ -n "$RUN_ID" ]; then
+            echo "Found benchmark run: $RUN_ID"
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+            # Get the run creation date for metadata
+            RUN_DATE=$(gh run view "$RUN_ID" --json createdAt --jq '.createdAt')
+            echo "run_date=$RUN_DATE" >> "$GITHUB_OUTPUT"
+            echo "Benchmark run date: $RUN_DATE"
+          else
+            echo "No successful benchmark runs found"
+            exit 1
+          fi
+
+      - name: Download benchmark visualization artifact
+        id: download-viz
+        if: steps.find-benchmark.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Download the benchmark-visualization-html artifact
+          gh run download ${{ steps.find-benchmark.outputs.run_id }} \
+            --name benchmark-visualization-html \
+            --dir benchmark-viz-temp
+
+          # Copy to docs location
+          mkdir -p docs/benchmarks/charts
+          cp -r benchmark-viz-temp/* docs/benchmarks/charts/
+
+          echo "Benchmark visualization downloaded and deployed"
+
+      - name: Ensure benchmark placeholder files exist
+        if: steps.download-viz.outcome != 'success'
+        run: |
+          mkdir -p docs/benchmarks/charts
+
+          # Create placeholder HTML
+          cat > docs/benchmarks/charts/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Kreuzberg Benchmarks - Pending</title>
+              <style>
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                      background: #f5f7fa;
+                      color: #2d3748;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      min-height: 100vh;
+                      margin: 0;
+                  }
+                  .container {
+                      text-align: center;
+                      padding: 3rem;
+                      background: white;
+                      border-radius: 8px;
+                      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                      max-width: 600px;
+                  }
+                  h1 { color: #1a202c; margin-bottom: 1rem; }
+                  p { color: #718096; line-height: 1.6; }
+                  .icon { font-size: 4rem; margin-bottom: 1rem; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="icon">📊</div>
+                  <h1>Benchmark Results Pending</h1>
+                  <p>Benchmark visualizations will be generated when the benchmark workflow runs.</p>
+                  <p>Check <a href="https://github.com/${{ github.repository }}/actions/workflows/benchmarks.yaml">GitHub Actions</a> for benchmark status.</p>
+              </div>
+          </body>
+          </html>
+          EOF
+
+          # Create empty JSON placeholders
+          echo '[]' > docs/benchmarks/charts/results.json
+          echo '{"by_extension": {}}' > docs/benchmarks/charts/by-extension.json
+
       - name: Build v4 documentation with mike
         run: |
           uv run mike deploy --update-aliases 4.0 latest
