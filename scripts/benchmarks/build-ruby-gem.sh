@@ -13,8 +13,15 @@ if [ -z "$PLATFORM" ]; then
 fi
 
 # Resolve workspace root to find native libraries
-WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-LIB_DIR="$WORKSPACE_ROOT/target/release"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+
+source "$REPO_ROOT/scripts/lib/common.sh"
+source "$REPO_ROOT/scripts/lib/library-paths.sh"
+
+validate_repo_root "$REPO_ROOT" || exit 1
+
+LIB_DIR="$REPO_ROOT/target/release"
 
 # Verify native libraries exist before building
 if [ ! -d "$LIB_DIR" ]; then
@@ -22,23 +29,22 @@ if [ ! -d "$LIB_DIR" ]; then
 	exit 1
 fi
 
-# Set library search paths so the Ruby native extension can find libpdfium and other dependencies
-export LD_LIBRARY_PATH="${LIB_DIR}:${LD_LIBRARY_PATH:-}"
-export DYLD_LIBRARY_PATH="${LIB_DIR}:${DYLD_LIBRARY_PATH:-}"
+# Setup Rust FFI library paths
+setup_rust_ffi_paths "$REPO_ROOT"
 
 echo "Ruby gem build environment:"
-echo "  WORKSPACE_ROOT: $WORKSPACE_ROOT"
+echo "  REPO_ROOT: $REPO_ROOT"
 echo "  LIB_DIR: $LIB_DIR"
-echo "  LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-echo "  DYLD_LIBRARY_PATH: $DYLD_LIBRARY_PATH"
+echo "  LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:-}"
+echo "  DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH:-}"
 echo ""
 
 # Vendor kreuzberg core before building gem
 echo "Vendoring kreuzberg core..."
-bash "$WORKSPACE_ROOT/scripts/ci/ruby/vendor-kreuzberg-core.sh"
+bash "$REPO_ROOT/scripts/ci/ruby/vendor-kreuzberg-core.sh"
 echo ""
 
-cd "$WORKSPACE_ROOT/packages/ruby"
+cd "$REPO_ROOT/packages/ruby"
 echo "Building Ruby native gem in: $(pwd)"
 
 # Install Ruby dependencies

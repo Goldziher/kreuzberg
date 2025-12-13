@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Runs benchmark harness for a specific framework and mode
-# Required environment variables:
-#   - FRAMEWORK: Name of framework to benchmark (e.g., kreuzberg-native, kreuzberg-python-sync)
-#   - MODE: Benchmark mode - "single-file" or "batch"
-#   - ITERATIONS: Number of iterations to run
-#   - TIMEOUT: Timeout per document in seconds (default: 900)
-# Optional environment variables:
-#   - FIXTURES_DIR: Path to fixtures directory (default: tools/benchmark-harness/fixtures)
-#   - HARNESS_PATH: Path to benchmark harness binary (default: ./target/release/benchmark-harness)
-
 set -euo pipefail
 
 FRAMEWORK="${FRAMEWORK:-}"
@@ -23,9 +13,17 @@ if [ -z "$FRAMEWORK" ] || [ -z "$MODE" ]; then
 	exit 1
 fi
 
-# Set PKG_CONFIG_PATH for Go bindings (needed for kreuzberg-go-* frameworks)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-export PKG_CONFIG_PATH="${REPO_ROOT}/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
+
+# Source shared utilities
+source "${REPO_ROOT}/scripts/lib/common.sh"
+source "${REPO_ROOT}/scripts/lib/library-paths.sh"
+
+# Validate repository structure
+validate_repo_root "$REPO_ROOT" || exit 1
+
+# Setup Go paths for any Go-based frameworks
+setup_go_paths "$REPO_ROOT"
 
 OUTPUT_DIR="benchmark-results/${FRAMEWORK}-${MODE}"
 rm -rf "${OUTPUT_DIR}"

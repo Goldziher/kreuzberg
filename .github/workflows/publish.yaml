@@ -1354,7 +1354,7 @@ jobs:
 
       - name: Setup Tesseract environment
         shell: bash
-        run: source scripts/ci/csharp/setup-tessdata.sh && echo "TESSDATA_PREFIX=${TESSDATA_PREFIX}" >> "$GITHUB_ENV"
+        run: source scripts/lib/tessdata.sh && setup_tessdata && echo "TESSDATA_PREFIX=${TESSDATA_PREFIX}" >> "$GITHUB_ENV"
 
       - name: Build FFI library
         run: cargo build -p kreuzberg-ffi --release

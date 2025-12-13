@@ -237,10 +237,6 @@ jobs:
         run: |
           uv pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
-      - name: Setup library paths
-        shell: bash
-        run: bash scripts/ci/python/setup-library-paths.sh
-
       - name: Run Python tests
         shell: bash
         run: bash scripts/ci/python/run-tests.sh "${{ matrix.coverage }}"

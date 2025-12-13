@@ -1,0 +1,215 @@
+name: Setup Kreuzberg Environment
+description: >
+  Configure native library paths for Kreuzberg across all platforms
+  (PDFium, ONNX Runtime, Rust FFI, Go cgo).
+  Exports environment variables to $GITHUB_ENV for persistence across steps.
+
+inputs:
+  mode:
+    description: Setup mode - 'full' (all libraries) or 'minimal' (FFI only)
+    required: false
+    default: 'full'
+  enable-cgo:
+    description: Enable Go cgo compilation environment setup
+    required: false
+    default: 'false'
+  ffi-lib-dir:
+    description: Path to Rust FFI library directory (default is target/release)
+    required: false
+    default: 'target/release'
+
+outputs:
+  pkg-config-path:
+    description: PKG_CONFIG_PATH for kreuzberg-ffi
+    value: ${{ steps.setup-env.outputs.pkg-config-path }}
+  ld-library-path:
+    description: LD_LIBRARY_PATH for Unix-like systems
+    value: ${{ steps.setup-env.outputs.ld-library-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Determine platform
+      id: platform
+      shell: bash
+      run: |
+        case "$RUNNER_OS" in
+        Linux)
+          echo "platform=Linux" >> "$GITHUB_OUTPUT"
+          ;;
+        macOS)
+          echo "platform=macOS" >> "$GITHUB_OUTPUT"
+          ;;
+        Windows)
+          echo "platform=Windows" >> "$GITHUB_OUTPUT"
+          ;;
+        *)
+          echo "platform=unknown" >> "$GITHUB_OUTPUT"
+          ;;
+        esac
+
+    - name: Setup library paths (Unix-like)
+      if: runner.os != 'Windows'
+      id: setup-unix
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        REPO_ROOT="${GITHUB_WORKSPACE}"
+        echo "REPO_ROOT=${REPO_ROOT}" >> "$GITHUB_ENV"
+
+        # Initialize path variables
+        LD_LIBRARY_PATH="${REPO_ROOT}/${{ inputs.ffi-lib-dir }}:${LD_LIBRARY_PATH:-}"
+        DYLD_LIBRARY_PATH="${REPO_ROOT}/${{ inputs.ffi-lib-dir }}:${DYLD_LIBRARY_PATH:-}"
+        DYLD_FALLBACK_LIBRARY_PATH="${REPO_ROOT}/${{ inputs.ffi-lib-dir }}:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+        PKG_CONFIG_PATH="${REPO_ROOT}/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
+
+        # Add PDFium paths if KREUZBERG_PDFIUM_PREBUILT is set
+        if [ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
+          LD_LIBRARY_PATH="${KREUZBERG_PDFIUM_PREBUILT}/lib:${LD_LIBRARY_PATH}"
+          DYLD_LIBRARY_PATH="${KREUZBERG_PDFIUM_PREBUILT}/lib:${DYLD_LIBRARY_PATH}"
+          DYLD_FALLBACK_LIBRARY_PATH="${KREUZBERG_PDFIUM_PREBUILT}/lib:${DYLD_FALLBACK_LIBRARY_PATH}"
+          echo "✓ PDFium paths configured"
+        fi
+
+        # Add ONNX Runtime paths if ORT_LIB_LOCATION is set (only for full mode)
+        if [ "${{ inputs.mode }}" = "full" ] && [ -n "${ORT_LIB_LOCATION:-}" ]; then
+          LD_LIBRARY_PATH="${ORT_LIB_LOCATION}:${LD_LIBRARY_PATH}"
+          DYLD_LIBRARY_PATH="${ORT_LIB_LOCATION}:${DYLD_LIBRARY_PATH}"
+          DYLD_FALLBACK_LIBRARY_PATH="${ORT_LIB_LOCATION}:${DYLD_FALLBACK_LIBRARY_PATH}"
+          echo "✓ ONNX Runtime paths configured"
+        fi
+
+        # Export to GITHUB_ENV for persistence
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+        echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+        echo "DYLD_FALLBACK_LIBRARY_PATH=${DYLD_FALLBACK_LIBRARY_PATH}" >> "$GITHUB_ENV"
+        echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+
+        # Output for action consumers
+        echo "ld-library-path=${LD_LIBRARY_PATH}" >> "$GITHUB_OUTPUT"
+        echo "pkg-config-path=${PKG_CONFIG_PATH}" >> "$GITHUB_OUTPUT"
+
+        echo "✓ Unix library paths configured"
+
+    - name: Setup library paths (Windows)
+      if: runner.os == 'Windows'
+      id: setup-windows
+      shell: pwsh
+      run: |
+        $REPO_ROOT = $env:GITHUB_WORKSPACE
+        $env:REPO_ROOT = $REPO_ROOT
+        [System.Environment]::SetEnvironmentVariable("REPO_ROOT", $REPO_ROOT, "Process")
+
+        $FFI_LIB_DIR = "${{ inputs.ffi-lib-dir }}"
+        $FFI_PATH = Join-Path $REPO_ROOT $FFI_LIB_DIR
+
+        # Initialize PATH variable
+        $env:PATH = "$FFI_PATH;$env:PATH"
+
+        # For Windows GNU target
+        if (Test-Path "target/x86_64-pc-windows-gnu/release") {
+          $env:PATH = "$(Join-Path $REPO_ROOT 'target/x86_64-pc-windows-gnu/release');$env:PATH"
+          Write-Host "✓ Windows GNU target paths configured"
+        }
+
+        # Add PDFium paths if available
+        if ($env:KREUZBERG_PDFIUM_PREBUILT) {
+          $env:PATH = "$env:KREUZBERG_PDFIUM_PREBUILT/bin;$env:PATH"
+          Write-Host "✓ PDFium paths configured"
+        }
+
+        # Add ONNX Runtime paths if available (only for full mode)
+        if ("${{ inputs.mode }}" -eq "full" -and $env:ORT_LIB_LOCATION) {
+          $env:PATH = "$env:ORT_LIB_LOCATION;$env:PATH"
+          Write-Host "✓ ONNX Runtime paths configured"
+        }
+
+        # Export to GITHUB_ENV for persistence
+        Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:PATH"
+        Add-Content -Path $env:GITHUB_ENV -Value "REPO_ROOT=$REPO_ROOT"
+
+        Write-Host "✓ Windows library paths configured"
+
+    - name: Setup Go cgo environment (Unix-like)
+      if: runner.os != 'Windows' && inputs.enable-cgo == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        REPO_ROOT="${GITHUB_WORKSPACE}"
+        FFI_LIB_DIR="${{ inputs.ffi-lib-dir }}"
+        FFI_PATH="${REPO_ROOT}/${FFI_LIB_DIR}"
+
+        # cgo compilation flags
+        CGO_ENABLED=1
+        CGO_CFLAGS="-I${REPO_ROOT}/crates/kreuzberg-ffi/include"
+        CGO_LDFLAGS="-L${FFI_PATH} -lkreuzberg_ffi"
+
+        # Add rpath for runtime library resolution (macOS and Linux)
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          CGO_LDFLAGS="${CGO_LDFLAGS} -Wl,-rpath,${FFI_PATH}"
+        elif [ "$RUNNER_OS" = "Linux" ]; then
+          CGO_LDFLAGS="${CGO_LDFLAGS} -Wl,-rpath,${FFI_PATH}"
+        fi
+
+        # Export to GITHUB_ENV
+        echo "CGO_ENABLED=${CGO_ENABLED}" >> "$GITHUB_ENV"
+        echo "CGO_CFLAGS=${CGO_CFLAGS}" >> "$GITHUB_ENV"
+        echo "CGO_LDFLAGS=${CGO_LDFLAGS}" >> "$GITHUB_ENV"
+
+        echo "✓ Go cgo environment configured"
+
+    - name: Setup Go cgo environment (Windows)
+      if: runner.os == 'Windows' && inputs.enable-cgo == 'true'
+      shell: pwsh
+      run: |
+        $REPO_ROOT = $env:GITHUB_WORKSPACE
+        $FFI_LIB_DIR = "${{ inputs.ffi-lib-dir }}"
+        $FFI_PATH = Join-Path $REPO_ROOT $FFI_LIB_DIR
+
+        # Try Windows GNU target first
+        $GNU_TARGET_PATH = Join-Path $REPO_ROOT "target/x86_64-pc-windows-gnu/release"
+        if (Test-Path $GNU_TARGET_PATH) {
+          $FFI_PATH = $GNU_TARGET_PATH
+        }
+
+        # cgo settings for Windows GNU
+        $CGO_ENABLED = "1"
+        $CGO_CFLAGS = "-I$(Join-Path $REPO_ROOT 'crates/kreuzberg-ffi/include')"
+        $CGO_LDFLAGS = "-L$FFI_PATH -lkreuzberg_ffi -static-libgcc -static-libstdc++"
+
+        Add-Content -Path $env:GITHUB_ENV -Value "CGO_ENABLED=$CGO_ENABLED"
+        Add-Content -Path $env:GITHUB_ENV -Value "CGO_CFLAGS=$CGO_CFLAGS"
+        Add-Content -Path $env:GITHUB_ENV -Value "CGO_LDFLAGS=$CGO_LDFLAGS"
+
+        Write-Host "✓ Go cgo environment configured (Windows)"
+
+    - name: Verify library paths
+      shell: bash
+      run: |
+        set +e  # Don't exit on errors for diagnostics
+        echo "=========================================="
+        echo "Kreuzberg Environment Configuration"
+        echo "=========================================="
+        echo "Platform: $RUNNER_OS"
+        echo "Repository Root: ${REPO_ROOT:-<not set>}"
+        echo ""
+        echo "=== PKG_CONFIG ==="
+        echo "PKG_CONFIG_PATH: ${PKG_CONFIG_PATH:-<not set>}"
+        echo ""
+        echo "=== Library Paths (Unix) ==="
+        echo "LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:-<not set>}"
+        echo "DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH:-<not set>}"
+        echo "DYLD_FALLBACK_LIBRARY_PATH: ${DYLD_FALLBACK_LIBRARY_PATH:-<not set>}"
+        echo ""
+        echo "=== Go cgo (if enabled) ==="
+        echo "CGO_ENABLED: ${CGO_ENABLED:-<not set>}"
+        echo "CGO_CFLAGS: ${CGO_CFLAGS:-<not set>}"
+        echo "CGO_LDFLAGS: ${CGO_LDFLAGS:-<not set>}"
+        echo ""
+        echo "=== Additional Paths ==="
+        echo "TESSDATA_PREFIX: ${TESSDATA_PREFIX:-<not set>}"
+        echo "KREUZBERG_PDFIUM_PREBUILT: ${KREUZBERG_PDFIUM_PREBUILT:-<not set>}"
+        echo "ORT_LIB_LOCATION: ${ORT_LIB_LOCATION:-<not set>}"
+        echo "=========================================="

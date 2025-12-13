@@ -45,7 +45,8 @@ scripts/ci/
 
 For library path setup scripts:
 ```bash
-source ./scripts/ci/python/setup-library-paths.sh
+source ./scripts/lib/library-paths.sh
+setup_all_library_paths
 ./scripts/ci/python/run-tests.sh true
 ```
 
@@ -73,14 +74,12 @@ source ./scripts/ci/python/setup-library-paths.sh
 ### Node/TypeScript (`node/`)
 - `build-napi.sh` - Build NAPI bindings with artifact collection
 - `unpack-bindings.sh` - Unpack and install bindings from tarball
-- `setup-library-paths.sh` - Configure PDFium and ONNX Runtime paths
 
 ### Python (`python/`)
 - `clean-artifacts.sh` - Clean previous wheel artifacts
 - `smoke-test-wheel.sh` - Test wheel installation
 - `install-wheel.sh` - Install platform-specific wheel
 - `run-tests.sh` - Run tests with optional coverage
-- `setup-library-paths.sh` - Configure PDFium and ONNX Runtime paths
 
 ### Ruby (`ruby/`)
 - `install-ruby-deps.sh` - Install bundle dependencies (Unix)
@@ -129,7 +128,7 @@ source ./scripts/ci/python/setup-library-paths.sh
 - Library path setup scripts handle Windows/Linux/macOS
 
 ### Reusability
-- `setup-library-paths.sh` shared by Python and Node
+- `library-paths.sh` (`scripts/lib/`) - Shared by all workflows for native library configuration
 - `configure-bindgen-windows.ps1` used by Ruby and Rust
 - Common patterns consolidated into single scripts
 

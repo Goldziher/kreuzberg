@@ -11,12 +11,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # scripts/ci/csharp lives three levels below repo root
 REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
-# Validate REPO_ROOT is correct by checking for Cargo.toml
-if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
-	echo "Error: REPO_ROOT validation failed. Expected Cargo.toml at: $REPO_ROOT/Cargo.toml" >&2
-	echo "REPO_ROOT resolved to: $REPO_ROOT" >&2
-	exit 1
-fi
+source "$REPO_ROOT/scripts/lib/common.sh"
+source "$REPO_ROOT/scripts/lib/library-paths.sh"
+source "$REPO_ROOT/scripts/lib/tessdata.sh"
+
+validate_repo_root "$REPO_ROOT" || exit 1
 
 if [ -z "${KREUZBERG_FFI_DIR:-}" ]; then
 	echo "Error: KREUZBERG_FFI_DIR environment variable not set"
@@ -30,13 +29,9 @@ if ! command -v tesseract &>/dev/null; then
 	exit 1
 fi
 
-# Verify TESSDATA_PREFIX
-if [ -z "${TESSDATA_PREFIX:-}" ]; then
-	echo "Warning: TESSDATA_PREFIX not set, sourcing setup script"
-	# shellcheck disable=SC1091 # file is in-repo but shellcheck cannot resolve the relative include
-	# shellcheck source=scripts/ci/csharp/setup-tessdata.sh
-	source "$SCRIPT_DIR/setup-tessdata.sh"
-fi
+# Setup Rust FFI and Tesseract paths
+setup_rust_ffi_paths "$REPO_ROOT"
+setup_tessdata
 
 echo "=== Running C# tests ==="
 echo "FFI directory: $KREUZBERG_FFI_DIR"

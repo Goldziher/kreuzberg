@@ -1,0 +1,152 @@
+name: Setup Go CGO Environment
+description: >
+  Configure Go cgo compilation and runtime environment for linking against
+  Kreuzberg FFI library. Sets PKG_CONFIG_PATH, library paths, CGO_LDFLAGS
+  with rpath, and CGO_ENABLED. Handles Windows GNU target specially.
+
+inputs:
+  ffi-lib-dir:
+    description: Path to Rust FFI library directory (default is target/release)
+    required: false
+    default: 'target/release'
+  enable-rpath:
+    description: Add rpath (-Wl,-rpath,...) to CGO_LDFLAGS for runtime library resolution
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go cgo environment (Unix-like)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        REPO_ROOT="${GITHUB_WORKSPACE}"
+        FFI_LIB_DIR="${{ inputs.ffi-lib-dir }}"
+        FFI_PATH="${REPO_ROOT}/${FFI_LIB_DIR}"
+
+        # Verify FFI library exists
+        if [ ! -d "$FFI_PATH" ]; then
+          echo "Error: FFI library directory not found: $FFI_PATH" >&2
+          exit 1
+        fi
+
+        # pkg-config path for finding kreuzberg-ffi.pc
+        PKG_CONFIG_PATH="${REPO_ROOT}/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
+
+        # Runtime library paths for dynamic linking
+        LD_LIBRARY_PATH="${FFI_PATH}:${LD_LIBRARY_PATH:-}"
+        DYLD_LIBRARY_PATH="${FFI_PATH}:${DYLD_LIBRARY_PATH:-}"
+        DYLD_FALLBACK_LIBRARY_PATH="${FFI_PATH}:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+
+        # cgo compilation settings
+        CGO_ENABLED=1
+        CGO_CFLAGS="-I${REPO_ROOT}/crates/kreuzberg-ffi/include"
+        CGO_LDFLAGS="-L${FFI_PATH} -lkreuzberg_ffi"
+
+        # Add rpath for runtime library resolution if enabled
+        if [ "${{ inputs.enable-rpath }}" = "true" ]; then
+          CGO_LDFLAGS="${CGO_LDFLAGS} -Wl,-rpath,${FFI_PATH}"
+        fi
+
+        # Export all variables to GITHUB_ENV for persistence across steps
+        echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+        echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+        echo "DYLD_FALLBACK_LIBRARY_PATH=${DYLD_FALLBACK_LIBRARY_PATH}" >> "$GITHUB_ENV"
+        echo "CGO_ENABLED=${CGO_ENABLED}" >> "$GITHUB_ENV"
+        echo "CGO_CFLAGS=${CGO_CFLAGS}" >> "$GITHUB_ENV"
+        echo "CGO_LDFLAGS=${CGO_LDFLAGS}" >> "$GITHUB_ENV"
+
+        echo "✓ Go cgo environment configured"
+        echo "  FFI Library Path: $FFI_PATH"
+        echo "  PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+        echo "  CGO_LDFLAGS: $CGO_LDFLAGS"
+
+    - name: Setup Go cgo environment (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $REPO_ROOT = $env:GITHUB_WORKSPACE
+        $FFI_LIB_DIR = "${{ inputs.ffi-lib-dir }}"
+        $FFI_PATH = Join-Path $REPO_ROOT $FFI_LIB_DIR
+
+        # On Windows with GNU target, prefer the GNU target release directory
+        $GNU_TARGET_PATH = Join-Path $REPO_ROOT "target/x86_64-pc-windows-gnu/release"
+        if (Test-Path $GNU_TARGET_PATH) {
+          $FFI_PATH = $GNU_TARGET_PATH
+          Write-Host "Using Windows GNU target path: $FFI_PATH"
+        } elseif (-not (Test-Path $FFI_PATH)) {
+          Write-Host "Error: FFI library directory not found: $FFI_PATH" -ForegroundColor Red
+          exit 1
+        }
+
+        # Add FFI library directory to PATH for runtime linking
+        $env:PATH = "$FFI_PATH;$env:PATH"
+
+        # pkg-config path for finding kreuzberg-ffi.pc
+        $PKG_CONFIG_PATH = "$(Join-Path $REPO_ROOT 'crates/kreuzberg-ffi');$env:PKG_CONFIG_PATH"
+
+        # cgo settings for Windows GNU target
+        # Note: Windows GNU uses static linking flags to avoid runtime dependencies
+        $CGO_ENABLED = "1"
+        $CGO_CFLAGS = "-I$(Join-Path $REPO_ROOT 'crates/kreuzberg-ffi/include')"
+        $CGO_LDFLAGS = "-L$FFI_PATH -lkreuzberg_ffi -static-libgcc -static-libstdc++"
+
+        # Export all variables to GITHUB_ENV for persistence
+        Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:PATH"
+        Add-Content -Path $env:GITHUB_ENV -Value "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        Add-Content -Path $env:GITHUB_ENV -Value "CGO_ENABLED=$CGO_ENABLED"
+        Add-Content -Path $env:GITHUB_ENV -Value "CGO_CFLAGS=$CGO_CFLAGS"
+        Add-Content -Path $env:GITHUB_ENV -Value "CGO_LDFLAGS=$CGO_LDFLAGS"
+
+        Write-Host "✓ Go cgo environment configured (Windows)"
+        Write-Host "  FFI Library Path: $FFI_PATH"
+        Write-Host "  PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+        Write-Host "  CGO_LDFLAGS: $CGO_LDFLAGS"
+
+    - name: Verify Go cgo configuration
+      shell: bash
+      run: |
+        set +e  # Don't exit on errors for diagnostics
+        echo "=========================================="
+        echo "Go CGO Environment Configuration"
+        echo "=========================================="
+        echo "Repository Root: ${GITHUB_WORKSPACE}"
+        echo "Platform: $RUNNER_OS"
+        echo ""
+        echo "=== pkg-config ==="
+        echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH:-<not set>}"
+        if [ -f "${GITHUB_WORKSPACE}/crates/kreuzberg-ffi/kreuzberg-ffi.pc" ]; then
+          echo "✓ kreuzberg-ffi.pc found"
+        else
+          echo "⚠ kreuzberg-ffi.pc not found (may not be built yet)"
+        fi
+        echo ""
+        echo "=== CGO Compilation Settings ==="
+        echo "CGO_ENABLED=${CGO_ENABLED:-<not set>}"
+        echo "CGO_CFLAGS=${CGO_CFLAGS:-<not set>}"
+        echo "CGO_LDFLAGS=${CGO_LDFLAGS:-<not set>}"
+        echo ""
+        echo "=== Runtime Library Paths ==="
+        if [ "$RUNNER_OS" != "Windows" ]; then
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-<not set>}"
+          echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH:-<not set>}"
+          echo "DYLD_FALLBACK_LIBRARY_PATH=${DYLD_FALLBACK_LIBRARY_PATH:-<not set>}"
+        else
+          echo "PATH=${PATH:-<not set>}" | head -c 200
+          echo "..."
+        fi
+        echo ""
+        echo "=== FFI Library Files ==="
+        FFI_LIB_DIR="${{ inputs.ffi-lib-dir }}"
+        FFI_PATH="${GITHUB_WORKSPACE}/${FFI_LIB_DIR}"
+        if [ -d "$FFI_PATH" ]; then
+          echo "FFI library directory: $FFI_PATH"
+          ls -lh "$FFI_PATH"/libkreuzberg_ffi.* 2>/dev/null || echo "No libkreuzberg_ffi files found in default target"
+        else
+          echo "FFI library directory does not exist: $FFI_PATH"
+        fi
+        echo "=========================================="

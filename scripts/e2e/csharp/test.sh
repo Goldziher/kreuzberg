@@ -3,13 +3,16 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-# Prepare Tesseract data and export TESSDATA_PREFIX
-# shellcheck disable=SC1091 # file is in-repo but shellcheck cannot resolve the relative include
-# shellcheck source=scripts/ci/csharp/setup-tessdata.sh
-source "${REPO_ROOT}/scripts/ci/csharp/setup-tessdata.sh"
+source "$REPO_ROOT/scripts/lib/common.sh"
+source "$REPO_ROOT/scripts/lib/library-paths.sh"
+source "$REPO_ROOT/scripts/lib/tessdata.sh"
 
-export DYLD_LIBRARY_PATH="${REPO_ROOT}/target/release:${DYLD_LIBRARY_PATH:-}"
-export LD_LIBRARY_PATH="${REPO_ROOT}/target/release:${LD_LIBRARY_PATH:-}"
+validate_repo_root "$REPO_ROOT" || exit 1
+
+# Setup Rust FFI and Tesseract paths
+setup_rust_ffi_paths "$REPO_ROOT"
+setup_tessdata
+
 # Ensure tesseract binary is on PATH for OCR tests
 case "${RUNNER_OS:-$(uname -s)}" in
 Linux)

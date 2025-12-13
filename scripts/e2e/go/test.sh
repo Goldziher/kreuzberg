@@ -3,10 +3,16 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-export DYLD_LIBRARY_PATH="${REPO_ROOT}/target/release:${DYLD_LIBRARY_PATH:-}"
-export LD_LIBRARY_PATH="${REPO_ROOT}/target/release:${LD_LIBRARY_PATH:-}"
-export PKG_CONFIG_PATH="${REPO_ROOT}/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
-export CGO_LDFLAGS="-L${REPO_ROOT}/target/release -Wl,-rpath,${REPO_ROOT}/target/release"
+# Source shared utilities
+source "${REPO_ROOT}/scripts/lib/common.sh"
+source "${REPO_ROOT}/scripts/lib/library-paths.sh"
 
+# Validate repository structure
+validate_repo_root "$REPO_ROOT" || exit 1
+
+# Setup Go paths
+setup_go_paths "$REPO_ROOT"
+
+# Run E2E tests
 cd "${REPO_ROOT}/e2e/go"
 go test ./...

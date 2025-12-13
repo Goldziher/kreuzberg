@@ -243,7 +243,8 @@ jobs:
       - name: Run TypeScript tests
         shell: bash
         run: |
-          source scripts/ci/node/setup-library-paths.sh
+          source scripts/lib/library-paths.sh
+          setup_all_library_paths
           if [ "${{ matrix.coverage }}" = "true" ]; then
             pnpm vitest run --root e2e/typescript --config vitest.config.ts --coverage
           else
@@ -264,7 +265,8 @@ jobs:
       - name: Run E2E tests
         shell: bash
         run: |
-          source scripts/ci/node/setup-library-paths.sh
+          source scripts/lib/library-paths.sh
+          setup_all_library_paths
           # Reinstall kreuzberg-node in packages/typescript after build to ensure E2E tests can resolve it
           cd packages/typescript && pnpm install && cd - > /dev/null
           task e2e:ts:test

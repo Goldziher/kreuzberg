@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+source "${REPO_ROOT}/scripts/lib/library-paths.sh"
+
 TARGET="${1:-}"
 
 if [ -z "$TARGET" ]; then
@@ -18,13 +21,7 @@ fi
 echo "=== Testing CLI binary for $TARGET ==="
 
 # Setup library paths
-if [ -n "${KREUZBERG_PDFIUM_PREBUILT:-}" ]; then
-	if [ "$RUNNER_OS" = "macOS" ]; then
-		export DYLD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${DYLD_LIBRARY_PATH:-}"
-	else
-		export LD_LIBRARY_PATH="$KREUZBERG_PDFIUM_PREBUILT/lib:${LD_LIBRARY_PATH:-}"
-	fi
-fi
+setup_pdfium_paths
 
 # Extract and test
 tar xzf "kreuzberg-cli-$TARGET.tar.gz"
