@@ -1270,11 +1270,34 @@ jobs:
         shell: bash
         run: cargo build -p kreuzberg-ffi --release
 
+      - name: Create artifact staging directory
+        shell: bash
+        run: |
+          mkdir -p artifact-staging/kreuzberg-ffi/{lib,include,share/pkgconfig}
+
+      - name: Stage FFI artifacts (Unix)
+        if: matrix.settings.os != 'windows-latest'
+        shell: bash
+        run: scripts/ci/go/stage-ffi-artifacts.sh artifact-staging/kreuzberg-ffi "${{ matrix.settings.build_features }}"
+
+      - name: Stage FFI artifacts (Windows)
+        if: matrix.settings.os == 'windows-latest'
+        shell: pwsh
+        run: scripts/ci/go/stage-ffi-artifacts-windows.ps1 "artifact-staging\kreuzberg-ffi"
+
+      - name: Generate installation README
+        shell: bash
+        run: scripts/ci/go/generate-install-readme.sh artifact-staging/kreuzberg-ffi/README.md
+
       - name: Package FFI library
         shell: bash
         run: |
-          cd target/release
-          tar -czf "../../go-ffi-${{ matrix.settings.label }}.tar.gz" libkreuzberg_ffi.*
+          cd artifact-staging
+          tar -czf "../go-ffi-${{ matrix.settings.label }}.tar.gz" kreuzberg-ffi/
+
+      - name: Verify artifact completeness
+        shell: bash
+        run: scripts/ci/go/verify-ffi-artifact.sh "go-ffi-${{ matrix.settings.label }}.tar.gz"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5

@@ -82,6 +82,7 @@ func (pc *PanicContext) String() string {
 type KreuzbergError interface {
 	error
 	Kind() ErrorKind
+	Code() ErrorCode
 	PanicCtx() *PanicContext
 }
 
@@ -109,8 +110,7 @@ func (e *baseError) PanicCtx() *PanicContext {
 	return e.panicCtx
 }
 
-// ErrorCodeFromError returns the error code associated with a Kreuzberg error.
-func (e *baseError) ErrorCodeFromError() ErrorCode {
+func (e *baseError) Code() ErrorCode {
 	return e.nativeCode
 }
 

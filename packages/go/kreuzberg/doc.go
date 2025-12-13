@@ -68,22 +68,6 @@
 //		fmt.Println("Pages:", *pdf.PageCount)
 //	}
 //
-// # Async Extraction with Context
-//
-// For timeout-aware extraction, use the async variants:
-//
-//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-//	defer cancel()
-//
-//	result, err := kreuzberg.ExtractFile(ctx, "large.pdf", nil)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-// Note: Context cancellation is best-effort. The underlying native call cannot
-// be interrupted yet, but the function returns early with ctx.Err() once the
-// context is done.
-//
 // # Configuration
 //
 // Advanced extraction settings are passed via ExtractionConfig:
@@ -124,6 +108,32 @@
 //		}
 //		fmt.Printf("[%d] %s => %d bytes\n", i, res.MimeType, len(res.Content))
 //	}
+//
+// # Concurrency and Goroutines
+//
+// All extraction functions are synchronous and block until completion.
+// For concurrent processing, spawn goroutines manually:
+//
+//	var wg sync.WaitGroup
+//	results := make([]*kreuzberg.ExtractionResult, len(files))
+//
+//	for i, path := range files {
+//		wg.Add(1)
+//		go func(idx int, p string) {
+//			defer wg.Done()
+//			result, err := kreuzberg.ExtractFileSync(p, nil)
+//			if err != nil {
+//				log.Printf("Error extracting %s: %v", p, err)
+//				return
+//			}
+//			results[idx] = result
+//		}(i, path)
+//	}
+//	wg.Wait()
+//
+// Note: Extraction operations cannot be canceled once started. If you need
+// timeouts, implement them at the application level (e.g., using channels
+// with time.After or dedicated timeout goroutines).
 //
 // # Error Handling
 //

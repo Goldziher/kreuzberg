@@ -49,6 +49,60 @@ The Go binding uses cgo to link against the `kreuzberg-ffi` library.
 
 3. Pdfium is bundled in `target/release`, so no extra system packages are required unless you customize the build.
 
+### Using Pre-built Binaries (Recommended)
+
+Download pre-built FFI libraries from the [releases page](https://github.com/kreuzberg-dev/kreuzberg/releases):
+
+```bash
+# Download for your platform (linux-x86_64, macos-arm64, or windows-x86_64)
+curl -LO https://github.com/kreuzberg-dev/kreuzberg/releases/download/v4.1.0/go-ffi-linux-x86_64.tar.gz
+
+# Extract and install system-wide (requires sudo)
+tar -xzf go-ffi-linux-x86_64.tar.gz
+cd kreuzberg-ffi
+sudo cp -r lib/* /usr/local/lib/
+sudo cp -r include/* /usr/local/include/
+sudo cp -r share/* /usr/local/share/
+sudo ldconfig  # Linux only
+
+# Verify installation
+pkg-config --modversion kreuzberg-ffi
+
+# Install Go package
+go get github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg@latest
+```
+
+For user-local installation (no sudo):
+
+```bash
+tar -xzf go-ffi-linux-x86_64.tar.gz
+cd kreuzberg-ffi
+mkdir -p ~/.local
+cp -r {lib,include,share} ~/.local/
+
+# Add to your shell profile (.bashrc, .zshrc, etc.):
+export PKG_CONFIG_PATH="$HOME/.local/share/pkgconfig:$PKG_CONFIG_PATH"
+export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"  # Linux
+export DYLD_FALLBACK_LIBRARY_PATH="$HOME/.local/lib:$DYLD_FALLBACK_LIBRARY_PATH"  # macOS
+```
+
+### Monorepo Development
+
+```bash
+# Build FFI library
+cargo build -p kreuzberg-ffi --release
+
+# Set pkg-config path for development
+export PKG_CONFIG_PATH="$PWD/crates/kreuzberg-ffi:$PKG_CONFIG_PATH"
+
+# Set runtime library path
+export LD_LIBRARY_PATH="$PWD/target/release"  # Linux
+export DYLD_FALLBACK_LIBRARY_PATH="$PWD/target/release"  # macOS
+
+# Run tests
+cd packages/go && go test ./...
+```
+
 ## Quickstart
 
 ```go
@@ -161,10 +215,12 @@ func init() {
 
 | Issue | Fix |
 |-------|-----|
-| `runtime/cgo: dlopen(/libkreuzberg_ffi.dylib, 0x0001): image not found` | Set `DYLD_FALLBACK_LIBRARY_PATH` (macOS) or `LD_LIBRARY_PATH` (Linux) to point at `target/release`. |
+| `pkg-config: kreuzberg-ffi not found` | Set `PKG_CONFIG_PATH` to include the installation directory (`/usr/local/share/pkgconfig`) or development directory (`crates/kreuzberg-ffi`) |
+| `runtime/cgo: dlopen: image not found` | Set `LD_LIBRARY_PATH` (Linux) or `DYLD_FALLBACK_LIBRARY_PATH` (macOS) to include the library directory |
+| `undefined: kreuzberg.ExtractFile` | This function was removed in v4.1.0. Use `ExtractFileSync` and wrap in goroutine if needed (see migration guide) |
+| Version mismatch between Go package and FFI library | Ensure versions match: `pkg-config --modversion kreuzberg-ffi` |
 | `Missing dependency: tesseract` | Install the OCR backend and ensure it is on `PATH`. Errors bubble up as `*kreuzberg.MissingDependencyError`. |
 | `undefined: C.customValidator` during build | Export the callback with `//export` in a `*_cgo.go` file before using it in `Register*` helpers. |
-| `github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg` tests fail | Set the library path as above before running `go test ./...`. |
 | Embeddings not available on Windows | Windows Go bindings use MinGW which cannot link ONNX Runtime (MSVC-only). Embeddings are unavailable on Windows for Go. |
 
 ## Testing / Tooling

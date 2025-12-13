@@ -1,0 +1,12 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: kreuzberg-ffi
+Description: C FFI bindings for Kreuzberg document intelligence library
+Version: @VERSION@
+URL: https://kreuzberg.dev
+Libs: -L${libdir} -lkreuzberg_ffi
+Libs.private: @LIBS_PRIVATE@
+Cflags: -I${includedir}
