@@ -1,27 +1,15 @@
 package kreuzberg
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../../crates/kreuzberg-ffi
-#cgo !windows LDFLAGS: -L${SRCDIR}/../../../target/release -lkreuzberg_ffi
-#cgo windows LDFLAGS: -L${SRCDIR}/../../../target/x86_64-pc-windows-gnu/release -L${SRCDIR}/../../../target/release -lkreuzberg_ffi -static-libgcc -static-libstdc++
-#include "../../../crates/kreuzberg-ffi/kreuzberg.h"
+#include "internal/ffi/kreuzberg.h"
 #include <stdlib.h>
 #include <stdint.h>
 
-// Explicitly declare all types to prevent CGO type inference issues on Windows
-typedef struct CExtractionResult CExtractionResult;
-typedef struct CBatchResult CBatchResult;
-typedef struct CBytesWithMime CBytesWithMime;
-typedef struct ExtractionConfig ExtractionConfig;
-
-// Workaround for Windows clang-cl: Redeclare functions that clang-cl misidentifies
-// This prevents cgo from trying to infer their types via __typeof__
+// Extraction API function declarations
 const char *kreuzberg_last_error(void);
 int32_t kreuzberg_last_error_code(void);
 char *kreuzberg_last_panic_context(void);
 const char *kreuzberg_version(void);
-
-// Function declarations for explicit type resolution on Windows
 void kreuzberg_free_string(char *ptr);
 void kreuzberg_free_result(CExtractionResult *result);
 void kreuzberg_free_batch_result(CBatchResult *batch);

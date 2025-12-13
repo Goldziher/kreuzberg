@@ -1,11 +1,29 @@
 package kreuzberg
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../../crates/kreuzberg-ffi
-#cgo windows LDFLAGS: -L${SRCDIR}/../../../target/x86_64-pc-windows-gnu/release -L${SRCDIR}/../../../target/release
-#cgo !windows LDFLAGS: -L${SRCDIR}/../../../target/release -L${SRCDIR}/../../../target/debug
-#include "../../../crates/kreuzberg-ffi/kreuzberg.h"
+#include "internal/ffi/kreuzberg.h"
 #include <stdlib.h>
+
+// Plugin API function declarations
+bool kreuzberg_register_ocr_backend(const char *name, OcrBackendCallback callback);
+bool kreuzberg_register_ocr_backend_with_languages(const char *name, OcrBackendCallback callback, const char *languages_json);
+bool kreuzberg_unregister_ocr_backend(const char *name);
+char *kreuzberg_list_ocr_backends(void);
+bool kreuzberg_clear_ocr_backends(void);
+bool kreuzberg_register_post_processor(const char *name, PostProcessorCallback callback, int32_t priority);
+bool kreuzberg_register_post_processor_with_stage(const char *name, PostProcessorCallback callback, int32_t priority, const char *stage);
+bool kreuzberg_unregister_post_processor(const char *name);
+bool kreuzberg_clear_post_processors(void);
+char *kreuzberg_list_post_processors(void);
+bool kreuzberg_register_validator(const char *name, ValidatorCallback callback, int32_t priority);
+bool kreuzberg_unregister_validator(const char *name);
+bool kreuzberg_clear_validators(void);
+char *kreuzberg_list_validators(void);
+bool kreuzberg_register_document_extractor(const char *name, DocumentExtractorCallback callback, const char *mime_types, int32_t priority);
+bool kreuzberg_unregister_document_extractor(const char *name);
+char *kreuzberg_list_document_extractors(void);
+bool kreuzberg_clear_document_extractors(void);
+void kreuzberg_free_string(char *ptr);
 */
 import "C"
 

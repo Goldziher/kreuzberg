@@ -4,6 +4,7 @@ vars:
   V3_TAG: v3.20.2
   BUNDLE: bundle
   GOLANGCI_LINT_VERSION: 2.6.2
+  ROOT: "{{.ROOT}}"
 silent: false
 tasks:
   version:sync:
@@ -669,16 +670,12 @@ tasks:
 
   go:lint:
     desc: Lint Go code with auto-fix (gofmt + golangci-lint)
-    dir: packages/go
     cmds:
-      - go fmt ./...
-      - golangci-lint run --config ../../.golangci.yml --fix ./...
+      - bash -c 'cd packages/go && export PKG_CONFIG_PATH="$(pwd)/../../crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}" && go fmt ./... && golangci-lint run --config ../../.golangci.yml --fix ./...'
   go:lint:check:
     desc: Lint Go code in check-only mode (gofmt + golangci-lint, no fixes)
-    dir: packages/go
     cmds:
-      - ../../scripts/go/format_check.sh
-      - golangci-lint run --config ../../.golangci.yml ./...
+      - bash -c 'cd packages/go && export PKG_CONFIG_PATH="$(pwd)/../../crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}" && ../../scripts/go/format_check.sh && golangci-lint run --config ../../.golangci.yml ./...'
   go:format:
     desc: Format Go code with modifications (gofmt)
     dir: packages/go

@@ -78,6 +78,57 @@ For manual header generation:
 cargo build --features html,embeddings -p kreuzberg-ffi
 ```
 
+### pkg-config File Generation
+
+The build process automatically generates pkg-config files for library discovery:
+
+```bash
+cargo build --release -p kreuzberg-ffi
+```
+
+This creates two variants in `crates/kreuzberg-ffi/`:
+- **kreuzberg-ffi.pc**: Development version (prefix points to repository)
+- **kreuzberg-ffi-install.pc**: Installation version (prefix=/usr/local)
+
+The development variant enables monorepo developers to use pkg-config:
+
+```bash
+export PKG_CONFIG_PATH="$PWD/crates/kreuzberg-ffi:$PKG_CONFIG_PATH"
+pkg-config --cflags kreuzberg-ffi  # Returns -I/path/to/repo/crates/kreuzberg-ffi
+pkg-config --libs kreuzberg-ffi    # Returns -L/path/to/repo/target/release -lkreuzberg_ffi
+```
+
+The installation variant is used in release artifacts for third-party use.
+
+### Installing from Release Artifacts
+
+Pre-built binaries are available for Linux, macOS, and Windows (MinGW) from the [releases page](https://github.com/kreuzberg-dev/kreuzberg/releases).
+
+Each `go-ffi-{platform}.tar.gz` archive contains:
+- `lib/`: Shared libraries (kreuzberg-ffi, pdfium, onnxruntime)
+- `include/`: C header file (kreuzberg.h)
+- `share/pkgconfig/`: pkg-config file for library discovery
+- `README.md`: Installation instructions
+
+Installation:
+
+```bash
+# Download and extract
+tar -xzf go-ffi-linux-x86_64.tar.gz
+cd kreuzberg-ffi
+
+# System-wide installation (requires sudo)
+sudo cp -r lib/* /usr/local/lib/
+sudo cp -r include/* /usr/local/include/
+sudo cp -r share/* /usr/local/share/
+sudo ldconfig  # Linux only
+
+# Verify
+pkg-config --modversion kreuzberg-ffi
+```
+
+For user-local installation or custom prefix, see the README.md included in the archive.
+
 ## Quick Start: C Example
 
 ### Basic Extraction
