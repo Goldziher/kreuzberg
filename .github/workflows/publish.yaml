@@ -306,7 +306,7 @@ jobs:
   check-docker:
     name: Check if Docker image tag exists
     needs: prepare
-    if: ${{ needs.prepare.outputs.is_tag == 'true' && needs.prepare.outputs.release_docker == 'true' }}
+    if: ${{ needs.prepare.outputs.release_docker == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1571,6 +1571,23 @@ jobs:
           FFI_NAME: ${{ matrix.ffi_name }}
         run: bash scripts/publish/csharp/assemble-native-assets.sh
 
+      - name: Verify native assets exist
+        shell: bash
+        run: |
+          rid="${{ matrix.rid }}"
+          native_dir="runtimes/${rid}/native"
+          if [ ! -d "$native_dir" ]; then
+            echo "ERROR: Native assets directory not found: $native_dir"
+            exit 1
+          fi
+          file_count=$(find "$native_dir" -type f | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "ERROR: No native asset files found in $native_dir"
+            ls -la runtimes/ || true
+            exit 1
+          fi
+          echo "Found $file_count native asset files"
+
       - name: Upload native assets artifact
         uses: actions/upload-artifact@v5
         with:
@@ -1699,22 +1716,22 @@ jobs:
         run: echo "Docker tag already exists for variant ${{ matrix.variant }}; skipping publish." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build AMD64 test image
-        if: ${{ (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true') || (matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         run: docker build -f ${{ matrix.dockerfile }} --build-arg PDFIUM_VERSION=${{ env.PDFIUM_VERSION }} -t kreuzberg-publish:${{ matrix.variant }}-test .
 
       - name: Run Docker feature tests
-        if: ${{ (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true') || (matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
         run: ./scripts/test_docker.sh --skip-build --image kreuzberg-publish:${{ matrix.variant }}-test --variant ${{ matrix.variant }} --verbose
 
       - name: Log in to Docker Hub
-        if: ${{ needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && ((matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true') || (matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true')) }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
-        if: ${{ needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && ((matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true') || (matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true')) }}
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
@@ -1724,7 +1741,7 @@ jobs:
             type=raw,value=${{ matrix.extra_tag }}
 
       - name: Build and push multi-arch image
-        if: ${{ needs.prepare.outputs.dry_run != 'true' && (matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true' || matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true') }}
+        if: ${{ needs.prepare.outputs.dry_run != 'true' && ((matrix.variant == 'core' && needs.check-docker.outputs.core_exists != 'true') || (matrix.variant == 'full' && needs.check-docker.outputs.full_exists != 'true')) }}
         uses: docker/build-push-action@v6
         with:
           context: .
