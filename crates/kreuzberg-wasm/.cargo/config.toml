@@ -3,9 +3,10 @@
 # WebAssembly (wasm32-unknown-unknown) compilation.
 
 [build]
-# Note: target-applies-to-host is the default behavior (true).
-# This setting applies target-specific rustflags only to the target triple,
-# not to build scripts or proc macros that run on the host machine.
+# Prevent wasm32 target rustflags from being applied to host builds
+# (build scripts / proc-macros). Without this, host crates can fail to build
+# because the wasm linker args are forwarded to the host linker (clang).
+target-applies-to-host = false
 #
 # Context: We cross-compile from host architecture (x86_64/aarch64) to wasm32,
 # so the [target.wasm32-unknown-unknown] settings below only apply to WASM builds.

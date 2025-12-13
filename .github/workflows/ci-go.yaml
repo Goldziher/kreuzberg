@@ -392,6 +392,8 @@ jobs:
               export CGO_LDFLAGS="-L${PWD}/target/release -Wl,-rpath,${PWD}/target/release"
             fi
           fi
+          # Set PKG_CONFIG_PATH so cgo can find kreuzberg-ffi.pc
+          export PKG_CONFIG_PATH="${PWD}/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
           if [[ "$RUNNER_OS" == "macOS" ]]; then
             export TESSDATA_PREFIX=/opt/homebrew/share/tessdata
           else

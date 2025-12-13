@@ -23,6 +23,10 @@ if [ -z "$FRAMEWORK" ] || [ -z "$MODE" ]; then
 	exit 1
 fi
 
+# Set PKG_CONFIG_PATH for Go bindings (needed for kreuzberg-go-* frameworks)
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PKG_CONFIG_PATH="${REPO_ROOT}/crates/kreuzberg-ffi:${PKG_CONFIG_PATH:-}"
+
 OUTPUT_DIR="benchmark-results/${FRAMEWORK}-${MODE}"
 rm -rf "${OUTPUT_DIR}"
 

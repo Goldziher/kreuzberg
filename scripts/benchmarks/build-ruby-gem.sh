@@ -48,3 +48,7 @@ bundle install
 bundle exec rake clean
 bundle exec rake compile
 bundle exec rake build
+
+# Install the built gem so Ruby can require 'kreuzberg'
+echo "Installing built gem..."
+gem install pkg/kreuzberg-*.gem

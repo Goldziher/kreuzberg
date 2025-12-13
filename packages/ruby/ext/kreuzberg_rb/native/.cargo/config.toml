@@ -1,2 +1,2 @@
 [build]
-rustflags = ["-A", "unpredictable-function-pointer-comparisons"]
+rustflags = ["-A", "unpredictable-function-pointer-comparisons", "-A", "fn_ptr_eq"]

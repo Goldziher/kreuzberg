@@ -48,8 +48,12 @@ fn find_node() -> Result<(PathBuf, Vec<String>)> {
         return Ok((PathBuf::from("ts-node"), vec![]));
     }
 
+    if which::which("pnpm").is_ok() {
+        return Ok((PathBuf::from("pnpm"), vec!["exec".to_string(), "tsx".to_string()]));
+    }
+
     Err(crate::Error::Config(
-        "TypeScript runtime (tsx or ts-node) not found".to_string(),
+        "TypeScript runtime (tsx or ts-node) not found – ensure pnpm install has run".to_string(),
     ))
 }
 
@@ -378,5 +382,19 @@ mod tests {
     fn test_find_python() {
         let result = find_python();
         assert!(result.is_ok() || which::which("python3").is_err());
+    }
+
+    #[test]
+    fn test_find_node() {
+        let result = find_node();
+        // Should succeed if any of tsx, ts-node, or pnpm is available
+        if result.is_err() {
+            assert!(which::which("tsx").is_err());
+            assert!(which::which("ts-node").is_err());
+            assert!(which::which("pnpm").is_err());
+        } else {
+            let (cmd, _args) = result.unwrap();
+            assert!(!cmd.as_os_str().is_empty());
+        }
     }
 }

@@ -86,17 +86,24 @@ runs:
           echo "SCCACHE_GHA_ENABLED=false" >> "$GITHUB_ENV"
           echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
         fi
-        base="${RUSTFLAGS:-"-D warnings -A unpredictable-function-pointer-comparisons"}"
-        if [ "${{ inputs.target }}" = "wasm32-unknown-unknown" ]; then
-          base+=" -C target-feature=+atomics,+bulk-memory"
-          base+=" -C link-arg=--shared-memory"
-          base+=" -C link-arg=--max-memory=2147483648"
-          base+=" -C link-arg=--import-memory"
-          base+=" -C link-arg=--export=__wasm_init_tls"
-          base+=" -C link-arg=--export=__tls_size"
-          base+=" -C link-arg=--export=__tls_align"
-          base+=" -C link-arg=--export=__tls_base"
+        base="-D warnings"
+        # IMPORTANT: Do NOT add WASM-specific RUSTFLAGS here. They will break host builds
+        # (build scripts, proc-macros) and native target builds (aarch64-apple-darwin, etc).
+        # The .cargo/config.toml in crates/kreuzberg-wasm/ already configures WASM flags
+        # correctly with target-applies-to-host=false to prevent this exact issue.
+
+        # Check if unpredictable-function-pointer-comparisons lint is available
+        if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W unpredictable-function-pointer-comparisons - 2>&1)"; then
+          :
         fi
+        if grep -qi "unknown lint" <<<"$check_output"; then
+          echo "unpredictable-function-pointer-comparisons lint unavailable on $(rustc -V); skipping flag"
+        else
+          base+=" -A unpredictable-function-pointer-comparisons"
+          echo "Detected unpredictable-function-pointer-comparisons lint support; appended suppression flag"
+        fi
+
+        # Check for fn_ptr_eq lint (newer Rust versions)
         if ! check_output="$(printf 'fn main() {}\n' | RUSTC_COLOR=never rustc -W fn_ptr_eq - 2>&1)"; then
           :
         fi

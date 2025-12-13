@@ -8,21 +8,47 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Restore Task CLI cache
-      uses: actions/cache@v5
-      id: cache
-      with:
-        path: ~/.local/bin
-        key: task-cli-${{ runner.os }}-v2-${{ inputs.version }}
-        restore-keys: |
-          task-cli-${{ runner.os }}-v2-
-    - name: Install Task
-      if: steps.cache.outputs.cache-hit != 'true'
+    - name: Setup Task (Unix)
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         set -euo pipefail
-        sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
-    - name: Add Task to PATH
-      shell: bash
+        TASK_BIN_DIR="${HOME}/.local/bin"
+        mkdir -p "$TASK_BIN_DIR"
+
+        # Check if task is already installed
+        if ! command -v task &> /dev/null || [[ "$(task --version 2>/dev/null || echo '')" != *"${{ inputs.version }}"* ]]; then
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b "$TASK_BIN_DIR"
+        fi
+
+        echo "$TASK_BIN_DIR" >> "$GITHUB_PATH"
+
+    - name: Setup Task (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: |
-        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        $taskBinDir = "$env:USERPROFILE\AppData\Local\task"
+        New-Item -ItemType Directory -Force -Path $taskBinDir | Out-Null
+
+        $taskVersion = "${{ inputs.version }}"
+        $taskExe = "$taskBinDir\task.exe"
+
+        # Download and install task
+        if (-not (Test-Path $taskExe)) {
+          $releases = "https://api.github.com/repos/go-task/task/releases/tags/v$taskVersion"
+          $release = Invoke-RestMethod -Uri $releases
+          $asset = $release.assets | Where-Object { $_.name -match "windows_amd64\.zip" } | Select-Object -First 1
+
+          if ($asset) {
+            $downloadUrl = $asset.browser_download_url
+            $zipPath = "$taskBinDir\task.zip"
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
+            Expand-Archive -Path $zipPath -DestinationPath $taskBinDir -Force
+            Remove-Item $zipPath
+          } else {
+            Write-Error "Could not find Windows amd64 release for Task v$taskVersion"
+            exit 1
+          }
+        }
+
+        "$taskBinDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
