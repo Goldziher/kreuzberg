@@ -33,7 +33,7 @@ import java.util.jar.JarFile;
 final class KreuzbergFFI {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup LOOKUP;
-    private static final long C_STRING_MAX_SIZE = 1048576L;
+    private static final long C_STRING_MAX_SIZE = 67108864L;
     private static final String NATIVES_RESOURCE_ROOT = "/natives";
     private static final Object NATIVE_EXTRACT_LOCK = new Object();
     private static String cachedExtractKey;
