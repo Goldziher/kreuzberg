@@ -65,14 +65,23 @@ runs:
     - name: Setup sccache
       if: inputs.use-sccache == 'true'
       uses: mozilla-actions/sccache-action@v0.0.9
+      continue-on-error: true
 
     - name: Configure Rust flags
       shell: bash
       run: |
         set -euo pipefail
         if [ "${{ inputs.use-sccache }}" = "true" ]; then
-          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          # Check if sccache is actually available before enabling it
+          if command -v sccache &> /dev/null; then
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+            echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+            echo "sccache is available, enabling as RUSTC_WRAPPER"
+          else
+            echo "SCCACHE_GHA_ENABLED=false" >> "$GITHUB_ENV"
+            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
+            echo "Warning: sccache requested but not found, proceeding without it"
+          fi
         else
           echo "SCCACHE_GHA_ENABLED=false" >> "$GITHUB_ENV"
           echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
@@ -132,10 +141,41 @@ runs:
         path: ~/.cargo/bin/cargo-llvm-cov
         key: cargo-llvm-cov-v2-${{ runner.os }}
 
+    - name: Validate sccache installation
+      if: inputs.use-sccache == 'true'
+      shell: bash
+      run: |
+        set +e  # Don't exit on error for diagnostics
+        echo "Checking sccache installation..."
+        if command -v sccache &> /dev/null; then
+          echo "sccache found in PATH"
+          which sccache
+          sccache --version || echo "sccache version check failed"
+        elif [ -n "${SCCACHE_PATH:-}" ] && [ -d "${SCCACHE_PATH}" ]; then
+          echo "SCCACHE_PATH is set to: ${SCCACHE_PATH}"
+          if [ -f "${SCCACHE_PATH}/sccache" ]; then
+            echo "sccache executable found at SCCACHE_PATH"
+            "${SCCACHE_PATH}/sccache" --version || echo "sccache version check failed"
+          else
+            echo "sccache executable NOT found at SCCACHE_PATH"
+            ls -la "${SCCACHE_PATH}" || echo "Failed to list SCCACHE_PATH contents"
+          fi
+        else
+          echo "Warning: sccache not found in PATH and SCCACHE_PATH not set or invalid"
+          echo "Continuing without sccache"
+        fi
+        set -e
+
     - name: Ensure sccache is on PATH
       if: inputs.use-sccache == 'true' && env.SCCACHE_PATH != ''
       shell: bash
-      run: echo "${SCCACHE_PATH}" >> "$GITHUB_PATH"
+      run: |
+        if [ -d "${SCCACHE_PATH}" ] && [ -f "${SCCACHE_PATH}/sccache" ]; then
+          echo "${SCCACHE_PATH}" >> "$GITHUB_PATH"
+          echo "Added sccache to PATH"
+        else
+          echo "Warning: sccache not available at ${SCCACHE_PATH}, proceeding without sccache"
+        fi
 
     - name: Install cargo-llvm-cov if not cached
       shell: bash
