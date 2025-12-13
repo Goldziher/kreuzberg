@@ -188,6 +188,12 @@ runs:
         $ExtractRoot = Join-Path $env:TEMP "onnxruntime"
         $ArchId = "${{ inputs.arch-id }}"
         if ([string]::IsNullOrWhiteSpace($ArchId)) {
+          $ArchId = "${{ runner.arch }}"
+        }
+        $ArchId = $ArchId.ToLowerInvariant()
+        if ($ArchId -eq "arm64") {
+          $ArchId = "arm64"
+        } else {
           $ArchId = "x64"
         }
 
@@ -208,8 +214,8 @@ runs:
         }
 
         # Verify library directory exists
-        if (!(Test-Path (Join-Path $OrtRoot 'lib'))) {
-          Write-Error "ERROR: ONNX Runtime lib directory missing at $OrtRoot\lib"
+        if (!(Test-Path $OrtLib)) {
+          Write-Error "ERROR: ONNX Runtime lib directory missing at $OrtLib"
           Get-ChildItem -Path $ExtractRoot -Recurse | Write-Host
           exit 1
         }
@@ -217,49 +223,57 @@ runs:
         # Verify that library files actually exist
         $LibFiles = Get-ChildItem -Path $OrtLib -Filter "*.lib" -ErrorAction SilentlyContinue
         if ($LibFiles.Count -eq 0) {
-          Write-Error "ERROR: No ONNX Runtime library files found in $OrtRoot\lib"
+          Write-Error "ERROR: No ONNX Runtime library files found in $OrtLib"
           Get-ChildItem -Path $OrtLib | Write-Host
           exit 1
         }
 
-        # Locate runtime DLLs (recent releases place them under lib/ instead of bin/)
-        $RuntimeDirs = @()
-        if (Test-Path $OrtBin) { $RuntimeDirs += $OrtBin }
-        if (Test-Path $OrtLib) { $RuntimeDirs += $OrtLib }
-        $RuntimeDirs += $OrtRoot
-
-        $DllFiles = @()
-        foreach ($dir in $RuntimeDirs) {
-          $DllFiles += Get-ChildItem -Path $dir -Filter "*.dll" -ErrorAction SilentlyContinue
+        # Locate runtime DLLs. Recent ONNX Runtime releases place them under `lib/` instead of `bin/`.
+        $DllDirs = @()
+        foreach ($Candidate in @($OrtLib, $OrtBin)) {
+          if (Test-Path $Candidate) {
+            $CandidateDlls = Get-ChildItem -Path $Candidate -Filter "*.dll" -File -ErrorAction SilentlyContinue
+            if ($CandidateDlls.Count -gt 0) {
+              $DllDirs += $Candidate
+            }
+          }
         }
-        if ($DllFiles.Count -eq 0) {
-          $DllFiles = Get-ChildItem -Path $OrtRoot -Recurse -Filter "*.dll" -ErrorAction SilentlyContinue
+        if ($DllDirs.Count -eq 0) {
+          $OrtDll = Get-ChildItem -Path $OrtRoot -Recurse -Filter "onnxruntime.dll" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($OrtDll) {
+            $DllDirs += $OrtDll.DirectoryName
+          }
         }
-        if ($DllFiles.Count -eq 0) {
+        if ($DllDirs.Count -eq 0) {
+          $AnyDll = Get-ChildItem -Path $OrtRoot -Recurse -Filter "*.dll" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($AnyDll) {
+            $DllDirs += $AnyDll.DirectoryName
+          }
+        }
+        $DllDirs = $DllDirs | Select-Object -Unique
+        if ($DllDirs.Count -eq 0) {
           Write-Error "ERROR: No ONNX Runtime runtime DLLs found under $OrtRoot"
           Get-ChildItem -Path $OrtRoot -Recurse | Write-Host
           exit 1
         }
-        $DllDirs = $DllFiles | Select-Object -ExpandProperty DirectoryName -Unique
-        $DllPathPrefix = ($DllDirs -join ';')
 
         $Dest = Join-Path $env:GITHUB_WORKSPACE "${{ inputs.dest-dir }}"
         New-Item -ItemType Directory -Path $Dest -Force | Out-Null
-        Copy-Item -Path (Join-Path $OrtRoot 'lib' '*') -Destination $Dest -Force
-        foreach ($dir in $DllDirs) {
-          Copy-Item -Path (Join-Path $dir '*.dll') -Destination $Dest -Force
+        Copy-Item -Path (Join-Path $OrtLib '*') -Destination $Dest -Force
+        foreach ($Dir in $DllDirs) {
+          Copy-Item -Path (Join-Path $Dir '*.dll') -Destination $Dest -Force
         }
 
         # Append to existing RUSTFLAGS if present
-        $RustFlags = if ($env:RUSTFLAGS) { "$env:RUSTFLAGS -L $OrtRoot\lib" } else { "-L $OrtRoot\lib" }
+        $RustFlags = if ($env:RUSTFLAGS) { "$env:RUSTFLAGS -L $OrtLib" } else { "-L $OrtLib" }
 
         @(
-          "ORT_LIB_LOCATION=$OrtRoot\lib"
+          "ORT_LIB_LOCATION=$OrtLib"
           "ORT_PREFER_DYNAMIC_LINK=1"
           "ORT_SKIP_DOWNLOAD=1"
           "ORT_STRATEGY=system"
           "RUSTFLAGS=$RustFlags"
-          "LIB=$OrtRoot\lib;$env:LIB"
-          "LIBRARY_PATH=$OrtRoot\lib;$env:LIBRARY_PATH"
-          "PATH=$DllPathPrefix;$Dest;$env:PATH"
+          "LIB=$OrtLib;$env:LIB"
+          "LIBRARY_PATH=$OrtLib;$env:LIBRARY_PATH"
+          "PATH=$Dest;$env:PATH"
         ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
