@@ -37,9 +37,11 @@ pub mod mime;
 pub mod pipeline;
 
 pub use config::{
-    ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, PdfConfig,
-    TokenReductionConfig,
+    ChunkingConfig, ExtractionConfig, ImageExtractionConfig, LanguageDetectionConfig, OcrConfig, TokenReductionConfig,
 };
+
+#[cfg(feature = "pdf")]
+pub use config::PdfConfig;
 #[cfg(feature = "tokio-runtime")]
 pub use extractor::{batch_extract_bytes, batch_extract_file};
 pub use extractor::{extract_bytes, extract_file};

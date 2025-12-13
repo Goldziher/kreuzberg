@@ -1,14 +1,17 @@
 # Kreuzberg
 
-[![Discord](https://img.shields.io/badge/Discord-Join%20our%20community-7289da)](https://discord.gg/pXxagNK2zN)
-[![PyPI](https://badge.fury.io/py/kreuzberg.svg)](https://badge.fury.io/py/kreuzberg)
-[![npm](https://img.shields.io/npm/v/@kreuzberg/node)](https://www.npmjs.com/package/@kreuzberg/node)
-[![RubyGems](https://badge.fury.io/rb/kreuzberg.svg)](https://rubygems.org/gems/kreuzberg)
-[![Go Reference](https://pkg.go.dev/badge/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg.svg)](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg/packages/go/kreuzberg)
-[![Maven Central](https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg)](https://central.sonatype.com/artifact/dev.kreuzberg/kreuzberg)
-[![NuGet](https://img.shields.io/nuget/v/Kreuzberg)](https://www.nuget.org/packages/Kreuzberg/)
-[![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
+[![Rust](https://img.shields.io/crates/v/kreuzberg?label=Rust)](https://crates.io/crates/kreuzberg)
+[![Python](https://img.shields.io/pypi/v/kreuzberg?label=Python)](https://pypi.org/project/kreuzberg/)
+[![TypeScript/Node.js](https://img.shields.io/npm/v/@kreuzberg/node?label=TypeScript%2FNode.js&color=3178c6)](https://www.npmjs.com/package/@kreuzberg/node)
+[![Browser/WASM](https://img.shields.io/npm/v/@kreuzberg/wasm?label=Browser%2FWASM&color=654ff0)](https://www.npmjs.com/package/@kreuzberg/wasm)
+[![Ruby](https://img.shields.io/gem/v/kreuzberg?label=Ruby)](https://rubygems.org/gems/kreuzberg)
+[![Java](https://img.shields.io/maven-central/v/dev.kreuzberg/kreuzberg?label=Java)](https://central.sonatype.com/artifact/dev.kreuzberg/kreuzberg)
+[![Go](https://img.shields.io/github/v/tag/kreuzberg-dev/kreuzberg?label=Go)](https://pkg.go.dev/github.com/kreuzberg-dev/kreuzberg)
+[![C#](https://img.shields.io/nuget/v/Goldziher.Kreuzberg?label=C%23)](https://www.nuget.org/packages/Goldziher.Kreuzberg/)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-kreuzberg.dev-blue)](https://kreuzberg.dev/)
+[![Discord](https://img.shields.io/badge/Discord-Join%20our%20community-7289da)](https://discord.gg/pXxagNK2zN)
 
 **A polyglot document intelligence framework with a Rust core.** Extract text, metadata, and structured information from PDFs, Office documents, images, and 56 formats. Available for Rust, Python, TypeScript/Node.js, Ruby, Go, Java, and C#—or use via CLI, REST API, or MCP server.
 
@@ -39,9 +42,25 @@ Don't want to manage Rust infrastructure? **Kreuzberg Cloud** is a managed docum
 
 Each language binding provides comprehensive documentation with examples and best practices. Choose your platform to get started:
 
+### JavaScript/TypeScript
+
+- **[@kreuzberg/node](crates/kreuzberg-node/README.md)** (Recommended for Node.js/Bun) – Native NAPI-RS bindings, fastest performance, direct system calls
+- **[@kreuzberg/wasm](packages/typescript/README.md)** (Browser/Workers/Deno) – Pure WebAssembly, no native dependencies, cross-platform consistency
+
+**TypeScript Decision Matrix:**
+
+| Platform | Package | Performance | Setup | Use Case |
+|----------|---------|-------------|-------|----------|
+| Node.js | `@kreuzberg/node` | Fastest (100%) | Native build toolchain | Production servers, backends |
+| Bun | `@kreuzberg/node` | Fastest (100%) | Native build toolchain | High-performance backends |
+| Browser | `@kreuzberg/wasm` | Good (60-80% of native) | Zero dependencies | Web apps, no build complexity |
+| Cloudflare Workers | `@kreuzberg/wasm` | Good (60-80% of native) | Zero dependencies | Serverless edge computing |
+| Deno | `@kreuzberg/wasm` | Good (60-80% of native) | Zero dependencies | Deno runtime |
+
+### Other Languages
+
 - **[Python](packages/python/README.md)** – Installation, basic usage, async/sync APIs
 - **[Ruby](packages/ruby/README.md)** – Installation, basic usage, configuration
-- **[TypeScript/Node.js](crates/kreuzberg-node/README.md)** – Installation, types, promises
 - **[Go](packages/go/README.md)** – Installation, native library setup, sync/async extraction + batch APIs
   _Note: Windows builds use MinGW and don't support embeddings (ONNX Runtime requires MSVC)_
 - **[Java](packages/java/README.md)** – Installation, FFM API usage, Maven/Gradle setup
@@ -120,6 +139,33 @@ Automatic language detection in extracted text using fast-langdetect. Configure 
 Extract comprehensive metadata from all supported formats: authors, titles, creation dates, page counts, EXIF data, and format-specific properties.
 
 **[Metadata Guide →](https://kreuzberg.dev/snippets/go/pdf_metadata_extractor/)**
+
+## Performance: Native vs WASM Bindings
+
+Kreuzberg offers two JavaScript/TypeScript options with different performance characteristics:
+
+| Metric | @kreuzberg/node (Native) | @kreuzberg/wasm (WASM) |
+|--------|--------------------------|------------------------|
+| **Single document extraction** | ~150ms (PDF, 10 pages) | ~240-250ms (60-80% of native) |
+| **Batch processing (10 docs)** | ~850ms | ~1400-1800ms |
+| **Memory usage** | Direct system calls | Browser/WASM runtime overhead |
+| **Native dependencies** | Required (OS libraries) | None |
+| **Browser support** | Node.js, Bun only | Browser, Workers, Deno |
+| **Setup complexity** | Native build toolchain | Zero dependencies |
+
+**Use @kreuzberg/node when:**
+- Running on Node.js or Bun backend servers
+- Performance is critical (2-3x faster than WASM)
+- You have or can install native build toolchain
+- Processing high document volumes
+
+**Use @kreuzberg/wasm when:**
+- Running in browser or web workers
+- Deploying to serverless edge (Cloudflare, Vercel)
+- Using Deno or similar runtimes
+- Need absolute zero native dependencies
+- Cross-platform consistency is important
+- Trade-off: ~20-40% slower but still good performance
 
 ## Deployment Options
 

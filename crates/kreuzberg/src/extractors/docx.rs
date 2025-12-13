@@ -1,3 +1,5 @@
+#![cfg(all(feature = "tokio-runtime", feature = "office"))]
+
 //! DOCX extractor using docx-lite for high-performance text extraction.
 //!
 //! Supports: Microsoft Word (.docx)

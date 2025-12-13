@@ -84,6 +84,7 @@ pub struct ExtractionConfig {
     pub images: Option<ImageExtractionConfig>,
 
     /// PDF-specific options (None = use defaults)
+    #[cfg(feature = "pdf")]
     #[serde(default)]
     pub pdf_options: Option<PdfConfig>,
 
@@ -263,6 +264,7 @@ pub struct ImageExtractionConfig {
 }
 
 /// PDF-specific configuration.
+#[cfg(feature = "pdf")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PdfConfig {
     /// Extract images from PDF
@@ -358,6 +360,7 @@ impl Default for ExtractionConfig {
             force_ocr: false,
             chunking: None,
             images: None,
+            #[cfg(feature = "pdf")]
             pdf_options: None,
             token_reduction: None,
             language_detection: None,

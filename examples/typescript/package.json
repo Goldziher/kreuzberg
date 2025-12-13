@@ -1,0 +1,27 @@
+{
+	"name": "@kreuzberg/examples-typescript",
+	"version": "4.0.0-rc.6",
+	"private": true,
+	"description": "Kreuzberg Node.js binding examples",
+	"type": "module",
+	"scripts": {
+		"basic": "tsx basic.ts",
+		"batch": "tsx batch.ts",
+		"ocr": "tsx ocr.ts",
+		"custom-validator": "tsx custom-validator.ts",
+		"custom-postprocessor": "tsx custom-postprocessor.ts",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
+	},
+	"dependencies": {
+		"@kreuzberg/node": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^24.10.1",
+		"glob": "^10.3.10",
+		"tsx": "^4.19.2",
+		"typescript": "^5.9.3"
+	}
+}

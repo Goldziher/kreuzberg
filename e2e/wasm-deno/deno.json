@@ -1,0 +1,26 @@
+{
+	"tasks": {
+		"test": "deno test --allow-read **/*.test.ts",
+		"test:watch": "deno test --allow-read --watch ./",
+		"test:verbose": "deno test --allow-read --trace-leaks ./"
+	},
+	"imports": {
+		"@std/assert": "jsr:@std/assert@^0.224.0"
+	},
+	"compilerOptions": {
+		"lib": ["deno.window", "deno.unstable"],
+		"strict": true
+	},
+	"lint": {
+		"rules": {
+			"tags": ["recommended"]
+		}
+	},
+	"fmt": {
+		"useTabs": false,
+		"lineWidth": 100,
+		"indentWidth": 2,
+		"semiColons": true,
+		"singleQuote": false
+	}
+}

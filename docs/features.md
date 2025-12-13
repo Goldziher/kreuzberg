@@ -485,43 +485,66 @@ kreuzberg mcp
 
 ### Feature Availability
 
-| Feature | C# | Go | Python | Ruby | Rust | TypeScript |
-|---------|----|----|--------|------|------|------------|
-| **Core Extraction** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| All file formats | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Table extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Metadata extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **OCR** | | | | | | |
-| Tesseract | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| EasyOCR | ✗ | ✗ | ✓ (optional) | ✗ | ✗ | ✗ |
-| PaddleOCR | ✗ | ✗ | ✓ (optional) | ✗ | ✗ | ✗ |
-| **Processing** | | | | | | |
-| Language detection | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Content chunking | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Embeddings | ✓ | ✓* | ✓ | ✓ | ✓ | ✓ |
-| Token reduction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Quality processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Keyword extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Configuration** | | | | | | |
-| Programmatic config | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| File-based config | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Config discovery | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Plugin System** | | | | | | |
-| Document extractors | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| OCR backends | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Post processors | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Validators | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Servers** | | | | | | |
-| HTTP REST API | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| MCP Server | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **APIs** | | | | | | |
-| Sync API | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Async API | ✗ | ✗ | ✓ | ✗ | ✓ | ✓ |
-| Batch processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Streaming | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ |
+| Feature | C# | Go | Python | Ruby | Rust | TypeScript (Native) | TypeScript (WASM) |
+|---------|----|----|--------|------|------|--------------------|-------------------|
+| **Core Extraction** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| All file formats | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Table extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Metadata extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **OCR** | | | | | | | |
+| Tesseract | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| EasyOCR | ✗ | ✗ | ✓ (optional) | ✗ | ✗ | ✗ | ✗ |
+| PaddleOCR | ✗ | ✗ | ✓ (optional) | ✗ | ✗ | ✗ | ✗ |
+| **Processing** | | | | | | | |
+| Language detection | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Content chunking | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Embeddings | ✓ | ✓* | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Token reduction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Quality processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Keyword extraction | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Configuration** | | | | | | | |
+| Programmatic config | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| File-based config | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Config discovery | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| **Plugin System** | | | | | | | |
+| Document extractors | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Limited |
+| OCR backends | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Limited |
+| Post processors | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Limited |
+| Validators | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Limited |
+| **Servers** | | | | | | | |
+| HTTP REST API | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| MCP Server | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| **APIs** | | | | | | | |
+| Sync API | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Async API | ✗ | ✗ | ✓ | ✗ | ✓ | ✓ | ✓ |
+| Batch processing | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Streaming | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| **File I/O** | | | | | | | |
+| File system access | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Limited* |
 
 **Platform Notes:**
 - `*` Go embeddings not available on Windows (MinGW cannot link ONNX Runtime which requires MSVC)
+- `*` WASM: File system access limited to browser File API (read-only), Cloudflare Workers, or Deno (with permissions)
+
+### TypeScript Binding Differences
+
+**Native (`@kreuzberg/node`):**
+- Fastest performance (100% of native speed)
+- Full feature parity with other language bindings
+- Full file I/O capabilities
+- Server-side HTTP/MCP servers supported
+- File-based configuration discovery
+- Plugin system with custom implementations
+
+**WASM (`@kreuzberg/wasm`):**
+- Cross-platform browser compatibility (60-80% of native speed)
+- Zero native dependencies
+- Limited file system access (browser File API only)
+- No server mode support (use worker/edge runtime instead)
+- Plugins limited to in-memory registration (no filesystem)
+- Configuration via programmatic API only
+
+Choose **Native** for server-side Node.js applications. Choose **WASM** for browser/edge environments.
 
 ### Package Distribution
 
@@ -595,12 +618,19 @@ pip install kreuzberg[all]
 
 ### TypeScript/Ruby Packages
 
-TypeScript and Ruby bindings include all features in a single package. No optional dependencies or modular installation.
+**TypeScript** provides two packages with different feature sets:
 
 ```bash title="Terminal"
-# TypeScript - full package
+# Native TypeScript - full features (Node.js/Bun)
 npm install @kreuzberg/node
 
+# WASM TypeScript - browser/edge compatible (60-80% of native speed)
+npm install @kreuzberg/wasm
+```
+
+**Ruby** includes all features in a single package:
+
+```bash title="Terminal"
 # Ruby - full package
 gem install kreuzberg
 ```

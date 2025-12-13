@@ -97,6 +97,12 @@ fn sanitize_path(path: &Path) -> String {
 /// 2. If runtime creation fails, the process is already in a critical state
 /// 3. This is a one-time initialization - if it fails, nothing will work
 /// 4. Better to fail fast than return errors from every sync operation
+///
+/// # Availability
+///
+/// This static is only available when the `tokio-runtime` feature is enabled.
+/// For WASM targets, use the truly synchronous extraction functions instead.
+#[cfg(feature = "tokio-runtime")]
 static GLOBAL_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -310,13 +316,13 @@ pub async fn extract_bytes(content: &[u8], mime_type: &str, config: &ExtractionC
 ///
 /// Individual file errors are captured in the result metadata. System errors
 /// (IO, RuntimeError equivalents) will bubble up and fail the entire batch.
+#[cfg(feature = "tokio-runtime")]
 #[cfg_attr(feature = "otel", tracing::instrument(
     skip(config, paths),
     fields(
         extraction.batch_size = paths.len(),
     )
 ))]
-#[cfg(feature = "tokio-runtime")]
 pub async fn batch_extract_file(
     paths: Vec<impl AsRef<Path>>,
     config: &ExtractionConfig,
@@ -408,13 +414,13 @@ pub async fn batch_extract_file(
 /// # Returns
 ///
 /// A vector of `ExtractionResult` in the same order as the input.
+#[cfg(feature = "tokio-runtime")]
 #[cfg_attr(feature = "otel", tracing::instrument(
     skip(config, contents),
     fields(
         extraction.batch_size = contents.len(),
     )
 ))]
-#[cfg(feature = "tokio-runtime")]
 pub async fn batch_extract_bytes(
     contents: Vec<(&[u8], &str)>,
     config: &ExtractionConfig,
@@ -504,6 +510,10 @@ pub async fn batch_extract_bytes(
 ///
 /// Uses the global Tokio runtime for 100x+ performance improvement over creating
 /// a new runtime per call. Always uses the global runtime to avoid nested runtime issues.
+///
+/// This function is only available with the `tokio-runtime` feature. For WASM targets,
+/// use a truly synchronous extraction approach instead.
+#[cfg(feature = "tokio-runtime")]
 pub fn extract_file_sync(
     path: impl AsRef<Path>,
     mime_type: Option<&str>,
@@ -516,14 +526,31 @@ pub fn extract_file_sync(
 ///
 /// Uses the global Tokio runtime for 100x+ performance improvement over creating
 /// a new runtime per call.
+///
+/// With the `tokio-runtime` feature, this blocks the current thread using the global
+/// Tokio runtime. Without it (WASM), this calls a truly synchronous implementation.
+#[cfg(feature = "tokio-runtime")]
 pub fn extract_bytes_sync(content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
     GLOBAL_RUNTIME.block_on(extract_bytes(content, mime_type, config))
+}
+
+/// Synchronous wrapper for `extract_bytes` (WASM-compatible version).
+///
+/// This is a truly synchronous implementation without tokio runtime dependency.
+/// It calls `extract_bytes_sync_impl()` to perform the extraction.
+#[cfg(not(feature = "tokio-runtime"))]
+pub fn extract_bytes_sync(content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<ExtractionResult> {
+    extract_bytes_sync_impl(content.to_vec(), Some(mime_type.to_string()), Some(config.clone()))
 }
 
 /// Synchronous wrapper for `batch_extract_file`.
 ///
 /// Uses the global Tokio runtime for 100x+ performance improvement over creating
 /// a new runtime per call.
+///
+/// This function is only available with the `tokio-runtime` feature. For WASM targets,
+/// use a truly synchronous extraction approach instead.
+#[cfg(feature = "tokio-runtime")]
 pub fn batch_extract_file_sync(
     paths: Vec<impl AsRef<Path>>,
     config: &ExtractionConfig,
@@ -535,11 +562,112 @@ pub fn batch_extract_file_sync(
 ///
 /// Uses the global Tokio runtime for 100x+ performance improvement over creating
 /// a new runtime per call.
+///
+/// With the `tokio-runtime` feature, this blocks the current thread using the global
+/// Tokio runtime. Without it (WASM), this calls a truly synchronous implementation
+/// that iterates through items and calls `extract_bytes_sync()`.
+#[cfg(feature = "tokio-runtime")]
 pub fn batch_extract_bytes_sync(
     contents: Vec<(&[u8], &str)>,
     config: &ExtractionConfig,
 ) -> Result<Vec<ExtractionResult>> {
     GLOBAL_RUNTIME.block_on(batch_extract_bytes(contents, config))
+}
+
+/// Synchronous wrapper for `batch_extract_bytes` (WASM-compatible version).
+///
+/// This is a truly synchronous implementation that iterates through items
+/// and calls `extract_bytes_sync()` for each.
+#[cfg(not(feature = "tokio-runtime"))]
+pub fn batch_extract_bytes_sync(
+    contents: Vec<(&[u8], &str)>,
+    config: &ExtractionConfig,
+) -> Result<Vec<ExtractionResult>> {
+    let mut results = Vec::with_capacity(contents.len());
+    for (content, mime_type) in contents {
+        let result = extract_bytes_sync(content, mime_type, config);
+        results.push(result.unwrap_or_else(|e| {
+            use crate::types::{ErrorMetadata, Metadata};
+            ExtractionResult {
+                content: format!("Error: {}", e),
+                mime_type: "text/plain".to_string(),
+                metadata: Metadata {
+                    error: Some(ErrorMetadata {
+                        error_type: format!("{:?}", e),
+                        message: e.to_string(),
+                    }),
+                    ..Default::default()
+                },
+                tables: vec![],
+                detected_languages: None,
+                chunks: None,
+                images: None,
+            }
+        }));
+    }
+    Ok(results)
+}
+
+/// Synchronous extraction implementation for WASM compatibility.
+///
+/// This function performs extraction without requiring a tokio runtime.
+/// It calls the sync extractor methods directly.
+///
+/// # Arguments
+///
+/// * `content` - The byte content to extract
+/// * `mime_type` - Optional MIME type to validate/use
+/// * `config` - Optional extraction configuration
+///
+/// # Returns
+///
+/// An `ExtractionResult` or a `KreuzbergError`
+///
+/// # Implementation Notes
+///
+/// This is called when the `tokio-runtime` feature is disabled.
+/// It replicates the logic of `extract_bytes` but uses synchronous extractor methods.
+#[cfg(not(feature = "tokio-runtime"))]
+fn extract_bytes_sync_impl(
+    content: Vec<u8>,
+    mime_type: Option<String>,
+    config: Option<ExtractionConfig>,
+) -> Result<ExtractionResult> {
+    use crate::core::mime;
+
+    let config = config.unwrap_or_default();
+
+    // Validate MIME type if provided
+    let validated_mime = if let Some(mime) = mime_type {
+        mime::validate_mime_type(&mime)?
+    } else {
+        return Err(KreuzbergError::Validation {
+            message: "MIME type is required for synchronous extraction".to_string(),
+            source: None,
+        });
+    };
+
+    // Ensure extractors are initialized
+    crate::extractors::ensure_initialized()?;
+
+    // Get the appropriate extractor
+    let extractor = get_extractor(&validated_mime)?;
+
+    // Check if extractor supports synchronous extraction
+    let sync_extractor = extractor.as_sync_extractor().ok_or_else(|| {
+        KreuzbergError::UnsupportedFormat(format!(
+            "Extractor for '{}' does not support synchronous extraction",
+            validated_mime
+        ))
+    })?;
+
+    // Call the sync extract method
+    let mut result = sync_extractor.extract_sync(&content, &validated_mime, &config)?;
+
+    // Run post-processing pipeline (sync version)
+    result = crate::core::pipeline::run_pipeline_sync(result, &config)?;
+
+    Ok(result)
 }
 
 async fn extract_file_with_extractor(

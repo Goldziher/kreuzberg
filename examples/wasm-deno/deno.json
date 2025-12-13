@@ -1,0 +1,26 @@
+{
+	"tasks": {
+		"basic": "deno run --allow-read basic.ts",
+		"batch": "deno run --allow-read batch.ts",
+		"ocr": "deno run --allow-read ocr.ts"
+	},
+	"imports": {
+		"@kreuzberg/wasm": "../../crates/kreuzberg-wasm/pkg/kreuzberg_wasm.js"
+	},
+	"compilerOptions": {
+		"lib": ["deno.window", "deno.unstable"],
+		"strict": true
+	},
+	"lint": {
+		"rules": {
+			"tags": ["recommended"]
+		}
+	},
+	"fmt": {
+		"useTabs": false,
+		"lineWidth": 100,
+		"indentWidth": 2,
+		"semiColons": true,
+		"singleQuote": false
+	}
+}

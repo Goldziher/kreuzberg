@@ -2,6 +2,9 @@
 
 Kreuzberg's plugin system allows you to extend functionality by creating custom extractors, post-processors, OCR backends, and validators. Plugins can be written in Rust or Python.
 
+!!! note "WASM Support"
+    The WebAssembly bindings use pre-compiled Rust core with tesseract-wasm for OCR. Custom plugins are not supported in WASM environments. For custom plugins, use Python, Rust, or other native language bindings.
+
 ## Plugin Types
 
 Kreuzberg supports four types of plugins:

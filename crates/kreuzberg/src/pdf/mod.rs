@@ -33,18 +33,30 @@
 //!
 //! # Note
 //!
-//! This module is always available. The `ocr` feature enables additional
+//! This module requires the `pdf` feature. The `ocr` feature enables additional
 //! functionality in the PDF extractor for rendering pages to images.
+#[cfg(feature = "pdf")]
 pub mod error;
+#[cfg(feature = "pdf")]
 pub mod images;
+#[cfg(feature = "pdf")]
 pub mod metadata;
+#[cfg(feature = "pdf")]
 pub mod rendering;
+#[cfg(feature = "pdf")]
 pub mod table;
+#[cfg(feature = "pdf")]
 pub mod text;
 
+#[cfg(feature = "pdf")]
 pub use error::PdfError;
+#[cfg(feature = "pdf")]
 pub use images::{PdfImage, PdfImageExtractor, extract_images_from_pdf};
+#[cfg(feature = "pdf")]
 pub use metadata::extract_metadata;
+#[cfg(feature = "pdf")]
 pub use rendering::{PageRenderOptions, render_page_to_image};
+#[cfg(feature = "pdf")]
 pub use table::extract_words_from_page;
+#[cfg(feature = "pdf")]
 pub use text::extract_text_from_pdf;

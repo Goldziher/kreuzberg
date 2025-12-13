@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 anyhow = { workspace = true }
+base64 = { workspace = true }
 camino = "1.2"
 clap = { workspace = true }
 itertools = "0.14"

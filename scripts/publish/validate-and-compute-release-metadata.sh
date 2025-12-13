@@ -133,6 +133,7 @@ release_homebrew=false
 release_java=false
 release_csharp=false
 release_go=false
+release_wasm=false
 
 # Helper function to set all targets
 set_all_targets() {
@@ -146,6 +147,7 @@ set_all_targets() {
 	release_java=true
 	release_csharp=true
 	release_go=true
+	release_wasm=true
 }
 
 # Parse requested targets
@@ -193,6 +195,9 @@ for raw_target in "${requested_targets[@]}"; do
 	go | golang)
 		release_go=true
 		;;
+	wasm | webassembly)
+		release_wasm=true
+		;;
 	none)
 		release_python=false
 		release_node=false
@@ -204,9 +209,10 @@ for raw_target in "${requested_targets[@]}"; do
 		release_java=false
 		release_csharp=false
 		release_go=false
+		release_wasm=false
 		;;
 	*)
-		echo "Unknown release target '$trimmed'. Allowed: all, python, node, ruby, cli, crates, docker, homebrew, java, csharp, go." >&2
+		echo "Unknown release target '$trimmed'. Allowed: all, python, node, ruby, cli, crates, docker, homebrew, java, csharp, go, wasm." >&2
 		exit 1
 		;;
 	esac
@@ -234,9 +240,10 @@ if [[ "$release_homebrew" == "true" ]]; then enabled_targets+=("homebrew"); fi
 if [[ "$release_java" == "true" ]]; then enabled_targets+=("java"); fi
 if [[ "$release_csharp" == "true" ]]; then enabled_targets+=("csharp"); fi
 if [[ "$release_go" == "true" ]]; then enabled_targets+=("go"); fi
+if [[ "$release_wasm" == "true" ]]; then enabled_targets+=("wasm"); fi
 
 # Summarize targets
-if [[ ${#enabled_targets[@]} -eq 10 ]]; then
+if [[ ${#enabled_targets[@]} -eq 11 ]]; then
 	release_targets_summary="all"
 elif [[ ${#enabled_targets[@]} -eq 0 ]]; then
 	release_targets_summary="none"
@@ -275,6 +282,7 @@ cat <<JSON
   "release_homebrew": $release_homebrew,
   "release_java": $release_java,
   "release_csharp": $release_csharp,
-  "release_go": $release_go
+  "release_go": $release_go,
+  "release_wasm": $release_wasm
 }
 JSON

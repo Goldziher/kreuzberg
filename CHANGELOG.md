@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [4.0.0-rc.7] - 2025-12-12
 
 ### Added
+- **WebAssembly bindings** (`@kreuzberg/wasm` npm package) for browser, Cloudflare Workers, Deno, and Bun
+  - Full TypeScript API with sync and async extraction methods
+  - Multi-threading support via `wasm-bindgen-rayon` and SharedArrayBuffer
+  - Batch processing with `batchExtractBytes()` and `batchExtractBytesSync()`
+  - Plugin system for custom post-processors, validators, and OCR backends
+  - MIME type detection and configuration management
+  - Comprehensive unit tests (95%+ coverage on core modules)
+  - Production-ready error handling with detailed error messages
 - RTF extractor now builds structured tables (markdown + cells) and parses RTF `\info` metadata (authors, dates, counts), bringing parity with DOCX/ODT fixtures.
 - New pandoc-generated RTF fixtures with embedded metadata for `word_sample`, `lorem_ipsum`, and `extraction_test` to validate cross-format extraction.
 - **Page tracking and metadata redesign** (#226)

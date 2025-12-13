@@ -7,13 +7,7 @@
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
-import {
-	batchExtractBytes,
-	batchExtractBytesSync,
-	batchExtractFiles,
-	batchExtractFilesSync,
-	ExtractionConfig,
-} from "@kreuzberg/node";
+import { batchExtractBytes, batchExtractBytesSync, batchExtractFiles, batchExtractFilesSync } from "@kreuzberg/node";
 import { glob } from "glob";
 
 async function main() {
@@ -22,12 +16,14 @@ async function main() {
 
 	const results = batchExtractFilesSync(files);
 
-	files.forEach((file, i) => {
+	files.forEach((file: string, i: number) => {
 		const result = results[i];
-		console.log(`\n${file}:`);
-		console.log(`  Length: ${result.content.length} chars`);
-		console.log(`  MIME: ${result.mimeType}`);
-		console.log(`  Preview: ${result.content.substring(0, 100)}...`);
+		if (result) {
+			console.log(`\n${file}:`);
+			console.log(`  Length: ${result.content.length} chars`);
+			console.log(`  MIME: ${result.mimeType}`);
+			console.log(`  Preview: ${result.content.substring(0, 100)}...`);
+		}
 	});
 
 	console.log("\n=== Async Batch Processing ===");
@@ -39,11 +35,10 @@ async function main() {
 	console.log(`Total characters: ${totalChars}`);
 
 	console.log("\n=== Batch with Configuration ===");
-	const config = new ExtractionConfig({
+	const config = {
 		enableQualityProcessing: true,
 		useCache: true,
-		ocr: undefined,
-	});
+	};
 
 	const configResults = batchExtractFilesSync(files, config);
 	console.log(`Processed ${configResults.length} files with configuration`);
@@ -53,9 +48,12 @@ async function main() {
 	if (pdfFiles.length > 0) {
 		const dirResults = batchExtractFilesSync(pdfFiles.slice(0, 5));
 
-		pdfFiles.slice(0, 5).forEach((file, i) => {
+		pdfFiles.slice(0, 5).forEach((file: string, i: number) => {
 			const filename = basename(file);
-			console.log(`${filename}: ${dirResults[i].content.length} chars`);
+			const dirResult = dirResults[i];
+			if (dirResult) {
+				console.log(`${filename}: ${dirResult.content.length} chars`);
+			}
 		});
 	}
 
@@ -98,8 +96,11 @@ async function main() {
 	console.log("\n=== Individual Processing with Error Handling ===");
 	for (const file of filesWithInvalid) {
 		try {
-			const [result] = batchExtractFilesSync([file]);
-			console.log(`✓ ${file}: ${result.content.length} chars`);
+			const results = batchExtractFilesSync([file]);
+			const result = results[0];
+			if (result) {
+				console.log(`✓ ${file}: ${result.content.length} chars`);
+			}
 		} catch (error) {
 			const err = error as Error;
 			console.log(`✗ ${file}: ${err.constructor.name}: ${err.message}`);
@@ -117,10 +118,10 @@ async function main() {
 		),
 	);
 
-	parallelResults.forEach((result, i) => {
+	parallelResults.forEach((result: any, i: number) => {
 		if ("error" in result && result.error) {
 			console.log(`✗ ${result.file}: ${result.message}`);
-		} else if ("content" in result) {
+		} else if ("content" in result && result.content) {
 			console.log(`✓ ${files[i]}: ${result.content.length} chars`);
 		}
 	});

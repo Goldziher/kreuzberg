@@ -6,6 +6,13 @@ use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use walkdir::WalkDir;
 
+/// Target for WASM code generation
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum WasmTarget {
+    Deno,
+    Workers,
+}
+
 /// Parsed fixture definition shared across generators.
 /// Supports both document extraction and plugin API fixtures.
 #[allow(dead_code)]
@@ -404,4 +411,31 @@ pub fn load_fixtures(fixtures_dir: &Utf8Path) -> Result<Vec<Fixture>> {
     }
 
     Ok(fixtures)
+}
+
+/// Determines whether a fixture should be included for a given WASM target.
+///
+/// This function filters fixtures based on WASM target-specific constraints:
+/// - Workers target cannot run Office fixtures (LibreOffice not available)
+/// - Workers target has a 500KB size limit for documents
+pub fn should_include_for_wasm(fixture: &Fixture, target: WasmTarget) -> bool {
+    // Skip Office fixtures for Workers (no LibreOffice available)
+    if target == WasmTarget::Workers && fixture.category() == "office" {
+        return false;
+    }
+
+    // Skip large PDFs for Workers (>500KB size limit)
+    if target == WasmTarget::Workers {
+        if let Some(doc) = &fixture.document {
+            // Check file size if possible
+            let doc_path = std::path::PathBuf::from("../../test_documents").join(&doc.path);
+            if let Ok(metadata) = std::fs::metadata(&doc_path) {
+                if metadata.len() > 500_000 {
+                    return false;
+                }
+            }
+        }
+    }
+
+    true
 }

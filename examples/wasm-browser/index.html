@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
+    <title>Kreuzberg WASM Document Extractor</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app" class="container">
+      <header class="header">
+        <h1>Document Extraction with Kreuzberg WASM</h1>
+        <p class="subtitle">
+          Upload documents to extract text, metadata, and structured content
+        </p>
+      </header>
+
+      <main class="main">
+        <!-- Instructions Section -->
+        <section class="instructions-section">
+          <h2>About COOP/COEP Headers</h2>
+          <p>
+            This application uses WebAssembly with multi-threading capabilities
+            (enabled via
+            <code>wasm-bindgen-rayon</code>). To support
+            <code>SharedArrayBuffer</code>, the browser requires special CORS
+            headers:
+          </p>
+          <ul>
+            <li>
+              <code>Cross-Origin-Opener-Policy: same-origin</code> - Isolates
+              the browsing context
+            </li>
+            <li>
+              <code>Cross-Origin-Embedder-Policy: require-corp</code> - Requires
+              CORS for all resources
+            </li>
+          </ul>
+          <p>
+            These headers are automatically set by the Vite development server
+            and should be configured in your production environment (e.g.,
+            Nginx, Cloudflare, AWS).
+          </p>
+        </section>
+
+        <!-- Upload Section -->
+        <section id="uploadSection" class="upload-section">
+          <div id="dropZone" class="drop-zone">
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2L12 14M12 14L6 8M12 14L18 8"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M3 15V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V15"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <h3>Drag and drop your document here</h3>
+            <p>or click to browse</p>
+            <p class="supported-types">
+              Supported: PDF, DOCX, XLSX, HTML, PNG, JPEG
+            </p>
+            <input
+              id="fileInput"
+              type="file"
+              accept=".pdf,.docx,.xlsx,.html,.png,.jpg,.jpeg"
+              hidden
+            />
+          </div>
+
+          <div id="sampleButtonContainer" class="sample-button-container">
+            <button id="sampleButton" class="sample-button">
+              Load Sample PDF
+            </button>
+          </div>
+        </section>
+
+        <!-- Progress Section -->
+        <section id="progressSection" class="progress-section" style="display: none">
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <p id="progressText" class="progress-text">Processing document...</p>
+          </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="results-section" style="display: none">
+          <div class="results-header">
+            <h2>Extraction Results</h2>
+            <button id="closeButton" class="close-button">New Document</button>
+          </div>
+
+          <!-- File Info -->
+          <div class="file-info">
+            <h3 id="fileName" class="file-name"></h3>
+            <div class="file-stats">
+              <div class="stat">
+                <span class="stat-label">File Size:</span>
+                <span id="fileSize" class="stat-value"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">MIME Type:</span>
+                <span id="mimeType" class="stat-value"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Characters:</span>
+                <span id="charCount" class="stat-value"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs">
+            <button id="contentTab" class="tab-button active" data-tab="content">
+              Extracted Content
+            </button>
+            <button id="metadataTab" class="tab-button" data-tab="metadata">
+              Metadata
+            </button>
+          </div>
+
+          <!-- Content Tab -->
+          <div id="contentTab-pane" class="tab-pane active">
+            <div class="content-preview">
+              <pre id="extractedContent" class="code-block"></pre>
+            </div>
+            <div class="button-group">
+              <button id="copyButton" class="copy-button">Copy to Clipboard</button>
+              <button id="downloadButton" class="download-button">
+                Download as .txt
+              </button>
+            </div>
+          </div>
+
+          <!-- Metadata Tab -->
+          <div id="metadataTab-pane" class="tab-pane" style="display: none">
+            <div class="metadata-container">
+              <pre id="metadataContent" class="code-block"></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- Error Section -->
+        <section id="errorSection" class="error-section" style="display: none">
+          <div class="error-box">
+            <h3>Error Processing Document</h3>
+            <p id="errorMessage"></p>
+            <button id="errorCloseButton" class="error-close-button">
+              Try Again
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>
+          Powered by
+          <a href="https://github.com/julien-cros/kreuzberg" target="_blank"
+            >Kreuzberg</a
+          >
+          - Document Intelligence at the Edge
+        </p>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

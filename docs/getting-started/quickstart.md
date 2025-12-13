@@ -2,6 +2,15 @@
 
 Get up and running with Kreuzberg in minutes.
 
+!!! info "Choosing Your TypeScript Package"
+
+    Kreuzberg provides **two TypeScript packages** for different runtimes:
+
+    - **`@kreuzberg/node`** – Use for Node.js servers and CLI tools (native performance, 100% speed)
+    - **`@kreuzberg/wasm`** – Use for browsers, Cloudflare Workers, Deno, Bun, and serverless (60-80% speed, cross-platform)
+
+    The examples below show both. Pick the one matching your runtime. See [Platform Overview](../index.md#choosing-between-typescript-packages) for detailed guidance.
+
 ## Basic Extraction
 
 Extract text from any supported document format:
@@ -33,6 +42,10 @@ Extract text from any supported document format:
 === "TypeScript"
 
     --8<-- "snippets/typescript/getting-started/extract_file_sync.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/getting-started/extract_file_sync.md"
 
 === "CLI"
 
@@ -70,11 +83,15 @@ For better performance with I/O-bound operations:
 
     --8<-- "snippets/typescript/getting-started/extract_file_async.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/getting-started/extract_file_async.md"
+
 === "CLI"
 
     !!! note "Not Applicable"
         Async extraction is an API-level feature. The CLI operates synchronously.
-        Use language-specific bindings (Python, TypeScript, Rust) for async operations.
+        Use language-specific bindings (Python, TypeScript, Rust, WASM) for async operations.
 
 ## OCR Extraction
 
@@ -107,6 +124,10 @@ Extract text from images and scanned documents:
 === "TypeScript"
 
     --8<-- "snippets/typescript/ocr/ocr_extraction.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/ocr/ocr_extraction.md"
 
 === "CLI"
 
@@ -144,6 +165,10 @@ Process multiple files concurrently:
 
     --8<-- "snippets/typescript/getting-started/batch_extract_files_sync.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/getting-started/batch_extract_files_sync.md"
+
 === "CLI"
 
     --8<-- "snippets/cli/batch_basic.md"
@@ -179,6 +204,10 @@ When you already have file content in memory:
 === "TypeScript"
 
     --8<-- "snippets/typescript/getting-started/extract_bytes_sync.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/getting-started/extract_bytes_sync.md"
 
 === "CLI"
 
@@ -227,6 +256,10 @@ Customize extraction behavior:
 === "TypeScript"
 
     --8<-- "snippets/typescript/config/advanced_config.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/config/advanced_config.md"
 
 === "CLI"
 
@@ -314,6 +347,10 @@ Access format-specific metadata from extracted documents:
 
     --8<-- "snippets/typescript/metadata/metadata.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/metadata/metadata.md"
+
 === "CLI"
 
     Extract and parse metadata using JSON output:
@@ -400,6 +437,10 @@ Extract and process tables from documents:
 
     --8<-- "snippets/typescript/api/tables.md"
 
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/tables.md"
+
 === "CLI"
 
     Extract and process tables from documents:
@@ -472,6 +513,10 @@ Handle extraction errors gracefully:
 === "TypeScript"
 
     --8<-- "snippets/typescript/api/error_handling.md"
+
+=== "WASM"
+
+    --8<-- "snippets/wasm/api/error_handling.md"
 
 ## Next Steps
 

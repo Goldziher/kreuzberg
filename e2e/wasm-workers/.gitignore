@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Build
+.wrangler/
+dist/
+.dev.vars
+
+# Testing
+coverage/
+*.log
+
+# Cache
+.turbo/

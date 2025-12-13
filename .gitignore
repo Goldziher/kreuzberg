@@ -122,3 +122,7 @@ wheels/
 yarn-debug.log*
 yarn-error.log*
 packages/python/kreuzberg/kreuzberg-cli
+
+# WASM build artifacts
+libpdfium.a
+.wrangler/

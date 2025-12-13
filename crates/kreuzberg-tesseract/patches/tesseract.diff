@@ -1,0 +1,199 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8c6845cb..fdcfc4a8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -90,6 +90,7 @@ option(ENABLE_LTO "Enable link-time optimization" OFF)
+ option(FAST_FLOAT "Enable float for LSTM" ON)
+ option(ENABLE_OPENCL "Enable unsupported experimental OpenCL support" OFF)
+ option(BUILD_TRAINING_TOOLS "Build training tools" ON)
++option(BUILD_TESSERACT_BINARY "Build Tesseract binary" ON)
+ option(BUILD_TESTS "Build tests" OFF)
+ option(USE_SYSTEM_ICU "Use system ICU" OFF)
+ option(DISABLE_ARCHIVE "Disable build with libarchive (if available)" OFF)
+@@ -565,9 +566,7 @@ file(
+   src/cutil/*.cpp
+   src/dict/*.cpp
+   src/lstm/*.cpp
+-  src/opencl/*.cpp
+   src/textord/*.cpp
+-  src/viewer/*.cpp
+   src/wordrec/*.cpp)
+
+ if(DISABLED_LEGACY_ENGINE)
+@@ -714,13 +713,7 @@ file(
+ set(TESSERACT_SRC
+     ${TESSERACT_SRC}
+     src/api/baseapi.cpp
+-    src/api/capi.cpp
+-    src/api/renderer.cpp
+-    src/api/altorenderer.cpp
+-    src/api/hocrrenderer.cpp
+-    src/api/lstmboxrenderer.cpp
+-    src/api/pdfrenderer.cpp
+-    src/api/wordstrboxrenderer.cpp)
++    src/api/hocrrenderer.cpp)
+
+ set(TESSERACT_CONFIGS
+   tessdata/configs/alto
+@@ -858,14 +851,16 @@ endif()
+ # EXECUTABLE tesseract
+ # ##############################################################################
+
+-add_executable(tesseract src/tesseract.cpp)
+-target_link_libraries(tesseract libtesseract)
+-if(HAVE_TIFFIO_H AND WIN32)
+-  target_link_libraries(tesseract ${TIFF_LIBRARIES})
+-endif()
++if(BUILD_TESSERACT_BINARY)
++  add_executable(tesseract src/tesseract.cpp)
++  target_link_libraries(tesseract libtesseract)
++  if(HAVE_TIFFIO_H AND WIN32)
++    target_link_libraries(tesseract ${TIFF_LIBRARIES})
++  endif()
+
+-if(OPENMP_BUILD AND UNIX)
+-  target_link_libraries(tesseract pthread)
++  if(OPENMP_BUILD AND UNIX)
++    target_link_libraries(tesseract pthread)
++  endif()
+ endif()
+
+ # ##############################################################################
+@@ -899,7 +894,11 @@ write_basic_package_version_file(
+
+ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/tesseract.pc
+         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+-install(TARGETS tesseract DESTINATION bin)
++
++if(BUILD_TESSERACT_BINARY)
++  install(TARGETS tesseract DESTINATION bin)
++endif()
++
+ install(
+   TARGETS libtesseract
+   EXPORT TesseractTargets
+diff --git a/src/arch/simddetect.cpp b/src/arch/simddetect.cpp
+index 1afe5a5d..cb8c6d4c 100644
+--- a/src/arch/simddetect.cpp
++++ b/src/arch/simddetect.cpp
+@@ -40,10 +40,12 @@
+
+ #endif
+
++#if !defined(__EMSCRIPTEN__)
+ #if defined(HAVE_AVX) || defined(HAVE_AVX2) || defined(HAVE_FMA) || defined(HAVE_SSE4_1)
+ // See https://en.wikipedia.org/wiki/CPUID.
+ #  define HAS_CPUID
+ #endif
++#endif
+
+ #if defined(HAS_CPUID)
+ #  if defined(__GNUC__)
+diff --git a/src/ccmain/pageiterator.cpp b/src/ccmain/pageiterator.cpp
+index 64ff7f66..c0f80e5f 100644
+--- a/src/ccmain/pageiterator.cpp
++++ b/src/ccmain/pageiterator.cpp
+@@ -582,7 +582,9 @@ void PageIterator::Orientation(tesseract::Orientation *orientation,
+   up_in_image.rotate(block->re_rotation());
+
+   if (up_in_image.x() == 0.0F) {
+-    if (up_in_image.y() > 0.0F) {
++    // tesseract-wasm note: `up_in_image` will be a null vector if orientation
++    // info is not available. In that case, assume page up.
++    if (up_in_image.y() >= 0.0F) {
+       *orientation = ORIENTATION_PAGE_UP;
+     } else {
+       *orientation = ORIENTATION_PAGE_DOWN;
+diff --git a/src/ccmain/pagesegmain.cpp b/src/ccmain/pagesegmain.cpp
+index 0af44607..718e73ef 100644
+--- a/src/ccmain/pagesegmain.cpp
++++ b/src/ccmain/pagesegmain.cpp
+@@ -222,7 +222,7 @@ int Tesseract::AutoPageSeg(PageSegMode pageseg_mode, BLOCK_LIST *blocks, TO_BLOC
+     }
+ #endif // ndef DISABLED_LEGACY_ENGINE
+     result = finder->FindBlocks(pageseg_mode, scaled_color_, scaled_factor_, to_block,
+-                                photomask_pix, pix_thresholds_, pix_grey_, &pixa_debug_,
++                                photomask_pix, pix_thresholds_, pix_grey_, pixa_debug_.get(),
+                                 &found_blocks, diacritic_blobs, to_blocks);
+     if (result >= 0) {
+       finder->GetDeskewVectors(&deskew_, &reskew_);
+@@ -279,17 +279,17 @@ ColumnFinder *Tesseract::SetupPageSegAndDetectOrientation(PageSegMode pageseg_mo
+   ICOORD bleft(0, 0);
+
+   ASSERT_HOST(pix_binary_ != nullptr);
+-  if (tessedit_dump_pageseg_images) {
+-    pixa_debug_.AddPix(pix_binary_, "PageSegInput");
++  if (tessedit_dump_pageseg_images && pixa_debug_) {
++    pixa_debug_->AddPix(pix_binary_, "PageSegInput");
+   }
+   // Leptonica is used to find the rule/separator lines in the input.
+   LineFinder::FindAndRemoveLines(source_resolution_, textord_tabfind_show_vlines, pix_binary_,
+                                  &vertical_x, &vertical_y, music_mask_pix, &v_lines, &h_lines);
+-  if (tessedit_dump_pageseg_images) {
+-    pixa_debug_.AddPix(pix_binary_, "NoLines");
++  if (tessedit_dump_pageseg_images && pixa_debug_) {
++    pixa_debug_->AddPix(pix_binary_, "NoLines");
+   }
+   // Leptonica is used to find a mask of the photo regions in the input.
+-  *photo_mask_pix = ImageFind::FindImages(pix_binary_, &pixa_debug_);
++  *photo_mask_pix = ImageFind::FindImages(pix_binary_, pixa_debug_.get());
+   if (tessedit_dump_pageseg_images) {
+     Image pix_no_image_ = nullptr;
+     if (*photo_mask_pix != nullptr) {
+@@ -297,7 +297,7 @@ ColumnFinder *Tesseract::SetupPageSegAndDetectOrientation(PageSegMode pageseg_mo
+     } else {
+       pix_no_image_ = pix_binary_.clone();
+     }
+-    pixa_debug_.AddPix(pix_no_image_, "NoImages");
++    pixa_debug_->AddPix(pix_no_image_, "NoImages");
+     pix_no_image_.destroy();
+   }
+   if (!PSM_COL_FIND_ENABLED(pageseg_mode)) {
+diff --git a/src/ccmain/tesseractclass.cpp b/src/ccmain/tesseractclass.cpp
+index fd58ac87..517f925e 100644
+--- a/src/ccmain/tesseractclass.cpp
++++ b/src/ccmain/tesseractclass.cpp
+@@ -487,8 +487,10 @@ Dict &Tesseract::getDict() {
+ }
+
+ void Tesseract::Clear() {
+-  std::string debug_name = imagebasename + "_debug.pdf";
+-  pixa_debug_.WritePDF(debug_name.c_str());
++  if (pixa_debug_) {
++    std::string debug_name = imagebasename + "_debug.pdf";
++    pixa_debug_->WritePDF(debug_name.c_str());
++  }
+   pix_binary_.destroy();
+   pix_grey_.destroy();
+   pix_thresholds_.destroy();
+@@ -572,7 +574,7 @@ void Tesseract::PrepareForPageseg() {
+   // the newly split image.
+   splitter_.set_orig_pix(pix_binary());
+   splitter_.set_pageseg_split_strategy(max_pageseg_strategy);
+-  if (splitter_.Split(true, &pixa_debug_)) {
++  if (splitter_.Split(true, pixa_debug_.get())) {
+     ASSERT_HOST(splitter_.splitted_image());
+     pix_binary_.destroy();
+     pix_binary_ = splitter_.splitted_image().clone();
+@@ -599,7 +601,7 @@ void Tesseract::PrepareForTessOCR(BLOCK_LIST *block_list, Tesseract *osd_tess, O
+   splitter_.set_segmentation_block_list(block_list);
+   splitter_.set_ocr_split_strategy(max_ocr_strategy);
+   // Run the splitter for OCR
+-  bool split_for_ocr = splitter_.Split(false, &pixa_debug_);
++  bool split_for_ocr = splitter_.Split(false, pixa_debug_.get());
+   // Restore pix_binary to the binarized original pix for future reference.
+   ASSERT_HOST(splitter_.orig_pix());
+   pix_binary_.destroy();
+diff --git a/src/ccmain/tesseractclass.h b/src/ccmain/tesseractclass.h
+index 732bb9e6..030aa5bc 100644
+--- a/src/ccmain/tesseractclass.h
++++ b/src/ccmain/tesseractclass.h
+@@ -986,7 +986,7 @@ private:
+   // Thresholds that were used to generate the thresholded image from grey.
+   Image pix_thresholds_;
+   // Debug images. If non-empty, will be written on destruction.
+-  DebugPixa pixa_debug_;
++  std::unique_ptr<DebugPixa> pixa_debug_;
+   // Input image resolution after any scaling. The resolution is not well
+   // transmitted by operations on Pix, so we keep an independent record here.
+   int source_resolution_;

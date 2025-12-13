@@ -165,6 +165,59 @@ flowchart LR
 - **TextExtractor**: Line-by-line streaming
 - **ArchiveExtractor**: Decompresses on-the-fly
 
+## Native vs WASM Performance
+
+Kreuzberg offers two TypeScript implementations with different performance characteristics:
+
+### Speed Comparison
+
+| Metric | Native (`@kreuzberg/node`) | WASM (`@kreuzberg/wasm`) | Ratio |
+|--------|---------------------------|------------------------|-------|
+| PDF extraction | ~100ms (baseline) | ~125-165ms | 1.25-1.65x slower |
+| OCR extraction | ~500ms (baseline) | ~625-825ms | 1.25-1.65x slower |
+| Batch processing (100 files) | ~80ms/file | ~100-130ms/file | 1.25-1.65x slower |
+| Memory overhead | Minimal (20-50MB) | Higher (50-150MB) | 2-5x more |
+
+**Speed baseline**: All percentages assume Kreuzberg native bindings as 100%. Native compilation and direct OS-level APIs enable maximum throughput.
+
+### Why WASM is Slower
+
+WASM runs in a sandboxed execution environment with several inherent overheads:
+
+1. **Interpretation overhead** – JavaScript runtimes interpret WASM bytecode (JIT compilation helps but adds startup cost)
+2. **Virtual memory layer** – WASM uses a linear memory model instead of native pointers
+3. **Function call marshalling** – Crossing WASM-JS boundaries adds latency for each operation
+4. **Single-threaded execution** – WASM Web Workers add communication overhead for parallel operations
+5. **Limited system access** – WASM cannot directly access native APIs (file I/O, OS resources)
+
+### When to Use Each
+
+**Use Native (`@kreuzberg/node`)** when:
+
+- Server-side performance is critical (batch processing, high-throughput APIs)
+- Processing large document volumes
+- Real-time extraction requirements
+- Running on Node.js, Bun, or Deno
+
+**Use WASM (`@kreuzberg/wasm`)** when:
+
+- Running in browsers or web environments
+- Deploying to Cloudflare Workers or edge platforms
+- Maximum platform compatibility is more important than speed
+- In-browser processing is a requirement
+- Performance overhead (25-65%) is acceptable for your use case
+
+### Browser-Specific Considerations
+
+In-browser WASM performance depends on:
+
+- **Browser JavaScript engine** (V8 in Chrome/Edge is fastest, then SpiderMonkey in Firefox)
+- **Hardware** (mobile devices will be slower than desktops)
+- **Worker thread usage** – Offloading OCR to Web Workers prevents UI blocking
+- **Memory constraints** – Browsers limit WebAssembly memory (typically 1-2GB per tab)
+
+For large-scale document processing, always use native Node.js bindings. For interactive in-browser processing, WASM is the only option.
+
 ## Benchmarking
 
 To measure Kreuzberg's performance for your specific use case, we recommend:

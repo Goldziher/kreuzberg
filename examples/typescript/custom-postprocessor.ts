@@ -181,7 +181,7 @@ class KeywordExtractor implements PostProcessorProtocol {
 			.slice(0, 10)
 			.map(([word]) => word);
 
-		result.metadata.keywords = keywords;
+		result.metadata.keywords = keywords as any;
 
 		console.log(`[KeywordExtractor] Extracted ${keywords.length} keywords`);
 
@@ -195,7 +195,7 @@ class KeywordExtractor implements PostProcessorProtocol {
 class ExternalAPIEnricher implements PostProcessorProtocol {
 	constructor(
 		private apiUrl: string,
-		private apiKey: string,
+		private _apiKey: string,
 	) {}
 
 	name(): string {
@@ -205,6 +205,8 @@ class ExternalAPIEnricher implements PostProcessorProtocol {
 	async process(result: ExtractionResult): Promise<ExtractionResult> {
 		try {
 			console.log(`[ExternalAPIEnricher] Calling API: ${this.apiUrl}`);
+			// Note: _apiKey would be used for authentication headers in a real implementation
+			void this._apiKey;
 
 			result.metadata.external_data = {
 				sentiment: "positive",
@@ -241,8 +243,8 @@ async function main() {
 	console.log(`  Word count: ${result.metadata.word_count}`);
 	console.log(`  PII redacted: ${result.metadata.pii_redacted}`);
 	console.log(`  Text normalized: ${result.metadata.text_normalized}`);
-	console.log(`  Summary length: ${(result.metadata.summary as string)?.length || 0}`);
-	console.log(`  Keywords: ${(result.metadata.keywords as string[])?.slice(0, 5)}`);
+	console.log(`  Summary length: ${(result.metadata.summary as unknown as string)?.length || 0}`);
+	console.log(`  Keywords: ${(result.metadata.keywords as unknown as string[])?.slice(0, 5)}`);
 
 	console.log("\n=== Unregister Post-Processor ===");
 	unregisterPostProcessor("pii_redactor");

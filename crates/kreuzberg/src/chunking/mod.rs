@@ -48,8 +48,13 @@
 //! - Maintaining context across chunk boundaries
 use crate::error::{KreuzbergError, Result};
 use crate::types::{Chunk, ChunkMetadata, PageBoundary};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use text_splitter::{Characters, ChunkCapacity, ChunkConfig, MarkdownSplitter, TextSplitter};
+
+pub mod processor;
+pub use processor::ChunkingProcessor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChunkerType {
@@ -1831,4 +1836,42 @@ mod tests {
         let result = chunk_text(text, &config, Some(&boundaries));
         assert!(result.is_err());
     }
+}
+
+/// Lazy-initialized flag that ensures chunking processor is registered exactly once.
+///
+/// This static is accessed on first use to automatically register the
+/// chunking processor with the plugin registry.
+static PROCESSOR_INITIALIZED: Lazy<Result<()>> = Lazy::new(register_chunking_processor);
+
+/// Ensure the chunking processor is registered.
+///
+/// This function is called automatically when needed.
+/// It's safe to call multiple times - registration only happens once.
+pub fn ensure_initialized() -> Result<()> {
+    PROCESSOR_INITIALIZED
+        .as_ref()
+        .map(|_| ())
+        .map_err(|e| crate::KreuzbergError::Plugin {
+            message: format!("Failed to register chunking processor: {}", e),
+            plugin_name: "text-chunking".to_string(),
+        })
+}
+
+/// Register the chunking processor with the global registry.
+///
+/// This function should be called once at application startup to register
+/// the chunking post-processor.
+///
+/// **Note:** This is called automatically on first use.
+/// Explicit calling is optional.
+pub fn register_chunking_processor() -> Result<()> {
+    let registry = crate::plugins::registry::get_post_processor_registry();
+    let mut registry = registry
+        .write()
+        .map_err(|e| crate::KreuzbergError::Other(format!("Post-processor registry lock poisoned: {}", e)))?;
+
+    registry.register(Arc::new(ChunkingProcessor), 50)?;
+
+    Ok(())
 }

@@ -10,6 +10,9 @@ use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
 
+#[cfg(not(feature = "tokio-runtime"))]
+use crate::KreuzbergError;
+
 /// OCR backend types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OcrBackendType {
@@ -164,9 +167,20 @@ pub trait OcrBackend: Plugin {
     ///
     /// Same as `process_image`, plus file I/O errors.
     async fn process_file(&self, path: &Path, config: &OcrConfig) -> Result<ExtractionResult> {
-        use crate::core::io;
-        let bytes = io::read_file_async(path).await?;
-        self.process_image(&bytes, config).await
+        #[cfg(feature = "tokio-runtime")]
+        {
+            use crate::core::io;
+            let bytes = io::read_file_async(path).await?;
+            self.process_image(&bytes, config).await
+        }
+        #[cfg(not(feature = "tokio-runtime"))]
+        {
+            // For WASM and non-tokio environments, file-based OCR is not supported
+            // through the default implementation. Implementations must provide their own.
+            Err(KreuzbergError::Other(
+                "File-based OCR processing requires the tokio-runtime feature".to_string(),
+            ))
+        }
     }
 
     /// Check if this backend supports a given language code.

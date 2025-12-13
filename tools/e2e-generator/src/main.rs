@@ -6,6 +6,8 @@ mod python;
 mod ruby;
 mod rust;
 mod typescript;
+mod wasm_deno;
+mod wasm_workers;
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
@@ -50,6 +52,8 @@ enum Language {
     Java,
     Go,
     Csharp,
+    WasmDeno,
+    WasmWorkers,
 }
 
 fn main() -> Result<()> {
@@ -66,6 +70,8 @@ fn main() -> Result<()> {
                 Language::Java => java::generate(&fixtures, output.as_path())?,
                 Language::Go => go::generate(&fixtures, output.as_path())?,
                 Language::Csharp => csharp::generate(&fixtures, output.as_path())?,
+                Language::WasmDeno => wasm_deno::generate(&fixtures, output.as_path())?,
+                Language::WasmWorkers => wasm_workers::generate(&fixtures, output.as_path())?,
             };
         }
         Commands::List { fixtures } => {

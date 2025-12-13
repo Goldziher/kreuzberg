@@ -6,6 +6,7 @@ members = [
     "crates/kreuzberg-tesseract",
     "crates/kreuzberg-cli",
     "crates/kreuzberg-node",
+    "crates/kreuzberg-wasm",
     "tools/benchmark-harness",
     "tools/e2e-generator",
     "e2e/rust",
@@ -80,3 +81,8 @@ strip = true
 [profile.dev]
 opt-level = 0
 debug = true
+
+# Package-specific profile overrides for WASM optimizations
+[profile.release.package.kreuzberg-wasm]
+opt-level = "z"
+codegen-units = 1

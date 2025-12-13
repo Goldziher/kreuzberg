@@ -1,0 +1,55 @@
+# Cargo configuration for kreuzberg-wasm WASM target builds
+# This file configures Rust compiler flags and build settings specific to
+# WebAssembly (wasm32-unknown-unknown) compilation.
+
+[build]
+# Note: target-applies-to-host is the default behavior (true).
+# This setting applies target-specific rustflags only to the target triple,
+# not to build scripts or proc macros that run on the host machine.
+#
+# Context: We cross-compile from host architecture (x86_64/aarch64) to wasm32,
+# so the [target.wasm32-unknown-unknown] settings below only apply to WASM builds.
+
+[target.wasm32-unknown-unknown]
+# rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
+#
+# Rust compiler flags specific to the wasm32-unknown-unknown target.
+# These flags configure how the Rust compiler builds code for WebAssembly.
+#
+# Flag Breakdown:
+# ---------------
+# --cfg getrandom_backend="wasm_js"
+#
+#   This conditional compilation flag tells the `getrandom` crate (used for
+#   generating cryptographic random numbers) to use the "wasm_js" backend.
+#
+#   The getrandom crate needs a platform-specific random number source:
+#   - On desktop: Uses /dev/urandom (Unix) or CryptoAPI (Windows)
+#   - On WASM: Must use JavaScript's crypto.getRandomValues() API
+#
+#   Available getrandom backends for WASM:
+#   - "wasm_js": Uses JavaScript's crypto.getRandomValues() - recommended
+#   - "wasm_bindgen": Uses wasm-bindgen to call JS - alternative approach
+#
+#   "wasm_js" is preferred because it has minimal dependencies and direct
+#   access to the Web Crypto API without wasm-bindgen overhead.
+#
+# Why this matters for Kreuzberg:
+# --------------------------------
+# Several dependencies (like UUIDs, session tokens, random sampling) need
+# cryptographically secure random numbers. Without this flag, the WASM build
+# would fail because the default backend is platform-specific and not available
+# in WASM environments.
+#
+# Common errors if missing:
+# - "getrandom backend is not supported on this platform"
+# - Build fails during linking phase
+# - Runtime errors about missing crypto support
+#
+# See Also:
+# - https://docs.rs/getrandom/
+# - https://docs.rs/getrandom/latest/getrandom/#wasm-support
+# - https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues
+rustflags = [
+    "--cfg", "getrandom_backend=\"wasm_js\""
+]

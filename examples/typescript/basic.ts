@@ -6,7 +6,7 @@
 
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { ExtractionConfig, extractBytes, extractBytesSync, extractFile, extractFileSync } from "@kreuzberg/node";
+import { extractBytes, extractBytesSync, extractFile, extractFileSync } from "@kreuzberg/node";
 
 async function main() {
 	console.log("=== Synchronous Extraction ===");
@@ -16,10 +16,10 @@ async function main() {
 	console.log(`First 200 chars: ${result.content.substring(0, 200)}...`);
 
 	console.log("\n=== With Configuration ===");
-	const config = new ExtractionConfig({
+	const config = {
 		enableQualityProcessing: true,
 		useCache: true,
-	});
+	};
 	const configResult = extractFileSync("document.pdf", null, config);
 	console.log(`Extracted ${configResult.content.length} characters with quality processing`);
 

@@ -1,6 +1,12 @@
 # TypeScript API Reference
 
-Complete reference for the Kreuzberg TypeScript/Node.js API.
+Complete reference for the Kreuzberg **native TypeScript/Node.js** API (`@kreuzberg/node`).
+
+!!! info "WASM Alternative"
+
+    This reference covers **native bindings** (`@kreuzberg/node`) for Node.js, Bun, and Deno.
+
+    For browser and edge environments, see the [WASM API Reference](api-wasm.md) (`@kreuzberg/wasm`).
 
 ## Installation
 
