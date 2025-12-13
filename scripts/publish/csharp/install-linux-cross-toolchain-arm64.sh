@@ -3,7 +3,7 @@
 set -euo pipefail
 
 sudo apt-get update
-sudo apt-get install -y gcc-aarch64-linux-gnu
+sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
 {
 	echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
