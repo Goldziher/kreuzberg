@@ -96,7 +96,12 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; t
 	# Skip -race on Windows: mingw + static CRT regularly fails to link race runtime
 	# -x to print the underlying compile/link commands for debugging toolchain issues
 	echo "Running Go tests with verbose output and compile command tracing..."
-	go test -v -x "${GO_TEST_FLAGS:-}" "${packages[@]}"
+	extra_flags=()
+	if [[ -n "${GO_TEST_FLAGS:-}" ]]; then
+		read -r -a extra_flags <<<"$GO_TEST_FLAGS"
+	fi
+
+	go test -v -x "${extra_flags[@]}" "${packages[@]}"
 else
 	# Unix paths (Linux/macOS)
 	workspace=$(cd ../.. && pwd)
@@ -157,5 +162,10 @@ else
 	# -x prints the underlying compile/link commands for debugging toolchain issues
 	# -race enables the race condition detector (not available on Windows)
 	echo "Running Go tests with verbose output, race detection, and compile command tracing..."
-	go test -v -race -x "${GO_TEST_FLAGS:-}" "${packages[@]}"
+	extra_flags=()
+	if [[ -n "${GO_TEST_FLAGS:-}" ]]; then
+		read -r -a extra_flags <<<"$GO_TEST_FLAGS"
+	fi
+
+	go test -v -race -x "${extra_flags[@]}" "${packages[@]}"
 fi
