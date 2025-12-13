@@ -25,5 +25,5 @@ echo ""
 
 if [ -f "$RESULTS_FILE" ]; then
 	echo "Test Results:"
-	cat "$RESULTS_FILE" | jq . || cat "$RESULTS_FILE"
+	jq . <"$RESULTS_FILE" || cat "$RESULTS_FILE"
 fi

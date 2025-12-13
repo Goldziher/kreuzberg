@@ -1,4 +1,3 @@
 ```bash title="Bash"
-brew install kreuzberg
-
+brew install kreuzberg-dev/tap/kreuzberg
 ```

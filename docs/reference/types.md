@@ -17,6 +17,8 @@ pub struct ExtractionResult {
     pub detected_languages: Option<Vec<String>>,
     pub chunks: Option<Vec<Chunk>>,
     pub images: Option<Vec<ExtractedImage>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pages: Option<Vec<PageContent>>,
 }
 ```
 
@@ -32,6 +34,7 @@ class ExtractionResult(TypedDict):
     detected_languages: list[str] | None
     chunks: list[Chunk] | None
     images: list[ExtractedImage] | None
+    pages: list[PageContent] | None
 ```
 
 ### TypeScript
@@ -45,6 +48,7 @@ export interface ExtractionResult {
     detectedLanguages: string[] | null;
     chunks: Chunk[] | null;
     images: ExtractedImage[] | null;
+    pages?: PageContent[];
 }
 ```
 
@@ -53,7 +57,7 @@ export interface ExtractionResult {
 ```ruby title="extraction_result.rb"
 class Kreuzberg::Result
     attr_reader :content, :mime_type, :metadata, :tables
-    attr_reader :detected_languages, :chunks, :images
+    attr_reader :detected_languages, :chunks, :images, :pages
 end
 ```
 
@@ -67,7 +71,8 @@ public record ExtractionResult(
     List<Table> tables,
     List<String> detectedLanguages,
     List<Chunk> chunks,
-    List<ExtractedImage> images
+    List<ExtractedImage> images,
+    List<PageContent> pages
 ) {}
 ```
 
@@ -82,6 +87,7 @@ type ExtractionResult struct {
     DetectedLanguages []string         `json:"detected_languages,omitempty"`
     Chunks            []Chunk          `json:"chunks,omitempty"`
     Images            []ExtractedImage `json:"images,omitempty"`
+    Pages             []PageContent    `json:"pages,omitempty"`
 }
 ```
 
@@ -93,9 +99,17 @@ Document metadata with discriminated union pattern. The `format_type` field dete
 
 ```rust title="metadata.rs"
 pub struct Metadata {
-    pub language: Option<String>,
-    pub date: Option<String>,
+    pub title: Option<String>,
     pub subject: Option<String>,
+    pub authors: Option<Vec<String>>,
+    pub keywords: Option<Vec<String>>,
+    pub language: Option<String>,
+    pub created_at: Option<String>,
+    pub modified_at: Option<String>,
+    pub created_by: Option<String>,
+    pub modified_by: Option<String>,
+    pub pages: Option<PageStructure>,
+    pub date: Option<String>,
     pub format: Option<FormatMetadata>,
     pub image_preprocessing: Option<ImagePreprocessingMetadata>,
     pub json_schema: Option<serde_json::Value>,
@@ -123,32 +137,41 @@ pub enum FormatMetadata {
 ```python title="metadata.py"
 class Metadata(TypedDict, total=False):
     """Document metadata with format-specific fields and processing info."""
-    language: str
-    date: str
-    subject: str
+    title: str | None
+    subject: str | None
+    authors: list[str] | None
+    keywords: list[str] | None
+    language: str | None
+    created_at: str | None
+    modified_at: str | None
+    created_by: str | None
+    modified_by: str | None
+    pages: PageStructure | None
+    date: str | None
     format_type: Literal["pdf", "excel", "email", "pptx", "archive", "image", "xml", "text", "html", "ocr"]
     # Format-specific fields are included at root level based on format_type
-    title: str
-    authors: list[str]
-    keywords: list[str]
-    # Additional format-specific fields vary by document type
-    image_preprocessing: ImagePreprocessingMetadata
-    json_schema: dict[str, Any]
-    error: ErrorMetadata
+    image_preprocessing: ImagePreprocessingMetadata | None
+    json_schema: dict[str, Any] | None
+    error: ErrorMetadata | None
 ```
 
 ### TypeScript
 
 ```typescript title="metadata.ts"
 export interface Metadata {
-    language?: string | null;
-    date?: string | null;
+    title?: string | null;
     subject?: string | null;
+    authors?: string[] | null;
+    keywords?: string[] | null;
+    language?: string | null;
+    createdAt?: string | null;
+    modifiedAt?: string | null;
+    createdBy?: string | null;
+    modifiedBy?: string | null;
+    pages?: PageStructure | null;
+    date?: string | null;
     format_type?: "pdf" | "excel" | "email" | "pptx" | "archive" | "image" | "xml" | "text" | "html" | "ocr";
     // Format-specific fields are included at root level based on format_type
-    title?: string | null;
-    author?: string | null;
-    // Additional format-specific fields vary by document type
     image_preprocessing?: ImagePreprocessingMetadata | null;
     json_schema?: Record<string, unknown> | null;
     error?: ErrorMetadata | null;
@@ -169,10 +192,18 @@ result.metadata["format_type"]  # "pdf", "excel", "email", etc.
 
 ```java title="Metadata.java"
 public final class Metadata {
-    private final Optional<String> language;
-    private final Optional<String> date;
+    private final Optional<String> title;
     private final Optional<String> subject;
-    private final FormatMetadata format;
+    private final Optional<List<String>> authors;
+    private final Optional<List<String>> keywords;
+    private final Optional<String> language;
+    private final Optional<String> createdAt;
+    private final Optional<String> modifiedAt;
+    private final Optional<String> createdBy;
+    private final Optional<String> modifiedBy;
+    private final Optional<PageStructure> pages;
+    private final Optional<String> date;
+    private final Optional<FormatMetadata> format;
     private final Optional<ImagePreprocessingMetadata> imagePreprocessing;
     private final Optional<Map<String, Object>> jsonSchema;
     private final Optional<ErrorMetadata> error;
@@ -191,9 +222,17 @@ public final class FormatMetadata {
 
 ```go title="metadata.go"
 type Metadata struct {
-    Language           *string                     `json:"language,omitempty"`
-    Date               *string                     `json:"date,omitempty"`
+    Title              *string                     `json:"title,omitempty"`
     Subject            *string                     `json:"subject,omitempty"`
+    Authors            []string                    `json:"authors,omitempty"`
+    Keywords           []string                    `json:"keywords,omitempty"`
+    Language           *string                     `json:"language,omitempty"`
+    CreatedAt          *string                     `json:"created_at,omitempty"`
+    ModifiedAt         *string                     `json:"modified_at,omitempty"`
+    CreatedBy          *string                     `json:"created_by,omitempty"`
+    ModifiedBy         *string                     `json:"modified_by,omitempty"`
+    Pages              *PageStructure              `json:"pages,omitempty"`
+    Date               *string                     `json:"date,omitempty"`
     Format             FormatMetadata              `json:"-"`
     ImagePreprocessing *ImagePreprocessingMetadata `json:"image_preprocessing,omitempty"`
     JSONSchema         json.RawMessage             `json:"json_schema,omitempty"`
@@ -209,6 +248,425 @@ type FormatMetadata struct {
     // Additional pointer fields for each supported format type
 }
 ```
+
+### Metadata.pages Field
+
+Contains page structure information when page tracking is available. This field provides detailed boundaries and metadata for individual pages/slides/sheets within multi-page documents.
+
+**Type**: `Option<PageStructure>` (Rust), `PageStructure | None` (Python), `PageStructure | null` (TypeScript), `Optional<PageStructure>` (Java), `*PageStructure` (Go)
+
+**When populated**: Only when the document format supports page tracking (PDF, PPTX, DOCX, XLSX) and extraction is successful.
+
+**Available fields**:
+- `total_count`: Total number of pages/slides/sheets in the document
+- `unit_type`: Type of paginated unit ("page", "slide", or "sheet")
+- `boundaries`: Byte offset boundaries for each page (enables O(1) lookups from byte positions to page numbers)
+- `pages`: Detailed per-page metadata including dimensions, titles, and content counts
+
+**Example usage**:
+
+```rust
+if let Some(page_structure) = metadata.pages {
+    println!("Document has {} pages", page_structure.total_count);
+    if let Some(boundaries) = page_structure.boundaries {
+        for boundary in boundaries {
+            println!("Page {}: bytes {} to {}", boundary.page_number, boundary.byte_start, boundary.byte_end);
+        }
+    }
+}
+```
+
+```python
+if metadata.get("pages"):
+    page_structure = metadata["pages"]
+    print(f"Document has {page_structure['total_count']} pages")
+    if page_structure.get("boundaries"):
+        for boundary in page_structure["boundaries"]:
+            print(f"Page {boundary['page_number']}: bytes {boundary['byte_start']}-{boundary['byte_end']}")
+```
+
+```typescript
+if (metadata.pages) {
+    console.log(`Document has ${metadata.pages.totalCount} pages`);
+    if (metadata.pages.boundaries) {
+        for (const boundary of metadata.pages.boundaries) {
+            console.log(`Page ${boundary.pageNumber}: bytes ${boundary.byteStart}-${boundary.byteEnd}`);
+        }
+    }
+}
+```
+
+```java
+metadata.pages().ifPresent(pageStructure -> {
+    System.out.println("Document has " + pageStructure.getTotalCount() + " pages");
+    pageStructure.getBoundaries().ifPresent(boundaries -> {
+        for (PageBoundary boundary : boundaries) {
+            System.out.println("Page " + boundary.pageNumber() + ": bytes " +
+                boundary.byteStart() + "-" + boundary.byteEnd());
+        }
+    });
+});
+```
+
+```go
+if metadata.Pages != nil {
+    fmt.Printf("Document has %d pages\n", metadata.Pages.TotalCount)
+    if metadata.Pages.Boundaries != nil {
+        for _, boundary := range metadata.Pages.Boundaries {
+            fmt.Printf("Page %d: bytes %d-%d\n", boundary.PageNumber, boundary.ByteStart, boundary.ByteEnd)
+        }
+    }
+}
+```
+
+## PageStructure
+
+Unified representation of page/slide/sheet structure with byte-accurate boundaries. Tracks the logical structure of multi-page documents, enabling precise page-to-content mapping and efficient chunk-to-page lookups.
+
+### Rust
+
+```rust title="page_structure.rs"
+pub struct PageStructure {
+    pub total_count: usize,
+    pub unit_type: PageUnitType,
+    pub boundaries: Option<Vec<PageBoundary>>,
+    pub pages: Option<Vec<PageInfo>>,
+}
+```
+
+### Python
+
+```python title="page_structure.py"
+class PageStructure(TypedDict, total=False):
+    total_count: int
+    unit_type: str  # "page", "slide", "sheet"
+    boundaries: list[PageBoundary] | None
+    pages: list[PageInfo] | None
+```
+
+### TypeScript
+
+```typescript title="page_structure.ts"
+interface PageStructure {
+  totalCount: number;
+  unitType: "page" | "slide" | "sheet";
+  boundaries?: PageBoundary[];
+  pages?: PageInfo[];
+}
+```
+
+### Ruby
+
+```ruby title="page_structure.rb"
+class PageStructure < Dry::Struct
+  attribute :total_count, Types::Integer
+  attribute :unit_type, Types::String.enum("page", "slide", "sheet")
+  attribute :boundaries, Types::Array.of(PageBoundary).optional
+  attribute :pages, Types::Array.of(PageInfo).optional
+end
+```
+
+### Java
+
+```java title="PageStructure.java"
+public final class PageStructure {
+    private final long totalCount;
+    private final PageUnitType unitType;
+    private final List<PageBoundary> boundaries;
+    private final List<PageInfo> pages;
+
+    public Optional<List<PageBoundary>> getBoundaries() { }
+    public Optional<List<PageInfo>> getPages() { }
+}
+```
+
+### Go
+
+```go title="page_structure.go"
+type PageStructure struct {
+    TotalCount int              `json:"total_count"`
+    UnitType   string           `json:"unit_type"`
+    Boundaries []PageBoundary   `json:"boundaries,omitempty"`
+    Pages      []PageInfo       `json:"pages,omitempty"`
+}
+```
+
+### C#
+
+```csharp title="PageStructure.cs"
+public record PageStructure
+{
+    public required int TotalCount { get; init; }
+    public required string UnitType { get; init; }
+    public List<PageBoundary>? Boundaries { get; init; }
+    public List<PageInfo>? Pages { get; init; }
+}
+```
+
+**Fields:**
+- `total_count`: Total number of pages/slides/sheets
+- `unit_type`: Distinction between Page/Slide/Sheet
+- `boundaries`: Byte offset ranges for each page (enables O(1) lookups)
+- `pages`: Per-page metadata (dimensions, counts, visibility)
+
+## PageBoundary
+
+Byte offset range for a single page/slide/sheet. Enables O(1) page lookups and precise chunk-to-page mapping.
+
+WARNING: Byte offsets are UTF-8 safe boundaries. Do not use them as character indices.
+
+### Rust
+
+```rust title="page_boundary.rs"
+pub struct PageBoundary {
+    pub byte_start: usize,
+    pub byte_end: usize,
+    pub page_number: usize,
+}
+```
+
+### Python
+
+```python title="page_boundary.py"
+class PageBoundary(TypedDict):
+    byte_start: int
+    byte_end: int
+    page_number: int
+```
+
+### TypeScript
+
+```typescript title="page_boundary.ts"
+interface PageBoundary {
+  byteStart: number;
+  byteEnd: number;
+  pageNumber: number;
+}
+```
+
+### Ruby
+
+```ruby title="page_boundary.rb"
+class PageBoundary < Dry::Struct
+  attribute :byte_start, Types::Integer
+  attribute :byte_end, Types::Integer
+  attribute :page_number, Types::Integer
+end
+```
+
+### Java
+
+```java title="PageBoundary.java"
+public record PageBoundary(
+    long byteStart,
+    long byteEnd,
+    long pageNumber
+) {}
+```
+
+### Go
+
+```go title="page_boundary.go"
+type PageBoundary struct {
+    ByteStart  int `json:"byte_start"`
+    ByteEnd    int `json:"byte_end"`
+    PageNumber int `json:"page_number"`
+}
+```
+
+### C#
+
+```csharp title="PageBoundary.cs"
+public record PageBoundary
+{
+    public required int ByteStart { get; init; }
+    public required int ByteEnd { get; init; }
+    public required int PageNumber { get; init; }
+}
+```
+
+**Fields:**
+- `byte_start`: UTF-8 byte offset (inclusive)
+- `byte_end`: UTF-8 byte offset (exclusive)
+- `page_number`: 1-indexed page number
+
+## PageInfo
+
+Detailed per-page metadata. Contains format-specific metadata for individual pages/slides/sheets.
+
+### Rust
+
+```rust title="page_info.rs"
+pub struct PageInfo {
+    pub number: usize,
+    pub title: Option<String>,
+    pub dimensions: Option<(f64, f64)>,
+    pub image_count: Option<usize>,
+    pub table_count: Option<usize>,
+    pub hidden: Option<bool>,
+}
+```
+
+### Python
+
+```python title="page_info.py"
+class PageInfo(TypedDict, total=False):
+    number: int
+    title: str | None
+    dimensions: tuple[float, float] | None
+    image_count: int | None
+    table_count: int | None
+    hidden: bool | None
+```
+
+### TypeScript
+
+```typescript title="page_info.ts"
+interface PageInfo {
+  number: number;
+  title?: string;
+  dimensions?: [number, number];
+  imageCount?: number;
+  tableCount?: number;
+  hidden?: boolean;
+}
+```
+
+### Ruby
+
+```ruby title="page_info.rb"
+class PageInfo < Dry::Struct
+  attribute :number, Types::Integer
+  attribute :title, Types::String.optional
+  attribute :dimensions, Types::Array.of(Types::Float).optional
+  attribute :image_count, Types::Integer.optional
+  attribute :table_count, Types::Integer.optional
+  attribute :hidden, Types::Bool.optional
+end
+```
+
+### Java
+
+```java title="PageInfo.java"
+public record PageInfo(
+    int number,
+    Optional<String> title,
+    Optional<double[]> dimensions,
+    Optional<Integer> imageCount,
+    Optional<Integer> tableCount,
+    Optional<Boolean> hidden
+) {}
+```
+
+### Go
+
+```go title="page_info.go"
+type PageInfo struct {
+    Number      int       `json:"number"`
+    Title       *string   `json:"title,omitempty"`
+    Dimensions  []float64 `json:"dimensions,omitempty"`
+    ImageCount  *int      `json:"image_count,omitempty"`
+    TableCount  *int      `json:"table_count,omitempty"`
+    Hidden      *bool     `json:"hidden,omitempty"`
+}
+```
+
+### C#
+
+```csharp title="PageInfo.cs"
+public record PageInfo
+{
+    public required int Number { get; init; }
+    public string? Title { get; init; }
+    public (double Width, double Height)? Dimensions { get; init; }
+    public int? ImageCount { get; init; }
+    public int? TableCount { get; init; }
+    public bool? Hidden { get; init; }
+}
+```
+
+**Fields:**
+- `number`: 1-indexed page number
+- `title`: Page/slide title (PPTX)
+- `dimensions`: Width and height in points (PDF, PPTX)
+- `image_count`: Number of images on page
+- `table_count`: Number of tables on page
+- `hidden`: Whether page/slide is hidden (PPTX)
+
+## PageUnitType
+
+Enum distinguishing page types across document formats.
+
+### Rust
+
+```rust title="page_unit_type.rs"
+pub enum PageUnitType {
+    Page,
+    Slide,
+    Sheet,
+}
+```
+
+### Python
+
+```python title="page_unit_type.py"
+# String literal type
+PageUnitType = Literal["page", "slide", "sheet"]
+```
+
+### TypeScript
+
+```typescript title="page_unit_type.ts"
+type PageUnitType = "page" | "slide" | "sheet";
+```
+
+### Ruby
+
+```ruby title="page_unit_type.rb"
+module PageUnitType
+  PAGE = "page"
+  SLIDE = "slide"
+  SHEET = "sheet"
+end
+```
+
+### Java
+
+```java title="PageUnitType.java"
+public enum PageUnitType {
+    PAGE,
+    SLIDE,
+    SHEET
+}
+```
+
+### Go
+
+```go title="page_unit_type.go"
+type PageUnitType string
+
+const (
+    PageUnitTypePage  PageUnitType = "page"
+    PageUnitTypeSlide PageUnitType = "slide"
+    PageUnitTypeSheet PageUnitType = "sheet"
+)
+```
+
+### C#
+
+```csharp title="PageUnitType.cs"
+public enum PageUnitType
+{
+    Page,
+    Slide,
+    Sheet
+}
+```
+
+**Values:**
+- `Page`: Standard document pages (PDF, DOCX)
+- `Slide`: Presentation slides (PPTX)
+- `Sheet`: Spreadsheet sheets (XLSX)
 
 ## Format-Specific Metadata
 

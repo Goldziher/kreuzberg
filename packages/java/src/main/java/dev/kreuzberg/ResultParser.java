@@ -20,6 +20,7 @@ final class ResultParser {
     private static final TypeReference<List<ExtractedImage>> IMAGE_LIST = new TypeReference<>() { };
     private static final TypeReference<Map<String, Object>> METADATA_MAP = new TypeReference<>() { };
     private static final TypeReference<EmbeddingPreset> EMBEDDING_PRESET = new TypeReference<>() { };
+    private static final TypeReference<PageStructure> PAGE_STRUCTURE = new TypeReference<>() { };
 
     private ResultParser() {
     }
@@ -32,6 +33,7 @@ final class ResultParser {
         String metadataJson,
         String chunksJson,
         String imagesJson,
+        String pageStructureJson,
         boolean success
     ) throws KreuzbergException {
         try {
@@ -40,6 +42,7 @@ final class ResultParser {
             List<String> detectedLanguages = decode(detectedLanguagesJson, STRING_LIST, List.of());
             List<Chunk> chunks = decode(chunksJson, CHUNK_LIST, List.of());
             List<ExtractedImage> images = decode(imagesJson, IMAGE_LIST, List.of());
+            PageStructure pageStructure = decode(pageStructureJson, PAGE_STRUCTURE, null);
 
             return new ExtractionResult(
                 content != null ? content : "",
@@ -49,6 +52,7 @@ final class ResultParser {
                 detectedLanguages,
                 chunks,
                 images,
+                pageStructure,
                 success
             );
         } catch (Exception e) {
@@ -88,6 +92,7 @@ final class ResultParser {
                 wire.detectedLanguages != null ? wire.detectedLanguages : List.of(),
                 wire.chunks != null ? wire.chunks : List.of(),
                 wire.images != null ? wire.images : List.of(),
+                wire.pageStructure,
                 wire.success == null || wire.success
             );
         } catch (Exception e) {
@@ -104,6 +109,7 @@ final class ResultParser {
             result.getDetectedLanguages(),
             result.getChunks(),
             result.getImages(),
+            result.getPageStructure().orElse(null),
             result.isSuccess()
         );
         return MAPPER.writeValueAsString(wire);
@@ -125,6 +131,7 @@ final class ResultParser {
         private final List<String> detectedLanguages;
         private final List<Chunk> chunks;
         private final List<ExtractedImage> images;
+        private final PageStructure pageStructure;
         private final Boolean success;
 
         WireExtractionResult(
@@ -135,6 +142,7 @@ final class ResultParser {
             @JsonProperty("detected_languages") List<String> detectedLanguages,
             @JsonProperty("chunks") List<Chunk> chunks,
             @JsonProperty("images") List<ExtractedImage> images,
+            @JsonProperty("page_structure") PageStructure pageStructure,
             @JsonProperty("success") Boolean success
         ) {
             this.content = content;
@@ -144,6 +152,7 @@ final class ResultParser {
             this.detectedLanguages = detectedLanguages;
             this.chunks = chunks;
             this.images = images;
+            this.pageStructure = pageStructure;
             this.success = success;
         }
     }

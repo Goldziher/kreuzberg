@@ -86,6 +86,7 @@ impl DocumentExtractor for PlainTextExtractor {
                 })),
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,
@@ -178,6 +179,7 @@ impl DocumentExtractor for MarkdownExtractor {
                 })),
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,

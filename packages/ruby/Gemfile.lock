@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    kreuzberg (4.0.0.pre.rc.6)
+    kreuzberg (4.0.0.pre.rc.7)
 
 GEM
   remote: https://rubygems.org/
@@ -31,11 +31,10 @@ GEM
     drb (2.2.3)
     ffi (1.17.2)
     ffi (1.17.2-arm64-darwin)
-    ffi (1.17.2-x86_64-linux-gnu)
     fileutils (1.8.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
-    json (2.17.1)
+    json (2.18.0)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     listen (3.9.0)
@@ -43,7 +42,7 @@ GEM
       rb-inotify (~> 0.9, >= 0.9.10)
     logger (1.7.0)
     method_source (1.1.0)
-    minitest (5.26.2)
+    minitest (5.27.0)
     mutex_m (0.3.0)
     parallel (1.27.0)
     parser (3.3.10.0)
@@ -136,7 +135,6 @@ GEM
 
 PLATFORMS
   arm64-darwin-24
-  x86_64-linux
 
 DEPENDENCIES
   bundler (~> 4.0)

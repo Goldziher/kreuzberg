@@ -11,14 +11,11 @@ import { describe, expect, it, afterAll } from "vitest";
  * pnpm test:binding -- guten-ocr.spec.ts
  */
 
-// Global cleanup after all tests complete
 afterAll(async () => {
 	try {
 		const { clearOcrBackends } = await import("../../dist/index.js");
 		clearOcrBackends();
-	} catch {
-		// Ignore errors during cleanup
-	}
+	} catch {}
 });
 
 /**
@@ -81,7 +78,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 				"Skipping GutenOcrBackend integration tests: @gutenye/ocr-node not installed. " +
 					"Install with: npm install @gutenye/ocr-node",
 			);
-			// Test passes but is skipped
 			expect(true).toBe(true);
 			return;
 		}
@@ -101,13 +97,10 @@ describe("GutenOcrBackend - Integration Tests", () => {
 		const { GutenOcrBackend } = await import("../../dist/index.js");
 		const backend = new GutenOcrBackend();
 
-		// Should not throw
 		await backend.initialize();
 
-		// Verify backend is ready
 		expect(backend.name()).toBe("guten-ocr");
 
-		// Clean up - explicitly release resources
 		await backend.shutdown();
 	});
 
@@ -123,7 +116,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 		const { GutenOcrBackend } = await import("../../dist/index.js");
 		const backend = new GutenOcrBackend();
 
-		// Should throw when trying to initialize without the dependency
 		await expect(backend.initialize()).rejects.toThrow(/requires the '@gutenye\/ocr-node' package/i);
 	});
 
@@ -131,7 +123,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 		const { GutenOcrBackend } = await import("../../dist/index.js");
 		const backend = new GutenOcrBackend();
 		await backend.shutdown();
-		// Should not throw
 		expect(true).toBe(true);
 	});
 
@@ -148,13 +139,10 @@ describe("GutenOcrBackend - Integration Tests", () => {
 		const backend = new GutenOcrBackend();
 
 		try {
-			// First initialization
 			await backend.initialize();
 
-			// Second initialization should be no-op
 			await backend.initialize();
 
-			// Backend should still work
 			expect(backend.name()).toBe("guten-ocr");
 		} finally {
 			await backend.shutdown();
@@ -170,8 +158,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 			return;
 		}
 
-		// Valid minimal 1x1 PNG image for testing
-		// This is a complete, valid PNG file that can be processed by image libraries
 		const validMinimalPng = new Uint8Array([
 			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00,
 			0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0a, 0x49,
@@ -186,7 +172,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 		try {
 			const result = await backend.processImage(validMinimalPng, "en");
 
-			// Verify result structure
 			expect(result).toHaveProperty("content");
 			expect(result).toHaveProperty("mime_type");
 			expect(result).toHaveProperty("metadata");
@@ -196,7 +181,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 			expect(result.mime_type).toBe("text/plain");
 			expect(Array.isArray(result.tables)).toBe(true);
 
-			// Verify metadata structure
 			expect(result.metadata).toHaveProperty("confidence");
 			expect(result.metadata).toHaveProperty("text_regions");
 			expect(result.metadata).toHaveProperty("language", "en");
@@ -224,7 +208,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 		const { GutenOcrBackend } = await import("../../dist/index.js");
 		const backend = new GutenOcrBackend();
 
-		// Do NOT call initialize - should auto-initialize
 		try {
 			const result = await backend.processImage(validMinimalPng, "en");
 			expect(result).toBeDefined();
@@ -243,7 +226,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 			return;
 		}
 
-		// Very small or blank image - may result in no detections
 		const blankImage = new Uint8Array([
 			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00,
 			0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0a, 0x49,
@@ -258,7 +240,6 @@ describe("GutenOcrBackend - Integration Tests", () => {
 		try {
 			const result = await backend.processImage(blankImage, "en");
 
-			// Empty content is valid (blank image)
 			expect(typeof result.content).toBe("string");
 			expect(result.metadata.confidence).toBeGreaterThanOrEqual(0);
 			expect(result.metadata.text_regions).toBeGreaterThanOrEqual(0);

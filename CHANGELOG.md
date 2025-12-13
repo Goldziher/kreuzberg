@@ -7,9 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0-rc.7] - 2025-12-12
+
 ### Added
 - RTF extractor now builds structured tables (markdown + cells) and parses RTF `\info` metadata (authors, dates, counts), bringing parity with DOCX/ODT fixtures.
 - New pandoc-generated RTF fixtures with embedded metadata for `word_sample`, `lorem_ipsum`, and `extraction_test` to validate cross-format extraction.
+- **Page tracking and metadata redesign** (#226)
+  - Per-page content extraction with `PageContent` type
+  - Byte-accurate page boundaries with `PageBoundary` type for O(1) lookups
+  - Detailed per-page metadata with `PageInfo` type (dimensions, counts, visibility)
+  - Unified page structure tracking with `PageStructure` type
+  - `PageConfig` for controlling page extraction behavior
+  - Automatic chunk-to-page mapping with `first_page`/`last_page` in `ChunkMetadata`
+  - Format-specific support:
+    - PDF: Full byte-accurate tracking with O(1) performance
+    - PPTX: Slide boundary tracking
+    - DOCX: Best-effort page break detection
+  - Page markers in combined text for LLM context awareness
+
+### Changed
+- **BREAKING**: `ChunkMetadata` field renames for byte-accurate tracking (#226)
+  - `char_start` → `byte_start` (UTF-8 byte offset)
+  - `char_end` → `byte_end` (UTF-8 byte offset)
+  - Existing code using `char_start`/`char_end` must be updated
+  - See [migration guide](docs/migration/v3-to-v4.md#byte-offset-changes) for details
 
 ### Fixed
 - Comprehensive lint cleanup across the crate and tests (clippy warnings resolved).
@@ -80,8 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Changed download path from `target` to `.` to prevent double-nesting (target/target/...)
   - Linker can now find libkreuzberg_ffi.dll at correct location
   - Added debug logging to show directory structure after artifact download
-- Aligned all workflows to Java 24
-  - Updated from Java 23 to 24 across all CI and publish workflows
+- Aligned all workflows to Java 25
+  - Updated from Java 24 to 25 across all CI and publish workflows
   - Resolves "release version 25 not supported" compilation errors
   - Affects ci-validate, ci-java, publish, and benchmarks workflows
 
@@ -633,7 +654,7 @@ kreuzberg = "4.0"
 
 **CLI** (Homebrew):
 ```bash title="Terminal"
-brew install goldziher/tap/kreuzberg
+brew install kreuzberg-dev/tap/kreuzberg
 ```
 
 **CLI** (Cargo):
@@ -1479,6 +1500,7 @@ This release introduces **Kreuzberg v4**, a complete rewrite with Rust core, pol
 - [Format Support](reference/formats.md) - Supported file formats
 - [Extraction Guide](guides/extraction.md) - Extraction examples
 
+[4.0.0-rc.7]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.6...v4.0.0-rc.7
 [4.0.0-rc.6]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.5...v4.0.0-rc.6
 [4.0.0-rc.5]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.4...v4.0.0-rc.5
 [4.0.0-rc.4]: https://github.com/kreuzberg-dev/kreuzberg/compare/v4.0.0-rc.3...v4.0.0-rc.4

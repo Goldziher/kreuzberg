@@ -36,6 +36,7 @@ type ExtractionConfig struct {
 	Keywords                 *KeywordConfig           `json:"keywords,omitempty"`
 	Postprocessor            *PostProcessorConfig     `json:"postprocessor,omitempty"`
 	HTMLOptions              *HTMLConversionOptions   `json:"html_options,omitempty"`
+	Pages                    *PageConfig              `json:"pages,omitempty"`
 	MaxConcurrentExtractions *int                     `json:"max_concurrent_extractions,omitempty"`
 }
 
@@ -132,11 +133,11 @@ type PostProcessorConfig struct {
 
 // EmbeddingModelType configures embedding model selection.
 type EmbeddingModelType struct {
-	Type       string `json:"type"`                 // preset, fastembed, custom
-	Name       string `json:"name,omitempty"`       // for preset
-	Model      string `json:"model,omitempty"`      // for fastembed/custom
-	ModelID    string `json:"model_id,omitempty"`   // alias for custom
-	Dimensions *int   `json:"dimensions,omitempty"` // for fastembed/custom
+	Type       string `json:"type"`
+	Name       string `json:"name,omitempty"`
+	Model      string `json:"model,omitempty"`
+	ModelID    string `json:"model_id,omitempty"`
+	Dimensions *int   `json:"dimensions,omitempty"`
 }
 
 // EmbeddingConfig configures embedding generation for chunks.
@@ -150,7 +151,7 @@ type EmbeddingConfig struct {
 
 // KeywordConfig configures keyword extraction.
 type KeywordConfig struct {
-	Algorithm   string      `json:"algorithm,omitempty"` // yake | rake
+	Algorithm   string      `json:"algorithm,omitempty"`
 	MaxKeywords *int        `json:"max_keywords,omitempty"`
 	MinScore    *float64    `json:"min_score,omitempty"`
 	NgramRange  *[2]int     `json:"ngram_range,omitempty"`
@@ -173,7 +174,7 @@ type RakeParams struct {
 // HTMLPreprocessingOptions configures HTML cleaning.
 type HTMLPreprocessingOptions struct {
 	Enabled          *bool   `json:"enabled,omitempty"`
-	Preset           *string `json:"preset,omitempty"` // minimal|standard|aggressive
+	Preset           *string `json:"preset,omitempty"`
 	RemoveNavigation *bool   `json:"remove_navigation,omitempty"`
 	RemoveForms      *bool   `json:"remove_forms,omitempty"`
 }
@@ -211,4 +212,11 @@ type HTMLConversionOptions struct {
 	StripTags          []string                  `json:"strip_tags,omitempty"`
 	PreserveTags       []string                  `json:"preserve_tags,omitempty"`
 	Preprocessing      *HTMLPreprocessingOptions `json:"preprocessing,omitempty"`
+}
+
+// PageConfig configures page tracking and extraction.
+type PageConfig struct {
+	ExtractPages      *bool   `json:"extract_pages,omitempty"`
+	InsertPageMarkers *bool   `json:"insert_page_markers,omitempty"`
+	MarkerFormat      *string `json:"marker_format,omitempty"`
 }

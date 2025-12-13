@@ -489,6 +489,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -507,6 +508,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -527,6 +529,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -562,6 +565,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -609,6 +613,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let txt_result = ExtractionResult {
@@ -619,6 +624,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         assert!(validator.should_validate(&pdf_result, &config));
@@ -702,6 +708,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -729,6 +736,7 @@ mod tests {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,
@@ -759,6 +767,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();
@@ -787,6 +796,7 @@ mod tests {
                 detected_languages: None,
                 chunks: None,
                 images: None,
+                pages: None,
             };
 
             assert!(validator.validate(&result, &config).await.is_ok());
@@ -805,6 +815,7 @@ mod tests {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         };
 
         let config = ExtractionConfig::default();

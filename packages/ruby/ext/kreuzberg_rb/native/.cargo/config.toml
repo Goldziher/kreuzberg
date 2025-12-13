@@ -1,0 +1,2 @@
+[build]
+rustflags = ["-A", "unpredictable-function-pointer-comparisons"]

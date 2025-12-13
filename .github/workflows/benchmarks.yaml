@@ -810,7 +810,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "24"
+          java-version: "25"
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
@@ -1205,7 +1205,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "24"
+          java-version: "25"
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime
@@ -1268,7 +1268,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "24"
+          java-version: "25"
 
       - name: Setup ONNX Runtime
         uses: ./.github/actions/setup-onnx-runtime

@@ -168,6 +168,15 @@ module Kreuzberg
       def to_h: () -> Hash[Symbol, untyped]
     end
 
+    class PageConfig
+      attr_reader extract_pages: bool
+      attr_reader insert_page_markers: bool
+      attr_reader marker_format: String
+
+      def initialize: (?extract_pages: bool, ?insert_page_markers: bool, ?marker_format: String) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
     class Extraction
       attr_reader use_cache: bool
       attr_reader enable_quality_processing: bool
@@ -182,6 +191,7 @@ module Kreuzberg
       attr_reader token_reduction: TokenReduction?
       attr_reader keywords: Keywords?
       attr_reader html_options: HtmlOptions?
+      attr_reader pages: PageConfig?
       attr_reader max_concurrent_extractions: Integer?
 
       def self.from_file: (String path) -> Extraction
@@ -199,6 +209,7 @@ module Kreuzberg
         ?token_reduction: (TokenReduction | Hash[Symbol, untyped])?,
         ?keywords: (Keywords | Hash[Symbol, untyped])?,
         ?html_options: (HtmlOptions | Hash[Symbol, untyped])?,
+        ?pages: (PageConfig | Hash[Symbol, untyped])?,
         ?max_concurrent_extractions: Integer?
       ) -> void
       def to_h: () -> Hash[Symbol, untyped]
@@ -234,11 +245,13 @@ module Kreuzberg
 
   type chunk_hash = {
     content: String,
-    char_start: Integer,
-    char_end: Integer,
+    byte_start: Integer,
+    byte_end: Integer,
     token_count: Integer?,
     chunk_index: Integer?,
     total_chunks: Integer?,
+    first_page: Integer?,
+    last_page: Integer?,
     embedding: Array[Float]?
   }
 
@@ -278,20 +291,24 @@ module Kreuzberg
     # Text chunk
     class Chunk
       attr_reader content: String
-      attr_reader char_start: Integer
-      attr_reader char_end: Integer
+      attr_reader byte_start: Integer
+      attr_reader byte_end: Integer
       attr_reader token_count: Integer?
       attr_reader chunk_index: Integer?
       attr_reader total_chunks: Integer?
+      attr_reader first_page: Integer?
+      attr_reader last_page: Integer?
       attr_reader embedding: Array[Float]?
 
       def initialize: (
         content: String,
-        char_start: Integer,
-        char_end: Integer,
+        byte_start: Integer,
+        byte_end: Integer,
         token_count: Integer?,
         chunk_index: Integer?,
         total_chunks: Integer?,
+        first_page: Integer?,
+        last_page: Integer?,
         embedding: Array[Float]?
       ) -> void
       def to_h: () -> chunk_hash

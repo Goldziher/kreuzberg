@@ -176,7 +176,7 @@ class PaddleOCRBackend:
         try:
             import io  # noqa: PLC0415
 
-            import numpy as np  # noqa: PLC0415
+            import numpy as np  # noqa: PLC0415  # type: ignore[import-not-found]
             from PIL import Image  # noqa: PLC0415
 
             image = Image.open(io.BytesIO(image_bytes))

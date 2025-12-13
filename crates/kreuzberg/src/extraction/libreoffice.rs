@@ -462,8 +462,7 @@ mod tests {
     async fn test_check_libreoffice_missing_dependency_error() {
         let result = check_libreoffice_available().await;
 
-        if result.is_err() {
-            let err = result.unwrap_err();
+        if let Err(err) = result {
             match err {
                 KreuzbergError::MissingDependency(msg) => {
                     assert!(msg.contains("LibreOffice") || msg.contains("soffice"));

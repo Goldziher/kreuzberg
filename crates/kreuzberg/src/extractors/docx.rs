@@ -6,7 +6,7 @@ use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extraction::{cells_to_markdown, office_metadata};
 use crate::plugins::{DocumentExtractor, Plugin};
-use crate::types::{ExtractionResult, Metadata, Table};
+use crate::types::{ExtractionResult, Metadata, PageBoundary, PageInfo, PageStructure, PageUnitType, Table};
 use async_trait::async_trait;
 use std::io::Cursor;
 
@@ -116,26 +116,30 @@ impl DocumentExtractor for DocxExtractor {
         mime_type: &str,
         _config: &ExtractionConfig,
     ) -> Result<ExtractionResult> {
-        let (text, tables) = if crate::core::batch_mode::is_batch_mode() {
+        let (text, tables, page_boundaries) = if crate::core::batch_mode::is_batch_mode() {
             let content_owned = content.to_vec();
             let span = tracing::Span::current();
-            tokio::task::spawn_blocking(move || -> crate::error::Result<(String, Vec<Table>)> {
-                let _guard = span.entered();
-                let cursor = Cursor::new(&content_owned);
-                let doc = docx_lite::parse_document(cursor)
-                    .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX parsing failed: {}", e)))?;
+            tokio::task::spawn_blocking(
+                move || -> crate::error::Result<(String, Vec<Table>, Option<Vec<PageBoundary>>)> {
+                    let _guard = span.entered();
+                    let cursor = Cursor::new(&content_owned);
+                    let doc = docx_lite::parse_document(cursor)
+                        .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX parsing failed: {}", e)))?;
 
-                let text = doc.extract_text();
+                    let text = doc.extract_text();
 
-                let tables: Vec<Table> = doc
-                    .tables
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, table)| convert_docx_table_to_table(table, idx))
-                    .collect();
+                    let tables: Vec<Table> = doc
+                        .tables
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, table)| convert_docx_table_to_table(table, idx))
+                        .collect();
 
-                Ok((text, tables))
-            })
+                    let page_boundaries = crate::extraction::docx::detect_page_breaks_from_docx(&content_owned)?;
+
+                    Ok((text, tables, page_boundaries))
+                },
+            )
             .await
             .map_err(|e| crate::error::KreuzbergError::parsing(format!("DOCX extraction task failed: {}", e)))??
         } else {
@@ -152,7 +156,9 @@ impl DocumentExtractor for DocxExtractor {
                 .map(|(idx, table)| convert_docx_table_to_table(table, idx))
                 .collect();
 
-            (text, tables)
+            let page_boundaries = crate::extraction::docx::detect_page_breaks_from_docx(content)?;
+
+            (text, tables, page_boundaries)
         };
 
         let mut archive = if crate::core::batch_mode::is_batch_mode() {
@@ -260,13 +266,38 @@ impl DocumentExtractor for DocxExtractor {
             }
         }
 
+        let page_structure = if let Some(boundaries) = page_boundaries {
+            let total_count = boundaries.len();
+            Some(PageStructure {
+                total_count,
+                unit_type: PageUnitType::Page,
+                boundaries: Some(boundaries),
+                pages: Some(
+                    (1..=total_count)
+                        .map(|page_num| PageInfo {
+                            number: page_num,
+                            title: None,
+                            dimensions: None,
+                            image_count: None,
+                            table_count: None,
+                            hidden: None,
+                        })
+                        .collect(),
+                ),
+            })
+        } else {
+            None
+        };
+
         Ok(ExtractionResult {
             content: text,
             mime_type: mime_type.to_string(),
             metadata: Metadata {
+                pages: page_structure,
                 additional: metadata_map,
                 ..Default::default()
             },
+            pages: None,
             tables,
             detected_languages: None,
             chunks: None,

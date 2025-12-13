@@ -700,6 +700,7 @@ type ExtractionResult struct {
 	DetectedLanguages []string         // Detected languages
 	Chunks            []Chunk          // Text chunks (if enabled)
 	Images            []ExtractedImage // Embedded images (if enabled)
+	Pages             []PageContent    // Per-page content (if enabled)
 	Success           bool             // Extraction success flag
 }
 ```
@@ -718,6 +719,90 @@ fmt.Printf("Detected languages: %v\n", result.DetectedLanguages)
 fmt.Printf("Number of tables: %d\n", len(result.Tables))
 fmt.Printf("Number of chunks: %d\n", len(result.Chunks))
 fmt.Printf("Number of images: %d\n", len(result.Images))
+```
+
+#### Pages
+
+**Type**: `[]PageContent`
+
+Per-page extracted content when page extraction is enabled via `PageConfig.ExtractPages = true`.
+
+Each page contains:
+- Page number (1-indexed)
+- Text content for that page
+- Tables on that page
+- Images on that page
+
+**Example:**
+
+```go title="page_extraction.go"
+config := &kreuzberg.ExtractionConfig{
+	Pages: &kreuzberg.PageConfig{
+		ExtractPages: boolPtr(true),
+	},
+}
+
+result, err := kreuzberg.ExtractFileSync("document.pdf", config)
+if err != nil {
+	log.Fatalf("extraction failed: %v", err)
+}
+
+if result.Pages != nil {
+	for _, page := range result.Pages {
+		fmt.Printf("Page %d:\n", page.PageNumber)
+		fmt.Printf("  Content: %d chars\n", len(page.Content))
+		fmt.Printf("  Tables: %d\n", len(page.Tables))
+		fmt.Printf("  Images: %d\n", len(page.Images))
+	}
+}
+```
+
+---
+
+### Accessing Per-Page Content
+
+When page extraction is enabled, access individual pages and iterate over them:
+
+```go title="iterate_pages.go"
+config := &kreuzberg.ExtractionConfig{
+	Pages: &kreuzberg.PageConfig{
+		ExtractPages:      boolPtr(true),
+		InsertPageMarkers: boolPtr(true),
+		MarkerFormat:      stringPtr("\n\n--- Page {page_num} ---\n\n"),
+	},
+}
+
+result, err := kreuzberg.ExtractFileSync("document.pdf", config)
+if err != nil {
+	log.Fatalf("extraction failed: %v", err)
+}
+
+// Access combined content with page markers
+fmt.Println("Combined content with markers:")
+if len(result.Content) > 500 {
+	fmt.Println(result.Content[:500])
+} else {
+	fmt.Println(result.Content)
+}
+fmt.Println()
+
+// Access per-page content
+if result.Pages != nil {
+	for _, page := range result.Pages {
+		fmt.Printf("Page %d:\n", page.PageNumber)
+		preview := page.Content
+		if len(preview) > 100 {
+			preview = preview[:100]
+		}
+		fmt.Printf("  %s...\n", preview)
+		if len(page.Tables) > 0 {
+			fmt.Printf("  Found %d table(s)\n", len(page.Tables))
+		}
+		if len(page.Images) > 0 {
+			fmt.Printf("  Found %d image(s)\n", len(page.Images))
+		}
+	}
+}
 ```
 
 ---
@@ -807,13 +892,27 @@ type Chunk struct {
 }
 
 type ChunkMetadata struct {
-	CharStart   int  // Character offset in original content
-	CharEnd     int  // End character offset
+	ByteStart   int  // UTF-8 byte offset (inclusive)
+	ByteEnd     int  // UTF-8 byte offset (exclusive)
+	CharCount   int  // Number of characters in chunk
 	TokenCount  *int // Token count (if available)
+	FirstPage   *int // First page this chunk appears on (1-indexed)
+	LastPage    *int // Last page this chunk appears on (1-indexed)
 	ChunkIndex  int  // Index in chunk sequence
 	TotalChunks int  // Total number of chunks
 }
 ```
+
+**Fields:**
+
+- `ByteStart` (int): UTF-8 byte offset in content (inclusive)
+- `ByteEnd` (int): UTF-8 byte offset in content (exclusive)
+- `CharCount` (int): Number of characters in chunk
+- `TokenCount` (*int): Estimated token count (if configured)
+- `FirstPage` (*int): First page this chunk appears on (1-indexed, only when page boundaries available)
+- `LastPage` (*int): Last page this chunk appears on (1-indexed, only when page boundaries available)
+
+**Page tracking:** When `PageStructure.Boundaries` is available and chunking is enabled, `FirstPage` and `LastPage` are automatically calculated based on byte offsets.
 
 **Example:**
 
@@ -821,7 +920,22 @@ type ChunkMetadata struct {
 for _, chunk := range result.Chunks {
 	fmt.Printf("Chunk %d/%d\n", chunk.Metadata.ChunkIndex, chunk.Metadata.TotalChunks)
 	fmt.Printf("Content: %s...\n", chunk.Content[:min(50, len(chunk.Content))])
-	fmt.Printf("Tokens: %d\n", *chunk.Metadata.TokenCount)
+	fmt.Printf("Bytes: [%d:%d], %d chars\n", chunk.Metadata.ByteStart, chunk.Metadata.ByteEnd, chunk.Metadata.CharCount)
+	if chunk.Metadata.TokenCount != nil {
+		fmt.Printf("Tokens: %d\n", *chunk.Metadata.TokenCount)
+	}
+
+	// Show page information if available
+	if chunk.Metadata.FirstPage != nil {
+		first := *chunk.Metadata.FirstPage
+		last := *chunk.Metadata.LastPage
+		if first == last {
+			fmt.Printf("Page: %d\n", first)
+		} else {
+			fmt.Printf("Pages: %d-%d\n", first, last)
+		}
+	}
+
 	if len(chunk.Embedding) > 0 {
 		fmt.Printf("Embedding dim: %d\n", len(chunk.Embedding))
 		fmt.Printf("First 5 values: %v\n", chunk.Embedding[:5])

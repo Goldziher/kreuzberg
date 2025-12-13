@@ -867,6 +867,13 @@ fn keyword_algorithm_to_string(algo: RustKeywordAlgorithm) -> &'static str {
 }
 
 #[napi(object)]
+pub struct JsPageConfig {
+    pub extract_pages: Option<bool>,
+    pub insert_page_markers: Option<bool>,
+    pub marker_format: Option<String>,
+}
+
+#[napi(object)]
 pub struct JsExtractionConfig {
     pub use_cache: Option<bool>,
     pub enable_quality_processing: Option<bool>,
@@ -881,6 +888,31 @@ pub struct JsExtractionConfig {
     pub keywords: Option<JsKeywordConfig>,
     pub html_options: Option<JsHtmlOptions>,
     pub max_concurrent_extractions: Option<u32>,
+    pub pages: Option<JsPageConfig>,
+}
+
+impl TryFrom<JsPageConfig> for kreuzberg::core::config::PageConfig {
+    type Error = Error;
+
+    fn try_from(val: JsPageConfig) -> Result<Self> {
+        Ok(kreuzberg::core::config::PageConfig {
+            extract_pages: val.extract_pages.unwrap_or(false),
+            insert_page_markers: val.insert_page_markers.unwrap_or(false),
+            marker_format: val
+                .marker_format
+                .unwrap_or_else(|| "\n\n<!-- PAGE {page_num} -->\n\n".to_string()),
+        })
+    }
+}
+
+impl From<kreuzberg::core::config::PageConfig> for JsPageConfig {
+    fn from(config: kreuzberg::core::config::PageConfig) -> Self {
+        Self {
+            extract_pages: Some(config.extract_pages),
+            insert_page_markers: Some(config.insert_page_markers),
+            marker_format: Some(config.marker_format),
+        }
+    }
 }
 
 impl TryFrom<JsExtractionConfig> for ExtractionConfig {
@@ -911,6 +943,7 @@ impl TryFrom<JsExtractionConfig> for ExtractionConfig {
             postprocessor: val.postprocessor.map(Into::into),
             html_options,
             max_concurrent_extractions: val.max_concurrent_extractions.map(|v| v as usize),
+            pages: val.pages.map(|p| p.try_into()).transpose()?,
         })
     }
 }
@@ -994,6 +1027,7 @@ impl TryFrom<ExtractionConfig> for JsExtractionConfig {
             keywords: val.keywords.map(JsKeywordConfig::from),
             html_options: val.html_options.as_ref().map(JsHtmlOptions::from),
             max_concurrent_extractions: val.max_concurrent_extractions.map(|v| v as u32),
+            pages: val.pages.map(JsPageConfig::from),
         })
     }
 }
@@ -1121,11 +1155,13 @@ pub struct JsExtractedImage {
 #[napi(object)]
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct JsChunkMetadata {
-    pub char_start: u32,
-    pub char_end: u32,
+    pub byte_start: u32,
+    pub byte_end: u32,
     pub token_count: Option<u32>,
     pub chunk_index: u32,
     pub total_chunks: u32,
+    pub first_page: Option<u32>,
+    pub last_page: Option<u32>,
 }
 
 #[napi(object)]
@@ -1227,14 +1263,16 @@ impl TryFrom<RustExtractionResult> for JsExtractionResult {
                 let mut js_chunks = Vec::with_capacity(chunks.len());
                 for chunk in chunks {
                     let metadata = JsChunkMetadata {
-                        char_start: usize_to_u32(chunk.metadata.char_start, "chunks[].metadata.char_start")?,
-                        char_end: usize_to_u32(chunk.metadata.char_end, "chunks[].metadata.char_end")?,
+                        byte_start: usize_to_u32(chunk.metadata.byte_start, "chunks[].metadata.byte_start")?,
+                        byte_end: usize_to_u32(chunk.metadata.byte_end, "chunks[].metadata.byte_end")?,
                         token_count: match chunk.metadata.token_count {
                             Some(tokens) => Some(usize_to_u32(tokens, "chunks[].metadata.token_count")?),
                             None => None,
                         },
                         chunk_index: usize_to_u32(chunk.metadata.chunk_index, "chunks[].metadata.chunk_index")?,
                         total_chunks: usize_to_u32(chunk.metadata.total_chunks, "chunks[].metadata.total_chunks")?,
+                        first_page: chunk.metadata.first_page.map(|p| p as u32),
+                        last_page: chunk.metadata.last_page.map(|p| p as u32),
                     };
 
                     let embedding = chunk
@@ -1313,7 +1351,6 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 "compressed_size",
                 "width",
                 "height",
-                "exif",
                 "element_count",
                 "unique_elements",
                 "line_count",
@@ -1373,6 +1410,7 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                 json_schema,
                 error,
                 additional,
+                ..Default::default()
             }
         };
 
@@ -1442,11 +1480,13 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
                     content: chunk.content,
                     embedding,
                     metadata: RustChunkMetadata {
-                        char_start: chunk.metadata.char_start as usize,
-                        char_end: chunk.metadata.char_end as usize,
+                        byte_start: chunk.metadata.byte_start as usize,
+                        byte_end: chunk.metadata.byte_end as usize,
                         token_count: chunk.metadata.token_count.map(|v| v as usize),
                         chunk_index: chunk.metadata.chunk_index as usize,
                         total_chunks: chunk.metadata.total_chunks as usize,
+                        first_page: chunk.metadata.first_page.map(|v| v as usize),
+                        last_page: chunk.metadata.last_page.map(|v| v as usize),
                     },
                 });
             }
@@ -1471,6 +1511,7 @@ impl TryFrom<JsExtractionResult> for RustExtractionResult {
             detected_languages: val.detected_languages,
             chunks,
             images,
+            pages: None,
         })
     }
 }
@@ -2497,6 +2538,7 @@ impl RustOcrBackend for JsOcrBackend {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         })
     }
 

@@ -12,6 +12,10 @@
     <suppress checks="MagicNumber" files=".*Test\.java"/>
     <suppress checks="MethodLength" files=".*Test\.java"/>
 
+    <!-- Generated E2E tests are validated by compilation/runtime and may exceed style limits -->
+    <suppress checks="LineLength" files="e2e/java/src/test/java/.*Test\.java"/>
+    <suppress checks="UnusedImports" files="e2e/java/src/test/java/.*Test\.java"/>
+
     <!-- Benchmark harness scripts live outside the Java package structure -->
     <suppress checks="JavadocPackage" files="tools/benchmark-harness/scripts/.*"/>
 </suppressions>

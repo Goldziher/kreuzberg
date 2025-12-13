@@ -380,6 +380,7 @@ pub async fn batch_extract_file(
                     detected_languages: None,
                     chunks: None,
                     images: None,
+                    pages: None,
                 });
             }
             Err(join_err) => {
@@ -483,6 +484,7 @@ pub async fn batch_extract_bytes(
                     detected_languages: None,
                     chunks: None,
                     images: None,
+                    pages: None,
                 });
             }
             Err(join_err) => {

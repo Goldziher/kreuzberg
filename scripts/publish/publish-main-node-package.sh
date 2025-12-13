@@ -5,9 +5,6 @@
 # Publishes the main @kreuzberg/node package using pnpm.
 # Includes idempotent handling for already-published versions.
 #
-# Environment Variables:
-#   - NODE_AUTH_TOKEN: npm registry authentication token (required)
-#
 # Arguments:
 #   $1: Package directory (default: crates/kreuzberg-node)
 
@@ -24,7 +21,7 @@ cd "$pkg_dir" || exit 1
 
 publish_log=$(mktemp)
 set +e
-pnpm publish --access public --no-git-checks 2>&1 | tee "$publish_log"
+npm publish --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
 status=${PIPESTATUS[0]}
 set -e
 

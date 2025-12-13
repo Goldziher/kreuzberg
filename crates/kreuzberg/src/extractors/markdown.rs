@@ -365,6 +365,7 @@ impl DocumentExtractor for MarkdownExtractor {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         })
     }
 

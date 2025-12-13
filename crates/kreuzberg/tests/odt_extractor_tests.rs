@@ -69,16 +69,13 @@ async fn test_odt_metadata_extraction() {
         "Should contain document title in content"
     );
 
-    // Verify metadata extraction
     let metadata = &result.metadata.additional;
     println!("Extracted metadata: {:?}", metadata);
 
-    // Check title
     if let Some(title) = metadata.get("title") {
         assert_eq!(title.as_str(), Some("Test Metadata Document"), "Title should match");
     }
 
-    // Check subject
     if let Some(subject) = metadata.get("subject") {
         assert_eq!(
             subject.as_str(),
@@ -87,28 +84,23 @@ async fn test_odt_metadata_extraction() {
         );
     }
 
-    // Check creator/author
     if let Some(created_by) = metadata.get("created_by") {
         assert_eq!(created_by.as_str(), Some("John Doe"), "Creator should match");
     }
 
-    // Check authors array
     if let Some(authors) = metadata.get("authors") {
         let authors_array = authors.as_array().expect("Authors should be an array");
         assert_eq!(authors_array.len(), 1, "Should have one author");
         assert_eq!(authors_array[0].as_str(), Some("John Doe"), "Author name should match");
     }
 
-    // Check creation date (should exist)
     assert!(metadata.get("created_at").is_some(), "Creation date should be present");
 
-    // Check modification date (should exist)
     assert!(
         metadata.get("modified_at").is_some(),
         "Modification date should be present"
     );
 
-    // Check generator
     if let Some(generator) = metadata.get("generator") {
         let gen_str = generator.as_str().expect("Generator should be a string");
         assert!(gen_str.contains("Pandoc"), "Generator should be Pandoc");
@@ -604,18 +596,11 @@ async fn test_odt_table_no_duplicate_content() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Count how many times we see "Content" in the output
-    // In a properly fixed version, it should appear only once in the markdown table
-    // or possibly twice if headers appear with the same name, but not multiple times
-    // for the same cell
     let content_count = result.content.matches("Content").count();
 
-    // "Content" appears twice in the header "More content" in a simple table
-    // It should not appear more than 3 times (once in header, once in data cell, once in a different word like "More content")
     println!("   'Content' appears {} times in output", content_count);
     println!("   Content preview:\n{}", result.content);
 
-    // This verifies that we're not getting duplicate cell content extracted
     assert!(
         content_count <= 3,
         "Content should not appear excessively, indicating no duplicate table cell extraction"
@@ -628,7 +613,6 @@ async fn test_odt_table_no_duplicate_content() {
 /// Uses the extraction_test document created with pandoc to ensure complete content
 #[tokio::test]
 async fn test_odt_comprehensive_table_extraction() {
-    // This test uses the pandoc-generated test document
     let test_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -648,7 +632,6 @@ async fn test_odt_comprehensive_table_extraction() {
 
     assert!(!result.content.is_empty(), "Content should not be empty");
 
-    // Verify all sections are present
     assert!(result.content.contains("Comprehensive"), "Should contain heading");
     assert!(
         result.content.contains("First Section") || result.content.contains("First"),
@@ -663,14 +646,12 @@ async fn test_odt_comprehensive_table_extraction() {
         "Should contain third section"
     );
 
-    // Verify tables are present and formatted correctly (as markdown)
     assert!(
         result.content.contains("|"),
         "Should contain pipe characters for markdown tables"
     );
     assert!(result.content.contains("---"), "Should contain table separator");
 
-    // Verify table content is extracted
     assert!(
         result.content.contains("Header 1") || result.content.contains("Cell 1A"),
         "Should contain table data"
@@ -680,8 +661,6 @@ async fn test_odt_comprehensive_table_extraction() {
         "Should contain second table data"
     );
 
-    // Verify no excessive duplication of cells (a simple heuristic check)
-    // Count "Cell 1A" - should appear once or twice at most
     let cell_count = result.content.matches("Cell 1A").count();
     assert!(
         cell_count <= 2,

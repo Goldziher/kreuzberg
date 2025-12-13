@@ -1,6 +1,7 @@
 default_install_hook_types:
   - pre-commit
   - commit-msg
+exclude: ^docs/snippets/|vendor/|node_modules/|target/|v3/|invalid*
 
 repos:
   - repo: https://github.com/Goldziher/gitfluff
@@ -16,15 +17,12 @@ repos:
       - id: end-of-file-fixer
       - id: check-merge-conflict
       - id: check-added-large-files
-        exclude: ^uv\.lock$
+        exclude: uv.lock
       - id: detect-private-key
       - id: check-json
-        exclude: ^packages/typescript/tsconfig\.json$
       - id: check-yaml
         args: ["--allow-multiple-documents"]
-        exclude: ^packages/python/tests/fixtures/invalid\.yaml$
       - id: check-toml
-        exclude: (invalid|test).*\.toml$
       - id: check-case-conflict
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
@@ -38,40 +36,31 @@ repos:
     rev: v2.3.8
     hooks:
       - id: biome-format
-        exclude: ^docs/snippets/
       - id: biome-lint
-        exclude: ^docs/snippets/
   - repo: https://github.com/oxc-project/mirrors-oxlint
     rev: v1.32.0
     hooks:
       - id: oxlint
         args: ["--fix"]
-        exclude: ^docs/snippets/
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.8
+    rev: v0.14.9
     hooks:
+      - id: ruff-format
       - id: ruff
         args: ["--fix", "--unsafe-fixes"]
-        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
-      - id: ruff-format
-        exclude: ^(v3|benchmarks|scripts|crates|docs/snippets)/
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.11.0
     hooks:
       - id: shellcheck
-        exclude: ^(crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/scop/pre-commit-shfmt
     rev: v3.12.0-2
     hooks:
       - id: shfmt
-        exclude: ^(crates/kreuzberg-tesseract/third_party/|vendor/|node_modules/|target/)
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
     hooks:
       - id: fmt
-        exclude: ^docs/snippets/
       - id: clippy
-        exclude: ^docs/snippets/
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.9
     hooks:
@@ -80,22 +69,47 @@ repos:
     rev: v0.6.30
     hooks:
       - id: cpd
-        exclude: "(crates/kreuzberg-tesseract/third_party/.*|^docs/snippets/)"
       - id: checkstyle
         args: ["-c", "packages/java/checkstyle.xml"]
-        files: ^packages/java/src/.*\.java$
-        exclude: "crates/kreuzberg-tesseract/third_party/.*"
+        files: ^(packages/java|e2e/java)/src/.*\.java$
   - repo: local
     hooks:
+      - id: taplo-format
+        name: taplo format
+        entry: bash -c 'scripts/toml_format.sh'
+        language: system
+        files: \.toml$
+        pass_filenames: false
+        require_serial: true
+      - id: taplo-format-check
+        name: taplo format check
+        entry: bash -c 'scripts/toml_format.sh --check'
+        language: system
+        files: \.toml$
+        pass_filenames: false
+        require_serial: true
+      - id: cargo-deny-licenses
+        name: cargo deny licenses
+        entry: cargo deny check licenses
+        language: system
+        files: ^(Cargo\.toml|Cargo\.lock|crates/.*/Cargo\.toml|tools/.*/Cargo\.toml|e2e/rust/Cargo\.toml|packages/ruby/ext/kreuzberg_rb/native/Cargo\.toml|deny\.toml)$
+        pass_filenames: false
+        require_serial: true
+      - id: go-fmt
+        name: go fmt (packages/go)
+        entry: bash -c 'cd packages/go && go fmt ./...'
+        language: system
+        files: ^packages/go/.*\.go$
+        pass_filenames: false
       - id: golangci-lint
         name: golangci-lint (packages/go)
-        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml ./...'
+        entry: bash -c 'cd packages/go && golangci-lint run --config ../../.golangci.yml --fix ./...'
         language: system
         files: ^packages/go/
         pass_filenames: false
       - id: rubocop
         name: rubocop
-        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yaml'
+        entry: bash -c 'cd packages/ruby && bundle exec rubocop --autocorrect --config .rubocop.yml'
         require_serial: true
         language: system
         files: ^packages/ruby/.*\.rb$
@@ -107,13 +121,27 @@ repos:
         language: system
         files: ^packages/ruby/(lib|sig)/.*\.(rb|rbs)$
         pass_filenames: false
+      - id: java-pmd
+        name: pmd (packages/java)
+        entry: bash -c 'cd packages/java && mvn pmd:check'
+        require_serial: true
+        language: system
+        files: ^packages/java/src/.*\.java$
+        pass_filenames: false
       - id: mypy
         name: mypy
         entry: uv run python -m mypy
         require_serial: true
         language: system
         types: [python]
-        exclude: ^(v3|benchmarks|scripts|crates|examples|e2e|docs/snippets|packages/python|tools|packages/ruby)/
+        pass_filenames: false
+      - id: typescript-typecheck
+        name: typescript typecheck (crates/kreuzberg-node)
+        entry: bash -c 'cd crates/kreuzberg-node && pnpm typecheck'
+        require_serial: true
+        language: system
+        files: ^crates/kreuzberg-node/
+        pass_filenames: false
       - id: dotnet-format
         name: dotnet format (packages/csharp)
         entry: bash -c 'cd packages/csharp && dotnet format Kreuzberg/Kreuzberg.csproj --verify-no-changes && dotnet format Kreuzberg.Tests/Kreuzberg.Tests.csproj --verify-no-changes && dotnet format Benchmark/Benchmark.csproj --verify-no-changes'

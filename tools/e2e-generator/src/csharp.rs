@@ -480,7 +480,6 @@ fn render_config_expression(config: &Map<String, Value>) -> Result<String> {
         Ok("null".to_string())
     } else {
         let json = serde_json::to_string(&Value::Object(config.clone()))?;
-        // Escape the JSON string for C# string literal
         let escaped = json
             .replace('\\', "\\\\")
             .replace('"', "\\\"")

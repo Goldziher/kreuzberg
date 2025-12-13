@@ -44,6 +44,5 @@ def _slow_test_timeout(request: pytest.FixtureRequest) -> None:
     Regular tests get default timeout.
     """
 
-    # Try to set pytest-timeout if available
     with contextlib.suppress(pytest.FixtureLookupError):
         request.getfixturevalue("pytest_timeout_set_sleep_func")

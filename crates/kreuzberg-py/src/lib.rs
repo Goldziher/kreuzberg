@@ -61,6 +61,7 @@ fn _internal_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<config::ExtractionConfig>()?;
     m.add_class::<config::OcrConfig>()?;
     m.add_class::<config::PdfConfig>()?;
+    m.add_class::<config::PageConfig>()?;
     m.add_class::<config::ChunkingConfig>()?;
     m.add_class::<config::EmbeddingConfig>()?;
     m.add_class::<config::EmbeddingModelType>()?;

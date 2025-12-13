@@ -1,4 +1,3 @@
-# Auto-generated tests for smoke fixtures.
 from __future__ import annotations
 
 import pytest
@@ -119,4 +118,4 @@ def test_smoke_xlsx_basic() -> None:
     )
     helpers.assert_table_count(result, 1, None)
     helpers.assert_metadata_expectation(result, "sheet_count", {"gte": 2})
-    helpers.assert_metadata_expectation(result, "sheet_names", {"contains": "Stanley Cups"})
+    helpers.assert_metadata_expectation(result, "sheet_names", {"contains": ["Stanley Cups"]})

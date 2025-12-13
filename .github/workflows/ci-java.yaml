@@ -47,7 +47,7 @@ jobs:
     name: Java Bindings (${{ matrix.os }})
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -69,7 +69,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '24'
+          java-version: '25'
           cache: 'maven'
 
       - name: Cache PDFium
@@ -107,7 +107,7 @@ jobs:
     needs: build-java
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -141,7 +141,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '24'
+          java-version: '25'
           cache: 'maven'
 
       - name: Download JAR

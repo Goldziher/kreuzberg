@@ -225,6 +225,7 @@ impl DocumentExtractor for HtmlExtractor {
                 format: html_metadata.map(|m| crate::types::FormatMetadata::Html(Box::new(m))),
                 ..Default::default()
             },
+            pages: None,
             tables,
             detected_languages: None,
             chunks: None,

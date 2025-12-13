@@ -223,12 +223,10 @@ export class GutenOcrBackend implements OcrBackendProtocol {
 	 * ```
 	 */
 	async shutdown(): Promise<void> {
-		// Release the OCR instance first
 		if (this.ocr !== null) {
 			this.ocr = null;
 		}
 
-		// Clear module reference to allow garbage collection
 		if (this.ocrModule !== null) {
 			this.ocrModule = null;
 		}

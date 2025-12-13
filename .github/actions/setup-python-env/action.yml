@@ -48,7 +48,7 @@ runs:
 
     - name: Cache Python dependencies
       id: cache-python
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv

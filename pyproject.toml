@@ -208,10 +208,7 @@ exclude_lines = [
   "class .*\\bProtocol\\):",
   "@(abc\\.)?abstractmethod",
 ]
-omit = [
-  "packages/python/kreuzberg/ocr/easyocr.py",
-  "packages/python/kreuzberg/ocr/paddleocr.py",
-]
+omit = [ "packages/python/kreuzberg/ocr/easyocr.py", "packages/python/kreuzberg/ocr/paddleocr.py" ]
 
 [tool.mypy]
 packages = [ "kreuzberg" ]
@@ -243,4 +240,4 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [ "numpy", "numpy.*" ]
-ignore_errors = true
+ignore_missing_imports = true

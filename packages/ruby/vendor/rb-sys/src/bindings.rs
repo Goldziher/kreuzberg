@@ -9,6 +9,8 @@
 #![allow(deref_nullptr)]
 #![warn(unknown_lints)]
 #![allow(clippy::all)]
+#![cfg_attr(has_fn_ptr_eq_lint, allow(fn_ptr_eq))]
+#![allow(unpredictable_function_pointer_comparisons)]
 #![allow(rustdoc::broken_intra_doc_links)]
 #![allow(rustdoc::invalid_rust_codeblocks)]
 #![allow(rustdoc::invalid_html_tags)]

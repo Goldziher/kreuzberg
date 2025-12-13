@@ -53,7 +53,7 @@ jobs:
       contents: read
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         variant:
           - core

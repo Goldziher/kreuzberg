@@ -77,7 +77,6 @@ fn find_dotnet() -> Result<PathBuf> {
 }
 
 fn workspace_root() -> Result<PathBuf> {
-    // Try CARGO_MANIFEST_DIR first (available during cargo run)
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
         let path = PathBuf::from(manifest_dir);
         if let Some(root) = path.parent().and_then(|p| p.parent())
@@ -87,21 +86,16 @@ fn workspace_root() -> Result<PathBuf> {
         }
     }
 
-    // Fallback: assume binary is in target/{release,debug} and work backwards
     if let Ok(exe_path) = std::env::current_exe()
         && let Some(parent) = exe_path.parent()
+        && let Some(target_dir) = parent.parent()
+        && target_dir.file_name().is_some_and(|n| n == "target")
+        && let Some(workspace_dir) = target_dir.parent()
+        && workspace_dir.exists()
     {
-        // Check if we're in target/release or target/debug
-        if let Some(target_dir) = parent.parent()
-            && target_dir.file_name().is_some_and(|n| n == "target")
-            && let Some(workspace_dir) = target_dir.parent()
-            && workspace_dir.exists()
-        {
-            return Ok(workspace_dir.to_path_buf());
-        }
+        return Ok(workspace_dir.to_path_buf());
     }
 
-    // Last resort: try relative path from current directory
     let cwd = std::env::current_dir()?;
     if cwd.join("target/release").exists() || cwd.join("target/debug").exists() {
         return Ok(cwd);

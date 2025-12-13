@@ -266,7 +266,7 @@ pub unsafe fn RB_TYPE(value: VALUE) -> ruby_value_type {
 /// This function is unsafe because it could dereference a raw pointer when
 /// attemping to access the underlying [`RBasic`] struct.
 #[inline]
-#[cfg(ruby_engine = "mri")] // truffleruby provides its own implementation
+#[cfg(ruby_engine = "mri")]
 pub unsafe fn RB_TYPE_P(obj: VALUE, ty: ruby_value_type) -> bool {
     api().type_p(obj, ty)
 }

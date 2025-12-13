@@ -516,7 +516,7 @@ mod build_tesseract {
                 );
             }
 
-            let backoff = 2u64.pow((attempt - 1).min(4)); // cap at 16s
+            let backoff = 2u64.pow((attempt - 1).min(4));
             println!(
                 "cargo:warning=Download attempt {}/{} for {} failed ({}). Retrying in {}s...",
                 attempt, max_attempts, name, err_msg, backoff

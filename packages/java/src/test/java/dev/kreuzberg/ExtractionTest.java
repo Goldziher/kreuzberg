@@ -169,7 +169,6 @@ class ExtractionTest {
             assertNotNull(result.getContent(), "CSV content should be extracted");
             assertTrue(result.isSuccess(), "CSV extraction should succeed");
         } catch (KreuzbergException e) {
-            // CSV extraction not supported, skip test
             if (e.getMessage().contains("Unsupported format")) {
                 System.out.println("Skipping test: CSV extraction not supported");
                 return;
@@ -263,7 +262,6 @@ class ExtractionTest {
             assertNotNull(result.getTables(), "Tables list should not be null");
             assertTrue(result.getTables().isEmpty() || result.getTables().size() > 0, "Tables list should be valid");
         } catch (KreuzbergException e) {
-            // CSV extraction not supported, skip test
             if (e.getMessage().contains("Unsupported format")) {
                 System.out.println("Skipping test: CSV extraction not supported");
                 return;
@@ -287,7 +285,6 @@ class ExtractionTest {
                 assertNotNull(table.cells(), "Table cells should not be null");
             }
         } catch (KreuzbergException e) {
-            // CSV extraction not supported, skip test
             if (e.getMessage().contains("Unsupported format")) {
                 System.out.println("Skipping test: CSV extraction not supported");
                 return;
@@ -474,7 +471,6 @@ class ExtractionTest {
 
     @Test
     void testSuccessFlagWithMultipleExtensions(@TempDir Path tempDir) throws IOException, KreuzbergException {
-        // Create files with appropriate content for each format
         Path txtFile = tempDir.resolve("test1.txt");
         Files.writeString(txtFile, "Test content");
         ExtractionResult txtResult = Kreuzberg.extractFile(txtFile);

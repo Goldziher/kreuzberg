@@ -60,6 +60,7 @@ impl OcrBackend for MockOcrBackend {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         })
     }
 
@@ -155,6 +156,7 @@ impl OcrBackend for ValidatingOcrBackend {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         })
     }
 
@@ -211,6 +213,7 @@ impl OcrBackend for MetadataOcrBackend {
             detected_languages: None,
             chunks: None,
             images: None,
+            pages: None,
         })
     }
 

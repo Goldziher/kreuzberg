@@ -359,9 +359,9 @@ const JAVA_POM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>24</maven.compiler.source>
-        <maven.compiler.target>24</maven.compiler.target>
-        <maven.compiler.release>24</maven.compiler.release>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.11.3</junit.version>
         <jackson.version>2.18.2</jackson.version>
@@ -372,9 +372,9 @@ const JAVA_POM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
         <dependency>
             <groupId>dev.kreuzberg</groupId>
             <artifactId>kreuzberg</artifactId>
-            <version>4.0.0-rc.6</version>
+            <version>4.0.0-rc.7</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/../../packages/java/target/kreuzberg-4.0.0-rc.6.jar</systemPath>
+            <systemPath>${project.basedir}/../../packages/java/target/kreuzberg-4.0.0-rc.7.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -404,13 +404,13 @@ const JAVA_POM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.1</version>
                 <configuration>
-                    <release>24</release>
+                    <release>25</release>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
+                <version>3.5.4</version>
             </plugin>
         </plugins>
     </build>
@@ -462,7 +462,10 @@ fn clean_test_files(src_test: &Utf8Path) -> Result<()> {
     for entry in fs::read_dir(src_test.as_std_path())? {
         let entry = entry?;
         let path = entry.path();
-        if path.file_name().is_some_and(|name| name == "E2EHelpers.java") {
+        if path
+            .file_name()
+            .is_some_and(|name| name == "E2EHelpers.java" || name == "package-info.java")
+        {
             continue;
         }
         if path.extension().is_some_and(|ext| ext == "java") {

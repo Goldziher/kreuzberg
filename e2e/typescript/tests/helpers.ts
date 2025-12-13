@@ -1,5 +1,6 @@
-import { join, resolve, dirname } from "node:path";
 import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { expect } from "vitest";
 import type {
 	ChunkingConfig,
 	ExtractionConfig,
@@ -12,36 +13,56 @@ import type {
 	TesseractConfig,
 	TokenReductionConfig,
 } from "@kreuzberg/node";
-import { expect } from "vitest";
 
+/**
+ * Resolve the workspace root robustly regardless of the current working directory.
+ */
 function resolveWorkspaceRoot(): string {
-	// Check CI environment variable (GitHub Actions)
-	const githubWorkspace = process.env.GITHUB_WORKSPACE;
-	if (githubWorkspace && existsSync(githubWorkspace)) {
-		return githubWorkspace;
+	const envRoot = process.env.KREUZBERG_WORKSPACE_ROOT ?? process.env.GITHUB_WORKSPACE;
+	if (envRoot && existsSync(envRoot)) {
+		return envRoot;
 	}
 
-	// Check local override
-	const workspaceRoot = process.env.KREUZBERG_WORKSPACE_ROOT;
-	if (workspaceRoot && existsSync(workspaceRoot)) {
-		return workspaceRoot;
-	}
-
-	// Fall back to Cargo.toml search
-	let current = __dirname;
-
-	while (current !== dirname(current)) {
+	let current = process.cwd();
+	while (true) {
 		if (existsSync(join(current, "Cargo.toml"))) {
 			return current;
 		}
-		current = dirname(current);
+		const parent = dirname(current);
+		if (parent === current) {
+			break;
+		}
+		current = parent;
 	}
 
-	throw new Error("Could not find workspace root (Cargo.toml not found)");
+	const fallback = resolve(__dirname, "../../..");
+	if (existsSync(fallback)) {
+		return fallback;
+	}
+
+	let searchDir = __dirname;
+	while (true) {
+		if (existsSync(join(searchDir, "test_documents"))) {
+			return searchDir;
+		}
+		const parent = dirname(searchDir);
+		if (parent === searchDir) {
+			break;
+		}
+		searchDir = parent;
+	}
+
+	return fallback;
 }
 
 const WORKSPACE_ROOT = resolveWorkspaceRoot();
 const TEST_DOCUMENTS = join(WORKSPACE_ROOT, "test_documents");
+
+if (process.env.DEBUG_PATHS === "true") {
+	console.log("WORKSPACE_ROOT:", WORKSPACE_ROOT);
+	console.log("TEST_DOCUMENTS:", TEST_DOCUMENTS);
+	console.log("Exists:", existsSync(TEST_DOCUMENTS));
+}
 
 type PlainRecord = Record<string, unknown>;
 
@@ -311,7 +332,7 @@ export const assertions = {
 		}
 	},
 
-	assertMetadataExpectation(result: ExtractionResult, path: string, expectation: PlainRecord): void {
+	assertMetadataExpectation(result: ExtractionResult, path: string, expectation: PlainRecord | string): void {
 		if (!isPlainRecord(result.metadata)) {
 			throw new Error(`Metadata is not a record for path ${path}`);
 		}
@@ -319,6 +340,15 @@ export const assertions = {
 		const value = getMetadataPath(result.metadata as PlainRecord, path);
 		if (value === undefined || value === null) {
 			throw new Error(`Metadata path '${path}' missing in ${JSON.stringify(result.metadata)}`);
+		}
+
+		if (typeof expectation === "string") {
+			expect(valuesEqual(value, expectation)).toBe(true);
+			return;
+		}
+
+		if (!isPlainRecord(expectation)) {
+			throw new Error(`Expectation must be a string or object for path '${path}'`);
 		}
 
 		if ("eq" in expectation) {

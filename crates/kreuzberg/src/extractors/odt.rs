@@ -169,13 +169,10 @@ fn extract_content_text(archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>) -> crate
 
     let mut text_parts: Vec<String> = Vec::new();
 
-    // Find the office:text or text body element - this is the main document body
     for body_child in root.children() {
         if body_child.tag_name().name() == "body" {
-            // Process the text element inside body
             for text_elem in body_child.children() {
                 if text_elem.tag_name().name() == "text" {
-                    // Now process only direct children of the text element
                     process_document_elements(text_elem, &mut text_parts);
                 }
             }
@@ -563,6 +560,7 @@ impl DocumentExtractor for OdtExtractor {
                 additional: metadata_map,
                 ..Default::default()
             },
+            pages: None,
             tables,
             detected_languages: None,
             chunks: None,

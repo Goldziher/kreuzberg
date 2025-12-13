@@ -80,6 +80,7 @@ impl DocumentExtractor for StructuredExtractor {
                 additional,
                 ..Default::default()
             },
+            pages: None,
             tables: vec![],
             detected_languages: None,
             chunks: None,

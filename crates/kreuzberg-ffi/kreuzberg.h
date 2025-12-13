@@ -22,7 +22,7 @@ typedef struct ExtractionConfig ExtractionConfig;
  * C-compatible extraction result structure
  *
  * Must be kept in sync with the Java side's MemoryLayout definition in KreuzbergFFI.java
- * Field order: 10 pointers (8 bytes each) + 1 bool + 7 bytes padding = 88 bytes total
+ * Field order: 11 pointers (8 bytes each) + 1 bool + 7 bytes padding = 96 bytes total
  */
 typedef struct CExtractionResult {
   /**
@@ -65,6 +65,10 @@ typedef struct CExtractionResult {
    * Extracted images as JSON array (null-terminated string, or NULL if not available, must be freed with kreuzberg_free_string)
    */
   char *images_json;
+  /**
+   * Page structure as JSON object (null-terminated string, or NULL if not available, must be freed with kreuzberg_free_string)
+   */
+  char *page_structure_json;
   /**
    * Whether extraction was successful
    */

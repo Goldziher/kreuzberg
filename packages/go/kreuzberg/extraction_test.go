@@ -248,8 +248,8 @@ func TestChunkingInResult(t *testing.T) {
 		chunk := Chunk{
 			Content: "chunk content",
 			Metadata: ChunkMetadata{
-				CharStart:   0,
-				CharEnd:     13,
+				ByteStart:   0,
+				ByteEnd:     13,
 				ChunkIndex:  0,
 				TotalChunks: 1,
 			},
@@ -269,8 +269,8 @@ func TestChunkingInResult(t *testing.T) {
 		chunk1 := Chunk{
 			Content: "first part",
 			Metadata: ChunkMetadata{
-				CharStart:   0,
-				CharEnd:     10,
+				ByteStart:   0,
+				ByteEnd:     10,
 				ChunkIndex:  0,
 				TotalChunks: 2,
 			},
@@ -278,8 +278,8 @@ func TestChunkingInResult(t *testing.T) {
 		chunk2 := Chunk{
 			Content: "second part",
 			Metadata: ChunkMetadata{
-				CharStart:   5,
-				CharEnd:     16,
+				ByteStart:   5,
+				ByteEnd:     16,
 				ChunkIndex:  1,
 				TotalChunks: 2,
 			},
@@ -671,7 +671,6 @@ func TestExtensionResolution(t *testing.T) {
 
 	t.Run("invalid MIME type may error", func(t *testing.T) {
 		_, err := GetExtensionsForMime("invalid/mime")
-		// May or may not error depending on implementation
 		_ = err
 	})
 }
@@ -776,14 +775,12 @@ func TestEmbeddingPresets(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to list presets: %v", err)
 		}
-		// May be empty or populated depending on configuration
 		_ = presets
 	})
 
 	t.Run("get preset by name", func(t *testing.T) {
 		preset, err := GetEmbeddingPreset("default")
 		if err != nil {
-			// May not exist, that's okay
 			_ = err
 		} else if preset != nil {
 			if preset.Name == "" {
@@ -806,8 +803,8 @@ func TestChunkingWithEmbeddings(t *testing.T) {
 		Content:   "test chunk",
 		Embedding: []float32{0.1, 0.2, 0.3},
 		Metadata: ChunkMetadata{
-			CharStart:  0,
-			CharEnd:    10,
+			ByteStart:  0,
+			ByteEnd:    10,
 			TokenCount: IntPtr(3),
 		},
 	}

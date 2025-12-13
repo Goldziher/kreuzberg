@@ -1,7 +1,5 @@
 package com.kreuzberg.e2e;
 
-// CHECKSTYLE.OFF: UnusedImports - generated code
-// CHECKSTYLE.OFF: LineLength - generated code
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -10,8 +8,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-// CHECKSTYLE.ON: UnusedImports
-// CHECKSTYLE.ON: LineLength
 
 /** Auto-generated tests for office fixtures. */
 public class OfficeTest {
@@ -256,7 +252,7 @@ public class OfficeTest {
                 E2EHelpers.Assertions.assertContentContainsAll(result, Arrays.asList("Team", "Location", "Stanley Cups"));
                 E2EHelpers.Assertions.assertTableCount(result, 1, null);
                 E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_count", Map.of("gte", 2));
-                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_names", Map.of("contains", "Stanley Cups"));
+                E2EHelpers.Assertions.assertMetadataExpectation(result, "sheet_names", Map.of("contains", Arrays.asList("Stanley Cups")));
             }
         );
     }

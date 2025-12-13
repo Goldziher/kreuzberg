@@ -23,40 +23,9 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Helper utilities for E2E tests.
  */
 public final class E2EHelpers {
-    private static final Path WORKSPACE_ROOT = resolveWorkspaceRoot();
+    private static final Path WORKSPACE_ROOT =
+            Paths.get("").toAbsolutePath().getParent().getParent();
     private static final Path TEST_DOCUMENTS = WORKSPACE_ROOT.resolve("test_documents");
-
-    private static Path resolveWorkspaceRoot() {
-        // Check CI environment variable (GitHub Actions)
-        String githubWorkspace = System.getenv("GITHUB_WORKSPACE");
-        if (githubWorkspace != null && !githubWorkspace.isEmpty()) {
-            Path path = Paths.get(githubWorkspace);
-            if (Files.exists(path)) {
-                return path;
-            }
-        }
-
-        // Check local override
-        String workspaceRoot = System.getenv("KREUZBERG_WORKSPACE_ROOT");
-        if (workspaceRoot != null && !workspaceRoot.isEmpty()) {
-            Path path = Paths.get(workspaceRoot);
-            if (Files.exists(path)) {
-                return path;
-            }
-        }
-
-        // Fall back to Cargo.toml search
-        Path current = Paths.get("").toAbsolutePath();
-
-        while (current != null) {
-            if (Files.exists(current.resolve("Cargo.toml"))) {
-                return current;
-            }
-            current = current.getParent();
-        }
-
-        throw new RuntimeException("Could not find workspace root (Cargo.toml not found)");
-    }
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private E2EHelpers() { }
@@ -98,7 +67,6 @@ public final class E2EHelpers {
         String reason;
         if (missingDependency) {
             if (error instanceof MissingDependencyException) {
-                // Extract dependency from exception message if available
                 String msg = error.getMessage();
                 reason = msg != null && !msg.isEmpty()
                         ? "missing dependency: " + msg
@@ -302,7 +270,6 @@ public final class E2EHelpers {
                     assertTrue(((String) value).contains((String) contains),
                             String.format("Expected '%s' to contain '%s'", value, contains));
                 } else if (value instanceof List && contains instanceof String) {
-                    // List contains a string
                     @SuppressWarnings("unchecked")
                     List<Object> valueList = (List<Object>) value;
                     boolean found = valueList.stream()

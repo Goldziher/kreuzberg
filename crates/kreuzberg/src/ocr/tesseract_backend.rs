@@ -161,6 +161,7 @@ impl OcrBackend for TesseractBackend {
             content: ocr_result.content,
             mime_type: ocr_result.mime_type,
             metadata,
+            pages: None,
             tables: ocr_result
                 .tables
                 .into_iter()
@@ -214,6 +215,7 @@ impl OcrBackend for TesseractBackend {
             content: ocr_result.content,
             mime_type: ocr_result.mime_type,
             metadata,
+            pages: None,
             tables: ocr_result
                 .tables
                 .into_iter()

@@ -8,6 +8,47 @@ using System.Text.Json.Serialization;
 
 namespace Kreuzberg;
 
+/// <summary>
+/// Custom JSON converter for byte arrays that handles both base64-encoded strings and JSON arrays.
+/// This is needed because Rust serializes byte arrays as JSON arrays, while System.Text.Json expects base64 strings.
+/// </summary>
+internal class ByteArrayConverter : JsonConverter<byte[]>
+{
+    public override byte[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.String => Convert.FromBase64String(reader.GetString() ?? string.Empty),
+            JsonTokenType.StartArray => ReadArrayAsBytes(ref reader),
+            _ => throw new JsonException($"Unexpected token {reader.TokenType} when parsing byte array")
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, byte[] value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(Convert.ToBase64String(value));
+    }
+
+    private static byte[] ReadArrayAsBytes(ref Utf8JsonReader reader)
+    {
+        var bytes = new List<byte>();
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndArray)
+            {
+                break;
+            }
+
+            if (reader.TokenType == JsonTokenType.Number)
+            {
+                bytes.Add(reader.GetByte());
+            }
+        }
+
+        return bytes.ToArray();
+    }
+}
+
 internal static class Serialization
 {
     internal static readonly JsonSerializerOptions Options = new()
@@ -15,6 +56,7 @@ internal static class Serialization
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = false,
+        Converters = { new ByteArrayConverter() }
     };
 
     private static readonly FrozenDictionary<FormatType, string[]> FormatFields = new Dictionary<FormatType, string[]>
@@ -40,6 +82,7 @@ internal static class Serialization
         "image_preprocessing",
         "json_schema",
         "error",
+        "pages",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     internal static string SerializeResult(ExtractionResult result)
@@ -157,6 +200,11 @@ internal static class Serialization
             metadata.Error = DeserializeElement<ErrorMetadata>(error);
         }
 
+        if (root.TryGetProperty("pages", out var pages))
+        {
+            metadata.Pages = DeserializeElement<PageStructure>(pages);
+        }
+
         if (root.TryGetProperty("format_type", out var formatType))
         {
             metadata.FormatType = ParseFormat(formatType.GetString());
@@ -165,14 +213,18 @@ internal static class Serialization
         }
 
         ApplyFormatMetadata(root, metadata);
-        var additional = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+        var additional = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         foreach (var property in root.EnumerateObject())
         {
             if (CoreMetadataKeys.Contains(property.Name))
             {
                 continue;
             }
-            additional[property.Name] = ParseNode(property.Value);
+            var node = ParseNode(property.Value);
+            if (node != null)
+            {
+                additional[property.Name] = node;
+            }
         }
 
         if (additional.Count > 0)
@@ -254,6 +306,10 @@ internal static class Serialization
         {
             node["error"] = JsonSerializer.SerializeToNode(metadata.Error, Options);
         }
+        if (metadata.Pages != null)
+        {
+            node["pages"] = JsonSerializer.SerializeToNode(metadata.Pages, Options);
+        }
 
         AddFormatFields(metadata, node);
 
@@ -261,7 +317,7 @@ internal static class Serialization
         {
             foreach (var kvp in metadata.Additional)
             {
-                node[kvp.Key] = kvp.Value;
+                node[kvp.Key] = kvp.Value as JsonNode;
             }
         }
 

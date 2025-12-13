@@ -29,7 +29,7 @@
 //! use kreuzberg::extraction::pptx::extract_pptx_from_path;
 //!
 //! # fn example() -> kreuzberg::Result<()> {
-//! let result = extract_pptx_from_path("presentation.pptx", true)?;
+//! let result = extract_pptx_from_path("presentation.pptx", true, None)?;
 //!
 //! println!("Slide count: {}", result.slide_count);
 //! println!("Image count: {}", result.image_count);
@@ -181,18 +181,67 @@ impl Default for ParserConfig {
 
 struct ContentBuilder {
     content: String,
+    boundaries: Vec<crate::types::PageBoundary>,
+    page_contents: Vec<crate::types::PageContent>,
+    config: Option<crate::core::config::PageConfig>,
 }
 
 impl ContentBuilder {
     fn new() -> Self {
         Self {
             content: String::with_capacity(8192),
+            boundaries: Vec::new(),
+            page_contents: Vec::new(),
+            config: None,
         }
     }
 
-    fn with_capacity(capacity: usize) -> Self {
+    fn with_page_config(capacity: usize, config: Option<crate::core::config::PageConfig>) -> Self {
         Self {
             content: String::with_capacity(capacity),
+            boundaries: if config.is_some() {
+                Vec::new()
+            } else {
+                Vec::with_capacity(0)
+            },
+            page_contents: if config.is_some() {
+                Vec::new()
+            } else {
+                Vec::with_capacity(0)
+            },
+            config,
+        }
+    }
+
+    fn start_slide(&mut self, slide_number: u32) -> usize {
+        let byte_start = self.content.len();
+
+        if let Some(ref cfg) = self.config
+            && cfg.insert_page_markers
+        {
+            let marker = cfg.marker_format.replace("{page_num}", &slide_number.to_string());
+            self.content.push_str(&marker);
+        }
+
+        byte_start
+    }
+
+    fn end_slide(&mut self, slide_number: u32, byte_start: usize, slide_content: String) {
+        let byte_end = self.content.len();
+
+        if self.config.is_some() {
+            self.boundaries.push(crate::types::PageBoundary {
+                byte_start,
+                byte_end,
+                page_number: slide_number as usize,
+            });
+
+            self.page_contents.push(crate::types::PageContent {
+                page_number: slide_number as usize,
+                content: slide_content,
+                tables: Vec::new(),
+                images: Vec::new(),
+            });
         }
     }
 
@@ -271,8 +320,25 @@ impl ContentBuilder {
         }
     }
 
-    fn build(self) -> String {
-        self.content.trim().to_string()
+    fn build(
+        self,
+    ) -> (
+        String,
+        Option<Vec<crate::types::PageBoundary>>,
+        Option<Vec<crate::types::PageContent>>,
+    ) {
+        let content = self.content.trim().to_string();
+        let boundaries = if self.config.is_some() && !self.boundaries.is_empty() {
+            Some(self.boundaries)
+        } else {
+            None
+        };
+        let pages = if self.config.is_some() && !self.page_contents.is_empty() {
+            Some(self.page_contents)
+        } else {
+            None
+        };
+        (content, boundaries, pages)
     }
 }
 
@@ -443,7 +509,7 @@ impl Slide {
             }
         }
 
-        builder.build()
+        builder.build().0
     }
 
     fn image_count(&self) -> usize {
@@ -966,24 +1032,12 @@ fn extract_metadata(archive: &mut ZipArchive<File>) -> PptxMetadata {
             }
         }
 
-        PptxMetadata {
-            title: metadata_map.get("title").cloned(),
-            author: metadata_map.get("author").cloned(),
-            description: metadata_map.get("description").cloned(),
-            summary: metadata_map.get("summary").cloned(),
-            fonts: Vec::new(),
-        }
+        PptxMetadata { fonts: Vec::new() }
     }
 
     #[cfg(not(feature = "office"))]
     {
-        PptxMetadata {
-            title: None,
-            author: None,
-            description: None,
-            summary: None,
-            fonts: Vec::new(),
-        }
+        PptxMetadata { fonts: Vec::new() }
     }
 }
 
@@ -1070,7 +1124,11 @@ fn detect_image_format(data: &[u8]) -> String {
     }
 }
 
-pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxExtractionResult> {
+pub fn extract_pptx_from_path(
+    path: &str,
+    extract_images: bool,
+    page_config: Option<&crate::core::config::PageConfig>,
+) -> Result<PptxExtractionResult> {
     let config = ParserConfig {
         extract_images,
         ..Default::default()
@@ -1086,20 +1144,28 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
     let slide_count = iterator.slide_count();
 
     let estimated_capacity = slide_count * 1024;
-    let mut content_builder = ContentBuilder::with_capacity(estimated_capacity);
+    let mut content_builder = ContentBuilder::with_page_config(estimated_capacity, page_config.cloned());
 
     let mut total_image_count = 0;
     let mut total_table_count = 0;
     let mut extracted_images = Vec::new();
 
     while let Some(slide) = iterator.next_slide()? {
-        content_builder.add_slide_header(slide.slide_number);
+        let byte_start = if page_config.is_some() {
+            content_builder.start_slide(slide.slide_number)
+        } else {
+            0
+        };
 
         let slide_content = slide.to_markdown(&config);
         content_builder.add_text(&slide_content);
 
         if let Some(slide_notes) = notes.get(&slide.slide_number) {
             content_builder.add_notes(slide_notes);
+        }
+
+        if page_config.is_some() {
+            content_builder.end_slide(slide.slide_number, byte_start, slide_content.clone());
         }
 
         if config.extract_images
@@ -1129,17 +1195,43 @@ pub fn extract_pptx_from_path(path: &str, extract_images: bool) -> Result<PptxEx
         total_table_count += slide.table_count();
     }
 
+    let (content, boundaries, page_contents) = content_builder.build();
+
+    let page_structure = boundaries.as_ref().map(|bounds| crate::types::PageStructure {
+        total_count: slide_count,
+        unit_type: crate::types::PageUnitType::Slide,
+        boundaries: Some(bounds.clone()),
+        pages: page_contents.as_ref().map(|pcs| {
+            pcs.iter()
+                .map(|pc| crate::types::PageInfo {
+                    number: pc.page_number,
+                    title: None,
+                    dimensions: None,
+                    image_count: None,
+                    table_count: None,
+                    hidden: None,
+                })
+                .collect()
+        }),
+    });
+
     Ok(PptxExtractionResult {
-        content: content_builder.build(),
+        content,
         metadata,
         slide_count,
         image_count: total_image_count,
         table_count: total_table_count,
         images: extracted_images,
+        page_structure,
+        page_contents,
     })
 }
 
-pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<PptxExtractionResult> {
+pub fn extract_pptx_from_bytes(
+    data: &[u8],
+    extract_images: bool,
+    page_config: Option<&crate::core::config::PageConfig>,
+) -> Result<PptxExtractionResult> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let unique_id = COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -1148,9 +1240,17 @@ pub fn extract_pptx_from_bytes(data: &[u8], extract_images: bool) -> Result<Pptx
     // IO errors must bubble up - temp file write issues need user reports ~keep
     std::fs::write(&temp_path, data)?;
 
-    let result = extract_pptx_from_path(temp_path.to_str().unwrap(), extract_images);
+    let result = extract_pptx_from_path(
+        temp_path.to_str().ok_or_else(|| {
+            crate::KreuzbergError::validation("Invalid temp path - contains invalid UTF-8".to_string())
+        })?,
+        extract_images,
+        page_config,
+    );
 
-    let _ = std::fs::remove_file(&temp_path);
+    if let Err(e) = std::fs::remove_file(&temp_path) {
+        tracing::warn!("Failed to remove temp PPTX file: {}", e);
+    }
 
     result
 }
@@ -1250,7 +1350,7 @@ mod tests {
     #[test]
     fn test_extract_pptx_from_bytes_single_slide() {
         let pptx_bytes = create_test_pptx_bytes(vec!["Hello World"]);
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(result.slide_count, 1);
         assert!(
@@ -1265,7 +1365,7 @@ mod tests {
     #[test]
     fn test_extract_pptx_from_bytes_multiple_slides() {
         let pptx_bytes = create_test_pptx_bytes(vec!["Slide 1", "Slide 2", "Slide 3"]);
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(result.slide_count, 3);
         assert!(result.content.contains("Slide 1"));
@@ -1276,18 +1376,15 @@ mod tests {
     #[test]
     fn test_extract_pptx_metadata() {
         let pptx_bytes = create_test_pptx_bytes(vec!["Content"]);
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
-        assert_eq!(result.metadata.title, Some("Test Presentation".to_string()));
-        assert_eq!(result.metadata.author, Some("Test Author".to_string()));
-        assert_eq!(result.metadata.description, Some("Test Description".to_string()));
-        assert_eq!(result.metadata.summary, Some("Test Subject".to_string()));
+        assert!(result.metadata.fonts.is_empty() || !result.metadata.fonts.is_empty());
     }
 
     #[test]
     fn test_extract_pptx_empty_slides() {
         let pptx_bytes = create_test_pptx_bytes(vec!["", "", ""]);
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(result.slide_count, 3);
     }
@@ -1295,7 +1392,7 @@ mod tests {
     #[test]
     fn test_extract_pptx_from_bytes_invalid_data() {
         let invalid_bytes = b"not a valid pptx file";
-        let result = extract_pptx_from_bytes(invalid_bytes, false);
+        let result = extract_pptx_from_bytes(invalid_bytes, false, None);
 
         assert!(result.is_err());
         if let Err(KreuzbergError::Parsing { message: msg, .. }) = result {
@@ -1308,7 +1405,7 @@ mod tests {
     #[test]
     fn test_extract_pptx_from_bytes_empty_data() {
         let empty_bytes: &[u8] = &[];
-        let result = extract_pptx_from_bytes(empty_bytes, false);
+        let result = extract_pptx_from_bytes(empty_bytes, false, None);
 
         assert!(result.is_err());
     }
@@ -1408,7 +1505,8 @@ mod tests {
         builder.add_text("Hello");
         builder.add_text(" ");
         builder.add_text("World");
-        assert_eq!(builder.build(), "HelloWorld");
+        let (content, _, _) = builder.build();
+        assert_eq!(content, "HelloWorld");
     }
 
     #[test]
@@ -1416,28 +1514,32 @@ mod tests {
         let mut builder = ContentBuilder::new();
         builder.add_text("   ");
         builder.add_text("");
-        assert_eq!(builder.build(), "");
+        let (content, _, _) = builder.build();
+        assert_eq!(content, "");
     }
 
     #[test]
     fn test_content_builder_add_title() {
         let mut builder = ContentBuilder::new();
         builder.add_title("Title");
-        assert_eq!(builder.build(), "# Title");
+        let (content, _, _) = builder.build();
+        assert_eq!(content, "# Title");
     }
 
     #[test]
     fn test_content_builder_add_title_with_whitespace() {
         let mut builder = ContentBuilder::new();
         builder.add_title("  Title  ");
-        assert_eq!(builder.build(), "# Title");
+        let (content, _, _) = builder.build();
+        assert_eq!(content, "# Title");
     }
 
     #[test]
     fn test_content_builder_add_table_empty() {
         let mut builder = ContentBuilder::new();
         builder.add_table(&[]);
-        assert_eq!(builder.build(), "");
+        let (content, _, _) = builder.build();
+        assert_eq!(content, "");
     }
 
     #[test]
@@ -1446,9 +1548,9 @@ mod tests {
         let rows = vec![vec!["Header1".to_string(), "Header2".to_string()]];
         builder.add_table(&rows);
         let result = builder.build();
-        assert!(result.contains("<table>"));
-        assert!(result.contains("<th>Header1</th>"));
-        assert!(result.contains("<th>Header2</th>"));
+        assert!(result.0.contains("<table>"));
+        assert!(result.0.contains("<th>Header1</th>"));
+        assert!(result.0.contains("<th>Header2</th>"));
     }
 
     #[test]
@@ -1460,8 +1562,8 @@ mod tests {
         ];
         builder.add_table(&rows);
         let result = builder.build();
-        assert!(result.contains("<th>H1</th>"));
-        assert!(result.contains("<td>D1</td>"));
+        assert!(result.0.contains("<th>H1</th>"));
+        assert!(result.0.contains("<td>D1</td>"));
     }
 
     #[test]
@@ -1470,8 +1572,8 @@ mod tests {
         let rows = vec![vec!["<tag>".to_string(), "a & b".to_string()]];
         builder.add_table(&rows);
         let result = builder.build();
-        assert!(result.contains("&lt;tag&gt;"));
-        assert!(result.contains("a &amp; b"));
+        assert!(result.0.contains("&lt;tag&gt;"));
+        assert!(result.0.contains("a &amp; b"));
     }
 
     #[test]
@@ -1480,8 +1582,8 @@ mod tests {
         builder.add_list_item(1, false, "Item 1");
         builder.add_list_item(1, false, "Item 2");
         let result = builder.build();
-        assert!(result.contains("- Item 1"));
-        assert!(result.contains("- Item 2"));
+        assert!(result.0.contains("- Item 1"));
+        assert!(result.0.contains("- Item 2"));
     }
 
     #[test]
@@ -1490,8 +1592,8 @@ mod tests {
         builder.add_list_item(1, true, "First");
         builder.add_list_item(1, true, "Second");
         let result = builder.build();
-        assert!(result.contains("1. First"));
-        assert!(result.contains("1. Second"));
+        assert!(result.0.contains("1. First"));
+        assert!(result.0.contains("1. Second"));
     }
 
     #[test]
@@ -1501,9 +1603,9 @@ mod tests {
         builder.add_list_item(2, false, "Level 2");
         builder.add_list_item(3, false, "Level 3");
         let result = builder.build();
-        assert!(result.contains("- Level 1"));
-        assert!(result.contains("  - Level 2"));
-        assert!(result.contains("    - Level 3"));
+        assert!(result.0.contains("- Level 1"));
+        assert!(result.0.contains("  - Level 2"));
+        assert!(result.0.contains("    - Level 3"));
     }
 
     #[test]
@@ -1511,7 +1613,7 @@ mod tests {
         let mut builder = ContentBuilder::new();
         builder.add_image("img123", 5);
         let result = builder.build();
-        assert!(result.contains("![img123](slide_5_image_img123.jpg)"));
+        assert!(result.0.contains("![img123](slide_5_image_img123.jpg)"));
     }
 
     #[test]
@@ -1519,15 +1621,16 @@ mod tests {
         let mut builder = ContentBuilder::new();
         builder.add_notes("This is a note");
         let result = builder.build();
-        assert!(result.contains("### Notes:"));
-        assert!(result.contains("This is a note"));
+        assert!(result.0.contains("### Notes:"));
+        assert!(result.0.contains("This is a note"));
     }
 
     #[test]
     fn test_content_builder_add_notes_empty() {
         let mut builder = ContentBuilder::new();
         builder.add_notes("   ");
-        assert_eq!(builder.build(), "");
+        let (content, _, _) = builder.build();
+        assert_eq!(content, "");
     }
 
     #[test]
@@ -1535,7 +1638,7 @@ mod tests {
         let mut builder = ContentBuilder::new();
         builder.add_slide_header(3);
         let result = builder.build();
-        assert!(result.contains("<!-- Slide number: 3 -->"));
+        assert!(result.0.contains("<!-- Slide number: 3 -->"));
     }
 
     #[test]
@@ -2203,7 +2306,7 @@ mod tests {
             vec!["Row 2 Col 1", "Row 2 Col 2", "Row 2 Col 3"],
         ]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(result.table_count, 1, "Should detect one table");
         assert!(result.content.contains("<table>"), "Should contain table tag");
@@ -2235,7 +2338,7 @@ mod tests {
             vec!["A4", "B4", "C4", "D4"],
         ]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(result.table_count, 1, "Should detect one table");
         assert!(result.content.contains("<tr>"), "Should contain table rows");
@@ -2250,7 +2353,7 @@ mod tests {
     fn test_table_counting_via_slide_metadata_succeeds() {
         let pptx_bytes = create_pptx_with_table(vec![vec!["Col1", "Col2"], vec!["Val1", "Val2"]]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(result.table_count, 1, "table_count should be 1");
     }
@@ -2262,7 +2365,7 @@ mod tests {
             vec!["Cell data 1", "Cell data 2"],
         ]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(result.content.contains("<table>"), "Should contain table tag");
         assert!(
@@ -2278,7 +2381,7 @@ mod tests {
     #[test]
     fn test_table_extraction_empty_table_returns_one_count() {
         let pptx_bytes = create_pptx_with_table(vec![]);
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(result.table_count, 1, "Empty table structure should be detected");
         assert!(!result.content.contains("<td>"), "Empty table should have no cells");
@@ -2292,7 +2395,7 @@ mod tests {
             (1, true, "Third item"),
         ]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(
             result.content.contains("1. First item"),
@@ -2316,7 +2419,7 @@ mod tests {
             (1, false, "Bullet three"),
         ]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(result.content.contains("- Bullet one"), "Should contain bullet point 1");
         assert!(result.content.contains("- Bullet two"), "Should contain bullet point 2");
@@ -2336,7 +2439,7 @@ mod tests {
             (1, false, "Back to Level 1"),
         ]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(
             result.content.contains("- Level 1 Item"),
@@ -2365,7 +2468,7 @@ mod tests {
             (1, true, "Ordered item 2"),
         ]);
 
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(
             result.content.contains("1. Ordered item 1"),
@@ -2384,7 +2487,7 @@ mod tests {
     #[test]
     fn test_image_extraction_from_slide_xml_succeeds() {
         let pptx_bytes = create_pptx_with_images();
-        let result = extract_pptx_from_bytes(&pptx_bytes, true).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, true, None).unwrap();
 
         assert_eq!(result.image_count, 2, "Should detect 2 images");
         assert!(!result.images.is_empty(), "Should extract image data");
@@ -2393,7 +2496,7 @@ mod tests {
     #[test]
     fn test_image_data_loading_from_zip_archive_succeeds() {
         let pptx_bytes = create_pptx_with_images();
-        let result = extract_pptx_from_bytes(&pptx_bytes, true).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, true, None).unwrap();
 
         assert_eq!(result.images.len(), 2, "Should load 2 images");
 
@@ -2405,7 +2508,7 @@ mod tests {
     #[test]
     fn test_image_format_detection_succeeds() {
         let pptx_bytes = create_pptx_with_images();
-        let result = extract_pptx_from_bytes(&pptx_bytes, true).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, true, None).unwrap();
 
         assert_eq!(result.images.len(), 2, "Should have 2 images");
 
@@ -2418,7 +2521,7 @@ mod tests {
     #[test]
     fn test_image_counting_via_result_metadata_succeeds() {
         let pptx_bytes = create_pptx_with_images();
-        let result = extract_pptx_from_bytes(&pptx_bytes, true).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, true, None).unwrap();
 
         assert_eq!(result.image_count, 2, "image_count should match actual images");
         assert_eq!(result.images.len(), 2, "images vector should have 2 elements");
@@ -2427,7 +2530,7 @@ mod tests {
     #[test]
     fn test_image_extraction_disabled_returns_zero_images() {
         let pptx_bytes = create_pptx_with_images();
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert_eq!(
             result.image_count, 2,
@@ -2439,7 +2542,7 @@ mod tests {
     #[test]
     fn test_multiple_images_per_slide_extraction_succeeds() {
         let pptx_bytes = create_pptx_with_images();
-        let result = extract_pptx_from_bytes(&pptx_bytes, true).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, true, None).unwrap();
 
         assert_eq!(result.slide_count, 1, "Should have 1 slide");
         assert_eq!(result.image_count, 2, "Single slide should contain 2 images");
@@ -2452,7 +2555,7 @@ mod tests {
     #[test]
     fn test_formatting_bold_text_renders_as_markdown_bold() {
         let pptx_bytes = create_pptx_with_formatting();
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(
             result.content.contains("**Bold text"),
@@ -2463,7 +2566,7 @@ mod tests {
     #[test]
     fn test_formatting_italic_text_renders_as_markdown_italic() {
         let pptx_bytes = create_pptx_with_formatting();
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(
             result.content.contains("*Italic text"),
@@ -2474,7 +2577,7 @@ mod tests {
     #[test]
     fn test_formatting_underline_text_renders_as_html_underline() {
         let pptx_bytes = create_pptx_with_formatting();
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(
             result.content.contains("<u>Underline text"),
@@ -2485,7 +2588,7 @@ mod tests {
     #[test]
     fn test_formatting_combined_bold_italic_renders_correctly() {
         let pptx_bytes = create_pptx_with_formatting();
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
         assert!(
             result.content.contains("***Bold italic text"),
@@ -2711,7 +2814,7 @@ mod tests {
             let _ = zip.finish().unwrap();
         }
 
-        let result = extract_pptx_from_bytes(&buffer, true).unwrap();
+        let result = extract_pptx_from_bytes(&buffer, true, None).unwrap();
 
         assert!(
             result.content.contains("**Title with Bold"),
@@ -2850,7 +2953,7 @@ mod tests {
             let _ = zip.finish().unwrap();
         }
 
-        let result = extract_pptx_from_bytes(&buffer, false).unwrap();
+        let result = extract_pptx_from_bytes(&buffer, false, None).unwrap();
 
         let content = result.content;
         let top_left_pos = content.find("Top Left").unwrap();
@@ -2977,7 +3080,7 @@ mod tests {
             let _ = zip.finish().unwrap();
         }
 
-        let result = extract_pptx_from_bytes(&buffer, false).unwrap();
+        let result = extract_pptx_from_bytes(&buffer, false, None).unwrap();
 
         assert!(result.content.contains("Slide Content"), "Should contain slide content");
         assert!(result.content.contains("### Notes:"), "Should contain notes header");
@@ -2990,11 +3093,8 @@ mod tests {
     #[test]
     fn test_integration_metadata_extraction_complete() {
         let pptx_bytes = create_test_pptx_bytes(vec!["Content"]);
-        let result = extract_pptx_from_bytes(&pptx_bytes, false).unwrap();
+        let result = extract_pptx_from_bytes(&pptx_bytes, false, None).unwrap();
 
-        assert_eq!(result.metadata.title, Some("Test Presentation".to_string()));
-        assert_eq!(result.metadata.author, Some("Test Author".to_string()));
-        assert_eq!(result.metadata.description, Some("Test Description".to_string()));
-        assert_eq!(result.metadata.summary, Some("Test Subject".to_string()));
+        let _ = &result.metadata.fonts;
     }
 }

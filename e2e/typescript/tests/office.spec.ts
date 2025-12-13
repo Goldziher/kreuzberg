@@ -1,10 +1,8 @@
-// Auto-generated tests for office fixtures.
-
 import { existsSync } from "node:fs";
-import type { ExtractionResult } from "@kreuzberg/node";
-import { extractFileSync } from "@kreuzberg/node";
 import { describe, it } from "vitest";
 import { assertions, buildConfig, resolveDocument, shouldSkipFixture } from "./helpers.js";
+import { extractFileSync } from "@kreuzberg/node";
+import type { ExtractionResult } from "@kreuzberg/node";
 
 const TEST_TIMEOUT_MS = 60_000;
 
@@ -429,7 +427,7 @@ describe("office fixtures", () => {
 			assertions.assertContentContainsAll(result, ["Team", "Location", "Stanley Cups"]);
 			assertions.assertTableCount(result, 1, null);
 			assertions.assertMetadataExpectation(result, "sheet_count", { gte: 2 });
-			assertions.assertMetadataExpectation(result, "sheet_names", { contains: "Stanley Cups" });
+			assertions.assertMetadataExpectation(result, "sheet_names", { contains: ["Stanley Cups"] });
 		},
 		TEST_TIMEOUT_MS,
 	);

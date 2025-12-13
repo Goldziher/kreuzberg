@@ -22,7 +22,7 @@ serde_json = { workspace = true }
 serde = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
-html-to-markdown-rs = { version = "2.13.0", default-features = false, optional = true }
+html-to-markdown-rs = { version = "2.14.1", default-features = false, optional = true }
 
 [build-dependencies]
 cbindgen = "0.29"

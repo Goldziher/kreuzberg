@@ -26,7 +26,6 @@ def build_cli_binary() -> None:
     workspace_root = Path(__file__).resolve().parents[2]
     package_dir = Path(__file__).resolve().parent / "kreuzberg"
 
-    # Check if cargo is available
     cargo = shutil.which("cargo")
     if cargo is None:
         return
@@ -39,16 +38,14 @@ def build_cli_binary() -> None:
             capture_output=True,
         )
 
-        # Copy the binary to the package directory
         source_binary = workspace_root / "target" / "release" / "kreuzberg"
         dest_binary = package_dir / "kreuzberg-cli"
 
         if source_binary.exists():
             shutil.copy2(source_binary, dest_binary)
-            dest_binary.chmod(0o755)  # Make it executable
+            dest_binary.chmod(0o755)
 
     except subprocess.CalledProcessError:
-        # Don't raise - allow wheel build to continue, Python fallback will kick in
         pass
 
 

@@ -138,6 +138,7 @@ async fn test_pipeline_empty_no_processors() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -182,6 +183,7 @@ async fn test_pipeline_single_processor_per_stage() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -226,6 +228,7 @@ async fn test_pipeline_multiple_processors_per_stage() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -261,6 +264,7 @@ async fn test_pipeline_all_stages_enabled() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -294,6 +298,7 @@ async fn test_pipeline_postprocessing_disabled() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {
@@ -340,6 +345,7 @@ async fn test_pipeline_early_stage_runs_first() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -379,6 +385,7 @@ async fn test_pipeline_middle_stage_runs_second() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -414,6 +421,7 @@ async fn test_pipeline_late_stage_runs_last() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -449,6 +457,7 @@ async fn test_pipeline_within_stage_priority_order() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -513,6 +522,7 @@ async fn test_pipeline_cross_stage_data_flow() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -569,6 +579,7 @@ async fn test_pipeline_early_stage_error_recorded() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -610,6 +621,7 @@ async fn test_pipeline_middle_stage_error_propagation() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -681,6 +693,7 @@ async fn test_pipeline_late_stage_error_doesnt_affect_earlier_stages() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -768,6 +781,7 @@ async fn test_pipeline_processor_error_doesnt_stop_other_processors() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -845,6 +859,7 @@ async fn test_pipeline_multiple_processor_errors() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -886,6 +901,7 @@ async fn test_pipeline_error_context_preservation() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -957,6 +973,7 @@ async fn test_pipeline_metadata_added_in_early_visible_in_middle() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1027,6 +1044,7 @@ async fn test_pipeline_content_modified_in_middle_visible_in_late() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1095,6 +1113,7 @@ async fn test_pipeline_multiple_processors_modifying_same_metadata() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1182,6 +1201,7 @@ async fn test_pipeline_processors_reading_previous_output() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1236,6 +1256,7 @@ async fn test_pipeline_large_content_modification() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1271,6 +1292,7 @@ async fn test_pipeline_enabled_processors_whitelist() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {
@@ -1315,6 +1337,7 @@ async fn test_pipeline_disabled_processors_blacklist() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {
@@ -1359,6 +1382,7 @@ async fn test_pipeline_no_filtering_runs_all() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig::default();
 
@@ -1396,6 +1420,7 @@ async fn test_pipeline_empty_whitelist_runs_none() {
         detected_languages: None,
         chunks: None,
         images: None,
+        pages: None,
     };
     let config = ExtractionConfig {
         postprocessor: Some(PostProcessorConfig {

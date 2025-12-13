@@ -11,6 +11,7 @@ type ExtractionResult struct {
 	DetectedLanguages []string         `json:"detected_languages,omitempty"`
 	Chunks            []Chunk          `json:"chunks,omitempty"`
 	Images            []ExtractedImage `json:"images,omitempty"`
+	Pages             []PageContent    `json:"pages,omitempty"`
 	Success           bool             `json:"success"`
 }
 
@@ -30,11 +31,13 @@ type Chunk struct {
 
 // ChunkMetadata provides positional information for a chunk.
 type ChunkMetadata struct {
-	CharStart   int  `json:"char_start"`
-	CharEnd     int  `json:"char_end"`
-	TokenCount  *int `json:"token_count,omitempty"`
-	ChunkIndex  int  `json:"chunk_index"`
-	TotalChunks int  `json:"total_chunks"`
+	ByteStart   uint64  `json:"byte_start"`
+	ByteEnd     uint64  `json:"byte_end"`
+	TokenCount  *int    `json:"token_count,omitempty"`
+	ChunkIndex  int     `json:"chunk_index"`
+	TotalChunks int     `json:"total_chunks"`
+	FirstPage   *uint64 `json:"first_page,omitempty"`
+	LastPage    *uint64 `json:"last_page,omitempty"`
 }
 
 // ExtractedImage represents an extracted image, optionally with nested OCR results.
@@ -61,6 +64,7 @@ type Metadata struct {
 	ImagePreprocessing *ImagePreprocessingMetadata `json:"image_preprocessing,omitempty"`
 	JSONSchema         json.RawMessage             `json:"json_schema,omitempty"`
 	Error              *ErrorMetadata              `json:"error,omitempty"`
+	PageStructure      *PageStructure              `json:"page_structure,omitempty"`
 	Additional         map[string]json.RawMessage  `json:"-"`
 }
 
@@ -283,4 +287,46 @@ type ImagePreprocessingMetadata struct {
 type ErrorMetadata struct {
 	ErrorType string `json:"error_type"`
 	Message   string `json:"message"`
+}
+
+// PageUnitType enumerates the types of paginated units in documents.
+type PageUnitType string
+
+const (
+	PageUnitTypePage  PageUnitType = "page"
+	PageUnitTypeSlide PageUnitType = "slide"
+	PageUnitTypeSheet PageUnitType = "sheet"
+)
+
+// PageBoundary marks byte offset boundaries for a page in the extracted content.
+type PageBoundary struct {
+	ByteStart  uint64 `json:"byte_start"`
+	ByteEnd    uint64 `json:"byte_end"`
+	PageNumber uint64 `json:"page_number"`
+}
+
+// PageInfo provides metadata about an individual page/slide/sheet.
+type PageInfo struct {
+	Number      uint64      `json:"number"`
+	Title       *string     `json:"title,omitempty"`
+	Dimensions  *[2]float64 `json:"dimensions,omitempty"`
+	ImageCount  *uint64     `json:"image_count,omitempty"`
+	Visible     *bool       `json:"visible,omitempty"`
+	ContentType *string     `json:"content_type,omitempty"`
+}
+
+// PageStructure describes the page/slide/sheet structure of a document.
+type PageStructure struct {
+	TotalCount uint64         `json:"total_count"`
+	UnitType   PageUnitType   `json:"unit_type"`
+	Boundaries []PageBoundary `json:"boundaries,omitempty"`
+	Pages      []PageInfo     `json:"pages,omitempty"`
+}
+
+// PageContent represents extracted content for a single page.
+type PageContent struct {
+	PageNumber uint64           `json:"page_number"`
+	Content    string           `json:"content"`
+	Tables     []Table          `json:"tables,omitempty"`
+	Images     []ExtractedImage `json:"images,omitempty"`
 }

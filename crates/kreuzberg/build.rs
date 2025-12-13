@@ -314,7 +314,6 @@ fn copy_lib_to_package(pdfium_dir: &Path, target: &str) {
             );
         }
 
-        // Also copy to target/{profile} for Java FFI (Maven expects it here)
         let simple_target_dir = workspace_root.join("target").join(&profile);
         if simple_target_dir != target_dir {
             fs::create_dir_all(&simple_target_dir).ok();

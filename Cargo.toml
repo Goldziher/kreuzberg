@@ -20,7 +20,7 @@ kreuzberg = { path = "crates/kreuzberg" }
 kreuzberg-tesseract = { path = "crates/kreuzberg-tesseract" }
 
 [workspace.package]
-version = "4.0.0-rc.6"
+version = "4.0.0-rc.7"
 edition = "2024"
 rust-version = "1.91"
 authors = ["Na'aman Hirschfeld <nhirschfeld@gmail.com>"]
@@ -30,7 +30,16 @@ homepage = "https://kreuzberg.dev"
 
 [workspace.dependencies]
 # Core async runtime
-tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros", "sync", "process", "fs", "time", "io-util"] }
+tokio = { version = "1.48.0", features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "process",
+    "fs",
+    "time",
+    "io-util",
+] }
 
 # Serialization
 serde = { version = "1.0.228", features = ["derive"] }

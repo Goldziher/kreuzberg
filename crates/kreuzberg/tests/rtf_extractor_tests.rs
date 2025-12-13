@@ -731,7 +731,6 @@ async fn test_rtf_comprehensive_extraction_alignment() {
         "Should include third section heading"
     );
 
-    // Table/text alignment with DOCX/ODT variants
     for expected in ["Header 1", "Cell 1A", "Product", "Apple"] {
         assert!(
             rtf_result.content.contains(expected),

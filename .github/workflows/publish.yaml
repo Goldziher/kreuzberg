@@ -1340,7 +1340,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '24'
+          java-version: '25'
           cache: 'maven'
 
       - name: Cache PDFium
@@ -2122,6 +2122,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -2151,6 +2152,10 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
+
+      - name: Update NPM
+        run: npm install -g npm
+        shell: bash
 
       - name: Enable corepack
         run: corepack enable
@@ -2192,6 +2197,10 @@ jobs:
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
         run: pnpm install -C crates/kreuzberg-node
 
+      - name: Build TypeScript bundle
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        run: pnpm -C crates/kreuzberg-node build:ts
+
       - name: Pack platform packages
         run: |
           cd crates/kreuzberg-node/npm
@@ -2203,8 +2212,6 @@ jobs:
 
       - name: Publish native binary packages
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -2212,7 +2219,7 @@ jobs:
             echo "Publishing $pkg"
             publish_log=$(mktemp)
             set +e
-            npm publish "$pkg" --access public --ignore-scripts 2>&1 | tee "$publish_log"
+            npm publish "$pkg" --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
             status=${PIPESTATUS[0]}
             set -e
             if [ "$status" -ne 0 ]; then
@@ -2231,13 +2238,11 @@ jobs:
 
       - name: Publish main Node package
         if: ${{ needs.prepare.outputs.dry_run != 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd crates/kreuzberg-node
           publish_log=$(mktemp)
           set +e
-          pnpm publish --access public --no-git-checks 2>&1 | tee "$publish_log"
+          npm publish --access public --provenance --ignore-scripts 2>&1 | tee "$publish_log"
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then
@@ -2329,7 +2334,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "24"
+          java-version: "25"
           cache: maven
           server-id: ossrh
           server-username: MAVEN_USERNAME
@@ -2403,6 +2408,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Download NuGet artifact
         uses: actions/download-artifact@v6
@@ -2433,7 +2439,6 @@ jobs:
         run: |
           dotnet nuget push "dist/*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
-            --api-key "${{ secrets.NUGET_API_KEY }}" \
             --skip-duplicate
           echo "NuGet package published." >> "$GITHUB_STEP_SUMMARY"
 

@@ -59,7 +59,6 @@ mod mri {
 
             unsafe {
                 if is_ruby_vm_started() {
-                    // On Windows, ssize_t is i32 even on 64-bit, so cast i64 to i32
                     #[cfg(all(target_pointer_width = "64", target_os = "windows"))]
                     rb_gc_adjust_memory_usage(delta as i32);
 

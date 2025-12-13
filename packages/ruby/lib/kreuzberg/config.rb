@@ -492,6 +492,36 @@ module Kreuzberg
       end
     end
 
+    # Page tracking configuration for multi-page documents
+    #
+    # @example Enable page extraction
+    #   pages = PageConfig.new(extract_pages: true)
+    #
+    # @example Enable page markers in content
+    #   pages = PageConfig.new(insert_page_markers: true, marker_format: "--- PAGE {page_num} ---")
+    #
+    class PageConfig
+      attr_reader :extract_pages, :insert_page_markers, :marker_format
+
+      def initialize(
+        extract_pages: false,
+        insert_page_markers: false,
+        marker_format: "\n\n<!-- PAGE {page_num} -->\n\n"
+      )
+        @extract_pages = extract_pages ? true : false
+        @insert_page_markers = insert_page_markers ? true : false
+        @marker_format = marker_format.to_s
+      end
+
+      def to_h
+        {
+          extract_pages: @extract_pages,
+          insert_page_markers: @insert_page_markers,
+          marker_format: @marker_format
+        }
+      end
+    end
+
     # Post-processor configuration
     #
     # @example Enable all post-processors
@@ -576,7 +606,7 @@ module Kreuzberg
       attr_reader :use_cache, :enable_quality_processing, :force_ocr,
                   :ocr, :chunking, :language_detection, :pdf_options,
                   :image_extraction, :image_preprocessing, :postprocessor,
-                  :token_reduction, :keywords, :html_options,
+                  :token_reduction, :keywords, :html_options, :pages,
                   :max_concurrent_extractions
 
       # Load configuration from a file.
@@ -634,6 +664,7 @@ module Kreuzberg
         token_reduction: nil,
         keywords: nil,
         html_options: nil,
+        pages: nil,
         max_concurrent_extractions: nil
       )
         @use_cache = use_cache ? true : false
@@ -649,6 +680,7 @@ module Kreuzberg
         @token_reduction = normalize_config(token_reduction, TokenReduction)
         @keywords = normalize_config(keywords, Keywords)
         @html_options = normalize_config(html_options, HtmlOptions)
+        @pages = normalize_config(pages, PageConfig)
         @max_concurrent_extractions = max_concurrent_extractions&.to_i
       end
 
@@ -668,6 +700,7 @@ module Kreuzberg
           token_reduction: @token_reduction&.to_h,
           keywords: @keywords&.to_h,
           html_options: @html_options&.to_h,
+          pages: @pages&.to_h,
           max_concurrent_extractions: @max_concurrent_extractions
         }.compact
       end

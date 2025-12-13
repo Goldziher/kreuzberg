@@ -128,7 +128,7 @@ RSpec.describe 'smoke fixtures' do
       E2ERuby::Assertions.assert_content_contains_all(result, ['Team', 'Location', 'Stanley Cups', 'Blues', 'Flyers', 'Maple Leafs', 'STL', 'PHI', 'TOR'])
       E2ERuby::Assertions.assert_table_count(result, 1, nil)
       E2ERuby::Assertions.assert_metadata_expectation(result, 'sheet_count', { gte: 2 })
-      E2ERuby::Assertions.assert_metadata_expectation(result, 'sheet_names', { contains: 'Stanley Cups' })
+      E2ERuby::Assertions.assert_metadata_expectation(result, 'sheet_names', { contains: ['Stanley Cups'] })
     end
   end
 end
