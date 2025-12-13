@@ -52,7 +52,7 @@ COPY crates/kreuzberg-tesseract/ crates/kreuzberg-tesseract/
 COPY vendor/rb-sys/ vendor/rb-sys/
 
 # Remove workspace members that aren't included (Ruby, Node, Python, tools, e2e)
-RUN sed -i '/kreuzberg-py/d; /kreuzberg_rb/d; /kreuzberg-node/d; /kreuzberg-ffi/d; /"crates\\/kreuzberg-wasm"/d; /^\[profile\.release\.package\.kreuzberg-wasm\]$/,$d; /benchmark-harness/d; /e2e-generator/d; /e2e\/rust/d' Cargo.toml
+RUN sed -i '/kreuzberg-py/d; /kreuzberg_rb/d; /kreuzberg-node/d; /kreuzberg-ffi/d; /"crates\/kreuzberg-wasm"/d; /^\[profile\.release\.package\.kreuzberg-wasm\]$/,$d; /benchmark-harness/d; /e2e-generator/d; /e2e\/rust/d' Cargo.toml
 
 # Build release binary with server features (api + full format support)
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
