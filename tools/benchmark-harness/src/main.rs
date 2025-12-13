@@ -181,7 +181,7 @@ async fn main() -> Result<()> {
                 create_csharp_sync_adapter, create_go_batch_adapter, create_go_sync_adapter, create_java_sync_adapter,
                 create_node_async_adapter, create_node_batch_adapter, create_python_async_adapter,
                 create_python_batch_adapter, create_python_sync_adapter, create_ruby_batch_adapter,
-                create_ruby_sync_adapter,
+                create_ruby_sync_adapter, create_wasm_async_adapter, create_wasm_batch_adapter,
             };
 
             let mut kreuzberg_count = 1;
@@ -267,6 +267,30 @@ async fn main() -> Result<()> {
                 Err(err) => eprintln!("[adapter] ✗ kreuzberg-node-batch (initialization failed: {err})"),
             }
 
+            match create_wasm_async_adapter() {
+                Ok(adapter) => {
+                    if let Err(err) = registry.register(Arc::new(adapter)) {
+                        eprintln!("[adapter] ✗ kreuzberg-wasm-async (registration failed: {err})");
+                    } else {
+                        eprintln!("[adapter] ✓ kreuzberg-wasm-async (registered)");
+                        kreuzberg_count += 1;
+                    }
+                }
+                Err(err) => eprintln!("[adapter] ✗ kreuzberg-wasm-async (initialization failed: {err})"),
+            }
+
+            match create_wasm_batch_adapter() {
+                Ok(adapter) => {
+                    if let Err(err) = registry.register(Arc::new(adapter)) {
+                        eprintln!("[adapter] ✗ kreuzberg-wasm-batch (registration failed: {err})");
+                    } else {
+                        eprintln!("[adapter] ✓ kreuzberg-wasm-batch (registered)");
+                        kreuzberg_count += 1;
+                    }
+                }
+                Err(err) => eprintln!("[adapter] ✗ kreuzberg-wasm-batch (initialization failed: {err})"),
+            }
+
             match create_ruby_sync_adapter() {
                 Ok(adapter) => {
                     if let Err(err) = registry.register(Arc::new(adapter)) {
@@ -315,7 +339,7 @@ async fn main() -> Result<()> {
                 Err(err) => eprintln!("[adapter] ✗ kreuzberg-csharp-sync (initialization failed: {err})"),
             }
 
-            eprintln!("[adapter] Kreuzberg bindings: {}/11 available", kreuzberg_count);
+            eprintln!("[adapter] Kreuzberg bindings: {}/13 available", kreuzberg_count);
 
             use benchmark_harness::adapters::external::{
                 create_docling_adapter, create_docling_batch_adapter, create_markitdown_adapter, create_pandoc_adapter,
