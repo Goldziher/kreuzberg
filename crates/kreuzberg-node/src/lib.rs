@@ -19,7 +19,7 @@ use kreuzberg::{
 };
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use std::ffi::CStr;
+use std::ffi::{CStr, c_char};
 
 #[allow(unused_extern_crates)]
 extern crate kreuzberg_ffi;
@@ -36,12 +36,12 @@ unsafe extern "C" {
     /// Maps to kreuzberg_last_panic_context() in the FFI library.
     /// Returns NULL if no panic context is available.
     /// The returned string must be freed with kreuzberg_free_string().
-    pub fn kreuzberg_last_panic_context() -> *const u8;
+    pub fn kreuzberg_last_panic_context() -> *const c_char;
 
     /// Free a string allocated by FFI.
     ///
     /// Maps to kreuzberg_free_string() in the FFI library.
-    pub fn kreuzberg_free_string(ptr: *mut u8);
+    pub fn kreuzberg_free_string(ptr: *mut c_char);
 }
 
 /// Helper function to retrieve panic context from FFI.
@@ -56,14 +56,14 @@ fn get_panic_context() -> Option<serde_json::Value> {
             return None;
         }
 
-        let c_str = CStr::from_ptr(ptr as *const i8);
+        let c_str = CStr::from_ptr(ptr);
         if let Ok(json_str) = c_str.to_str() {
             let result = serde_json::from_str(json_str).ok();
-            kreuzberg_free_string(ptr as *mut u8);
+            kreuzberg_free_string(ptr as *mut c_char);
             return result;
         }
 
-        kreuzberg_free_string(ptr as *mut u8);
+        kreuzberg_free_string(ptr as *mut c_char);
         None
     }
 }
