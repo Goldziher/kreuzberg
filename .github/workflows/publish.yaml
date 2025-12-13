@@ -1866,7 +1866,19 @@ jobs:
       - name: Upload Go FFI libraries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: for file in dist/go/go-ffi-*.tar.gz; do gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber; done
+        run: |
+          cd dist/go
+          for file in go-ffi-*.tar.gz; do
+            if [ -f "$file" ]; then
+              gh release upload "${{ needs.prepare.outputs.tag }}" "$file" --clobber
+              echo "✅ Uploaded $file"
+            fi
+          done
+          # Verify at least one file was uploaded
+          if ! ls go-ffi-*.tar.gz 1>/dev/null 2>&1; then
+            echo "❌ Error: No Go FFI artifacts found in dist/go"
+            exit 1
+          fi
 
   publish-crates:
     name: Publish crates.io packages

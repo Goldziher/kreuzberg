@@ -1,0 +1,38 @@
+name: Free Disk Space (Linux)
+description: Free up disk space on Linux runners
+
+inputs:
+  show-initial:
+    description: Show initial disk space before cleanup
+    required: false
+    default: "true"
+  show-final:
+    description: Show final disk space after cleanup
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Show initial disk space (Linux)
+      if: runner.os == 'Linux' && inputs.show-initial == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "=== Initial disk space ===" >&2
+        df -h / >&2
+
+    - name: Free up disk space (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        bash scripts/publish/ubuntu/free-disk-space.sh
+
+    - name: Show final disk space (Linux)
+      if: runner.os == 'Linux' && inputs.show-final == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "=== Final disk space ===" >&2
+        df -h / >&2

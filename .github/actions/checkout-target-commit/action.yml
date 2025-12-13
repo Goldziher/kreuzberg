@@ -1,0 +1,62 @@
+name: Checkout Target Commit
+description: Checkout code and optionally ensure specific commit
+
+inputs:
+  checkout_ref:
+    description: Git ref to checkout (branch, tag, or commit SHA)
+    required: true
+  target_sha:
+    description: Specific commit SHA to ensure checkout (optional, only enforced if provided)
+    required: false
+    default: ""
+  fetch_depth:
+    description: Depth of commit history to fetch
+    required: false
+    default: "0"
+  submodules:
+    description: Submodule checkout mode (disable, shallow, or recursive)
+    required: false
+    default: "recursive"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.checkout_ref }}
+        fetch-depth: ${{ inputs.fetch_depth }}
+        submodules: ${{ inputs.submodules }}
+
+    - name: Ensure target commit
+      if: ${{ inputs.target_sha != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        target_sha="${{ inputs.target_sha }}"
+
+        # Validate SHA format (40 hex chars for full SHA-1, or 7-40 for abbreviated)
+        if ! [[ "$target_sha" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+          echo "ERROR: Invalid commit SHA format: $target_sha" >&2
+          echo "Expected: 7-40 hexadecimal characters" >&2
+          exit 1
+        fi
+
+        echo "Ensuring target commit: $target_sha"
+
+        # Verify the commit exists before checking it out
+        if ! git cat-file -t "$target_sha" > /dev/null 2>&1; then
+          echo "ERROR: Commit SHA not found in repository: $target_sha" >&2
+          exit 1
+        fi
+
+        git checkout --progress --force "$target_sha"
+
+        # Verify we checked out the intended commit
+        current_sha=$(git rev-parse HEAD)
+        if [[ ! "$current_sha" =~ ^$target_sha ]]; then
+          echo "ERROR: Checkout verification failed. Expected commit starting with $target_sha, got $current_sha" >&2
+          exit 1
+        fi
+
+        echo "Successfully checked out commit: $current_sha"

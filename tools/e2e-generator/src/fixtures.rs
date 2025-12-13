@@ -425,15 +425,15 @@ pub fn should_include_for_wasm(fixture: &Fixture, target: WasmTarget) -> bool {
     }
 
     // Skip large PDFs for Workers (>500KB size limit)
-    if target == WasmTarget::Workers {
-        if let Some(doc) = &fixture.document {
-            // Check file size if possible
-            let doc_path = std::path::PathBuf::from("../../test_documents").join(&doc.path);
-            if let Ok(metadata) = std::fs::metadata(&doc_path) {
-                if metadata.len() > 500_000 {
-                    return false;
-                }
-            }
+    if target == WasmTarget::Workers
+        && let Some(doc) = &fixture.document
+    {
+        // Check file size if possible
+        let doc_path = std::path::PathBuf::from("../../test_documents").join(&doc.path);
+        if let Ok(metadata) = std::fs::metadata(&doc_path)
+            && metadata.len() > 500_000
+        {
+            return false;
         }
     }
 

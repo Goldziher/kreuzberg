@@ -1,0 +1,58 @@
+name: Setup PDFium
+description: Cache, download, and optionally stage PDFium libraries
+
+inputs:
+  pdfium-version:
+    description: PDFium version to download and cache
+    required: true
+
+  platform-id:
+    description: Override platform detection (linux|mac|win). Defaults to runner platform.
+    required: false
+    default: ""
+
+  arch-id:
+    description: Override architecture detection (x64|arm64). Defaults to runner architecture.
+    required: false
+    default: ""
+
+  stage-to:
+    description: >-
+      Destination directory for staging PDFium runtime library.
+      Can be a single path or multiple paths separated by newlines.
+      Staging is skipped if not provided.
+    required: false
+    default: ""
+
+outputs:
+  pdfium-path:
+    description: Path to the extracted PDFium runtime
+    value: ${{ steps.download.outputs.pdfium-path }}
+
+  cache-hit:
+    description: Whether the PDFium cache was restored
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Cache PDFium
+      id: cache
+      uses: ./.github/actions/cache-pdfium
+      with:
+        pdfium-version: ${{ inputs.pdfium-version }}
+
+    - name: Download PDFium
+      id: download
+      uses: ./.github/actions/download-pdfium
+      with:
+        pdfium-version: ${{ inputs.pdfium-version }}
+        platform-id: ${{ inputs.platform-id }}
+        arch-id: ${{ inputs.arch-id }}
+
+    - name: Stage PDFium runtime
+      if: inputs.stage-to != ''
+      uses: ./.github/actions/stage-pdfium-runtime
+      with:
+        pdfium-path: ${{ steps.download.outputs.pdfium-path }}
+        stage-to: ${{ inputs.stage-to }}

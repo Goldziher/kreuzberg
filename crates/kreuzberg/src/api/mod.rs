@@ -1,5 +1,3 @@
-#![cfg(feature = "api")]
-
 //! REST API server for Kreuzberg document extraction.
 //!
 //! This module provides an Axum-based HTTP server for document extraction

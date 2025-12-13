@@ -1,6 +1,6 @@
 prefix=/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg
 exec_prefix=${prefix}
-libdir=/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/target/aarch64-apple-darwin/debug
+libdir=/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/target/debug
 includedir=/Users/naamanhirschfeld/workspace/kreuzberg-dev/kreuzberg/crates/kreuzberg-ffi
 
 Name: kreuzberg-ffi

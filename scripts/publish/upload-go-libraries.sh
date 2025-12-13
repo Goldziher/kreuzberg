@@ -22,11 +22,18 @@ if [ ! -d "$artifacts_dir" ]; then
 	exit 1
 fi
 
+found_files=0
 for file in "$artifacts_dir"/go-ffi-*.tar.gz; do
 	if [ -f "$file" ]; then
 		gh release upload "$tag" "$file" --clobber
-		echo "Uploaded $(basename "$file")"
+		echo "✅ Uploaded $(basename "$file")"
+		found_files=$((found_files + 1))
 	fi
 done
 
-echo "Go FFI libraries uploaded to $tag"
+if [ $found_files -eq 0 ]; then
+	echo "❌ Error: No Go FFI artifacts found in $artifacts_dir" >&2
+	exit 1
+fi
+
+echo "✅ Go FFI libraries uploaded to $tag ($found_files files)"
