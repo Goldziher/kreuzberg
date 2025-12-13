@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kreuzberg Benchmark Results</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+{% include "styles/variables.css.jinja" %}
+
+{% include "styles/layout.css.jinja" %}
+
+{% include "styles/components.css.jinja" %}
+
+{% include "styles/charts.css.jinja" %}
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% include "components/header.html.jinja" %}
+
+        {% if data.frameworks|length > 0 %}
+            {% include "components/tabs.html.jinja" %}
+
+            {% include "charts/duration.html.jinja" %}
+
+            {% include "charts/throughput.html.jinja" %}
+
+            {% include "charts/memory.html.jinja" %}
+
+            {% include "charts/filetype.html.jinja" %}
+
+            {% include "charts/success.html.jinja" %}
+        {% else %}
+            {% include "components/empty_state.html.jinja" %}
+        {% endif %}
+    </div>
+
+    <script>
+        // Embed benchmark data
+        const benchmarkData = {{ data|tojson }};
+
+        {% if data.frameworks|length > 0 %}
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Chart.js default configuration
+        Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-family').trim();
+        Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-color-secondary').trim();
+
+        // Color palette for frameworks (from CSS variables)
+        const colors = [
+            '#4299e1', '#48bb78', '#ed8936', '#9f7aea', '#f56565',
+            '#38b2ac', '#ecc94b', '#ed64a6', '#667eea', '#fc8181'
+        ];
+
+        {% include "charts/duration_script.js.jinja" %}
+
+        {% include "charts/throughput_script.js.jinja" %}
+
+        {% include "charts/memory_script.js.jinja" %}
+
+        {% include "charts/filetype_script.js.jinja" %}
+
+        {% include "charts/success_script.js.jinja" %}
+        {% endif %}
+    </script>
+</body>
+</html>

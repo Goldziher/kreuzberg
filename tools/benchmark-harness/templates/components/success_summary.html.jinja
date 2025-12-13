@@ -1,0 +1,18 @@
+<div class="success-summary">
+    <div class="summary-card">
+        <h3>Total Files</h3>
+        <p class="metric">{{ data.framework_metrics.values()|map(attribute='count')|max|default(0) }}</p>
+    </div>
+    <div class="summary-card">
+        <h3>Overall Success Rate</h3>
+        <p class="metric">
+            {%- set total_count = data.framework_metrics.values()|map(attribute='count')|sum -%}
+            {%- set total_successful = data.framework_metrics.values()|map(attribute='successful')|sum -%}
+            {%- if total_count > 0 -%}
+                {{ ((total_successful / total_count) * 100)|round(1) }}%
+            {%- else -%}
+                0%
+            {%- endif -%}
+        </p>
+    </div>
+</div>

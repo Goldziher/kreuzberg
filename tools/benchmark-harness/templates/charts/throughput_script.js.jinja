@@ -1,0 +1,55 @@
+{# Throughput Chart - MB/s processing speed #}
+new Chart(document.getElementById('throughput-chart'), {
+    type: 'bar',
+    data: {
+        labels: {{ data.frameworks|tojson }},
+        datasets: [
+            {
+                label: 'Throughput (MB/s)',
+                data: [
+                    {%- for fw in data.frameworks -%}
+                        {%- if data.framework_metrics[fw] -%}
+                            {{ data.framework_metrics[fw].avg_throughput_mbps }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: 'rgba(237, 137, 54, 0.8)',
+                borderColor: 'rgba(237, 137, 54, 1)',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        indexAxis: 'y',
+        plugins: {
+            title: {
+                display: true,
+                text: 'Throughput Comparison (Higher is Better)'
+            },
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        return 'Throughput: ' + context.parsed.x.toFixed(2) + ' MB/s';
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Throughput (MB/s)'
+                }
+            }
+        }
+    }
+});

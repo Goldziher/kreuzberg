@@ -1,0 +1,63 @@
+{# File Type Chart - Duration by extension for each framework #}
+{%- set colors = [
+    '#4299e1', '#48bb78', '#ed8936', '#9f7aea', '#f56565',
+    '#38b2ac', '#ecc94b', '#ed64a6', '#667eea', '#fc8181'
+] -%}
+
+new Chart(document.getElementById('filetype-chart'), {
+    type: 'bar',
+    data: {
+        labels: {{ data.extensions|tojson }},
+        datasets: [
+            {%- for fw in data.frameworks -%}
+            {
+                label: '{{ fw }}',
+                data: [
+                    {%- for ext in data.extensions -%}
+                        {%- if data.extension_metrics.get(ext) and data.extension_metrics.get(ext).get(fw) -%}
+                            {{ data.extension_metrics[ext][fw].p95_duration_ms }}
+                        {%- else -%}
+                            0
+                        {%- endif -%}
+                        {%- if not loop.last %}, {% endif -%}
+                    {%- endfor -%}
+                ],
+                backgroundColor: '{{ colors[loop.index0 % colors|length] }}',
+                borderWidth: 1
+            }{%- if not loop.last %},{% endif -%}
+            {%- endfor -%}
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Duration by File Type (p95, ms)'
+            },
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 12
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' ms';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Duration (ms)'
+                }
+            }
+        }
+    }
+});

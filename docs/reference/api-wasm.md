@@ -375,7 +375,7 @@ async function batchExtractBytes(
 
 **Returns:**
 
-- `Promise<ExtractionResult[]>`: Array of extraction results in the same order as input
+- Promise<ExtractionResult[]> type: Array of extraction results in the same order as input
 
 **Throws:**
 
@@ -422,7 +422,7 @@ async function batchExtractFiles(
 
 **Returns:**
 
-- `Promise<ExtractionResult[]>`: Array of extraction results in the same order as input
+- Promise<ExtractionResult[]> type: Array of extraction results in the same order as input
 
 **Throws:**
 
@@ -516,7 +516,7 @@ function batchExtractBytesSync(
 
 **Returns:**
 
-- `ExtractionResult[]`: Array of extraction results
+- ExtractionResult array type: Array of extraction results
 
 **Throws:**
 
@@ -669,7 +669,7 @@ function listOcrBackends(): string[]
 
 **Returns:**
 
-- `string[]`: Array of registered backend names
+- string array type: Array of registered backend names
 
 **Example:**
 
@@ -808,7 +808,7 @@ function getExtensionsForMime(mimeType: string): string[]
 
 **Returns:**
 
-- `string[]`: Array of file extensions (without leading dots)
+- string array type: Array of file extensions (without leading dots)
 
 **Example:**
 
@@ -1325,7 +1325,7 @@ Extracted table structure.
 
 **Fields:**
 
-- `cells` (string[][]): 2D array of table cells
+- `cells`: string array type (2D array of table cells)
 - `markdown` (string): Table in Markdown format
 - `pageNumber` (number): Page number where table appears
 

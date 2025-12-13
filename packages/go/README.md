@@ -225,7 +225,7 @@ func init() {
 
 ## Testing / Tooling
 
-- `task go:lint` – runs `gofmt` and `golangci-lint` (`golangci-lint` pinned to v2.6.2).
+- `task go:lint` – runs `gofmt` and `golangci-lint` (`golangci-lint` pinned to v2.7.2).
 - `task go:test` – executes `go test ./...` with `LD_LIBRARY_PATH`/`DYLD_FALLBACK_LIBRARY_PATH` pointing at `target/release`.
 - `task e2e:go:verify` – regenerates fixtures via the e2e generator and runs `go test ./...` inside `e2e/go`.
 

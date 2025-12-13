@@ -177,6 +177,10 @@ nav:
       - Docker Deployment: guides/docker.md
       - Creating Plugins: guides/plugins.md
       - C# Bindings: guides/csharp.md
+  - Benchmarks:
+      - Overview: benchmarks/index.md
+      - Latest Results: benchmarks/latest.md
+      - Methodology: benchmarks/methodology.md
   - CLI: cli/usage.md
   - API Server: guides/api-server.md
   - API Reference:

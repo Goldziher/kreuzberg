@@ -570,7 +570,7 @@ page_text = content.encode('utf-8')[boundary.byte_start:boundary.byte_end].decod
 page_text = content[boundary.byte_start:boundary.byte_end]  # Wrong for multi-byte chars
 ```
 
-See [Byte Offset Handling](../migration/v3-to-v4.md#byte-offset-changes) in the migration guide.
+See [Byte Offset Handling](../migration/v3-to-v4.md#field-renames-character-to-byte-offsets) in the migration guide.
 
 ## ImageExtractionConfig
 
