@@ -18,7 +18,6 @@ use kreuzberg::plugins::registry::{get_document_extractor_registry, get_post_pro
 use kreuzberg::plugins::{Plugin, PostProcessor, ProcessingStage};
 use kreuzberg::types::{ExtractionResult, Metadata};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(feature = "ocr")]
 use kreuzberg::core::config::OcrConfig;
@@ -52,12 +51,15 @@ fn assert_text_content(actual: &str, expected: &str) {
 async fn test_concurrent_extractions_mixed_formats() {
     let config = ExtractionConfig::default();
 
-    let test_cases = vec![
+    #[allow(unused_mut)]
+    let mut test_cases = vec![
         (b"Plain text content" as &[u8], "text/plain"),
         (b"{\"key\": \"value\"}", "application/json"),
-        (b"<root><item>XML content</item></root>", "application/xml"),
         (b"# Markdown\n\nContent here", "text/markdown"),
     ];
+
+    #[cfg(feature = "xml")]
+    test_cases.push((b"<root><item>XML content</item></root>" as &[u8], "application/xml"));
 
     let mut handles = vec![];
     for _ in 0..10 {
@@ -487,12 +489,15 @@ async fn test_high_concurrency_stress() {
         ..Default::default()
     };
 
-    let formats = vec![
+    #[allow(unused_mut)]
+    let mut formats = vec![
         (b"Text content" as &[u8], "text/plain"),
         (b"{\"json\": true}", "application/json"),
-        (b"<xml><item>content</item></xml>", "application/xml"),
         (b"# Markdown\n\nContent", "text/markdown"),
     ];
+
+    #[cfg(feature = "xml")]
+    formats.push((b"<xml><item>content</item></xml>" as &[u8], "application/xml"));
 
     let mut handles = vec![];
     for _ in 0..100 {
@@ -517,9 +522,10 @@ async fn test_high_concurrency_stress() {
     .await
     .expect("High-load stress test should complete within 60s");
 
+    let expected_successes = 100 * formats.len();
     let success_count = results.iter().filter(|r| r.is_ok()).count();
     assert_eq!(
-        success_count, 400,
+        success_count, expected_successes,
         "All extractions should succeed under stress, got {} successes",
         success_count
     );

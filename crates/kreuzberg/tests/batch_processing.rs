@@ -4,9 +4,9 @@
 //! Validates concurrent processing, error handling, and performance.
 
 use kreuzberg::core::config::ExtractionConfig;
-use kreuzberg::core::extractor::{
-    batch_extract_bytes, batch_extract_bytes_sync, batch_extract_file, batch_extract_file_sync,
-};
+#[cfg(feature = "pdf")]
+use kreuzberg::core::extractor::batch_extract_file_sync;
+use kreuzberg::core::extractor::{batch_extract_bytes, batch_extract_bytes_sync, batch_extract_file};
 use std::path::PathBuf;
 
 mod helpers;
@@ -26,6 +26,7 @@ fn assert_text_content(actual: &str, expected: &str) {
 
 /// Test batch extraction with multiple file formats (PDF, DOCX, TXT).
 #[tokio::test]
+#[cfg(all(feature = "pdf", feature = "office", feature = "tokio-runtime"))]
 async fn test_batch_extract_file_multiple_formats() {
     if !test_documents_available() {
         println!("Skipping test: test_documents/ directory not found");
@@ -73,6 +74,7 @@ async fn test_batch_extract_file_multiple_formats() {
 
 /// Test synchronous batch extraction variant.
 #[test]
+#[cfg(feature = "pdf")]
 fn test_batch_extract_file_sync_variant() {
     if !test_documents_available() {
         println!("Skipping test: test_documents/ directory not found");

@@ -3,6 +3,8 @@
 //! Tests for ZIP, TAR, TAR.GZ, and 7z archive extraction.
 //! Validates metadata extraction, content extraction, nested archives, and error handling.
 
+#![cfg(feature = "archives")]
+
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::{extract_bytes, extract_bytes_sync};
 use std::io::{Cursor, Write};

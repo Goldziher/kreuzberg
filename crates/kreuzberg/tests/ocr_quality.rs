@@ -14,6 +14,8 @@
 //! - Verify layout preservation (line counts, structure)
 //! - Assert minimum quality thresholds
 
+#![cfg(all(feature = "ocr", feature = "pdf"))]
+
 mod helpers;
 
 use helpers::*;

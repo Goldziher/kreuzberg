@@ -3,6 +3,8 @@
 //! Tests for .eml (RFC822) email extraction.
 //! Validates metadata extraction, content extraction, HTML/plain text handling, and attachments.
 
+#![cfg(feature = "email")]
+
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_bytes;
 

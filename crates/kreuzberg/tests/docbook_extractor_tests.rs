@@ -1,5 +1,7 @@
 //! Comprehensive tests for DocBook extractor supporting both 4.x and 5.x versions.
 
+#![cfg(feature = "xml")]
+
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::plugins::{DocumentExtractor, Plugin};
 use std::path::PathBuf;

@@ -13,6 +13,8 @@
 //! - Test recovery from transient failures
 //! - Validate resource limits and constraints
 
+#![cfg(feature = "ocr")]
+
 mod helpers;
 
 use helpers::*;
@@ -451,6 +453,9 @@ fn test_ocr_cache_disabled_then_enabled() {
     };
 
     let result1 = extract_file_sync(&file_path, None, &config_no_cache);
+    if matches!(result1, Err(KreuzbergError::MissingDependency(_))) {
+        return;
+    }
     assert!(result1.is_ok(), "First extraction should succeed");
 
     let config_with_cache = ExtractionConfig {
@@ -468,6 +473,9 @@ fn test_ocr_cache_disabled_then_enabled() {
     };
 
     let result2 = extract_file_sync(&file_path, None, &config_with_cache);
+    if matches!(result2, Err(KreuzbergError::MissingDependency(_))) {
+        return;
+    }
     assert!(result2.is_ok(), "Second extraction should succeed");
 
     assert_non_empty_content(&result1.unwrap());
@@ -494,6 +502,13 @@ fn test_ocr_concurrent_same_file() {
         use_cache: true,
         ..Default::default()
     });
+
+    if matches!(
+        extract_file_sync(&*file_path, None, &config),
+        Err(KreuzbergError::MissingDependency(_))
+    ) {
+        return;
+    }
 
     let mut handles = vec![];
     for i in 0..5 {
@@ -553,6 +568,13 @@ fn test_ocr_concurrent_different_files() {
         use_cache: true,
         ..Default::default()
     });
+
+    if matches!(
+        extract_file_sync(&files[0], None, &config),
+        Err(KreuzbergError::MissingDependency(_))
+    ) {
+        return;
+    }
 
     let mut handles = vec![];
     for (i, file_path) in files.iter().enumerate() {

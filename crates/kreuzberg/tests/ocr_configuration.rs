@@ -11,6 +11,8 @@
 //! - Verify configuration changes actually affect output
 //! - Test table detection with various settings
 
+#![cfg(feature = "ocr")]
+
 mod helpers;
 
 use helpers::*;
@@ -204,6 +206,7 @@ fn test_ocr_psm_single_line() {
 }
 
 #[test]
+#[cfg(feature = "pdf")]
 fn test_force_ocr_on_text_pdf() {
     if skip_if_missing("pdfs/fake_memo.pdf") {
         return;
@@ -233,6 +236,7 @@ fn test_force_ocr_on_text_pdf() {
 }
 
 #[test]
+#[cfg(feature = "pdf")]
 fn test_force_ocr_disabled() {
     if skip_if_missing("pdfs/fake_memo.pdf") {
         return;

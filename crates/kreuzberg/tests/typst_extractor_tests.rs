@@ -12,6 +12,8 @@
 //!
 //! Each test document is extracted and validated for correct content extraction.
 
+#![cfg(feature = "office")]
+
 use kreuzberg::core::config::ExtractionConfig;
 use kreuzberg::core::extractor::extract_bytes;
 use std::{fs, path::PathBuf};

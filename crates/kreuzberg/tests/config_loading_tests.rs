@@ -389,6 +389,7 @@ extract_images = true
         "Should have language detection config"
     );
     assert!(config.images.is_some(), "Should have image extraction config");
+    #[cfg(feature = "pdf")]
     assert!(config.pdf_options.is_some(), "Should have PDF config");
 }
 

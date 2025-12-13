@@ -386,7 +386,7 @@ mod tests {
             assert!(extractor_names.contains(&"typst-extractor".to_string()));
         }
 
-        #[cfg(feature = "tokio-runtime")]
+        #[cfg(all(feature = "tokio-runtime", feature = "office"))]
         {
             expected_count += 3;
             assert!(extractor_names.contains(&"docx-extractor".to_string()));

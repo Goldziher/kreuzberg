@@ -140,6 +140,7 @@ fn test_archive_deeply_nested_directories() {
 }
 
 #[test]
+#[cfg(feature = "archives")]
 fn test_archive_many_small_files() {
     let mut cursor = std::io::Cursor::new(Vec::new());
     {

@@ -4,6 +4,8 @@
 //! multi-language E2E generator. This module keeps only the cases that
 //! exercise Rust-specific failure handling or error propagation.
 
+#![cfg(feature = "pdf")]
+
 mod helpers;
 
 use helpers::*;

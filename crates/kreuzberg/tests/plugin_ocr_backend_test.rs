@@ -3,6 +3,8 @@
 //! Tests custom OCR backend registration, execution, parameter passing,
 //! error handling, and backend switching with real image extraction.
 
+#![cfg(feature = "ocr")]
+
 use async_trait::async_trait;
 use kreuzberg::core::config::{ExtractionConfig, OcrConfig};
 use kreuzberg::plugins::registry::get_ocr_backend_registry;

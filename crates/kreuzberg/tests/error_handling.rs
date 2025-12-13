@@ -12,6 +12,7 @@ mod helpers;
 
 /// Test truncated PDF - incomplete PDF file.
 #[tokio::test]
+#[cfg(feature = "pdf")]
 async fn test_truncated_pdf() {
     let config = ExtractionConfig::default();
 
@@ -31,6 +32,7 @@ async fn test_truncated_pdf() {
 
 /// Test corrupted ZIP - malformed archive.
 #[tokio::test]
+#[cfg(feature = "archives")]
 async fn test_corrupted_zip() {
     let config = ExtractionConfig::default();
 
@@ -50,6 +52,7 @@ async fn test_corrupted_zip() {
 
 /// Test invalid XML - bad XML syntax.
 #[tokio::test]
+#[cfg(feature = "xml")]
 async fn test_invalid_xml() {
     let config = ExtractionConfig::default();
 
@@ -80,6 +83,7 @@ async fn test_invalid_xml() {
 
 /// Test corrupted image - invalid image data.
 #[tokio::test]
+#[cfg(feature = "ocr")]
 async fn test_corrupted_image() {
     let config = ExtractionConfig::default();
 
@@ -112,27 +116,28 @@ async fn test_empty_file() {
 
     let empty_data = b"";
 
-    let result_pdf = extract_bytes(empty_data, "application/pdf", &config).await;
     let result_text = extract_bytes(empty_data, "text/plain", &config).await;
-    let result_xml = extract_bytes(empty_data, "application/xml", &config).await;
-
-    match result_pdf {
-        Ok(extraction) => {
-            assert!(
-                extraction.content.is_empty(),
-                "Empty PDF should have empty content if it succeeds"
-            );
-            assert!(extraction.chunks.is_none(), "Chunks should be None");
-        }
-        Err(error) => {
-            assert!(
-                matches!(
-                    error,
-                    kreuzberg::KreuzbergError::Parsing { .. } | kreuzberg::KreuzbergError::Validation { .. }
-                ),
-                "Empty PDF should produce Parsing or Validation error, got: {:?}",
-                error
-            );
+    #[cfg(feature = "pdf")]
+    {
+        let result_pdf = extract_bytes(empty_data, "application/pdf", &config).await;
+        match result_pdf {
+            Ok(extraction) => {
+                assert!(
+                    extraction.content.is_empty(),
+                    "Empty PDF should have empty content if it succeeds"
+                );
+                assert!(extraction.chunks.is_none(), "Chunks should be None");
+            }
+            Err(error) => {
+                assert!(
+                    matches!(
+                        error,
+                        kreuzberg::KreuzbergError::Parsing { .. } | kreuzberg::KreuzbergError::Validation { .. }
+                    ),
+                    "Empty PDF should produce Parsing or Validation error, got: {:?}",
+                    error
+                );
+            }
         }
     }
 
@@ -149,20 +154,24 @@ async fn test_empty_file() {
         }
     }
 
-    match result_xml {
-        Ok(extraction) => {
-            assert!(
-                extraction.content.is_empty(),
-                "Empty XML should have empty content if it succeeds"
-            );
-            assert!(extraction.chunks.is_none(), "Chunks should be None");
-        }
-        Err(error) => {
-            assert!(
-                matches!(error, kreuzberg::KreuzbergError::Parsing { .. }),
-                "Empty XML error should be Parsing type, got: {:?}",
-                error
-            );
+    #[cfg(feature = "xml")]
+    {
+        let result_xml = extract_bytes(empty_data, "application/xml", &config).await;
+        match result_xml {
+            Ok(extraction) => {
+                assert!(
+                    extraction.content.is_empty(),
+                    "Empty XML should have empty content if it succeeds"
+                );
+                assert!(extraction.chunks.is_none(), "Chunks should be None");
+            }
+            Err(error) => {
+                assert!(
+                    matches!(error, kreuzberg::KreuzbergError::Parsing { .. }),
+                    "Empty XML error should be Parsing type, got: {:?}",
+                    error
+                );
+            }
         }
     }
 }

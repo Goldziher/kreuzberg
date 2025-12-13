@@ -5,6 +5,11 @@ MODE="${1:-}"
 
 shopt -s nullglob
 
+if ! command -v taplo >/dev/null 2>&1; then
+	echo "Error: taplo is required for TOML formatting. Install with: cargo install taplo-cli --locked" >&2
+	exit 1
+fi
+
 files=(
 	Cargo.toml
 	rustfmt.toml

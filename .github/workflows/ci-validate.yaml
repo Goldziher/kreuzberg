@@ -88,6 +88,13 @@ jobs:
       - name: Install Task
         uses: ./.github/actions/install-task
 
+      - name: Install taplo
+        run: |
+          if ! command -v taplo >/dev/null 2>&1; then
+            cargo install taplo-cli --locked
+          fi
+        shell: bash
+
       - name: Install cargo-deny
         run: cargo install cargo-deny --locked
         shell: bash

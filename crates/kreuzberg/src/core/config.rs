@@ -692,6 +692,7 @@ max_dpi = 600
     }
 
     #[test]
+    #[cfg(feature = "pdf")]
     fn test_config_with_pdf_options() {
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("kreuzberg.toml");
@@ -815,9 +816,10 @@ enabled = true
         assert!(config.ocr.is_some());
         assert!(config.chunking.is_some());
         assert!(config.images.is_some());
-        assert!(config.pdf_options.is_some());
         assert!(config.token_reduction.is_some());
         assert!(config.language_detection.is_some());
+        #[cfg(feature = "pdf")]
+        assert!(config.pdf_options.is_some());
     }
 
     #[test]
@@ -883,6 +885,7 @@ enabled = true
     }
 
     #[test]
+    #[cfg(feature = "pdf")]
     fn test_pdf_config_defaults() {
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("kreuzberg.toml");

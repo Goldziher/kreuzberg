@@ -602,6 +602,7 @@ pub fn batch_extract_bytes_sync(
                 detected_languages: None,
                 chunks: None,
                 images: None,
+                pages: None,
             }
         }));
     }

@@ -316,7 +316,7 @@ pub fn run_pipeline_sync(mut result: ExtractionResult, config: &ExtractionConfig
             chunker_type: crate::chunking::ChunkerType::Text,
         };
 
-        match crate::chunking::chunk_text(&result.content, &chunk_config) {
+        match crate::chunking::chunk_text(&result.content, &chunk_config, None) {
             Ok(chunking_result) => {
                 result.chunks = Some(chunking_result.chunks);
 
@@ -406,6 +406,7 @@ mod tests {
     use lazy_static::lazy_static;
 
     const VALIDATION_MARKER_KEY: &str = "registry_validation_marker";
+    #[cfg(feature = "quality")]
     const QUALITY_VALIDATION_MARKER: &str = "quality_validation_test";
     const POSTPROCESSOR_VALIDATION_MARKER: &str = "postprocessor_validation_test";
     const ORDER_VALIDATION_MARKER: &str = "order_validation_test";

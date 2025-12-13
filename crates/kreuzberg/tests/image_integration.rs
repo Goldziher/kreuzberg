@@ -11,6 +11,8 @@
 //! - Test OCR with various languages and layouts
 //! - Verify graceful handling of images without text
 
+#![cfg(feature = "ocr")]
+
 mod helpers;
 
 use helpers::*;

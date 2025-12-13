@@ -61,7 +61,7 @@ impl PostProcessor for ChunkingProcessor {
             chunker_type: crate::chunking::ChunkerType::Text,
         };
 
-        let chunking_result = crate::chunking::chunk_text(&result.content, &chunk_config)
+        let chunking_result = crate::chunking::chunk_text(&result.content, &chunk_config, None)
             .map_err(|e| KreuzbergError::Other(format!("Chunking failed: {}", e)))?;
         result.chunks = Some(chunking_result.chunks);
 

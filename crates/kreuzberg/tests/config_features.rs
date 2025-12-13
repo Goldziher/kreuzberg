@@ -3,13 +3,19 @@
 //! Tests for chunking, language detection, caching, token reduction, and quality processing.
 //! Validates that configuration options work correctly end-to-end.
 
-use kreuzberg::core::config::{ChunkingConfig, ExtractionConfig, LanguageDetectionConfig, TokenReductionConfig};
+#[cfg(feature = "chunking")]
+use kreuzberg::core::config::ChunkingConfig;
+use kreuzberg::core::config::ExtractionConfig;
+#[cfg(feature = "language-detection")]
+use kreuzberg::core::config::LanguageDetectionConfig;
+use kreuzberg::core::config::TokenReductionConfig;
 use kreuzberg::core::extractor::extract_bytes;
 
 mod helpers;
 
 /// Test chunking enabled - text split into chunks.
 #[tokio::test]
+#[cfg(feature = "chunking")]
 async fn test_chunking_enabled() {
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
@@ -52,6 +58,7 @@ async fn test_chunking_enabled() {
 
 /// Test chunking with overlap - overlap preserved between chunks.
 #[tokio::test]
+#[cfg(feature = "chunking")]
 async fn test_chunking_with_overlap() {
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
@@ -91,6 +98,7 @@ async fn test_chunking_with_overlap() {
 
 /// Test chunking with custom sizes - custom chunk size and overlap.
 #[tokio::test]
+#[cfg(feature = "chunking")]
 async fn test_chunking_custom_sizes() {
     let config = ExtractionConfig {
         chunking: Some(ChunkingConfig {
@@ -151,6 +159,7 @@ async fn test_chunking_disabled() {
 
 /// Test language detection for single language document.
 #[tokio::test]
+#[cfg(feature = "language-detection")]
 async fn test_language_detection_single() {
     let config = ExtractionConfig {
         language_detection: Some(LanguageDetectionConfig {
@@ -177,6 +186,7 @@ async fn test_language_detection_single() {
 /// Test language detection for multi-language document.
 #[cfg_attr(coverage, ignore = "coverage instrumentation affects multi-language heuristics")]
 #[tokio::test]
+#[cfg(feature = "language-detection")]
 async fn test_language_detection_multiple() {
     let config = ExtractionConfig {
         language_detection: Some(LanguageDetectionConfig {
@@ -201,6 +211,7 @@ async fn test_language_detection_multiple() {
 
 /// Test language detection with confidence threshold.
 #[tokio::test]
+#[cfg(feature = "language-detection")]
 async fn test_language_detection_confidence() {
     let config = ExtractionConfig {
         language_detection: Some(LanguageDetectionConfig {
@@ -225,6 +236,7 @@ async fn test_language_detection_confidence() {
 
 /// Test language detection disabled.
 #[tokio::test]
+#[cfg(feature = "language-detection")]
 async fn test_language_detection_disabled() {
     let config = ExtractionConfig {
         language_detection: Some(LanguageDetectionConfig {
@@ -397,6 +409,7 @@ async fn test_token_reduction_disabled() {
 
 /// Test quality processing enabled - quality scoring applied.
 #[tokio::test]
+#[cfg(feature = "quality")]
 async fn test_quality_processing_enabled() {
     let config = ExtractionConfig {
         enable_quality_processing: true,
@@ -420,6 +433,7 @@ async fn test_quality_processing_enabled() {
 
 /// Test quality processing calculates score for different text quality.
 #[tokio::test]
+#[cfg(feature = "quality")]
 async fn test_quality_threshold_filtering() {
     let config = ExtractionConfig {
         enable_quality_processing: true,

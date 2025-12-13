@@ -8,6 +8,8 @@
 //! - Section structure and heading levels
 //! - Table extraction (simple and grid tables)
 //! - Reference links and images
+
+#![cfg(feature = "office")]
 //! - Comments and special blocks
 //! - Content quality validation
 

@@ -5,6 +5,8 @@
 //! asynchronous APIs or to graceful handling when optional system
 //! dependencies are missing.
 
+#![cfg(any(feature = "pdf", feature = "office", feature = "ocr"))]
+
 mod helpers;
 
 use helpers::{assert_mime_type, assert_non_empty_content, get_test_file_path, test_documents_available};

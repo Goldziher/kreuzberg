@@ -1,4 +1,5 @@
 #![allow(clippy::len_zero, clippy::unnecessary_get_then_check, clippy::single_match)]
+#![cfg(feature = "office")]
 //! Comprehensive behavioral tests for Typst extractor against Pandoc baselines.
 //!
 //! These tests expose the critical bugs found in code review:
