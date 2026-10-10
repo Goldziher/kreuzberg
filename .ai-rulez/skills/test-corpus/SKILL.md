@@ -1,9 +1,12 @@
 ---
-name: test-corpus
-description: >-
-  The test_documents submodule is a bucket-fetched fixture corpus that is not committed. This skill covers
-  read_test_fixture, missing fixtures, valid A/B controls, and submodule push order. Load before running Rust tests on
-  a fresh clone, setting up an A/B control, adding a fixture-backed test, or diagnosing missing-fixture failures.
+type: Playbook
+title: Test Corpus
+description: The test_documents submodule is a bucket-fetched fixture corpus that is not committed. This skill covers read_test_fixture, missing fixtures, valid A/B controls, and submodule push order. Load before running Rust tests on a fresh clone, setting up an A/B control, adding a fixture-backed test, or diagnosing missing-fixture failures.
+x-ai-rulez:
+  kind: skill
+  id: test-corpus
+  metadata:
+    name: test-corpus
 ---
 
 # Test corpus

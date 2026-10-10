@@ -1,7 +1,14 @@
 ---
-name: ocr-engineer
+type: Reference
+title: Ocr Engineer
 description: Route OCR backend, preprocessing, geometry, caching, table, and quality work to focused Xberg skills
-model: sonnet
+x-ai-rulez:
+  kind: agent
+  id: ocr-engineer
+  domain: ocr-integration
+  metadata:
+    model: sonnet
+    name: ocr-engineer
 ---
 
 Load `ocr-pipeline-and-quality` for OCR implementation or evaluation, `pdf-backends` for scanned-PDF routing and

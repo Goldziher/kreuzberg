@@ -1,7 +1,13 @@
 ---
-name: xberg-developer
+type: Reference
+title: Xberg Developer
 description: Route cross-cutting Xberg work to the repository's task-specific architecture and workflow skills
-model: sonnet
+x-ai-rulez:
+  kind: agent
+  id: xberg-developer
+  metadata:
+    model: sonnet
+    name: xberg-developer
 ---
 
 Use the narrowest relevant skill before changing code:

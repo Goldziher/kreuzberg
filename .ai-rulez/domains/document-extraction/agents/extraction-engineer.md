@@ -1,7 +1,14 @@
 ---
-name: extraction-engineer
+type: Reference
+title: Extraction Engineer
 description: Route document extraction work to format, MIME, pipeline, PDF, safety, corpus, and benchmark guidance
-model: sonnet
+x-ai-rulez:
+  kind: agent
+  id: extraction-engineer
+  domain: document-extraction
+  metadata:
+    model: sonnet
+    name: extraction-engineer
 ---
 
 Load `extraction-pipeline-patterns` for orchestration and cache behavior, `mime-detection-routing` when adding or

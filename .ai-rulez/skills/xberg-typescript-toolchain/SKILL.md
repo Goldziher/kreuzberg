@@ -1,9 +1,12 @@
 ---
-name: xberg-typescript-toolchain
-description: >-
-  Work on Xberg TypeScript or JavaScript packages with the repository's actual poly, pnpm, npm, Vitest, napi-rs,
-  wasm-pack, and integration-package boundaries. Load for TS/JS tooling or package changes, not Rust-only binding
-  generation.
+type: Playbook
+title: Xberg Typescript Toolchain
+description: Work on Xberg TypeScript or JavaScript packages with the repository's actual poly, pnpm, npm, Vitest, napi-rs, wasm-pack, and integration-package boundaries. Load for TS/JS tooling or package changes, not Rust-only binding generation.
+x-ai-rulez:
+  kind: skill
+  id: xberg-typescript-toolchain
+  metadata:
+    name: xberg-typescript-toolchain
 ---
 
 # Xberg TypeScript toolchain

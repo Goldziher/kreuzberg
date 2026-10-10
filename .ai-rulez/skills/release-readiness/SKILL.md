@@ -1,8 +1,12 @@
 ---
-name: release-readiness
-description: >-
-  Audit Xberg before a push or release by reconciling CI, Publish Release dry-run, Benchmarks, generated freshness,
-  changelog, and remote branch state. Load for release-readiness work, not routine local commits.
+type: Playbook
+title: Release Readiness
+description: Audit Xberg before a push or release by reconciling CI, Publish Release dry-run, Benchmarks, generated freshness, changelog, and remote branch state. Load for release-readiness work, not routine local commits.
+x-ai-rulez:
+  kind: skill
+  id: release-readiness
+  metadata:
+    name: release-readiness
 ---
 
 # Release readiness

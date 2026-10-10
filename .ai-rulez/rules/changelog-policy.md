@@ -1,5 +1,11 @@
 ---
-priority: high
+type: Decision
+title: Changelog Policy
+x-ai-rulez:
+  kind: rule
+  id: changelog-policy
+  metadata:
+    priority: high
 ---
 
 Keep `CHANGELOG.md` user-facing. Record Added, Changed, Removed, Fixed, Security, and public API changes that affect

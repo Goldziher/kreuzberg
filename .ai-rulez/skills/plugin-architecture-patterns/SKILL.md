@@ -1,10 +1,13 @@
 ---
-name: plugin-architecture-patterns
-description: >-
-  Design, implement, or diagnose Xberg plugin traits, typed registries, priority collisions, lifecycle,
-  native extractors, and Alef-generated Python plugin bridges. Load for plugin-system work, not ordinary
-  extractor parsing.
-priority: critical
+type: Playbook
+title: Plugin Architecture Patterns
+description: Design, implement, or diagnose Xberg plugin traits, typed registries, priority collisions, lifecycle, native extractors, and Alef-generated Python plugin bridges. Load for plugin-system work, not ordinary extractor parsing.
+x-ai-rulez:
+  kind: skill
+  id: plugin-architecture-patterns
+  metadata:
+    priority: critical
+    name: plugin-architecture-patterns
 ---
 
 # Plugin Architecture & Registration

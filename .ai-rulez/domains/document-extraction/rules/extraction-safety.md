@@ -1,5 +1,12 @@
 ---
-priority: critical
+type: Decision
+title: Extraction Safety
+x-ai-rulez:
+  kind: rule
+  id: extraction-safety
+  domain: document-extraction
+  metadata:
+    priority: critical
 ---
 
 - Always use `SecurityLimits` to cap archive size, compression ratio, file count, and nesting depth for user content. Use `ZipBombValidator` for archive extraction.

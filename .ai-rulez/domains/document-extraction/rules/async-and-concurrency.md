@@ -1,5 +1,12 @@
 ---
-priority: high
+type: Decision
+title: Async And Concurrency
+x-ai-rulez:
+  kind: rule
+  id: async-and-concurrency
+  domain: document-extraction
+  metadata:
+    priority: high
 ---
 
 - All extraction paths must be fully async using tokio

@@ -1,5 +1,12 @@
 ---
-priority: high
+type: Decision
+title: Api Compatibility
+x-ai-rulez:
+  kind: rule
+  id: api-compatibility
+  domain: document-extraction
+  metadata:
+    priority: high
 ---
 
 - Compatibility and deprecation policy applies to public APIs. Private and internal code may be removed directly when

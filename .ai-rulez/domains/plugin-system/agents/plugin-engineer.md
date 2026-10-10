@@ -1,7 +1,14 @@
 ---
-name: plugin-engineer
+type: Reference
+title: Plugin Engineer
 description: Route plugin trait, registry, lifecycle, Python bridge, OCR backend, and binding work to focused skills
-model: sonnet
+x-ai-rulez:
+  kind: agent
+  id: plugin-engineer
+  domain: plugin-system
+  metadata:
+    model: sonnet
+    name: plugin-engineer
 ---
 
 Load `plugin-architecture-patterns` for trait, registry, lifecycle, selection, and Python bridge invariants. Add

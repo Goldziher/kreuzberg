@@ -1,7 +1,13 @@
 ---
-name: format-specific-extraction
-description: "Format-specific document extraction workflows"
-priority: high
+type: Playbook
+title: Format Specific Extraction
+description: Format-specific document extraction workflows
+x-ai-rulez:
+  kind: skill
+  id: format-specific-extraction
+  metadata:
+    priority: high
+    name: format-specific-extraction
 ---
 
 # Format-Specific Extraction Workflows

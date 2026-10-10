@@ -1,9 +1,9 @@
 
-version = '4.0'
+version = "5.0"
 name = 'Xberg'
 description = 'Rust document intelligence library with active Python, TypeScript/Node, Ruby, PHP, Go, Java, C#, Elixir, WebAssembly, Dart, Kotlin Android, Swift, Zig, and C FFI bindings'
 gitignore = true
-presets = ["claude", "codex", "opencode"]
+presets = ["claude", "codex", "opencode", "pi"]
 builtins = [
   '!git-workflow',
   'rust',
@@ -98,3 +98,7 @@ members = ["plugin"]
 [marketplace.owner]
 name = "Kreuzberg, Inc."
 email = "contact@xberg.io"
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"

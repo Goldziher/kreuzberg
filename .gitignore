@@ -361,5 +361,12 @@ testResults.xml
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .ai-rulez/.generated-manifest.json
-.opencode/
+.ai-rulez/.generated-manifest.local.json
+.ai-rulez/local/
+.opencode/agents/
+.opencode/commands/
+.pi/agents/
+.pi/mcp.json
+.pi/prompts/
+opencode.json
 # END ai-rulez

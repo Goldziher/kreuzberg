@@ -1,8 +1,12 @@
 ---
-name: pdf-backends
-description: >-
-  Change or diagnose Xberg PDF extraction, native/Pdfium backend selection, PDF rendering sessions, encrypted
-  documents, OCR fallback, or backend-specific capability gaps. Load for PDF engine work, not generic image OCR.
+type: Playbook
+title: Pdf Backends
+description: Change or diagnose Xberg PDF extraction, native/Pdfium backend selection, PDF rendering sessions, encrypted documents, OCR fallback, or backend-specific capability gaps. Load for PDF engine work, not generic image OCR.
+x-ai-rulez:
+  kind: skill
+  id: pdf-backends
+  metadata:
+    name: pdf-backends
 ---
 
 # PDF backends

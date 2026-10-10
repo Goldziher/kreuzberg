@@ -1,7 +1,13 @@
 ---
-description: "REST API server and MCP protocol integration"
-name: api-server-mcp
-priority: critical
+type: Playbook
+title: Api Server Mcp
+description: REST API server and MCP protocol integration
+x-ai-rulez:
+  kind: skill
+  id: api-server-mcp
+  metadata:
+    priority: critical
+    name: api-server-mcp
 ---
 
 # API Server & MCP Protocol

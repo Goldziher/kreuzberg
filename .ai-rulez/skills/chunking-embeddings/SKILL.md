@@ -1,7 +1,13 @@
 ---
-description: "Chunking, embeddings, and RAG pipeline integration"
-name: chunking-embeddings
-priority: critical
+type: Playbook
+title: Chunking Embeddings
+description: Chunking, embeddings, and RAG pipeline integration
+x-ai-rulez:
+  kind: skill
+  id: chunking-embeddings
+  metadata:
+    priority: critical
+    name: chunking-embeddings
 ---
 
 # Chunking & Embeddings
