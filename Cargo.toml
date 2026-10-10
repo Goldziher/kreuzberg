@@ -79,7 +79,6 @@ itertools = "0.15"
 js-sys = "0.3"
 
 lazy_static = "1.5.1"
-# ~keep Crawlberg 1.10.3 pins libc 0.2.189 for iOS Mach API compatibility.
 libc = "0.2.189"
 # Builds a bundled zlib from source (`static`) for the target, so the vendored
 # librevenge RVNGZipStream.cpp can `#include <zlib.h>` and link zlib even under

@@ -13,7 +13,20 @@ keywords = ["pdf", "pdfium", "rendering", "extraction"]
 categories = ["api-bindings", "multimedia::images"]
 readme = "README.md"
 build = "build.rs"
-exclude = ["include/**/rust-import-wrapper.h"]
+include = [
+  "/src/**",
+  "/Cargo.toml",
+  "/Cargo.lock",
+  "/LICENSE*",
+  "/README*",
+  "/build.rs",
+  "/include/**",
+  "!/include/**/rust-import-wrapper.h",
+  "!/src/pdf/document/page/object/group/tests.rs",
+  "!/src/pdf/document/page/object/image/tests.rs",
+  "!/src/pdf/document/page/object_tests.rs",
+  "!/src/pdf/document/page/tests.rs",
+]
 
 [package.metadata.cargo-machete]
 ignored = ["bindgen"]

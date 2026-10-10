@@ -12,7 +12,7 @@ documentation = "https://docs.rs/xberg-candle-ocr"
 readme = "README.md"
 keywords = ["candle", "ocr", "transformer", "vlm", "recognition"]
 categories = ["computer-vision", "text-processing"]
-exclude = ["tests/*", ".github/*"]
+include = ["/src/**", "/Cargo.toml", "/Cargo.lock", "/LICENSE*", "/README*"]
 
 [package.metadata.docs.rs]
 all-features = true

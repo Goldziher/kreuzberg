@@ -12,7 +12,7 @@ documentation = "https://docs.rs/xberg-libheif"
 readme = "README.md"
 keywords = ["heic", "heif", "avif", "libheif", "xberg"]
 categories = ["multimedia::images", "api-bindings"]
-exclude = ["tests/*", ".github/*"]
+include = ["/src/**", "/Cargo.toml", "/Cargo.lock", "/LICENSE*", "/README*"]
 
 [package.metadata.docs.rs]
 all-features = true

@@ -12,7 +12,7 @@ documentation = "https://docs.rs/xberg-paddle-ocr"
 readme = "README.md"
 keywords = ["paddle", "ocr", "onnx", "recognition", "detection"]
 categories = ["computer-vision", "text-processing"]
-exclude = ["tests/*", ".github/*"]
+include = ["/src/**", "/Cargo.toml", "/Cargo.lock", "/LICENSE*", "/README*", "!/src/ocr_lite/tests.rs"]
 
 [package.metadata.docs.rs]
 all-features = true

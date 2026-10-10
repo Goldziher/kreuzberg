@@ -3,7 +3,6 @@ name = "xberg-native-pdf"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
-# Upstream authorship is retained deliberately -- see ATTRIBUTIONS.md and LICENSE. ~keep
 authors = [
   "Na'aman Hirschfeld <naaman@xberg.io>",
   "Tobias Perlstein <tobias@xberg.io>",
@@ -15,19 +14,13 @@ documentation = "https://docs.rs/xberg-native-pdf"
 readme = "README.md"
 keywords = ["pdf", "text-extraction", "pdf-parser", "pdf-rendering", "document-parser"]
 categories = ["parsing", "text-processing"]
-# `include` is load-bearing, not tidiness. tests/ is ~10 MB dominated by PDFs and TTFs that
-# compress poorly; shipping it would push the .crate past crates.io's 10 MiB ceiling. Only the
-# fixtures the doctests and packaged unit tests actually read are listed -- every fixture any
-# `src/` file `include_bytes!`s MUST appear here or `cargo test` on the packaged crate fails to
-# compile, which `cargo package --verify` does NOT catch because it runs `cargo build`, not
-# `--tests` (GH#1850 added three and missed them). ~keep
 include = [
-  "/src/**/*",
+  "/src/**",
   "/Cargo.toml",
-  "/LICENSE",
-  "/README.md",
+  "/Cargo.lock",
+  "/LICENSE*",
+  "/README*",
   "/ATTRIBUTIONS.md",
-  "/CHANGELOG.md",
   "/tests/fixtures/jpx/sample_gray.jp2",
   "/tests/fixtures/jpx/gh1850_rgba.jp2",
   "/tests/fixtures/jpx/gh1850_rgba.j2k",
@@ -43,6 +36,27 @@ include = [
   "/tests/fixtures/encrypted_objstm.pdf",
   "/tests/fixtures/simple.pdf",
   "/tests/fixtures/fonts/StandardSymbolsPS.otf",
+  "!/src/annotation_types/tests.rs",
+  "!/src/crypto/policy/tests.rs",
+  "!/src/document/ink_dict_extractor_tests.rs",
+  "!/src/document/open_signals_tests.rs",
+  "!/src/document/tests/**",
+  "!/src/encryption/tests.rs",
+  "!/src/extractors/auto/tests.rs",
+  "!/src/extractors/forms/tests.rs",
+  "!/src/extractors/gap_statistics/tests.rs",
+  "!/src/extractors/paths/tests.rs",
+  "!/src/extractors/text/config_tests/**",
+  "!/src/extractors/text/tests/**",
+  "!/src/fonts/cff_encoding/tests.rs",
+  "!/src/fonts/cmap/tests.rs",
+  "!/src/fonts/truetype_cmap/tests.rs",
+  "!/src/fonts/truetype_parser/tests.rs",
+  "!/src/layout/text_block/tests.rs",
+  "!/src/object/tests.rs",
+  "!/src/pipeline/config/tests.rs",
+  "!/src/rendering/resolution/test_support.rs",
+  "!/src/text/word_boundary/tests.rs",
 ]
 
 [package.metadata.docs.rs]

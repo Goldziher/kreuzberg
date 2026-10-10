@@ -10,6 +10,7 @@ repository.workspace = true
 homepage.workspace = true
 keywords = ["nlp", "ner", "gliner", "onnx", "candle"]
 categories = ["text-processing"]
+include = ["/src/**", "/Cargo.toml", "/Cargo.lock", "/LICENSE*", "/README*", "!/src/candle/tests.rs", "!/src/tests.rs"]
 
 [lib]
 name = "xberg_gliner"

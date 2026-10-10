@@ -14,6 +14,19 @@ categories = ["external-ffi-bindings", "text-processing"]
 build = "build.rs"
 links = "xberg_libwpd"
 
+include = [
+  "/src/**",
+  "/Cargo.toml",
+  "/Cargo.lock",
+  "/LICENSE*",
+  "/README*",
+  "/build.rs",
+  "/build_target_flags.rs",
+  "/build_wpd_patches.rs",
+  "/vendor/*.tar.gz",
+  "/vendor/PROVENANCE.md",
+]
+
 # libz-sys is never `use`d by path — it is declared purely so its build script
 # statically compiles zlib and exports `DEP_Z_INCLUDE`/links the symbols into
 # this crate's build.rs (see the target block below), so cargo-machete cannot

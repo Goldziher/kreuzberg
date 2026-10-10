@@ -11,6 +11,15 @@ homepage = "https://xberg.io"
 documentation = "https://docs.xberg.io"
 keywords = ["document", "extraction", "cli", "tool", "parser"]
 categories = ["command-line-utilities", "text-processing"]
+include = [
+  "/src/**",
+  "/Cargo.toml",
+  "/Cargo.lock",
+  "/LICENSE*",
+  "/README*",
+  "/build.rs",
+  "!/src/commands/overrides/tests/**",
+]
 
 [package.metadata.cargo-machete]
 ignored = ["serde_toon_format"]

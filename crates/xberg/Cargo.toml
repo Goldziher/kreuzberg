@@ -12,6 +12,78 @@ documentation = "https://docs.rs/xberg"
 keywords = ["document", "extraction", "pdf", "ocr", "parser"]
 categories = ["parser-implementations", "text-processing"]
 readme = "README.md"
+include = [
+  "/src/**",
+  "/Cargo.toml",
+  "/Cargo.lock",
+  "/LICENSE*",
+  "/README*",
+  "/build.rs",
+  "/stopwords/*.json",
+  "!/src/candle_ocr/glm_ocr_backend/tests.rs",
+  "!/src/core/config/llm/tests.rs",
+  "!/src/core/config/processing/tests.rs",
+  "!/src/core/image_encode/tests.rs",
+  "!/src/core/pipeline/initialization/registry_state.rs",
+  "!/src/core/pipeline/tests.rs",
+  "!/src/core/server_config/tests/**",
+  "!/src/engine/extract_impl/tests.rs",
+  "!/src/extraction/archive/tests/**",
+  "!/src/extraction/derive/test_support.rs",
+  "!/src/extraction/derive/tests.rs",
+  "!/src/extraction/derive/tests_extraction_result.rs",
+  "!/src/extraction/diagram/tests.rs",
+  "!/src/extraction/doc/tests.rs",
+  "!/src/extraction/docx/math/tests.rs",
+  "!/src/extraction/docx/styles/test_support.rs",
+  "!/src/extraction/docx/styles/tests.rs",
+  "!/src/extraction/docx/table/tests.rs",
+  "!/src/extraction/email/tests.rs",
+  "!/src/extraction/excel/tests.rs",
+  "!/src/extraction/html/structure/tests.rs",
+  "!/src/extraction/image/jp2_decode_tests.rs",
+  "!/src/extraction/image/tests.rs",
+  "!/src/extraction/image_decode/tests.rs",
+  "!/src/extraction/image_kind/tests.rs",
+  "!/src/extraction/mathml/tests.rs",
+  "!/src/extraction/ooxml_embedded/tests.rs",
+  "!/src/extraction/ppt/tests/**",
+  "!/src/extraction/pptx/tests.rs",
+  "!/src/extraction/pst/tests.rs",
+  "!/src/extractors/csv/tests.rs",
+  "!/src/extractors/epub/content/tests.rs",
+  "!/src/extractors/pdf/ocr/numeric_repair_tests.rs",
+  "!/src/extractors/pdf/ocr/plausibility_tests.rs",
+  "!/src/extractors/pdf/ocr/recognition_noise_tests.rs",
+  "!/src/extractors/pdf/ocr/tests.rs",
+  "!/src/extractors/rtf/parser/text_extract_tests.rs",
+  "!/src/extractors/security/tests.rs",
+  "!/src/extractors/security_tests.rs",
+  "!/src/extractors/structured/tests.rs",
+  "!/src/extractors/wordperfect/tests.rs",
+  "!/src/language_detection/tests.rs",
+  "!/src/layout/models/tatr/tests.rs",
+  "!/src/paddle_ocr/tract_parity.rs",
+  "!/src/pdf/native/images/decode_skip_tests.rs",
+  "!/src/pdf/native/images/parallel_tests.rs",
+  "!/src/pdf/native/images/tests.rs",
+  "!/src/pdf/scan_detect/tests.rs",
+  "!/src/pdf/scan_detect_type3_tests.rs",
+  "!/src/pdf/structure/pipeline/list_marker_tests.rs",
+  "!/src/pdf/structure/pipeline/tests.rs",
+  "!/src/plugins/ocr/tests.rs",
+  "!/src/rendering/common/tests.rs",
+  "!/src/rendering/doctags/tests.rs",
+  "!/src/rendering/pdf/tests.rs",
+  "!/src/types/document_structure/tests.rs",
+  "!/src/types/formats/tests.rs",
+  "!/src/types/internal/tests.rs",
+  "!/src/utils/test_support.rs",
+  "!/src/extraction/excel/tests/**",
+  "!/src/chunking/testdata/**",
+  "!/src/pdf/testdata/**",
+  "!/src/text/testdata/**",
+]
 
 [package.metadata.cargo-machete]
 # Only crates that are genuinely never named in Rust source belong here. Deps that are
@@ -664,8 +736,8 @@ otel = [
 # Opt-in Prometheus `/metrics` endpoint (#1391). Needs BOTH `api` (the HTTP route) and
 # `otel` (the OTel meter instruments actually being fed) — neither implies the other, so
 # both are listed explicitly rather than relying on `services` (which bundles `api` + `mcp`
-# + `otel` together and would needlessly pull in `mcp`). `opentelemetry-prometheus` 0.32.0
-# matches this crate's pinned `opentelemetry`/`opentelemetry_sdk` 0.32 exactly and requests
+# + `otel` together and would needlessly pull in `mcp`). The exporter shares the
+# `opentelemetry`/`opentelemetry_sdk` minor version and requests
 # `opentelemetry_sdk`'s unstable `experimental_metrics_custom_reader` feature itself (via
 # Cargo feature unification), so it does not need to be declared again here. `prometheus`
 # is pulled with `default-features = false` so its `protobuf` dependency is never enabled —
@@ -950,21 +1022,17 @@ windows-target = [
     "markdown-footnotes",
     # otel = [dep:opentelemetry, dep:opentelemetry_sdk, dep:tracing-opentelemetry,
     # crawlberg?/otel, liter-llm?/otel] (GH#1443). All three direct deps verified pure
-    # Rust with no build script (opentelemetry 0.32.0, opentelemetry_sdk 0.32.1,
-    # tracing-opentelemetry 0.33.0 — their only target-specific blocks are wasm32 deps
+    # Rust with no build script (their only target-specific blocks are wasm32 deps
     # and non-Windows dev-dependencies, neither of which apply here). The two weak (`?/`)
     # forwards add nothing new: `crawlberg/otel` only forwards to crawlberg's own
     # optional `liter-llm` dep, which isn't enabled here (windows-target enables
     # crawlberg via `url-ingestion` -> `native-runtime` only, not crawlberg's `ai`
     # feature), so it is a no-op; `liter-llm/otel` pulls `dep:tracing-opentelemetry` +
-    # `dep:opentelemetry` at the exact same 0.33/0.32 versions already declared above,
+    # `dep:opentelemetry` at compatible minor versions already declared above,
     # so Cargo unifies them into the instances already being built — no new crate.
     "otel",
-    # wordperfect = [dep:xberg-libwpd]: xberg-libwpd vendors its boost header
-    # subset (no vcpkg boost needed, unlike `heic`'s libheif), but its build.rs
-    # still links vcpkg-provided `zlib` on Windows. That zlib install and the
-    # `-v4` dep cache are already wired into
-    # scripts/ci/install-system-deps/install-windows.ps1 — do not remove them.
+    # WordPerfect vendors its Boost subset and builds zlib through libz-sys, so this
+    # feature needs a C++ toolchain but no system Boost or zlib installation. ~keep
     "wordperfect",
 ]
 # windows-gnu-target: Ruby-on-Windows only (gem platform x64-mingw-ucrt).
@@ -1328,9 +1396,11 @@ ndarray = { version = "0.17", optional = true }
 nom-exif = { workspace = true, optional = true }
 num_cpus = { workspace = true }
 once_cell = { workspace = true }
-opentelemetry = { version = "0.33", features = ["trace"], optional = true } # these four move TOGETHER: tracing-opentelemetry pins one exact opentelemetry minor (0.34 -> ^0.33.0), so bumping it alone splits the lock into two `opentelemetry` versions and the layer/tracer types stop matching. The 0.32 cap this comment used to describe is lifted -- tracing-opentelemetry 0.34 moved to opentelemetry 0.33. Verified 2026-09-25. ~keep
+# Keep the OTel API, SDK, exporter, and tracing bridge on matching minor versions;
+# mixing OTel minors gives the layer and tracer incompatible Rust types. ~keep
+opentelemetry = { version = "0.33", features = ["trace"], optional = true }
 # Bridges the OTel `SdkMeterProvider` to a `prometheus::Registry` for the opt-in `/metrics`
-# endpoint (#1391). 0.32.0 matches the `opentelemetry`/`opentelemetry_sdk` 0.32 pin exactly.
+# endpoint (#1391); keep its minor version aligned with both OTel dependencies. ~keep
 opentelemetry-prometheus = { version = "0.33", optional = true }
 # `testing` supplies `metrics::InMemoryMetricExporter`, which the #332 regression test
 # uses to read back real counter/histogram deltas instead of asserting on a mock. It is

@@ -14,7 +14,18 @@ keywords = ["tesseract", "ocr", "bindings", "vision", "recognition"]
 categories = ["external-ffi-bindings", "computer-vision", "text-processing"]
 build = "build.rs"
 links = "xberg_tesseract"
-exclude = ["tessdata/*", "third_party/*"]
+include = [
+  "/src/**",
+  "/Cargo.toml",
+  "/Cargo.lock",
+  "/LICENSE*",
+  "/README*",
+  "/build.rs",
+  "/build_support/**",
+  "/licenses/**",
+  "/patches/tesseract.diff",
+  "!/src/leptonica/tests.rs",
+]
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
 same-file.workspace = true
