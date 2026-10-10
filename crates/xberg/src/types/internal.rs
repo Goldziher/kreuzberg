@@ -751,7 +751,7 @@ impl InternalElement {
     /// It is an empty paragraph, so it renders as nothing until the pipeline gives it the
     /// text of the picture, or removes it when the picture gave none. An image element in
     /// its place would render as a placeholder wherever the pipeline did not run. ~keep
-    #[cfg(all(feature = "pdf", feature = "ocr", feature = "tokio-runtime"))]
+    #[cfg(all(any(feature = "pdf", feature = "office"), feature = "ocr", feature = "tokio-runtime"))]
     pub(crate) fn image_ocr_text_anchor(image_index: u32, page: Option<u32>) -> Self {
         let mut anchor = Self::text(ElementKind::Paragraph, "", 0);
         anchor.page = page;

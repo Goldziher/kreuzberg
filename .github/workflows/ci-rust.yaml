@@ -291,6 +291,12 @@ jobs:
         run: cargo check --locked -p xberg --no-default-features --features "tokio-runtime,pdf,layout-detection" --lib
         shell: bash
 
+      # PPTX makes OCR text anchors for pictures, and the anchor is compiled for `pdf` or
+      # `office` with `ocr`. No other leg compiles `office` with `ocr` and without `pdf`. ~keep
+      - name: Check office with OCR and without pdf
+        run: cargo check --locked -p xberg --no-default-features --features "office,ocr" --all-targets
+        shell: bash
+
       # Cheap standalone check of the exact feature closure the `all` Docker images build
       # (default features + `all`, not `--no-default-features`). Catches a feature-closure
       # compile break in minutes instead of via the ~20-minute Docker build (#325).

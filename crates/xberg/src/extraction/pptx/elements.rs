@@ -448,6 +448,9 @@ impl Slide {
                 let image_index = image_indices.get(image_ordinal).copied().flatten();
                 image_ordinal += 1;
                 if config.plain || !config.inject_placeholders {
+                    if let Some(image_index) = image_index {
+                        internal_elements.push(PptxInternalSlideElement::ImageOcrTextAnchor { image_index });
+                    }
                     continue;
                 }
                 internal_elements.push(self.internal_image_element(img_ref, image_index));

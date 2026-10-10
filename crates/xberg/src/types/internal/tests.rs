@@ -64,7 +64,7 @@ fn public_attributes_hide_internal_image_ocr_suppression() {
     assert!(!element.should_render_image_ocr());
 }
 
-#[cfg(all(feature = "pdf", feature = "ocr", feature = "tokio-runtime"))]
+#[cfg(all(any(feature = "pdf", feature = "office"), feature = "ocr", feature = "tokio-runtime"))]
 #[test]
 fn an_image_ocr_text_anchor_is_an_empty_paragraph_with_a_hidden_attribute() {
     let anchor = InternalElement::image_ocr_text_anchor(3, Some(2));

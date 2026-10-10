@@ -2321,7 +2321,7 @@ mod picture_ocr_text_rendering_tests {
         assert_eq!(texts, ["", OTHER_PICTURE_WORDS]);
     }
 
-    #[cfg(all(feature = "pdf", feature = "ocr"))]
+    #[cfg(all(any(feature = "pdf", feature = "office"), feature = "ocr"))]
     #[tokio::test]
     #[serial]
     async fn an_inline_placeholder_does_not_take_the_words_of_a_picture_with_an_ocr_text_anchor() {

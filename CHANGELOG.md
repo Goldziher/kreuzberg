@@ -95,6 +95,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(html, epub, fictionbook): Markdown-family output keeps embedded-image OCR text.** Extractors now invalidate
   pre-rendered markup before image OCR mutates the document, so recognized picture text is rendered once rather than
   being omitted from Markdown and Djot output. (GH#2087)
+- **(pptx, ocr): plain output of a PPTX file has the OCR text of a picture on a slide.** The text is in `content` and
+  in the content of the slide one time. Before, OCR read the picture and the text was in no part of the plain output.
+  The text is also there when `images.inject_placeholders` is `false` in Markdown, Djot and HTML output. (GH#2086)
 - **(ocr): text that has the form of a Markdown image reference does not repeat the OCR text of a picture.** When a
   document had a paragraph such as `![label](label.png)` as text, and a picture whose OCR text is shown without a
   placeholder, the text of the picture was in `content` two times. A PDF file with the default settings is such a
