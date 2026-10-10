@@ -6,7 +6,7 @@ edition.workspace = true
 # Upstream authorship is retained deliberately -- see ATTRIBUTIONS.md and LICENSE. ~keep
 authors = [
   "Na'aman Hirschfeld <naaman@xberg.io>",
-  "Tobias Perelstein <tobias@xberg.io>",
+  "Tobias Perlstein <tobias@xberg.io>",
 ]
 license = "MIT"
 description = "PDF parsing, extraction and rendering -- the native PDF engine behind xberg."

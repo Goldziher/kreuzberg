@@ -4,6 +4,7 @@
 # To verify freshness: alef verify
 
 [package]
+authors.workspace = true
 name = "xberg-php"
 version.workspace = true
 edition = "2024"

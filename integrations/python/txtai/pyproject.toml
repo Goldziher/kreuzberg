@@ -21,8 +21,14 @@ keywords = [
   "xberg",
 ]
 license = "MIT"
-maintainers = [{ name = "Xberg", email = "contact@xberg.io" }]
-authors = [{ name = "Xberg", email = "contact@xberg.io" }]
+maintainers = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
+authors = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
 requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",

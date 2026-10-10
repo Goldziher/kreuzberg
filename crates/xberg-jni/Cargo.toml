@@ -2,6 +2,7 @@
 # alef:hash:a0cb955850d34909552ae049b54ac8ed09630ba92a8f3fd105ec46ac593bdfe0
 
 [package]
+authors.workspace = true
 name = "xberg-jni"
 version.workspace = true
 edition = "2024"

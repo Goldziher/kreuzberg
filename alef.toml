@@ -5339,7 +5339,10 @@ description = "High-performance document intelligence library"
 license = "MIT"
 repository = "https://github.com/xberg-io/xberg"
 homepage = "https://xberg.io"
-authors = ["Na'aman Hirschfeld <naaman@xberg.io>"]
+authors = [
+  "Na'aman Hirschfeld <naaman@xberg.io>",
+  "Tobias Perlstein <tobias@xberg.io>",
+]
 keywords = ["document", "extraction", "pdf", "ocr", "text"]
 
 [crates.scaffold.cargo]

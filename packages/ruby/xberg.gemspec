@@ -10,7 +10,8 @@
 Gem::Specification.new do |spec|
   spec.name = "xberg"
   spec.version = "1.3.8"
-  spec.authors       = ["Na'aman Hirschfeld <naaman@xberg.io>"]
+  spec.authors       = ["Na'aman Hirschfeld", "Tobias Perlstein"]
+  spec.email         = ["naaman@xberg.io", "tobias@xberg.io"]
   spec.summary       = "High-performance document intelligence library"
   spec.description   = "High-performance document intelligence library"
   spec.homepage      = "https://github.com/xberg-io/xberg"

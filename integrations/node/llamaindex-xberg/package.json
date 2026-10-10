@@ -17,9 +17,15 @@
   "license": "MIT",
   "homepage": "https://github.com/xberg-io/xberg/tree/main/integrations/node/llamaindex-xberg",
   "author": {
-    "name": "Xberg.dev",
-    "email": "contact@xberg.io"
+    "name": "Na'aman Hirschfeld",
+    "email": "naaman@xberg.io"
   },
+  "contributors": [
+    {
+      "name": "Tobias Perlstein",
+      "email": "tobias@xberg.io"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xberg-io/xberg.git",

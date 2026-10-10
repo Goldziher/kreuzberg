@@ -3,7 +3,16 @@
   "version": "1.3.8",
   "description": "CLI proxy for xberg — downloads and runs the native xberg binary from GitHub releases.",
   "license": "MIT",
-  "author": "Na'aman Hirschfeld",
+  "author": {
+    "name": "Na'aman Hirschfeld",
+    "email": "naaman@xberg.io"
+  },
+  "contributors": [
+    {
+      "name": "Tobias Perlstein",
+      "email": "tobias@xberg.io"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xberg-io/xberg.git",

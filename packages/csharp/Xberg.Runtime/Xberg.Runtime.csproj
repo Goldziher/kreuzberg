@@ -14,7 +14,7 @@
     <Description>High-performance document intelligence library — native runtime assets for $(PublishedRID).</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl>https://github.com/xberg-io/xberg</RepositoryUrl>
-    <Authors>Na&apos;aman Hirschfeld &lt;naaman@xberg.io&gt;</Authors>
+    <Authors>Na&apos;aman Hirschfeld &lt;naaman@xberg.io&gt;;Tobias Perlstein &lt;tobias@xberg.io&gt;</Authors>
     <Company>Alef Team</Company>
     <Product>Xberg</Product>
     <!-- No managed assembly ships: this package carries only the RID's native

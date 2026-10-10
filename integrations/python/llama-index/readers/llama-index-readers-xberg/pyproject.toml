@@ -9,8 +9,14 @@ description = "LlamaIndex reader for 107 document formats powered by xberg's Rus
 readme = "README.md"
 keywords = ["ai", "document-extraction", "xberg", "llamaindex", "llm", "ocr", "pdf", "rag", "text-extraction"]
 license = "MIT"
-maintainers = [{ name = "xberg", email = "contact@xberg.io" }]
-authors = [{ name = "xberg", email = "contact@xberg.io" }]
+maintainers = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
+authors = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
 requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",

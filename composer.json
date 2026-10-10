@@ -1,4 +1,14 @@
 {
+  "authors": [
+    {
+      "name": "Na'aman Hirschfeld",
+      "email": "naaman@xberg.io"
+    },
+    {
+      "name": "Tobias Perlstein",
+      "email": "tobias@xberg.io"
+    }
+  ],
   "name": "xberg-io/xberg",
   "description": "High-performance document intelligence library",
   "license": "MIT",

@@ -4,6 +4,10 @@
 # To verify freshness: alef verify
 
 [package]
+authors = [
+  "Na'aman Hirschfeld <naaman@xberg.io>",
+  "Tobias Perlstein <tobias@xberg.io>",
+]
 name = "xberg-rb"
 version = "1.3.8"
 edition = "2024"

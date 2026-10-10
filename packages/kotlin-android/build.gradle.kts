@@ -306,8 +306,12 @@ mavenPublishing {
         }
         developers {
             developer {
-                name.set("Na&apos;aman Hirschfeld")
+                name.set("Na'aman Hirschfeld")
                 email.set("naaman@xberg.io")
+            }
+            developer {
+                name.set("Tobias Perlstein")
+                email.set("tobias@xberg.io")
             }
         }
 

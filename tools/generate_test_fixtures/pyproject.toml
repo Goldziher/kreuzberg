@@ -11,7 +11,10 @@ description = """\
   """
 readme = "README.md"
 license = { text = "MIT OR Apache-2.0" }
-authors = [{ name = "Xberg Contributors", email = "hello@xberg.io" }]
+authors = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
 requires-python = ">=3.11"
 classifiers = [
   "Development Status :: 4 - Beta",

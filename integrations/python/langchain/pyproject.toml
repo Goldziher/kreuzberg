@@ -15,8 +15,14 @@ description = "LangChain document loader for Xberg — extract 88+ file formats 
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "Xberg", email = "contact@xberg.io" }]
-maintainers = [{ name = "Xberg", email = "contact@xberg.io" }]
+authors = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
+maintainers = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
 keywords = [
   "xberg",
   "langchain",

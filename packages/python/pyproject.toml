@@ -17,7 +17,14 @@ description = "High-performance document intelligence library"
 keywords = ["document", "extraction", "ocr", "pdf", "text"]
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{ name = "Na'aman Hirschfeld <naaman@xberg.io>" }]
+authors = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
+maintainers = [
+  { name = "Na'aman Hirschfeld", email = "naaman@xberg.io" },
+  { name = "Tobias Perlstein", email = "tobias@xberg.io" },
+]
 requires-python = ">=3.10"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
