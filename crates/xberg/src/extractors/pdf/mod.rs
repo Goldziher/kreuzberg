@@ -1106,7 +1106,7 @@ async fn run_ocr_with_layout(
     #[cfg(feature = "layout-detection")] precomputed_layout_acceleration_override: Option<
         crate::core::config::acceleration::AccelerationConfig,
     >,
-) -> crate::Result<(
+) -> ocr::OcrRunResult<(
     String,
     Vec<crate::types::Table>,
     Vec<crate::types::OcrElement>,
@@ -2589,14 +2589,26 @@ impl PdfExtractor {
                             ocr_confidence_by_page = page_ocr_confidence;
                             (ocr_text, ExtractionMethod::Ocr)
                         }
-                        Err(e) => {
+                        Err(failed_run) => {
                             tracing::warn!(
-                                error = %e,
+                                error = %failed_run.error,
                                 "OCR fallback failed; using native text extraction result"
                             );
                             if failed_ocr_fallback_is_total_loss(&native_text) {
-                                return Err(e);
+                                return Err(failed_run.error);
                             }
+                            // ~keep A cancelled run did not fail to read its pages, so it adds no
+                            // record. The token decides: a pipeline run reports a cancellation as
+                            // the failure of each of its stages, not as the cancellation error.
+                            if ensure_pdf_not_cancelled(config).is_ok() {
+                                ocr_page_failures.extend(ocr::failed_run_page_failures(
+                                    &failed_run,
+                                    pdf_metadata.pdf_specific.page_count.unwrap_or(0),
+                                    &native_text,
+                                    boundaries.as_deref().unwrap_or(&[]),
+                                ));
+                            }
+                            let e = &failed_run.error;
                             ocr_fallback_warnings.push(crate::types::ProcessingWarning {
                                 source: std::borrow::Cow::Borrowed("ocr"),
                                 message: std::borrow::Cow::Owned(format!(

@@ -131,6 +131,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image is not sent to OCR again, and the text is in `content` one time in every output format. With `ocr_text_only`,
   the placeholder of the image stays. An image file whose OCR read gives no text and no table is still read by image
   OCR, as before. (GH#2068)
+- **(pdf, ocr): a failed OCR fallback for a whole PDF now reports its failed pages in `ocr_page_failures`.** When the
+  OCR run of a whole document failed and the native text was kept, the result had a warning and no record. Each page
+  that has no native text now has a record, as it does when OCR runs on the scanned pages only. A page that has
+  native text has no record. A page that failed in one OCR pipeline stage and got no text from a later stage had no
+  record either, and now has one. (GH#2083)
 
 ## [1.3.7] - 2026-10-09
 

@@ -63,7 +63,9 @@ pub(crate) use document::{
 #[cfg(all(paddle_ocr, any(feature = "ocr", feature = "ocr-pipeline"), feature = "pdf"))]
 pub(crate) use pipeline::extract_full_document_ocr_pipeline_per_page;
 #[cfg(all(any(feature = "ocr", feature = "ocr-pipeline"), feature = "pdf"))]
-pub(crate) use pipeline::{extract_mixed_ocr_native_with_single_block_pages, route_level_ocr_page_failures};
+pub(crate) use pipeline::{
+    extract_mixed_ocr_native_with_single_block_pages, failed_run_page_failures, route_level_ocr_page_failures,
+};
 // ~keep Must match the definition's own gate in `pipeline.rs`; `#[cfg(test)]` alone left
 // this import unresolved on every leg without an OCR feature (GH#1951). The definition is
 // dead on an `ocr-pipeline`-only test leg, so the re-export is unused there.
@@ -72,10 +74,12 @@ pub(crate) use pipeline::{extract_mixed_ocr_native_with_single_block_pages, rout
 pub(crate) use pipeline::extract_with_ocr;
 #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
 pub(crate) use pipeline::{
-    PageOcrHints, apply_numeric_repair_to_whole_document_ocr, extract_with_ocr_with_page_hints, numeric_repair_enabled,
-    run_ocr_pipeline,
+    OcrRunResult, PageOcrHints, apply_numeric_repair_to_whole_document_ocr, extract_with_ocr_with_page_hints,
+    numeric_repair_enabled, run_ocr_pipeline,
 };
 
+#[cfg(all(test, feature = "ocr", feature = "pdf"))]
+mod failed_page_record_tests;
 #[cfg(all(test, any(feature = "ocr", feature = "ocr-pipeline")))]
 mod numeric_repair_tests;
 #[cfg(all(test, any(feature = "ocr", feature = "ocr-pipeline")))]

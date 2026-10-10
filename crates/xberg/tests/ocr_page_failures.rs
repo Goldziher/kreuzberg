@@ -382,3 +382,563 @@ fn a_whole_document_run_records_every_failed_page() {
         ])
     );
 }
+
+/// What a backend of the tests below does with one image.
+#[derive(Clone, Copy)]
+enum Read {
+    Fails,
+    Blank,
+    Word,
+}
+
+/// A backend with one outcome for the embedded raster and one for every other image.
+struct TwoOutcomeBackend {
+    name: &'static str,
+    page: Read,
+    raster: Read,
+}
+
+impl Plugin for TwoOutcomeBackend {
+    fn name(&self) -> &str {
+        self.name
+    }
+    fn version(&self) -> String {
+        "1.0.0".to_string()
+    }
+    fn initialize(&self) -> xberg::Result<()> {
+        Ok(())
+    }
+    fn shutdown(&self) -> xberg::Result<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl OcrBackend for TwoOutcomeBackend {
+    async fn process_image(&self, image_bytes: &[u8], _config: &OcrConfig) -> xberg::Result<ExtractedDocument> {
+        let read = if png_size(image_bytes) == Some((RASTER_WIDTH_PX, RASTER_HEIGHT_PX)) {
+            self.raster
+        } else {
+            self.page
+        };
+        match read {
+            Read::Fails => Err(xberg::XbergError::Ocr {
+                message: format!("{} is down", self.name),
+                source: None,
+            }),
+            Read::Blank => Ok(ExtractedDocument::default()),
+            Read::Word => {
+                let mut read = ExtractedDocument::default();
+                read.content = RECOVERED_WORD.to_string();
+                Ok(read)
+            }
+        }
+    }
+    fn supports_language(&self, _language: &str) -> bool {
+        true
+    }
+    fn backend_type(&self) -> OcrBackendType {
+        OcrBackendType::Custom
+    }
+}
+
+/// Extract `content` with `backends` registered for the time of the call.
+fn extract_with_backends(
+    content: &[u8],
+    mime_type: &str,
+    backends: Vec<TwoOutcomeBackend>,
+    config: &ExtractionConfig,
+) -> xberg::Result<ExtractedDocument> {
+    let names: Vec<&'static str> = backends.iter().map(|backend| backend.name).collect();
+    for backend in backends {
+        let _ = unregister_ocr_backend(backend.name);
+        register_ocr_backend(Arc::new(backend)).expect("the backend registers");
+    }
+    let result = extract_bytes_document_blocking(content, mime_type, config);
+    for name in names {
+        unregister_ocr_backend(name).expect("the backend unregisters");
+    }
+    result
+}
+
+/// A three-page PDF: page 1 has a text layer of `words` words, pages 2 and 3 each paint the
+/// grey raster over the page and have no text.
+fn pdf_with_text_cover_and_two_scans(words: usize) -> Vec<u8> {
+    let raster = vec![0xA0u8; (RASTER_WIDTH_PX * RASTER_HEIGHT_PX) as usize];
+    let scan = format!("q {PAGE_PT} 0 0 {PAGE_PT} 0 0 cm /Im0 Do Q\n");
+    let tokens: Vec<String> = (0..words).map(|index| format!("word{index}")).collect();
+    let mut cover = String::from("BT /F1 6 Tf 8 TL 10 180 Td\n");
+    for line in tokens.chunks(5) {
+        cover.push_str(&format!("({}) Tj T*\n", line.join(" ")));
+    }
+    cover.push_str("ET\n");
+
+    let mut objects: Vec<Vec<u8>> = vec![
+        b"<</Type /Catalog /Pages 2 0 R>>".to_vec(),
+        b"<</Type /Pages /Kids [3 0 R 6 0 R 8 0 R] /Count 3>>".to_vec(),
+        format!(
+            "<</Type /Page /MediaBox [0 0 {PAGE_PT} {PAGE_PT}] /Parent 2 0 R /Contents 4 0 R \
+             /Resources <</Font <</F1 5 0 R>> >> >>"
+        )
+        .into_bytes(),
+        format!("<</Length {}>>\nstream\n{cover}endstream", cover.len()).into_bytes(),
+        b"<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding>>".to_vec(),
+    ];
+    for contents_object in [7, 9] {
+        objects.push(
+            format!(
+                "<</Type /Page /MediaBox [0 0 {PAGE_PT} {PAGE_PT}] /Parent 2 0 R /Contents {contents_object} 0 R \
+                 /Resources <</XObject <</Im0 10 0 R>> >> >>"
+            )
+            .into_bytes(),
+        );
+        objects.push(format!("<</Length {}>>\nstream\n{scan}endstream", scan.len()).into_bytes());
+    }
+    let mut image = format!(
+        "<</Type /XObject /Subtype /Image /Width {RASTER_WIDTH_PX} /Height {RASTER_HEIGHT_PX} \
+         /ColorSpace /DeviceGray /BitsPerComponent 8 /Length {}>>\nstream\n",
+        raster.len()
+    )
+    .into_bytes();
+    image.extend_from_slice(&raster);
+    image.extend_from_slice(b"\nendstream");
+    objects.push(image);
+
+    let mut buf = b"%PDF-1.4\n".to_vec();
+    let mut offsets = Vec::with_capacity(objects.len());
+    for (index, object) in objects.iter().enumerate() {
+        offsets.push(buf.len());
+        buf.extend_from_slice(format!("{} 0 obj\n", index + 1).as_bytes());
+        buf.extend_from_slice(object);
+        buf.extend_from_slice(b"\nendobj\n");
+    }
+    let xref_offset = buf.len();
+    buf.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", offsets.len() + 1).as_bytes());
+    for offset in &offsets {
+        buf.extend_from_slice(format!("{offset:010} 00000 n \n").as_bytes());
+    }
+    buf.extend_from_slice(format!("trailer\n<</Size {} /Root 1 0 R>>\n", offsets.len() + 1).as_bytes());
+    buf.extend_from_slice(format!("startxref\n{xref_offset}\n%%EOF\n").as_bytes());
+    buf
+}
+
+const DOWN_BACKEND: &str = "ocr-page-failures-down-backend";
+const DOWN_ERROR: &str = "OCR error: ocr-page-failures-down-backend is down";
+
+/// Default settings (`ocr_strategy` is `auto`) and a backend that fails on every image.
+fn extract_with_a_backend_that_is_down(words_on_the_cover: usize) -> ExtractedDocument {
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig {
+            backend: DOWN_BACKEND.to_string(),
+            ..Default::default()
+        }),
+        use_cache: false,
+        ..Default::default()
+    };
+    extract_with_backends(
+        &pdf_with_text_cover_and_two_scans(words_on_the_cover),
+        "application/pdf",
+        vec![TwoOutcomeBackend {
+            name: DOWN_BACKEND,
+            page: Read::Fails,
+            raster: Read::Fails,
+        }],
+        &config,
+    )
+    .expect("the native text of the cover page is kept, so extraction must not error")
+}
+
+fn failed_page(page: u32, error: &str, recovered: bool) -> OcrPageFailure {
+    OcrPageFailure {
+        page,
+        error: error.to_string(),
+        recovered,
+    }
+}
+
+/// A cover page with three words makes the whole document poor text, so OCR runs on all of it
+/// in one pass. The pass fails, and the native text is kept. Only the two scanned pages get a
+/// record, as they do with a longer cover page: the cover page has its native text.
+#[test]
+#[serial_test::serial]
+fn a_failed_whole_document_fallback_records_the_scanned_pages_only() {
+    let result = extract_with_a_backend_that_is_down(3);
+
+    assert!(
+        result.content.contains("word0"),
+        "the native text of the cover page is kept; content: {:?}",
+        result.content
+    );
+    assert!(
+        result
+            .processing_warnings
+            .iter()
+            .any(|warning| warning.message.contains("OCR fallback failed")),
+        "the fallback for the whole document must be the route that failed; warnings: {:?}",
+        result.processing_warnings
+    );
+    assert_eq!(
+        result.ocr_page_failures,
+        Some(vec![
+            failed_page(2, DOWN_ERROR, false),
+            failed_page(3, DOWN_ERROR, false)
+        ])
+    );
+}
+
+/// A cover page with twenty words is good text, so OCR runs on the two scanned pages only.
+#[test]
+#[serial_test::serial]
+fn a_longer_cover_page_gives_the_same_scanned_page_records() {
+    let result = extract_with_a_backend_that_is_down(20);
+
+    assert!(
+        result.content.contains("word19"),
+        "the native text of the cover page is kept; content: {:?}",
+        result.content
+    );
+    let failures = result.ocr_page_failures.expect("the scanned pages failed");
+    assert_eq!(
+        failures
+            .iter()
+            .map(|failure| (failure.page, failure.recovered))
+            .collect::<Vec<_>>(),
+        vec![(2, false), (3, false)]
+    );
+}
+
+const FIRST_STAGE: &str = "ocr-page-failures-first-stage";
+const SECOND_STAGE: &str = "ocr-page-failures-second-stage";
+const FIRST_STAGE_ERROR: &str = "OCR error: ocr-page-failures-first-stage is down";
+
+fn two_stage_pipeline() -> OcrPipelineConfig {
+    let stage = |backend: &str, priority: u32| OcrPipelineStage {
+        backend: backend.to_string(),
+        priority,
+        language: None,
+        tesseract_config: None,
+        paddle_ocr_config: None,
+        paddle_ocr_settings: None,
+        vlm_config: None,
+        backend_options: None,
+    };
+    OcrPipelineConfig {
+        stages: vec![stage(FIRST_STAGE, 100), stage(SECOND_STAGE, 50)],
+        quality_thresholds: Default::default(),
+    }
+}
+
+/// The first stage fails on every image. The second stage reads nothing from a page render and
+/// reads the word from the embedded raster.
+fn two_stage_backends() -> Vec<TwoOutcomeBackend> {
+    vec![
+        TwoOutcomeBackend {
+            name: FIRST_STAGE,
+            page: Read::Fails,
+            raster: Read::Fails,
+        },
+        TwoOutcomeBackend {
+            name: SECOND_STAGE,
+            page: Read::Blank,
+            raster: Read::Word,
+        },
+    ]
+}
+
+/// Both pages of the two-page fixture go through the two stages. Page 1 has no raster, so no
+/// stage reads it. The second stage reads page 2 from its raster.
+fn extract_two_pages_with_two_stages() -> ExtractedDocument {
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig {
+            backend: FIRST_STAGE.to_string(),
+            pipeline: Some(two_stage_pipeline()),
+            ..Default::default()
+        }),
+        force_ocr_pages: Some(vec![1, 2]),
+        ocr_embedded_images: Some(false),
+        use_cache: false,
+        ..Default::default()
+    };
+    extract_with_backends(
+        &pdf_with_image_on_page_two(),
+        "application/pdf",
+        two_stage_backends(),
+        &config,
+    )
+    .expect("the second stage reads page 2, so extraction must not error")
+}
+
+#[test]
+#[serial_test::serial]
+fn a_page_read_by_a_later_stage_gives_no_record() {
+    let result = extract_two_pages_with_two_stages();
+
+    assert!(
+        result.content.contains(RECOVERED_WORD),
+        "the second stage read page 2; content: {:?}",
+        result.content
+    );
+    assert!(
+        result
+            .processing_warnings
+            .iter()
+            .any(|warning| warning.message.contains(FIRST_STAGE) && warning.message.contains("failed and was skipped")),
+        "the failed stage stays in the warnings; warnings: {:?}",
+        result.processing_warnings
+    );
+    let failures = result.ocr_page_failures.expect("page 1 was read by no stage");
+    assert!(
+        failures.iter().all(|failure| failure.page != 2),
+        "page 2 has text from the second stage; records: {failures:?}"
+    );
+}
+
+#[test]
+#[serial_test::serial]
+fn a_page_no_stage_read_keeps_the_first_failure() {
+    let result = extract_two_pages_with_two_stages();
+
+    assert_eq!(
+        result.ocr_page_failures,
+        Some(vec![failed_page(1, FIRST_STAGE_ERROR, false)])
+    );
+}
+
+/// The selected pages of the document with the twenty-word cover page go through the two stages.
+/// The first stage fails on every image and the second stage reads nothing, so no stage reads a
+/// selected page.
+fn extract_selected_pages_that_no_stage_reads(pages: Vec<u32>) -> ExtractedDocument {
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig {
+            backend: FIRST_STAGE.to_string(),
+            pipeline: Some(two_stage_pipeline()),
+            ..Default::default()
+        }),
+        force_ocr_pages: Some(pages),
+        ocr_embedded_images: Some(false),
+        use_cache: false,
+        ..Default::default()
+    };
+    let backends = vec![
+        TwoOutcomeBackend {
+            name: FIRST_STAGE,
+            page: Read::Fails,
+            raster: Read::Fails,
+        },
+        TwoOutcomeBackend {
+            name: SECOND_STAGE,
+            page: Read::Blank,
+            raster: Read::Blank,
+        },
+    ];
+    let result = extract_with_backends(
+        &pdf_with_text_cover_and_two_scans(20),
+        "application/pdf",
+        backends,
+        &config,
+    )
+    .expect("the second stage returns a blank page, so extraction must not error");
+    assert!(
+        result.content.contains("word19"),
+        "the native text of the cover page is kept; content: {:?}",
+        result.content
+    );
+    result
+}
+
+/// The cover page is the selected page. It keeps its native text, so its record is recovered.
+#[test]
+#[serial_test::serial]
+fn a_selected_page_that_keeps_its_native_text_is_recorded_as_recovered() {
+    let result = extract_selected_pages_that_no_stage_reads(vec![1]);
+
+    assert_eq!(
+        result.ocr_page_failures,
+        Some(vec![failed_page(1, FIRST_STAGE_ERROR, true)])
+    );
+}
+
+/// The cover page and one scanned page are selected. The scanned page has no native text, so
+/// only the record of the cover page is recovered.
+#[test]
+#[serial_test::serial]
+fn a_selected_page_without_native_text_is_recorded_as_not_recovered() {
+    let result = extract_selected_pages_that_no_stage_reads(vec![1, 2]);
+
+    assert_eq!(
+        result.ocr_page_failures,
+        Some(vec![
+            failed_page(1, FIRST_STAGE_ERROR, true),
+            failed_page(2, FIRST_STAGE_ERROR, false)
+        ])
+    );
+}
+
+/// A pipeline of one stage reads the two-page fixture as one document. The stage fails on both
+/// page renders and reads the word from the raster of page 2, so its result has a record for
+/// each page. Page 1 stays blank, and its record is in the result one time.
+#[test]
+#[serial_test::serial]
+fn a_page_the_returned_stage_failed_on_has_one_record() {
+    let mut pipeline = two_stage_pipeline();
+    pipeline.stages.truncate(1);
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig {
+            backend: FIRST_STAGE.to_string(),
+            pipeline: Some(pipeline),
+            ..Default::default()
+        }),
+        force_ocr: true,
+        ocr_embedded_images: Some(false),
+        use_cache: false,
+        ..Default::default()
+    };
+
+    let result = extract_with_backends(
+        &pdf_with_image_on_page_two(),
+        "application/pdf",
+        vec![TwoOutcomeBackend {
+            name: FIRST_STAGE,
+            page: Read::Fails,
+            raster: Read::Word,
+        }],
+        &config,
+    )
+    .expect("the stage reads page 2 from its raster, so extraction must not error");
+
+    assert_eq!(
+        result.ocr_page_failures,
+        Some(vec![
+            failed_page(1, FIRST_STAGE_ERROR, false),
+            failed_page(2, FIRST_STAGE_ERROR, true)
+        ])
+    );
+}
+
+/// An image file goes through the two stages as one page. No stage reads it.
+#[test]
+#[serial_test::serial]
+fn an_image_file_keeps_the_record_of_a_failed_stage() {
+    let mut png = Vec::new();
+    image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(64, 48, image::Rgb([255, 255, 255])))
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .expect("the image encodes");
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig {
+            backend: FIRST_STAGE.to_string(),
+            pipeline: Some(two_stage_pipeline()),
+            ..Default::default()
+        }),
+        use_cache: false,
+        ..Default::default()
+    };
+
+    let result = extract_with_backends(&png, "image/png", two_stage_backends(), &config)
+        .expect("the second stage returns a blank page, so extraction must not error");
+
+    assert!(
+        result
+            .processing_warnings
+            .iter()
+            .any(|warning| warning.message.contains(FIRST_STAGE) && warning.message.contains("failed and was skipped")),
+        "the pipeline ran and its first stage failed; warnings: {:?}",
+        result.processing_warnings
+    );
+    assert_eq!(
+        result.ocr_page_failures,
+        Some(vec![failed_page(1, FIRST_STAGE_ERROR, false)])
+    );
+}
+
+const CANCELLING_STAGE: &str = "ocr-page-failures-cancelling-stage";
+/// The start of the warning of a whole-document fallback whose pipeline stages all failed.
+const CANCELLED_FALLBACK_WARNING: &str = "OCR fallback failed (Parsing error: All OCR pipeline backends failed";
+
+/// A backend that cancels the extraction on its first call and then fails.
+struct CancellingBackend {
+    token: xberg::cancellation::CancellationToken,
+}
+
+impl Plugin for CancellingBackend {
+    fn name(&self) -> &str {
+        CANCELLING_STAGE
+    }
+    fn version(&self) -> String {
+        "1.0.0".to_string()
+    }
+    fn initialize(&self) -> xberg::Result<()> {
+        Ok(())
+    }
+    fn shutdown(&self) -> xberg::Result<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl OcrBackend for CancellingBackend {
+    async fn process_image(&self, _image_bytes: &[u8], _config: &OcrConfig) -> xberg::Result<ExtractedDocument> {
+        self.token.cancel();
+        Err(xberg::XbergError::Ocr {
+            message: "the run was cancelled".to_string(),
+            source: None,
+        })
+    }
+    fn supports_language(&self, _language: &str) -> bool {
+        true
+    }
+    fn backend_type(&self) -> OcrBackendType {
+        OcrBackendType::Custom
+    }
+}
+
+/// The first stage of a two-stage pipeline cancels the extraction during the fallback for the
+/// whole document. Each stage then ends with the cancellation, and the pipeline reports that
+/// every stage failed. The native text of the cover page is kept, as it is for a failed run.
+#[test]
+#[serial_test::serial]
+fn a_cancelled_whole_document_fallback_adds_no_record() {
+    let token = xberg::cancellation::CancellationToken::new();
+    let mut pipeline = two_stage_pipeline();
+    pipeline.stages[0].backend = CANCELLING_STAGE.to_string();
+    let config = ExtractionConfig {
+        ocr: Some(OcrConfig {
+            backend: CANCELLING_STAGE.to_string(),
+            pipeline: Some(pipeline),
+            ..Default::default()
+        }),
+        cancel_token: Some(token.clone()),
+        use_cache: false,
+        ..Default::default()
+    };
+    let _ = unregister_ocr_backend(CANCELLING_STAGE);
+    register_ocr_backend(Arc::new(CancellingBackend { token: token.clone() })).expect("the backend registers");
+
+    let result = extract_with_backends(
+        &pdf_with_text_cover_and_two_scans(3),
+        "application/pdf",
+        vec![TwoOutcomeBackend {
+            name: SECOND_STAGE,
+            page: Read::Blank,
+            raster: Read::Blank,
+        }],
+        &config,
+    );
+    unregister_ocr_backend(CANCELLING_STAGE).expect("the backend unregisters");
+    let result = result.expect("the native text of the cover page is kept");
+
+    assert!(token.is_cancelled(), "the first stage ran and cancelled the extraction");
+    assert!(
+        result.content.contains("word0"),
+        "the native text of the cover page is kept; content: {:?}",
+        result.content
+    );
+    assert!(
+        result
+            .processing_warnings
+            .iter()
+            .any(|warning| warning.message.contains(CANCELLED_FALLBACK_WARNING)),
+        "the fallback for the whole document ended with the failure of every stage; warnings: {:?}",
+        result.processing_warnings
+    );
+    assert_eq!(result.ocr_page_failures, None);
+}
