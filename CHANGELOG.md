@@ -95,6 +95,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(html, epub, fictionbook): Markdown-family output keeps embedded-image OCR text.** Extractors now invalidate
   pre-rendered markup before image OCR mutates the document, so recognized picture text is rendered once rather than
   being omitted from Markdown and Djot output. (GH#2087)
+- **(ocr): text that has the form of a Markdown image reference does not repeat the OCR text of a picture.** When a
+  document had a paragraph such as `![label](label.png)` as text, and a picture whose OCR text is shown without a
+  placeholder, the text of the picture was in `content` two times. A PDF file with the default settings is such a
+  document. The text is now there one time. (GH#2093)
 - **(pdf): a title set across a two-column page's gutter no longer moves the column split beside a lone label.** The
   whitespace-corridor search accepted the gap between a column and a lone header label or page number as a gutter, so
   the two columns were read line by line. That search now needs text on at least six rows on each side of a corridor,

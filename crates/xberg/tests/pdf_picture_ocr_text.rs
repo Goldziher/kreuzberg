@@ -24,6 +24,8 @@ const PICTURE_HEIGHT_PX: u32 = 120;
 const PICTURE_WORDS: &str = "CRATE 17 KEEP DRY UNLOAD AT GATE B";
 /// The first line of text on every page that has a text layer.
 const NATIVE_HEADING: &str = "Warehouse report";
+/// A line of page text that has the form of a Markdown image reference.
+const IMAGE_REFERENCE_LINE: &str = "![label](label.png)";
 
 /// Where a page paints the picture: width, height, x and y in points on a 595 x 842 page.
 type PictureBox = [u32; 4];
@@ -51,6 +53,11 @@ struct PageSpec {
     picture: Option<PictureBox>,
     /// The text below the place of the picture.
     lines_below: &'static [&'static str],
+}
+
+/// `line` as the body of a PDF literal string.
+fn pdf_string(line: &str) -> String {
+    line.replace('\\', "\\\\").replace('(', "\\(").replace(')', "\\)")
 }
 
 /// A PDF with one page for each spec. Object 3 is the font and object 4 is the picture.
@@ -81,7 +88,7 @@ fn pdf(pages: &[PageSpec]) -> Vec<u8> {
         if !page.lines.is_empty() {
             content.push_str("BT /F1 12 Tf 18 TL 72 770 Td\n");
             for line in page.lines {
-                content.push_str(&format!("({line}) Tj T*\n"));
+                content.push_str(&format!("({}) Tj T*\n", pdf_string(line)));
             }
             content.push_str("ET\n");
         }
@@ -91,7 +98,7 @@ fn pdf(pages: &[PageSpec]) -> Vec<u8> {
         if !page.lines_below.is_empty() {
             content.push_str("BT /F1 12 Tf 18 TL 72 300 Td\n");
             for line in page.lines_below {
-                content.push_str(&format!("({line}) Tj T*\n"));
+                content.push_str(&format!("({}) Tj T*\n", pdf_string(line)));
             }
             content.push_str("ET\n");
         }
@@ -130,6 +137,16 @@ fn text_page_with_picture() -> Vec<u8> {
         lines: FIRST_PAGE_LINES,
         picture: Some(SMALL_PICTURE),
         lines_below: &[],
+    }])
+}
+
+/// The page of the report with one more line of text, alone below the picture: an image
+/// reference.
+fn text_page_with_picture_and_image_reference_line() -> Vec<u8> {
+    pdf(&[PageSpec {
+        lines: FIRST_PAGE_LINES,
+        picture: Some(SMALL_PICTURE),
+        lines_below: &[IMAGE_REFERENCE_LINE],
     }])
 }
 
@@ -328,6 +345,59 @@ fn extract_without_picture_ocr(
         configure(config);
         config.ocr_embedded_images = Some(false);
     })
+}
+
+/// One row for each output format: its name, the count of the picture's words in `content`,
+/// their count in the content of page 1, and the count of [`IMAGE_REFERENCE_LINE`] in `content`.
+type FormatCounts = Vec<(&'static str, usize, usize, usize)>;
+/// What each number of a [`FormatCounts`] row counts, and the count that is right.
+const FORMAT_COUNTS_LEGEND: &str =
+    "each row: format, picture words in `content`, picture words in page 1, reference lines in `content`; 1 is right";
+
+/// The picture's words one time in `content` and in the page content, and the image reference
+/// line one time in `content`, in each output format.
+fn once_in_every_output_format() -> FormatCounts {
+    vec![
+        ("plain", 1, 1, 1),
+        ("markdown", 1, 1, 1),
+        ("djot", 1, 1, 1),
+        ("html", 1, 1, 1),
+    ]
+}
+
+/// Extract `pdf` in each text output format and count the picture's words and the image
+/// reference line. The picture is sent to OCR one time in each run.
+fn counts_in_every_output_format(
+    backend: &'static str,
+    pdf: &[u8],
+    configure: impl Fn(&mut ExtractionConfig),
+) -> FormatCounts {
+    [
+        (OutputFormat::Plain, "plain"),
+        (OutputFormat::Markdown, "markdown"),
+        (OutputFormat::Djot, "djot"),
+        (OutputFormat::Html, "html"),
+    ]
+    .into_iter()
+    .map(|(format, format_name)| {
+        let run = extract(backend, pdf, WORDS_FROM_THE_PICTURE, |config| {
+            configure(config);
+            config.output_format = format;
+        });
+        assert_eq!(
+            (run.picture_calls, run.page_render_calls),
+            (1, 0),
+            "{format_name}: one OCR call, on the picture"
+        );
+        let content = &run.document.content;
+        (
+            format_name,
+            words_in(content),
+            words_in(run.page_content(1)),
+            content.matches(IMAGE_REFERENCE_LINE).count(),
+        )
+    })
+    .collect()
 }
 
 #[test]
@@ -861,4 +931,36 @@ fn inline_image_ocr_adds_the_words_once() {
         run.document.content
     );
     assert_eq!(words_in(run.page_content(1)), 1, "page 1: {:?}", run.page_content(1));
+}
+
+/// A line of text on the page has the form of an image reference. It is text, not a placeholder
+/// of the picture, so the picture's words are not added after it a second time.
+#[test]
+fn text_in_the_form_of_an_image_reference_does_not_repeat_the_picture_words() {
+    let counts = counts_in_every_output_format(
+        "picture-text-reference-line",
+        &text_page_with_picture_and_image_reference_line(),
+        |_| {},
+    );
+
+    assert_eq!(counts, once_in_every_output_format(), "{FORMAT_COUNTS_LEGEND}");
+}
+
+/// With `ocr_text_only` on and placeholders off, the picture's words stand where the picture
+/// is. The line of text stays as it is: the words do not replace it.
+#[test]
+fn ocr_text_only_does_not_replace_text_in_the_form_of_an_image_reference() {
+    let counts = counts_in_every_output_format(
+        "picture-text-reference-line-text-only",
+        &text_page_with_picture_and_image_reference_line(),
+        |config| {
+            config.images = Some(ImageExtractionConfig {
+                inject_placeholders: false,
+                ocr_text_only: true,
+                ..Default::default()
+            });
+        },
+    );
+
+    assert_eq!(counts, once_in_every_output_format(), "{FORMAT_COUNTS_LEGEND}");
 }
