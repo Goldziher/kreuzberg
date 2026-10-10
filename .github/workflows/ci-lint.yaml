@@ -20,6 +20,7 @@ on:
       # uv.lock pinning xberg at 1.1.6 survived two releases that way. ~keep
       - "uv.lock"
       - "Cargo.lock"
+      - "package.json"
       - ".github/**"
       - ".task/**"
       - ".gitmodules"
@@ -81,8 +82,34 @@ jobs:
       # match plugin/.ai-rulez (BLAKE3 provenance). Pinned to the ai-rulez version that
       # generates them; bump in lockstep with the generator. Regenerate with
       # `task plugin:generate`. ~keep
+      - name: Check out the Pi-capable ai-rulez generator
+        uses: actions/checkout@v7
+        with:
+          repository: Goldziher/ai-rulez
+          ref: 8dfebd2b8b3700ff134f86886d5b44dca82abc18
+          path: .tools/ai-rulez
+      - name: Set up Go for ai-rulez
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: .tools/ai-rulez/go.mod
+          cache-dependency-path: .tools/ai-rulez/go.sum
+      - name: Build the pinned plugin generator
+        working-directory: .tools/ai-rulez
+        shell: bash
+        run: |
+          eval "$(./scripts/setup-liter-llm.sh --mode static --format export)"
+          mkdir -p "$RUNNER_TEMP/ai-rulez-bin"
+          go build -o "$RUNNER_TEMP/ai-rulez-bin/ai-rulez" ./cmd/ai-rulez
+          echo "$RUNNER_TEMP/ai-rulez-bin" >> "$GITHUB_PATH"
       - name: Verify generated plugin bundles are current
-        run: uvx ai-rulez==4.11.0 verify --recursive --plugin --if-configured
+        run: ai-rulez verify --plugin
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Verify OpenCode tools and packed Pi resources
+        run: |
+          node --test scripts/tests/opencode-plugin.test.mjs
+          python3 scripts/verify_pi_package.py
 
   submodule-gitlinks:
     if: github.event.pull_request.draft != true

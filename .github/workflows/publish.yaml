@@ -5148,7 +5148,7 @@ jobs:
   # at runtime), so it publishes in parallel with the core jobs. ~keep
 
   publish-plugin-opencode:
-    name: Publish OpenCode plugin to npm
+    name: Publish OpenCode and Pi plugin to npm
     needs: [prepare]
     if: >-
       ${{ !cancelled() && needs.prepare.outputs.release_any == 'true'
@@ -5167,6 +5167,31 @@ jobs:
           registry-url: "https://registry.npmjs.org/"
       # Plain ESM adapter — no build step. Skip if this version is already on npm so a
       # release re-run is idempotent (publish-npm has no built-in skip-existing). ~keep
+      - name: Check out the Pi-capable ai-rulez generator
+        uses: actions/checkout@v7
+        with:
+          repository: Goldziher/ai-rulez
+          ref: 8dfebd2b8b3700ff134f86886d5b44dca82abc18
+          path: .tools/ai-rulez
+      - name: Set up Go for ai-rulez
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: .tools/ai-rulez/go.mod
+          cache-dependency-path: .tools/ai-rulez/go.sum
+      - name: Build the pinned plugin generator
+        working-directory: .tools/ai-rulez
+        shell: bash
+        run: |
+          eval "$(./scripts/setup-liter-llm.sh --mode static --format export)"
+          mkdir -p "$RUNNER_TEMP/ai-rulez-bin"
+          go build -o "$RUNNER_TEMP/ai-rulez-bin/ai-rulez" ./cmd/ai-rulez
+          echo "$RUNNER_TEMP/ai-rulez-bin" >> "$GITHUB_PATH"
+      - name: Verify plugin bundles match the pinned generator
+        run: |
+          ai-rulez verify --plugin
+          node --test scripts/tests/opencode-plugin.test.mjs
+      - name: Verify Pi and OpenCode resources in the npm archive
+        run: python3 scripts/verify_pi_package.py
       - name: Skip if already on npm
         id: guard
         run: |

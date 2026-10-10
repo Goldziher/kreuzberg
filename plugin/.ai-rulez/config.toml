@@ -1,8 +1,13 @@
-version = "4.0"
+version = "5.0"
 name = "xberg"
 description = "Local document extraction: text, tables, metadata, images from 107 formats with optional OCR."
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+agents_md = false
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+gitignore = true
 
 [plugin]
+runtimes = ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "pi"]
 name = "xberg"
 version = "1.3.8"
 display_name = "Xberg"
@@ -43,3 +48,7 @@ brand_color = "#1F6FEB"
 
 [plugin.gemini]
 context_file_name = "GEMINI.md"
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"

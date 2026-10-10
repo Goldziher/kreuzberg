@@ -1,31 +1,84 @@
 {
-  "name": "@xberg-io/opencode-xberg",
-  "version": "1.3.8",
+  "dependencies": {
+    "@opencode/plugin": "^2.0.20"
+  },
   "description": "Local document extraction: text, tables, metadata, images from 107 formats with optional OCR.",
+  "exports": {
+    ".": "./.opencode/plugins/xberg.js"
+  },
+  "files": [
+    ".opencode/ai-rulez-bundle.json",
+    ".opencode/ai-rulez-content.js",
+    ".opencode/commands/xberg-extract.md",
+    ".opencode/commands/xberg-ocr.md",
+    ".opencode/plugins/xberg.js",
+    ".opencode/skills/batch-extraction/SKILL.md",
+    ".opencode/skills/chunking/SKILL.md",
+    ".opencode/skills/extracting-keywords/SKILL.md",
+    ".opencode/skills/extracting-tables/SKILL.md",
+    ".opencode/skills/extracting-with-ocr/SKILL.md",
+    ".opencode/skills/picking-a-format/SKILL.md",
+    ".opencode/skills/xberg/SKILL.md",
+    ".opencode/skills/xberg/references/advanced-features.md",
+    ".opencode/skills/xberg/references/cli-reference.md",
+    ".opencode/skills/xberg/references/configuration.md",
+    ".opencode/skills/xberg/references/nodejs-api.md",
+    ".opencode/skills/xberg/references/other-bindings.md",
+    ".opencode/skills/xberg/references/python-api.md",
+    ".opencode/skills/xberg/references/rust-api.md",
+    ".opencode/skills/xberg/references/supported-formats.md",
+    ".pi/prompts/xberg-extract.md",
+    ".pi/prompts/xberg-ocr.md",
+    ".pi/skills/batch-extraction/SKILL.md",
+    ".pi/skills/chunking/SKILL.md",
+    ".pi/skills/extracting-keywords/SKILL.md",
+    ".pi/skills/extracting-tables/SKILL.md",
+    ".pi/skills/extracting-with-ocr/SKILL.md",
+    ".pi/skills/picking-a-format/SKILL.md",
+    ".pi/skills/xberg/SKILL.md",
+    ".pi/skills/xberg/references/advanced-features.md",
+    ".pi/skills/xberg/references/cli-reference.md",
+    ".pi/skills/xberg/references/configuration.md",
+    ".pi/skills/xberg/references/nodejs-api.md",
+    ".pi/skills/xberg/references/other-bindings.md",
+    ".pi/skills/xberg/references/python-api.md",
+    ".pi/skills/xberg/references/rust-api.md",
+    ".pi/skills/xberg/references/supported-formats.md",
+    "README.md",
+    "assets/",
+    "scripts/"
+  ],
+  "homepage": "https://xberg.io",
   "keywords": [
     "document-intelligence",
     "extraction",
     "ocr",
     "pdf",
+    "pi-package",
     "tables"
   ],
-  "homepage": "https://xberg.io",
+  "license": "MIT",
+  "main": ".opencode/plugins/xberg.js",
+  "name": "@xberg-io/opencode-xberg",
+  "pi": {
+    "prompts": [
+      "./.pi/prompts/xberg-extract.md",
+      "./.pi/prompts/xberg-ocr.md"
+    ],
+    "skills": [
+      "./.pi/skills/batch-extraction",
+      "./.pi/skills/chunking",
+      "./.pi/skills/extracting-keywords",
+      "./.pi/skills/extracting-tables",
+      "./.pi/skills/extracting-with-ocr",
+      "./.pi/skills/picking-a-format",
+      "./.pi/skills/xberg"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/xberg-io/xberg"
   },
-  "license": "MIT",
   "type": "module",
-  "main": ".opencode/plugins/xberg.js",
-  "exports": {
-    ".": "./.opencode/plugins/xberg.js"
-  },
-  "files": [
-    ".opencode/",
-    "assets/",
-    "README.md"
-  ],
-  "dependencies": {
-    "@opencode-ai/plugin": "^1.17.8"
-  }
+  "version": "1.3.8"
 }

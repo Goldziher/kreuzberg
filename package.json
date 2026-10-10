@@ -27,5 +27,17 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   },
-  "packageManager": "pnpm@12.3.4"
+  "packageManager": "pnpm@12.3.4",
+  "pi": {
+    "prompts": ["./plugin/.pi/prompts/xberg-extract.md", "./plugin/.pi/prompts/xberg-ocr.md"],
+    "skills": [
+      "./plugin/.pi/skills/batch-extraction",
+      "./plugin/.pi/skills/chunking",
+      "./plugin/.pi/skills/extracting-keywords",
+      "./plugin/.pi/skills/extracting-tables",
+      "./plugin/.pi/skills/extracting-with-ocr",
+      "./plugin/.pi/skills/picking-a-format",
+      "./plugin/.pi/skills/xberg"
+    ]
+  }
 }

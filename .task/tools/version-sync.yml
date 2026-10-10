@@ -18,7 +18,7 @@ tasks:
       - "python3 scripts/sync_integration_versions.py"
       # Regenerate the coding-agent plugin bundles from the just-synced config so the
       # per-runtime manifests under plugin/ carry the new version. ~keep
-      - "uvx ai-rulez=={{.AI_RULEZ_VERSION}} generate --plugin"
+      - "ai-rulez generate --plugin"
 
   check:
     desc: "Check if versions are synchronized (dry-run)"

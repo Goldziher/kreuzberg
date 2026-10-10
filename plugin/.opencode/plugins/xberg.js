@@ -1,19 +1,10 @@
 // AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-// Content-Hash: blake3:0c4b20b2428ca03b76e22085bdcc856fbac85091cd3f6d157655d6c25c02714f
-// Source-Hash: blake3:d383d567084a0c6d65ab7919c492397f9738bf4c482b5f07e1b12ce69d1dce7c
+// Content-Hash: blake3:3fe1a33d721dfa8b49134cbe88659999cf9e481c558eb8e4b5ac81bc672c88db
+// Source-Hash: blake3:3fca38eb564d0ed9c9194d070fd8dec96de727edc92e82954cb4b9af52cddbaf
 // Schema-Version: v1
 
-import { tool } from "@opencode-ai/plugin";
 import { spawn } from "node:child_process";
-
-const schema = tool.schema;
-
-const wireFormat = schema.enum(["text", "json", "toon"]).default("json").describe("CLI output format.");
-
-const contentFormat = schema
-  .enum(["plain", "markdown", "djot", "html", "json"])
-  .optional()
-  .describe("Document content rendering format.");
+import { registerBundledContent } from "../ai-rulez-content.js";
 
 function hasValue(value) {
   return value !== undefined && value !== null && value !== "";
@@ -37,14 +28,12 @@ function validateJson(value, name) {
   }
 }
 
-function runCli(args, context) {
-  const directory = context?.directory ?? context?.worktree ?? process.cwd();
-
+function runCli(args, context, directory) {
   return new Promise((resolve, reject) => {
     const child = spawn("xberg", args, {
       cwd: directory,
       env: process.env,
-      signal: context?.abort,
+      signal: context?.signal,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -56,8 +45,7 @@ function runCli(args, context) {
     child.on("error", (error) => {
       if (error.code === "ENOENT") {
         resolve({
-          title: "xberg CLI not found",
-          output:
+          content:
             "Install the xberg CLI with `brew install xberg-io/tap/xberg`, or run it via `npx -y @xberg-io/xberg-cli` / `uvx --from xberg-cli xberg`.",
           metadata: { exitCode: 127, command: "xberg", subcommand: args[0] },
         });
@@ -71,8 +59,7 @@ function runCli(args, context) {
       const output = [stdoutText, stderrText && `stderr:\n${stderrText}`].filter(Boolean).join("\n\n");
 
       resolve({
-        title: exitCode === 0 ? `xberg ${args[0]}` : `xberg ${args[0]} failed`,
-        output: output || "(no output)",
+        content: output || "(no output)",
         metadata: {
           exitCode,
           signal,
@@ -84,49 +71,75 @@ function runCli(args, context) {
   });
 }
 
-export const XbergPlugin = () =>
-  Promise.resolve({
-    tool: {
-      xberg_extract: tool({
-        description: "Extract text, tables, metadata, and images from a local document with the xberg CLI.",
-        args: {
-          path: schema.string().min(1).describe("Path to the local document."),
-          format: wireFormat,
-          content_format: contentFormat,
-          mime_type: schema.string().min(1).optional().describe("Optional MIME type hint."),
-          config_json: schema.string().min(2).optional().describe("Optional ExtractionConfig JSON."),
-        },
-        async execute(args, context) {
-          validateJson(args.config_json, "config_json");
+const wireFormat = { type: "string", enum: ["text", "json", "toon"], default: "json" };
+const contentFormat = { type: "string", enum: ["plain", "markdown", "djot", "html", "json"] };
 
-          const cliArgs = ["extract", args.path, "--format", args.format];
-          pushOption(cliArgs, "--content-format", args.content_format);
-          pushOption(cliArgs, "--mime-type", args.mime_type);
-          pushOption(cliArgs, "--config-json", args.config_json);
-
-          return await runCli(cliArgs, context);
-        },
-      }),
-      xberg_detect: tool({
-        description: "Detect the MIME type for a local file with the xberg CLI.",
-        args: {
-          path: schema.string().min(1).describe("Path to the local file."),
-          format: wireFormat,
-        },
-        async execute(args, context) {
-          return await runCli(["detect", args.path, "--format", args.format], context);
-        },
-      }),
-      xberg_formats: tool({
-        description: "List document formats supported by the xberg CLI.",
-        args: {
-          format: wireFormat,
-        },
-        async execute(args, context) {
-          return await runCli(["formats", "--format", args.format], context);
-        },
-      }),
+function extractTool(directory) {
+  return {
+    name: "xberg_extract",
+    description: "Extract text, tables, metadata, and images from a local document with the xberg CLI.",
+    input: {
+      type: "object",
+      properties: {
+        path: { type: "string", minLength: 1 },
+        format: wireFormat,
+        content_format: contentFormat,
+        mime_type: { type: "string", minLength: 1 },
+        config_json: { type: "string", minLength: 2 },
+      },
+      required: ["path"],
+      additionalProperties: false,
     },
-  });
+    execute(args, context) {
+      validateJson(args.config_json, "config_json");
+      const cliArgs = ["extract", args.path, "--format", args.format ?? "json"];
+      pushOption(cliArgs, "--content-format", args.content_format);
+      pushOption(cliArgs, "--mime-type", args.mime_type);
+      pushOption(cliArgs, "--config-json", args.config_json);
+      return runCli(cliArgs, context, directory);
+    },
+  };
+}
 
-export default XbergPlugin;
+function detectTool(directory) {
+  return {
+    name: "xberg_detect",
+    description: "Detect the MIME type for a local file with the xberg CLI.",
+    input: {
+      type: "object",
+      properties: { path: { type: "string", minLength: 1 }, format: wireFormat },
+      required: ["path"],
+      additionalProperties: false,
+    },
+    execute(args, context) {
+      return runCli(["detect", args.path, "--format", args.format ?? "json"], context, directory);
+    },
+  };
+}
+
+function formatsTool(directory) {
+  return {
+    name: "xberg_formats",
+    description: "List document formats supported by the xberg CLI.",
+    input: { type: "object", properties: { format: wireFormat }, additionalProperties: false },
+    execute(args, context) {
+      return runCli(["formats", "--format", args.format ?? "json"], context, directory);
+    },
+  };
+}
+
+export default {
+  id: "xberg",
+  async setup(ctx) {
+    await registerBundledContent(ctx);
+    await ctx.tool.transform((editor) => {
+      for (const tool of [
+        extractTool(ctx.location.directory),
+        detectTool(ctx.location.directory),
+        formatsTool(ctx.location.directory),
+      ]) {
+        editor.add(tool);
+      }
+    });
+  },
+};
