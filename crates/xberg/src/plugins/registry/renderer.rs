@@ -39,12 +39,9 @@ impl RegisteredRenderer {
         // derives without document structure and never fills in `elements`, which strips
         // every layout signal a renderer needs. Derive the structure tree explicitly and
         // attach both the element list and the source document so a foreign renderer can
-        // do layout-aware rendering.
-        let mut result = crate::extraction::derive::derive_extraction_result(
-            doc.clone(),
-            true,
-            crate::core::config::OutputFormat::Plain,
-        );
+        // do layout-aware rendering. The renderer's output is the `content` the caller
+        // gets, so the pages of this document are built as for an output that is not plain.
+        let mut result = crate::extraction::derive::derive_renderer_input(doc.clone());
         result.internal_document = Some(doc.clone());
         result.elements = Some(crate::extraction::transform::transform_extraction_result_to_elements(
             &result,
