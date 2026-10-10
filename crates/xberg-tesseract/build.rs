@@ -1917,6 +1917,11 @@ fn build_system_shim() {
 }
 
 fn main() {
+    // docs.rs only needs Rust declarations; native downloads and linking are unavailable. ~keep
+    if std::env::var_os("DOCS_RS").is_some() {
+        return;
+    }
+
     // `dynamic-linking` is an explicit opt out of the vendored build, so it outranks the
     // default `build-tesseract` rather than being ignored beside it. Cargo features are
     // additive and a dependent cannot switch off a dependency's defaults, so precedence here

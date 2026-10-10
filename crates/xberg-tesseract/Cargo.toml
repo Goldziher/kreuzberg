@@ -31,7 +31,6 @@ include = [
 same-file.workspace = true
 
 [package.metadata.docs.rs]
-features = ["docs-only"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lib]
