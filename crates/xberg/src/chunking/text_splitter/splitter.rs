@@ -342,11 +342,29 @@ where
     /// Will return `None` if given an invalid range.
     fn next_chunk(&mut self) -> Option<(usize, &'text str)> {
         self.semantic_split.update_cursor(self.cursor);
-        let low = self.update_next_sections(false);
+        let low = self.update_next_sections(Retry::First);
         let (mut start, mut end) = self.binary_search_next_chunk(low)?;
-        if end < self.text.len() && is_mark_only(self.text.get(start..end)?) {
-            let low = self.update_next_sections(true);
+        for retry in [Retry::SkipMarkLevels, Retry::SkipSemantic] {
+            if end >= self.text.len() || !is_mark_only(self.text.get(start..end)?) {
+                break;
+            }
+            let low = self.update_next_sections(retry);
             (start, end) = self.binary_search_next_chunk(low)?;
+        }
+        // An overlap is measured trimmed, but a chunk spanning several lines keeps its leading
+        // indentation, so one opening on a wide whitespace run would share far more with the
+        // previous chunk than the overlap allows.
+        if start < self.prev_item_end {
+            let padding = leading_whitespace(self.text.get(start..end)?);
+            if padding > self.overlap.max {
+                start += padding;
+            }
+        }
+        if end < self.text.len()
+            && is_mark_only(self.text.get(end..)?)
+            && let Some(earlier) = self.end_before_mark_tail(start, end)
+        {
+            end = earlier;
         }
         let chunk = self.text.get(start..end)?;
         self.chunk_stats.update_max_chunk_size(end - start);
@@ -355,6 +373,30 @@ where
         self.update_cursor(end);
 
         Some(self.trim.trim(start, chunk))
+    }
+
+    /// An earlier end for the chunk `start..end` when everything after `end` is only marks.
+    ///
+    /// A closing quote, bracket or bullet that spills one section past a full chunk would
+    /// otherwise become a chunk of its own. Ending the chunk one content section sooner lets the
+    /// final chunk carry that section along with the marks, provided it fits the capacity.
+    fn end_before_mark_tail(&mut self, start: usize, end: usize) -> Option<usize> {
+        let text = self.text;
+        let tail_end = text.len();
+        let earlier = self
+            .next_sections
+            .iter()
+            .rev()
+            .map(|&(offset, section)| offset + section.len())
+            .filter(|&section_end| section_end < end && section_end > start)
+            .find(|&section_end| !lacks_content(&text[section_end..end]))?;
+        if lacks_content(&text[start..earlier]) {
+            return None;
+        }
+        let tail_size = self
+            .chunk_sizer
+            .chunk_size(earlier, &text[earlier..tail_end], self.trim);
+        self.capacity.fits(tail_size).is_le().then_some(earlier)
     }
 
     /// Use binary search to find the next chunk that fits within the chunk size
@@ -473,8 +515,11 @@ where
     fn semantic_level_and_offset(
         &mut self,
         remaining_text: &'text str,
-        avoid_dangling: bool,
+        retry: Retry,
     ) -> (Option<Level>, Option<usize>) {
+        if retry == Retry::SkipSemantic {
+            return (None, None);
+        }
         self.chunk_sizer.find_correct_level(
             self.cursor,
             &self.capacity,
@@ -486,7 +531,7 @@ where
                         .next()
                         .map(|(_, str)| (level, str))
                 })
-                .filter(|&(_, str)| !(avoid_dangling && is_mark_only(str))),
+                .filter(|&(_, str)| !(retry != Retry::First && is_mark_only(str))),
             self.trim,
         )
     }
@@ -529,14 +574,16 @@ where
         &mut self,
         window: &'text str,
         max_offset: Option<usize>,
-        avoid_dangling: bool,
+        retry: Retry,
     ) -> (FallbackLevel, Option<usize>) {
         let (semantic_level, fallback_max_offset) = self.chunk_sizer.find_correct_level(
             self.cursor,
             &self.capacity,
             FallbackLevel::iter()
                 .filter_map(|level| level.sections(window).next().map(|(_, str)| (level, str)))
-                .filter(|&(level, str)| !(avoid_dangling && level == FallbackLevel::Sentence && is_mark_only(str))),
+                .filter(|&(level, str)| {
+                    !(retry != Retry::First && level == FallbackLevel::Sentence && is_mark_only(str))
+                }),
             self.trim,
         );
 
@@ -551,12 +598,12 @@ where
     /// Find the ideal next sections, breaking it up until we find the largest chunk.
     /// Increasing length of chunk until we find biggest size to minimize validation time
     /// on huge chunks
-    fn update_next_sections(&mut self, avoid_dangling: bool) -> usize {
+    fn update_next_sections(&mut self, retry: Retry) -> usize {
         self.next_sections.clear();
 
         let remaining_text = self.text.get(self.cursor..).unwrap();
 
-        let (semantic_level, mut max_offset) = self.semantic_level_and_offset(remaining_text, avoid_dangling);
+        let (semantic_level, mut max_offset) = self.semantic_level_and_offset(remaining_text, retry);
 
         let sections = if let Some(semantic_level) = semantic_level {
             Either::Left(
@@ -565,8 +612,7 @@ where
             )
         } else {
             let window = self.fallback_window(remaining_text);
-            let (fallback_level, merged_max_offset) =
-                self.fallback_level_and_offset(window, max_offset, avoid_dangling);
+            let (fallback_level, merged_max_offset) = self.fallback_level_and_offset(window, max_offset, retry);
             max_offset = merged_max_offset;
 
             Either::Right(
@@ -638,38 +684,32 @@ where
 /// A cut that lands just before a sentence's closing mark, or a list bullet, heading marker or
 /// table pipe that is followed by a unit too long to join it, can leave a chunk that carries no
 /// content at all. Such a chunk is redone without anchoring to the level that produced it, which
-/// fills it from finer units instead.
+/// fills it from finer units instead. Anything that is neither alphanumeric nor whitespace counts
+/// as a mark, so typographic bullets and quotes are covered along with ASCII punctuation.
 fn is_mark_only(text: &str) -> bool {
-    !text.trim().is_empty()
-        && text.chars().all(|c| {
-            c.is_whitespace()
-                || c.is_ascii_punctuation()
-                || matches!(
-                    c,
-                    '\u{2026}'
-                        | '\u{2025}'
-                        | '\u{201d}'
-                        | '\u{2019}'
-                        | '\u{bb}'
-                        | '\u{3001}'
-                        | '\u{3002}'
-                        | '\u{ff01}'
-                        | '\u{ff09}'
-                        | '\u{ff0c}'
-                        | '\u{ff1a}'
-                        | '\u{ff1b}'
-                        | '\u{ff1f}'
-                        | '\u{300d}'
-                        | '\u{300f}'
-                        | '\u{3011}'
-                        | '\u{61f}'
-                        | '\u{60c}'
-                        | '\u{61b}'
-                        | '\u{6d4}'
-                        | '\u{964}'
-                        | '\u{965}'
-                )
-        })
+    !text.trim().is_empty() && lacks_content(text)
+}
+
+/// How a chunk is rebuilt after the previous attempt produced only marks.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Retry {
+    /// The first attempt, anchored to the deepest semantic level whose first section fits.
+    First,
+    /// Skip levels that open on a mark, so a bullet or quote is filled from finer units.
+    SkipMarkLevels,
+    /// Ignore the semantic levels, for marks hidden behind a leading line break or space that
+    /// make every level look like it opens on content.
+    SkipSemantic,
+}
+
+/// Bytes of whitespace `text` opens with.
+fn leading_whitespace(text: &str) -> usize {
+    text.len() - text.trim_start().len()
+}
+
+/// Whether `text` has no letter or digit.
+fn lacks_content(text: &str) -> bool {
+    !text.chars().any(char::is_alphanumeric)
 }
 
 /// Smallest fallback lookahead window, so tiny capacities still see a few words.

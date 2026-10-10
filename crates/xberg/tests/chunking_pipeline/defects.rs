@@ -107,3 +107,59 @@ fn bullets_heading_markers_and_closing_marks_are_never_chunks_of_their_own() {
         }
     }
 }
+
+fn assert_every_chunk_has_content(text: &str, chunkers: &[ChunkerType], capacities: &[usize]) {
+    for &chunker in chunkers {
+        for &max in capacities {
+            let result = run(text, &config(chunker, max, 0), None);
+            for chunk in &result.chunks {
+                assert!(
+                    chunk.content.chars().any(char::is_alphanumeric),
+                    "{chunker:?} max={max}: chunk {:?} at {} carries no content",
+                    chunk.content,
+                    chunk.metadata.byte_start
+                );
+            }
+        }
+    }
+}
+
+/// An opening quote followed by a sentence too long to join it was left alone: the soft break
+/// before it made its level look like it opened on content.
+#[test]
+fn opening_quotes_stay_with_the_text_that_follows() {
+    let mut text = String::new();
+    for i in 0..40 {
+        text.push_str(&format!(
+            "CHAPTER {i}\n\n\"Well, Prince, so Genoa and Lucca are now just family estates of the Buonapartes, I warn you\"\n\n"
+        ));
+    }
+    assert_every_chunk_has_content(&text, &[ChunkerType::Markdown], &[30, 50]);
+}
+
+/// Only ASCII punctuation counted as a mark, so a typographic bullet followed by an inline code
+/// span too long to join it was not recognized as a lone mark.
+#[test]
+fn typographic_bullets_stay_with_the_text_that_follows() {
+    let mut text = String::new();
+    for i in 0..40 {
+        text.push_str(&format!(
+            "\u{2022}\u{a0}`alpha beta gamma delta epsilon zeta eta theta {i}`\n\n"
+        ));
+    }
+    assert_every_chunk_has_content(&text, &[ChunkerType::Markdown], &[30, 50]);
+}
+
+/// A closing mark that spilled one section past a full chunk became the whole final chunk, even
+/// though ending the previous chunk a word sooner lets the last chunk carry that word with it.
+#[test]
+fn a_closing_mark_after_a_full_chunk_is_not_left_as_the_final_chunk() {
+    let text = format!("{}bb)", "aaaaa ".repeat(8));
+    assert_every_chunk_has_content(&text, &[ChunkerType::Text, ChunkerType::Markdown], &[50]);
+    let result = run(&text, &config(ChunkerType::Text, 50, 0), None);
+    let last = result.chunks.last().unwrap();
+    assert_eq!(last.content, "bb)");
+    for pair in result.chunks.windows(2) {
+        assert!(pair[0].metadata.byte_end <= pair[1].metadata.byte_start);
+    }
+}

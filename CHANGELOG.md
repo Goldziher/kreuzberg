@@ -64,6 +64,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(chunking): YAML and JSON section chunks report where their section sits in the source.** Every section used to
   carry `byte_start` and `byte_end` of 0, so all sections resolved to the first page and the offsets located nothing.
   Sections now carry the byte range of their key through the end of their value, `first_page`, `last_page` and
+- **(chunking): opening quotes, typographic bullets and a closing mark after a full chunk stay with their text.** A
+  `"` after a line break, or a `•` bullet, followed by a unit too long to join it was left as a chunk of its own, as
+  was a closing `)` or `"` that spilled just past a full final chunk. The splitter now treats any non-alphanumeric
+  mark as a mark, refills such a chunk from finer units, and ends the previous chunk a word sooner when only marks
+  would remain. A leading whitespace run wider than `overlap` is no longer carried into the next chunk as overlap.
   `page_spans` cover the pages that range touches, and the pieces of a section that had to be split share that range.
   A section the scanner cannot place falls back to its nearest enclosing key.
 - **(chunking): attaching bounding boxes and node ids to chunks scales linearly on pages that hold many nodes.** Each
