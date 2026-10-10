@@ -128,18 +128,17 @@ pub(crate) fn merge_segments(
             });
         } else {
             let splitter = TextSplitter::new(max_characters);
-            let sub_chunks: Vec<&str> = splitter.chunks(group_text).collect();
-            let num_sub = sub_chunks.len();
-            let span = group_byte_end.saturating_sub(group_byte_start);
+            let group_origin = group_text.as_ptr() as usize;
 
-            for (idx, chunk_text) in sub_chunks.iter().enumerate() {
-                let approx_start = group_byte_start + (span as f64 * idx as f64 / num_sub as f64) as usize;
-                let approx_end = group_byte_start + (span as f64 * (idx + 1) as f64 / num_sub as f64) as usize;
+            for chunk_text in splitter.chunks(group_text) {
+                // The splitter yields subslices of `group_text`, so pointer distance is the exact
+                // byte offset; the trimmed chunk's own span is what the offsets must describe.
+                let byte_start = group_byte_start + (chunk_text.as_ptr() as usize - group_origin);
 
                 result.push(MergedChunk {
-                    text: (*chunk_text).to_string(),
-                    byte_start: approx_start,
-                    byte_end: approx_end,
+                    text: chunk_text.to_string(),
+                    byte_start,
+                    byte_end: byte_start + chunk_text.len(),
                 });
             }
         }
@@ -325,6 +324,25 @@ mod tests {
     fn tail_chars_exceeds_length() {
         assert_eq!(tail_chars("hi", 10), "hi");
         assert_eq!(tail_chars("café", 100), "café");
+    }
+
+    #[test]
+    fn oversized_group_chunks_report_the_exact_span_of_their_text() {
+        let source = format!("preamble  {}", "caf\u{e9} \u{65e5}\u{672c}\u{8a9e} word ".repeat(40));
+        let body = source.trim_end();
+        let segments = [Segment {
+            text: &body[10..],
+            byte_start: 10,
+        }];
+        let chunks = merge_segments(body, &segments, &[true], 30, 0);
+        assert!(chunks.len() > 2, "oversized group must be re-split");
+        for chunk in &chunks {
+            assert_eq!(
+                body.get(chunk.byte_start..chunk.byte_end),
+                Some(chunk.text.as_str()),
+                "offsets must locate the chunk text on char boundaries"
+            );
+        }
     }
 
     #[test]

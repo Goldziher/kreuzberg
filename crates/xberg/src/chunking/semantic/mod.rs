@@ -8,7 +8,7 @@ pub mod merge;
 #[cfg(feature = "embeddings")]
 pub mod topic;
 
-use crate::chunking::boundaries::{calculate_page_range, calculate_page_spans};
+use crate::chunking::boundaries::PageIndex;
 use crate::chunking::boundary_detection::detect_plain_text_boundaries;
 use crate::chunking::builder::{heading_path_from_context, resolve_token_counter};
 use crate::chunking::classifier::classify_chunk;
@@ -69,15 +69,20 @@ pub(crate) fn chunk_semantic(
     let merged = merge::merge_segments(text, &segments, &boundaries, ceiling, config.overlap);
 
     let heading_map = build_heading_map(text);
+    let page_index = match page_boundaries {
+        Some(boundaries) if !merged.is_empty() => Some(PageIndex::new(boundaries)?),
+        _ => None,
+    };
     let total_chunks = merged.len();
     let mut chunks = Vec::with_capacity(total_chunks);
     let token_counter = resolve_token_counter(&config.sizing);
 
     for (index, mc) in merged.into_iter().enumerate() {
-        let heading_ctx = resolve_heading_context(mc.byte_start, &heading_map, page_boundaries);
+        let heading_ctx = resolve_heading_context(mc.byte_start, &heading_map, page_index.as_ref());
         let chunk_type = classify_chunk(&mc.text, heading_ctx.as_ref());
 
-        let (first_page, last_page, page_spans) = resolve_page_provenance(mc.byte_start, mc.byte_end, page_boundaries)?;
+        let (first_page, last_page, page_spans) =
+            resolve_page_provenance(mc.byte_start, mc.byte_end, page_index.as_ref());
 
         let heading_path = heading_path_from_context(&heading_ctx);
         let token_count = token_counter.as_ref().map(|counter| counter(&mc.text));
@@ -166,20 +171,20 @@ fn forced_boundaries(text: &str, segments: &[Segment<'_>]) -> Vec<bool> {
 }
 
 /// Resolve a merged chunk's page range and page spans from the page boundaries.
+///
+/// Boundary-validation errors surface when the [`PageIndex`] is built, instead of silently
+/// discarding page provenance (#258) — matching the non-semantic path (`chunking/builder.rs`).
 fn resolve_page_provenance(
     byte_start: usize,
     byte_end: usize,
-    page_boundaries: Option<&[PageBoundary]>,
-) -> Result<(Option<u32>, Option<u32>, Vec<crate::types::PageSpan>)> {
-    if let Some(pb) = page_boundaries {
-        // Propagate boundary-validation errors instead of silently discarding page
-        // provenance (#258) — matches the non-semantic path (chunking/builder.rs),
-        // which propagates the same errors via `?`.
-        let (first_page, last_page) = calculate_page_range(byte_start, byte_end, pb)?;
-        let page_spans = calculate_page_spans(byte_start, byte_end, pb)?;
-        Ok((first_page, last_page, page_spans))
-    } else {
-        Ok((None, None, Vec::new()))
+    pages: Option<&PageIndex<'_>>,
+) -> (Option<u32>, Option<u32>, Vec<crate::types::PageSpan>) {
+    match pages {
+        Some(pages) => {
+            let (first_page, last_page) = pages.range(byte_start, byte_end);
+            (first_page, last_page, pages.spans(byte_start, byte_end))
+        }
+        None => (None, None, Vec::new()),
     }
 }
 
@@ -619,7 +624,7 @@ mod tests {
             ..Default::default()
         };
         // byte_start > byte_end: rejected by `validate_page_boundaries` inside
-        // `calculate_page_range`/`calculate_page_spans`.
+        // `PageIndex::new`.
         let boundaries = vec![PageBoundary {
             byte_start: 15,
             byte_end: 10,

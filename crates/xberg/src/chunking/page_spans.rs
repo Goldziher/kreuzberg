@@ -21,6 +21,7 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
+use super::node_text_trie::NodeTextTrie;
 use crate::types::document_structure::{ContentLayer, DocumentNode, DocumentStructure, NodeContent};
 use crate::types::{BoundingBox, Chunk};
 
@@ -33,6 +34,34 @@ use crate::types::{BoundingBox, Chunk};
 /// headings and list items. Nodes with shorter text are skipped for bbox aggregation — their
 /// page still appears in `page_spans`, just without a bbox contribution from that node.
 const MIN_NODE_TEXT_MATCH_LEN: usize = 10;
+
+/// Pages with at least this many candidate nodes are matched through a [`NodeTextTrie`]
+/// instead of testing every node against every chunk.
+const TRIE_MIN_NODES: usize = 64;
+
+/// A page's body-layer nodes, with a text index when there are enough of them to need one.
+struct PageNodes<'a> {
+    nodes: Vec<&'a DocumentNode>,
+    trie: Option<NodeTextTrie>,
+}
+
+impl<'a> PageNodes<'a> {
+    fn new(nodes: Vec<&'a DocumentNode>) -> Self {
+        let trie = (nodes.len() >= TRIE_MIN_NODES).then(|| {
+            let mut trie = NodeTextTrie::new();
+            for (id, node) in nodes.iter().enumerate() {
+                for text in node_text_for_matching(&node.content) {
+                    let trimmed = text.trim();
+                    if trimmed.len() >= MIN_NODE_TEXT_MATCH_LEN {
+                        trie.insert(trimmed.as_bytes(), id as u32);
+                    }
+                }
+            }
+            trie
+        });
+        Self { nodes, trie }
+    }
+}
 
 /// Fill in `bbox` on each chunk's `page_spans`, and `metadata.node_ids`, using the document's
 /// structured node tree.
@@ -86,7 +115,7 @@ pub(crate) fn populate_page_span_bboxes(chunks: &mut [Chunk], structure: &Docume
 /// existed (`node.page..=node.page_end` covers the span's page). Non-body-layer nodes (headers,
 /// footers, footnotes) and nodes without a `page` are omitted entirely, since they never
 /// contribute to a bbox union.
-fn index_body_nodes_by_page(nodes: &[DocumentNode]) -> HashMap<u32, Vec<&DocumentNode>> {
+fn index_body_nodes_by_page(nodes: &[DocumentNode]) -> HashMap<u32, PageNodes<'_>> {
     let mut index: HashMap<u32, Vec<&DocumentNode>> = HashMap::new();
 
     for node in nodes {
@@ -102,6 +131,9 @@ fn index_body_nodes_by_page(nodes: &[DocumentNode]) -> HashMap<u32, Vec<&Documen
     }
 
     index
+        .into_iter()
+        .map(|(page, nodes)| (page, PageNodes::new(nodes)))
+        .collect()
 }
 
 /// Match all `nodes` (already scoped to a single page) whose text is found in `chunk_content`,
@@ -110,11 +142,25 @@ fn index_body_nodes_by_page(nodes: &[DocumentNode]) -> HashMap<u32, Vec<&Documen
 /// A node contributes its `id` whenever its text matches, independent of whether it carries a
 /// `bbox` — `node_ids` link chunks back to structure nodes and shouldn't be gated on layout
 /// coordinates being available.
-fn match_page_nodes<'a>(chunk_content: &str, nodes: &[&'a DocumentNode]) -> (Option<BoundingBox>, Vec<&'a str>) {
+fn match_page_nodes<'a>(chunk_content: &str, page: &PageNodes<'a>) -> (Option<BoundingBox>, Vec<&'a str>) {
     let mut union = None;
     let mut ids = Vec::new();
 
-    for node in nodes.iter().filter(|node| node_text_matches_chunk(node, chunk_content)) {
+    let matched: Vec<&'a DocumentNode> = match &page.trie {
+        Some(trie) => trie
+            .matching_ids(chunk_content.as_bytes())
+            .into_iter()
+            .map(|id| page.nodes[id as usize])
+            .collect(),
+        None => page
+            .nodes
+            .iter()
+            .copied()
+            .filter(|node| node_text_matches_chunk(node, chunk_content))
+            .collect(),
+    };
+
+    for node in matched {
         if let Some(bbox) = node.bbox {
             union = Some(union_bbox(union, bbox));
         }
@@ -511,17 +557,17 @@ mod tests {
         let index = index_body_nodes_by_page(&nodes);
 
         assert_eq!(
-            index.get(&2).map(Vec::len),
+            index.get(&2).map(|page| page.nodes.len()),
             Some(1),
             "page 2 must only see the spanning node"
         );
         assert_eq!(
-            index.get(&3).map(Vec::len),
+            index.get(&3).map(|page| page.nodes.len()),
             Some(2),
             "page 3 must see both the spanning node and the single-page node, but not the header"
         );
         assert_eq!(
-            index.get(&4).map(Vec::len),
+            index.get(&4).map(|page| page.nodes.len()),
             Some(1),
             "page 4 must only see the spanning node"
         );
@@ -948,5 +994,85 @@ mod tests {
 
         assert_eq!(chunks[0].metadata.page_spans[0].bbox, None);
         assert!(chunks[0].metadata.node_ids.is_empty());
+    }
+
+    /// One page holding every node is the worst case for the per-page node scan: each chunk is
+    /// matched against all of them.
+    #[test]
+    fn bbox_population_scales_linearly_when_all_nodes_share_one_page() {
+        fn time_for(nodes: usize) -> f64 {
+            let texts: Vec<String> = (0..nodes)
+                .map(|i| format!("paragraph number {i} with some filler words"))
+                .collect();
+            let structure_nodes: Vec<DocumentNode> = texts
+                .iter()
+                .map(|t| body_node(t, 1, Some(bbox(0.0, 0.0, 1.0, 1.0))))
+                .collect();
+            let structure = DocumentStructure {
+                nodes: structure_nodes,
+                source_format: None,
+                relationships: Vec::new(),
+                node_types: Vec::new(),
+            };
+            let per_chunk = 8;
+            let mut chunks: Vec<Chunk> = texts
+                .chunks(per_chunk)
+                .map(|group| chunk_with_spans(&group.join("\n\n"), vec![PageSpan { page: 1, bbox: None }]))
+                .collect();
+            let start = std::time::Instant::now();
+            populate_page_span_bboxes(&mut chunks, &structure);
+            start.elapsed().as_secs_f64() * 1e3
+        }
+        let small = time_for(1_000).max(0.05);
+        let large = time_for(8_000);
+        assert!(
+            large / small < 24.0,
+            "8x nodes took {:.1}x as long ({small:.2}ms -> {large:.2}ms)",
+            large / small
+        );
+    }
+
+    #[test]
+    fn trie_matching_selects_exactly_the_nodes_substring_matching_selects() {
+        let texts: Vec<String> = (0..200)
+            .map(|i| match i % 5 {
+                0 => format!("  shared heading text {}  ", i % 7),
+                1 => format!("short{i}"),
+                2 => format!("unique paragraph body number {i} ends here"),
+                3 => "shared heading text 3".to_string(),
+                _ => format!("日本語の段落 {i} が続きます"),
+            })
+            .collect();
+        let nodes: Vec<DocumentNode> = texts
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                let mut node =
+                    body_node_with_id(&format!("n{i}"), t, 1, Some(bbox(i as f64, 0.0, i as f64 + 1.0, 1.0)));
+                node.id = format!("n{i}");
+                node
+            })
+            .collect();
+        let with_trie = PageNodes::new(nodes.iter().collect());
+        assert!(with_trie.trie.is_some());
+        let brute = PageNodes {
+            nodes: nodes.iter().collect(),
+            trie: None,
+        };
+        for content in [
+            "",
+            "shared heading text 3 and shared heading text 4",
+            "unique paragraph body number 12 ends here plus 日本語の段落 4 が続きます and short1",
+            "xx unique paragraph body number 77 ends here",
+            &texts.join("\n"),
+        ] {
+            let (fast_bbox, fast_ids) = match_page_nodes(content, &with_trie);
+            let (slow_bbox, slow_ids) = match_page_nodes(content, &brute);
+            assert_eq!(fast_ids, slow_ids, "ids for {content:?}");
+            assert_eq!(
+                fast_bbox.map(|b| (b.x0, b.y0, b.x1, b.y1)),
+                slow_bbox.map(|b| (b.x0, b.y0, b.x1, b.y1))
+            );
+        }
     }
 }

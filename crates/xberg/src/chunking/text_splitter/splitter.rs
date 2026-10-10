@@ -1,6 +1,6 @@
 //! Vendored from text-splitter v0.30.1 (MIT, © 2023 Benjamin Brandt). See ATTRIBUTIONS.md.
 
-use std::{cmp::Ordering, fmt, iter::once, ops::Range};
+use std::{cmp::Ordering, collections::BTreeMap, fmt, iter::once, ops::Range};
 
 use either::Either;
 use itertools::Itertools;
@@ -109,8 +109,71 @@ where
     /// Current cursor in the ranges list, so that we can skip over items we've
     /// already processed.
     cursor: usize,
+    /// Indexes each level's occurrences so future chunks never rescan the remaining tail. ~keep
+    level_indices: BTreeMap<Level, Vec<usize>>,
+    /// Supports successor queries by minimum level without visiting lower-level ranges. ~keep
+    level_tree: LevelRangeTree<Level>,
     /// Range of each semantic item and its precalculated semantic level
     ranges: Vec<(Level, Range<usize>)>,
+}
+
+#[derive(Debug)]
+struct LevelRangeTree<Level>
+where
+    Level: SemanticLevel,
+{
+    leaf_count: usize,
+    levels: Vec<Option<Level>>,
+    range_count: usize,
+}
+
+impl<Level> LevelRangeTree<Level>
+where
+    Level: SemanticLevel,
+{
+    fn new(ranges: &[(Level, Range<usize>)]) -> Self {
+        let leaf_count = ranges.len().next_power_of_two().max(1);
+        let mut levels = vec![None; leaf_count * 2];
+        for (index, (level, _)) in ranges.iter().enumerate() {
+            levels[leaf_count + index] = Some(*level);
+        }
+        for index in (1..leaf_count).rev() {
+            levels[index] = levels[index * 2].max(levels[index * 2 + 1]);
+        }
+        Self {
+            leaf_count,
+            levels,
+            range_count: ranges.len(),
+        }
+    }
+
+    fn first_at_or_above(&self, start: usize, minimum: Level) -> Option<usize> {
+        if start >= self.range_count {
+            return None;
+        }
+        self.first_in_node(1, 0, self.leaf_count, start, minimum)
+            .filter(|index| *index < self.range_count)
+    }
+
+    fn first_in_node(
+        &self,
+        node: usize,
+        node_start: usize,
+        node_end: usize,
+        start: usize,
+        minimum: Level,
+    ) -> Option<usize> {
+        if node_end <= start || self.levels[node].is_none_or(|maximum| maximum < minimum) {
+            return None;
+        }
+        if node_end - node_start == 1 {
+            return Some(node_start);
+        }
+
+        let midpoint = node_start + (node_end - node_start) / 2;
+        self.first_in_node(node * 2, node_start, midpoint, start, minimum)
+            .or_else(|| self.first_in_node(node * 2 + 1, midpoint, node_end, start, minimum))
+    }
 }
 
 impl<Level> SemanticSplitRanges<Level>
@@ -119,14 +182,28 @@ where
 {
     fn new(mut ranges: Vec<(Level, Range<usize>)>) -> Self {
         ranges.sort_unstable_by(|(_, a), (_, b)| a.start.cmp(&b.start).then_with(|| b.end.cmp(&a.end)));
-        Self { cursor: 0, ranges }
+        let mut level_indices = BTreeMap::<Level, Vec<usize>>::new();
+        for (index, (level, _)) in ranges.iter().enumerate() {
+            level_indices.entry(*level).or_default().push(index);
+        }
+        let level_tree = LevelRangeTree::new(&ranges);
+        Self {
+            cursor: 0,
+            level_indices,
+            level_tree,
+            ranges,
+        }
+    }
+
+    fn index_after_offset(&self, offset: usize) -> usize {
+        self.cursor + self.ranges[self.cursor..].partition_point(|(_, range)| range.start < offset)
     }
 
     /// Retrieve ranges for all sections of a given level after an offset
+    #[cfg(test)]
     fn ranges_after_offset(&self, offset: usize) -> impl Iterator<Item = (Level, Range<usize>)> + '_ {
-        self.ranges[self.cursor..]
+        self.ranges[self.index_after_offset(offset)..]
             .iter()
-            .filter(move |(_, sep)| sep.start >= offset)
             .map(|(l, r)| (*l, r.start..r.end))
     }
     /// Retrieve ranges for all sections of a given level after an offset
@@ -135,34 +212,46 @@ where
         offset: usize,
         level: Level,
     ) -> impl Iterator<Item = (Level, Range<usize>)> + '_ {
-        let first_item = self
-            .ranges_after_offset(offset)
-            .position(|(l, _)| l == level)
-            .and_then(|i| {
-                self.ranges_after_offset(offset)
-                    .skip(i)
-                    .coalesce(|(a_level, a_range), (b_level, b_range)| {
-                        if a_level == b_level && a_range.start == b_range.start && i == 0 {
-                            Ok((b_level, b_range))
-                        } else {
-                            Err(((a_level, a_range), (b_level, b_range)))
-                        }
-                    })
-                    .next()
-            });
-        self.ranges_after_offset(offset)
-            .filter(move |(l, _)| l >= &level)
-            .skip_while(move |(l, r)| {
-                first_item.as_ref().is_some_and(|(_, fir)| {
-                    (l > &level && r.contains(&fir.start)) || (l == &level && r.start == fir.start && r.end > fir.end)
-                })
+        let start_index = self.index_after_offset(offset);
+        let first_item = self.level_indices.get(&level).and_then(|indices| {
+            let position = indices.partition_point(|index| *index < start_index);
+            let mut index = *indices.get(position)?;
+            if index == start_index {
+                let start = self.ranges[index].1.start;
+                while self
+                    .ranges
+                    .get(index + 1)
+                    .is_some_and(|(next_level, next_range)| *next_level == level && next_range.start == start)
+                {
+                    index += 1;
+                }
+            }
+            let (first_level, first_range) = &self.ranges[index];
+            Some((*first_level, first_range.clone()))
+        });
+
+        let mut next_index = start_index;
+        std::iter::from_fn(move || {
+            let index = self.level_tree.first_at_or_above(next_index, level)?;
+            next_index = index + 1;
+            let (item_level, range) = &self.ranges[index];
+            Some((*item_level, range.clone()))
+        })
+        .skip_while(move |(l, r)| {
+            first_item.as_ref().is_some_and(|(_, fir)| {
+                (l > &level && r.contains(&fir.start)) || (l == &level && r.start == fir.start && r.end > fir.end)
             })
+        })
     }
 
     /// Return a unique, sorted list of all line break levels present before the next max level, added
     /// to all of the base semantic levels, in order from smallest to largest
     fn levels_in_remaining_text(&self, offset: usize) -> impl Iterator<Item = Level> + '_ {
-        self.ranges_after_offset(offset).map(|(l, _)| l).sorted().dedup()
+        let start_index = self.index_after_offset(offset);
+        self.level_indices
+            .iter()
+            .filter(move |(_, indices)| indices.last().is_some_and(|index| *index >= start_index))
+            .map(|(level, _)| *level)
     }
 
     /// Split a given text into iterator over each semantic chunk
@@ -182,10 +271,7 @@ where
 
     /// Clear out ranges we have moved past so future iterations are faster
     fn update_cursor(&mut self, cursor: usize) {
-        self.cursor += self.ranges[self.cursor..]
-            .iter()
-            .position(|(_, range)| range.start >= cursor)
-            .unwrap_or_else(|| self.ranges.len() - self.cursor);
+        self.cursor = self.index_after_offset(cursor);
     }
 }
 
@@ -256,8 +342,12 @@ where
     /// Will return `None` if given an invalid range.
     fn next_chunk(&mut self) -> Option<(usize, &'text str)> {
         self.semantic_split.update_cursor(self.cursor);
-        let low = self.update_next_sections();
-        let (start, end) = self.binary_search_next_chunk(low)?;
+        let low = self.update_next_sections(false);
+        let (mut start, mut end) = self.binary_search_next_chunk(low)?;
+        if end < self.text.len() && is_mark_only(self.text.get(start..end)?) {
+            let low = self.update_next_sections(true);
+            (start, end) = self.binary_search_next_chunk(low)?;
+        }
         let chunk = self.text.get(start..end)?;
         self.chunk_stats.update_max_chunk_size(end - start);
 
@@ -380,7 +470,11 @@ where
     }
 
     /// The deepest semantic level whose first section still fits, with the offset cap it implies.
-    fn semantic_level_and_offset(&mut self, remaining_text: &'text str) -> (Option<Level>, Option<usize>) {
+    fn semantic_level_and_offset(
+        &mut self,
+        remaining_text: &'text str,
+        avoid_dangling: bool,
+    ) -> (Option<Level>, Option<usize>) {
         self.chunk_sizer.find_correct_level(
             self.cursor,
             &self.capacity,
@@ -391,22 +485,58 @@ where
                         .semantic_chunks(self.cursor, remaining_text, level)
                         .next()
                         .map(|(_, str)| (level, str))
-                }),
+                })
+                .filter(|&(_, str)| !(avoid_dangling && is_mark_only(str))),
             self.trim,
         )
+    }
+
+    /// The prefix of `remaining_text` the fallback levels need to look at.
+    ///
+    /// Unicode sentence and dictionary word segmentation scan the whole remaining text to find
+    /// the first segment, which made every chunk of a document with no newline levels cost
+    /// O(remaining) and the whole split quadratic. A chunk can never extend past the first
+    /// prefix that already exceeds the capacity, so the levels are computed on a prefix that
+    /// does, grown by doubling.
+    ///
+    /// The prefix ends where segmentation is independent of the text that was cut off. Sentence
+    /// rules can look arbitrarily far ahead only through an `ATerm` (`.`) that is not yet
+    /// followed by a letter, newline or other sentence terminator, so the prefix stops before
+    /// such a trailing `.`; other rules look a few characters ahead, covered by a fixed margin.
+    /// It relies on `size` never shrinking when text is appended, which holds for every sizer
+    /// the splitter ships.
+    fn fallback_window(&mut self, remaining_text: &'text str) -> &'text str {
+        let total = remaining_text.len();
+        let mut len = self.capacity.max.saturating_mul(4).max(MIN_WINDOW_BYTES);
+        loop {
+            if len >= total {
+                return remaining_text;
+            }
+            let end = stable_prefix_end(remaining_text, len);
+            let window = &remaining_text[..end];
+            if end > 0 {
+                let size = self.chunk_sizer.chunk_size(self.cursor, window, self.trim);
+                if self.capacity.fits(size).is_gt() {
+                    return window;
+                }
+            }
+            len = len.saturating_mul(2);
+        }
     }
 
     /// The fallback level to split on when no semantic level fits, with `max_offset` narrowed to it.
     fn fallback_level_and_offset(
         &mut self,
-        remaining_text: &'text str,
+        window: &'text str,
         max_offset: Option<usize>,
+        avoid_dangling: bool,
     ) -> (FallbackLevel, Option<usize>) {
         let (semantic_level, fallback_max_offset) = self.chunk_sizer.find_correct_level(
             self.cursor,
             &self.capacity,
             FallbackLevel::iter()
-                .filter_map(|level| level.sections(remaining_text).next().map(|(_, str)| (level, str))),
+                .filter_map(|level| level.sections(window).next().map(|(_, str)| (level, str)))
+                .filter(|&(level, str)| !(avoid_dangling && level == FallbackLevel::Sentence && is_mark_only(str))),
             self.trim,
         );
 
@@ -421,12 +551,12 @@ where
     /// Find the ideal next sections, breaking it up until we find the largest chunk.
     /// Increasing length of chunk until we find biggest size to minimize validation time
     /// on huge chunks
-    fn update_next_sections(&mut self) -> usize {
+    fn update_next_sections(&mut self, avoid_dangling: bool) -> usize {
         self.next_sections.clear();
 
         let remaining_text = self.text.get(self.cursor..).unwrap();
 
-        let (semantic_level, mut max_offset) = self.semantic_level_and_offset(remaining_text);
+        let (semantic_level, mut max_offset) = self.semantic_level_and_offset(remaining_text, avoid_dangling);
 
         let sections = if let Some(semantic_level) = semantic_level {
             Either::Left(
@@ -434,12 +564,14 @@ where
                     .semantic_chunks(self.cursor, remaining_text, semantic_level),
             )
         } else {
-            let (fallback_level, merged_max_offset) = self.fallback_level_and_offset(remaining_text, max_offset);
+            let window = self.fallback_window(remaining_text);
+            let (fallback_level, merged_max_offset) =
+                self.fallback_level_and_offset(window, max_offset, avoid_dangling);
             max_offset = merged_max_offset;
 
             Either::Right(
                 fallback_level
-                    .sections(remaining_text)
+                    .sections(window)
                     .map(|(offset, text)| (self.cursor + offset, text)),
             )
         };
@@ -498,6 +630,64 @@ where
         }
 
         low
+    }
+}
+
+/// Whether `text` holds only punctuation, markup marks and whitespace, with no letter or digit.
+///
+/// A cut that lands just before a sentence's closing mark, or a list bullet, heading marker or
+/// table pipe that is followed by a unit too long to join it, can leave a chunk that carries no
+/// content at all. Such a chunk is redone without anchoring to the level that produced it, which
+/// fills it from finer units instead.
+fn is_mark_only(text: &str) -> bool {
+    !text.trim().is_empty()
+        && text.chars().all(|c| {
+            c.is_whitespace()
+                || c.is_ascii_punctuation()
+                || matches!(
+                    c,
+                    '\u{2026}'
+                        | '\u{2025}'
+                        | '\u{201d}'
+                        | '\u{2019}'
+                        | '\u{bb}'
+                        | '\u{3001}'
+                        | '\u{3002}'
+                        | '\u{ff01}'
+                        | '\u{ff09}'
+                        | '\u{ff0c}'
+                        | '\u{ff1a}'
+                        | '\u{ff1b}'
+                        | '\u{ff1f}'
+                        | '\u{300d}'
+                        | '\u{300f}'
+                        | '\u{3011}'
+                        | '\u{61f}'
+                        | '\u{60c}'
+                        | '\u{61b}'
+                        | '\u{6d4}'
+                        | '\u{964}'
+                        | '\u{965}'
+                )
+        })
+}
+
+/// Smallest fallback lookahead window, so tiny capacities still see a few words.
+const MIN_WINDOW_BYTES: usize = 256;
+
+/// Bytes kept clear of the window end for rules that look a few characters ahead.
+const LOOKAHEAD_MARGIN_BYTES: usize = 64;
+
+/// End of the longest prefix of `text[..len]` whose fallback segmentation matches the full text.
+fn stable_prefix_end(text: &str, len: usize) -> usize {
+    let cut = text.floor_char_boundary(len.saturating_sub(LOOKAHEAD_MARGIN_BYTES));
+    let head = &text[..cut];
+    let last_terminator = head.char_indices().rev().find(|&(_, c)| {
+        c.is_alphabetic() || matches!(c, '.' | '!' | '?' | '\n' | '\r' | '\u{85}' | '\u{2028}' | '\u{2029}')
+    });
+    match last_terminator {
+        Some((position, '.')) => position,
+        _ => cut,
     }
 }
 
@@ -574,7 +764,87 @@ impl ChunkStats {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::Cell, cmp::Ordering};
+
     use super::*;
+
+    thread_local! {
+        static LEVEL_COMPARISONS: Cell<usize> = const { Cell::new(0) };
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    struct CountingLevel(u8);
+
+    impl CountingLevel {
+        fn reset_comparisons() {
+            LEVEL_COMPARISONS.set(0);
+        }
+
+        fn comparisons() -> usize {
+            LEVEL_COMPARISONS.get()
+        }
+
+        fn record_comparison() {
+            LEVEL_COMPARISONS.set(LEVEL_COMPARISONS.get() + 1);
+        }
+    }
+
+    impl PartialEq for CountingLevel {
+        fn eq(&self, other: &Self) -> bool {
+            Self::record_comparison();
+            self.0 == other.0
+        }
+    }
+
+    impl Eq for CountingLevel {}
+
+    impl PartialOrd for CountingLevel {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    impl Ord for CountingLevel {
+        fn cmp(&self, other: &Self) -> Ordering {
+            Self::record_comparison();
+            self.0.cmp(&other.0)
+        }
+    }
+
+    impl SemanticLevel for CountingLevel {}
+
+    fn legacy_level_ranges(
+        ranges: &SemanticSplitRanges<usize>,
+        offset: usize,
+        level: usize,
+    ) -> Vec<(usize, Range<usize>)> {
+        let remaining = ranges.ranges_after_offset(offset).collect::<Vec<_>>();
+        let first_item = remaining
+            .iter()
+            .position(|(item_level, _)| *item_level == level)
+            .map(|position| {
+                let mut first = remaining[position].clone();
+                if position == 0 {
+                    for candidate in &remaining[position + 1..] {
+                        if candidate.0 != first.0 || candidate.1.start != first.1.start {
+                            break;
+                        }
+                        first = candidate.clone();
+                    }
+                }
+                first
+            });
+        remaining
+            .into_iter()
+            .filter(|(item_level, _)| *item_level >= level)
+            .skip_while(|(item_level, range)| {
+                first_item.as_ref().is_some_and(|(_, first_range)| {
+                    (*item_level > level && range.contains(&first_range.start))
+                        || (*item_level == level && range.start == first_range.start && range.end > first_range.end)
+                })
+            })
+            .collect()
+    }
 
     #[test]
     fn chunk_stats_empty() {
@@ -614,5 +884,80 @@ mod tests {
         ranges.update_cursor(1);
 
         assert_eq!(ranges.ranges_after_offset(0).collect::<Vec<_>>(), vec![(0, 1..2)]);
+    }
+
+    #[test]
+    fn remaining_levels_do_not_rescan_all_future_ranges() {
+        let input = (0..8_192)
+            .map(|index| (CountingLevel((index % 2) as u8), index..index + 1))
+            .collect();
+        let mut ranges = SemanticSplitRanges::new(input);
+        CountingLevel::reset_comparisons();
+
+        for offset in (0..8_192).step_by(128) {
+            ranges.update_cursor(offset);
+            assert_eq!(ranges.levels_in_remaining_text(offset).count(), 2);
+        }
+
+        assert!(
+            CountingLevel::comparisons() < 1_000,
+            "remaining-level lookup performed {} level comparisons",
+            CountingLevel::comparisons()
+        );
+    }
+
+    #[test]
+    fn distant_higher_level_lookup_does_not_scan_lower_levels() {
+        let mut input = (0..8_191)
+            .map(|index| (CountingLevel(0), index..index + 1))
+            .collect::<Vec<_>>();
+        input.push((CountingLevel(1), 8_191..8_192));
+        let ranges = SemanticSplitRanges::new(input);
+        CountingLevel::reset_comparisons();
+
+        assert_eq!(
+            ranges
+                .level_ranges_after_offset(0, CountingLevel(1))
+                .next()
+                .map(|(_, range)| range),
+            Some(8_191..8_192)
+        );
+        assert!(
+            CountingLevel::comparisons() < 256,
+            "higher-level lookup performed {} level comparisons",
+            CountingLevel::comparisons()
+        );
+    }
+
+    #[test]
+    fn indexed_level_ranges_match_legacy_nested_range_semantics() {
+        let input = vec![
+            (3, 0..20),
+            (2, 0..15),
+            (1, 0..10),
+            (1, 0..8),
+            (0, 0..4),
+            (0, 4..8),
+            (2, 8..20),
+            (1, 8..16),
+            (0, 8..12),
+            (0, 12..16),
+            (3, 20..30),
+            (0, 20..25),
+        ];
+
+        for offset in [0, 4, 8, 12, 20] {
+            let mut ranges = SemanticSplitRanges::new(input.clone());
+            ranges.update_cursor(offset);
+            for level in 0..=3 {
+                let expected = legacy_level_ranges(&ranges, offset, level);
+
+                assert_eq!(
+                    ranges.level_ranges_after_offset(offset, level).collect::<Vec<_>>(),
+                    expected,
+                    "offset={offset}, level={level}"
+                );
+            }
+        }
     }
 }

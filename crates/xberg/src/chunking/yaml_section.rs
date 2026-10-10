@@ -14,7 +14,9 @@ use std::collections::VecDeque;
 use crate::error::Result;
 use crate::types::{Chunk, ChunkMetadata, PageBoundary};
 
+use super::boundaries::PageIndex;
 use super::config::{ChunkingConfig, ChunkingResult};
+use super::section_spans::{Span, json_member_spans, yaml_member_spans};
 
 /// Split YAML or JSON text into per-section chunks.
 ///
@@ -36,7 +38,8 @@ pub(crate) fn chunk_yaml_by_sections(
     }
 
     let trimmed = text.trim();
-    let sections = if trimmed.starts_with('{') || trimmed.starts_with('[') {
+    let is_json = trimmed.starts_with('{') || trimmed.starts_with('[');
+    let mut sections = if is_json {
         flatten_json(text)?
     } else {
         flatten_yaml(text)?
@@ -46,7 +49,33 @@ pub(crate) fn chunk_yaml_by_sections(
         return fallback_to_text(text, config);
     }
 
+    assign_source_spans(text, is_json, &mut sections);
+
     build_chunks_from_sections(&sections, config, page_boundaries)
+}
+
+/// Locate each section in the source text, falling back to its nearest located ancestor.
+///
+/// Sections the scanners cannot place keep a `0..0` range.
+fn assign_source_spans(text: &str, is_json: bool, sections: &mut [Section]) {
+    let spans = if is_json {
+        json_member_spans(text)
+    } else {
+        let prefixes: Vec<&[String]> = sections
+            .iter()
+            .flat_map(|section| (1..=section.path.len()).map(|len| &section.path[..len]))
+            .collect();
+        yaml_member_spans(text, prefixes)
+    };
+    for section in sections {
+        let located: Option<Span> = (1..=section.path.len())
+            .rev()
+            .find_map(|len| spans.get(&section.path[..len].join(" > ")).copied());
+        if let Some((start, end)) = located {
+            section.byte_start = start;
+            section.byte_end = end;
+        }
+    }
 }
 
 /// Parse JSON and flatten into leaf sections via BFS.
@@ -122,6 +151,7 @@ fn flatten_value_tree(roots: impl Iterator<Item = (String, serde_yaml_ng::Value)
             other => {
                 sections.push(Section {
                     key: path.join(" > "),
+                    path,
                     value: format_yaml_value(&other),
                     byte_start: 0,
                     byte_end: 0,
@@ -153,15 +183,6 @@ fn fallback_to_text(text: &str, config: &ChunkingConfig) -> Result<ChunkingResul
     super::core::chunk_text(text, &fallback_config, None)
 }
 
-/// Return the page number for a byte offset, or `None` if no boundary covers it.
-fn page_for_offset(offset: usize, boundaries: &[PageBoundary]) -> Option<u32> {
-    boundaries
-        .iter()
-        .find(|b| offset >= b.byte_start && offset < b.byte_end)
-        .map(|b| b.page_number)
-        .or_else(|| boundaries.last().map(|b| b.page_number))
-}
-
 /// Per-section page data derived from `page_boundaries`.
 struct SectionPageData {
     first_page: Option<u32>,
@@ -169,23 +190,24 @@ struct SectionPageData {
     page_spans: Vec<crate::types::PageSpan>,
 }
 
-/// Compute the page span data for a section from `page_boundaries`.
-fn section_page_data(section: &Section, page_boundaries: Option<&[PageBoundary]>) -> SectionPageData {
-    let (first_page, last_page) = match page_boundaries {
-        Some(b) if !b.is_empty() => (
-            page_for_offset(section.byte_start, b),
-            page_for_offset(section.byte_start, b),
-        ),
-        _ => (None, None),
+/// Compute the page data for a section from the pages its source range overlaps.
+///
+/// A section the scanners could not place has an empty range at offset 0 and resolves to the
+/// page containing that offset.
+fn section_page_data(section: &Section, pages: Option<&PageIndex<'_>>) -> SectionPageData {
+    let Some(pages) = pages else {
+        return SectionPageData {
+            first_page: None,
+            last_page: None,
+            page_spans: Vec::new(),
+        };
     };
-    let page_spans: Vec<crate::types::PageSpan> = first_page
-        .map(|page| vec![crate::types::PageSpan { page, bbox: None }])
-        .unwrap_or_default();
-
+    let end = section.byte_end.max(section.byte_start + 1);
+    let (first_page, last_page) = pages.range(section.byte_start, end);
     SectionPageData {
         first_page,
         last_page,
-        page_spans,
+        page_spans: pages.spans(section.byte_start, end),
     }
 }
 
@@ -234,11 +256,15 @@ fn build_chunks_from_sections(
 ) -> Result<ChunkingResult> {
     let mut chunks: Vec<Chunk> = Vec::new();
     let token_counter = super::builder::resolve_token_counter(&config.sizing);
+    let page_index = page_boundaries
+        .filter(|b| !b.is_empty())
+        .map(PageIndex::new)
+        .transpose()?;
 
     for section in sections {
         let prefix = format!("# {}", section.key);
         let content = format!("{}\n\n{}", prefix, section.value.trim());
-        let page_data = section_page_data(section, page_boundaries);
+        let page_data = section_page_data(section, page_index.as_ref());
 
         if config.max_characters == 0 || content.len() <= config.max_characters {
             let token_count = token_counter.as_ref().map(|counter| counter(&content));
@@ -255,8 +281,8 @@ fn build_chunks_from_sections(
             )?;
             for sub_chunk in sub_result.chunks {
                 let metadata = section_chunk_metadata(
-                    section.byte_start + sub_chunk.metadata.byte_start,
-                    section.byte_start + sub_chunk.metadata.byte_end,
+                    section.byte_start,
+                    section.byte_end,
                     sub_chunk.metadata.token_count,
                     &page_data,
                 );
@@ -279,6 +305,8 @@ fn build_chunks_from_sections(
 
 struct Section {
     key: String,
+    /// Key segments from the document root to this section.
+    path: Vec<String>,
     value: String,
     byte_start: usize,
     byte_end: usize,

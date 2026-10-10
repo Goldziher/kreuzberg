@@ -11,6 +11,7 @@ use crate::chunking::text_splitter::{ChunkConfig, ChunkSizer, MarkdownSplitter, 
 use crate::error::Result;
 use crate::types::{HeadingContext, PageBoundary};
 
+use super::boundaries::PageIndex;
 #[cfg(feature = "chunking-tokenizers")]
 use super::builder::TokenizerBackendSizer;
 use super::builder::{build_chunk_config, build_chunks, resolve_token_counter};
@@ -136,9 +137,10 @@ pub(crate) fn chunk_text_with_heading_source(
     if config.chunker_type == ChunkerType::Markdown {
         let heading_map = build_heading_map(heading_source.unwrap_or(text));
         if !heading_map.is_empty() {
+            let page_index = page_boundaries.map(PageIndex::new).transpose()?;
             for chunk in &mut chunks {
                 chunk.metadata.heading_context =
-                    resolve_heading_context(chunk.metadata.byte_start, &heading_map, page_boundaries);
+                    resolve_heading_context(chunk.metadata.byte_start, &heading_map, page_index.as_ref());
                 // Reclassify now that heading context is known: heading-context-aware
                 // rules (e.g. `is_schedule`) are dead at construction time, where
                 // `build_chunks` always classifies with `heading_context = None` (#211).

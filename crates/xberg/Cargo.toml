@@ -1826,5 +1826,10 @@ harness = false
 name = "engine_noop_cache_batch"
 harness = false
 
+[[bench]]
+name = "chunking_scaling"
+harness = false
+required-features = ["chunking"]
+
 [lints]
 workspace = true

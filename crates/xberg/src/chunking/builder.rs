@@ -7,7 +7,7 @@ use crate::chunking::text_splitter::{Characters, ChunkCapacity, ChunkConfig};
 use crate::error::{Result, XbergError};
 use crate::types::{Chunk, ChunkMetadata, HeadingContext, PageBoundary};
 
-use super::boundaries::{calculate_page_range, calculate_page_spans};
+use super::boundaries::PageIndex;
 use super::classifier::classify_chunk;
 
 #[cfg(feature = "chunking-tokenizers")]
@@ -186,6 +186,10 @@ where
     I: IntoIterator<Item = &'a str>,
 {
     let chunks_vec: Vec<&str> = text_chunks.into_iter().collect();
+    let page_index = match page_boundaries {
+        Some(boundaries) if !chunks_vec.is_empty() => Some(PageIndex::new(boundaries)?),
+        _ => None,
+    };
     let total_chunks = chunks_vec.len();
     let source_start = source_text.as_ptr() as usize;
     let mut chunks = Vec::with_capacity(total_chunks);
@@ -194,10 +198,9 @@ where
         let byte_start = chunk_text.as_ptr() as usize - source_start;
         let byte_end = byte_start + chunk_text.len();
 
-        let (first_page, last_page, page_spans) = if let Some(boundaries) = page_boundaries {
-            let (first_page, last_page) = calculate_page_range(byte_start, byte_end, boundaries)?;
-            let page_spans = calculate_page_spans(byte_start, byte_end, boundaries)?;
-            (first_page, last_page, page_spans)
+        let (first_page, last_page, page_spans) = if let Some(pages) = &page_index {
+            let (first_page, last_page) = pages.range(byte_start, byte_end);
+            (first_page, last_page, pages.spans(byte_start, byte_end))
         } else {
             (None, None, Vec::new())
         };

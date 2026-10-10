@@ -57,9 +57,11 @@ pub mod classifier;
 pub mod config;
 pub mod core;
 mod headings;
+mod node_text_trie;
 pub(crate) mod page_spans;
 pub mod processor;
 pub mod rag;
+mod section_spans;
 pub mod semantic;
 mod text_splitter;
 #[cfg(feature = "chunking-tokenizers")]

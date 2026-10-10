@@ -561,6 +561,38 @@ jobs:
         run: cargo check --locked -p xberg --no-default-features --features "${{ matrix.features }}" --all-targets
         shell: bash
 
+  # GH#2085: chunking cost must stay linear in document size. The `chunking_pipeline` tests
+  # include a ratio-based scaling guard that is only meaningful with optimizations on, and the
+  # broad unit-test leg builds the dev profile, so this leg runs them in release against the
+  # lean `chunking` feature set. `--test` runs each criterion benchmark once, which keeps the
+  # scaling bench compiling and runnable without paying for a measurement run. ~keep
+  chunking-scaling:
+    name: Chunking scaling guard
+    if: github.repository == 'xberg-io/xberg' && github.actor != 'dependabot[bot]' && github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Fetch test_documents fixtures
+        uses: xberg-io/actions/fetch-test-documents@v1
+
+      - name: Setup Rust
+        uses: xberg-io/actions/setup-rust@v1
+        with:
+          cache-key-prefix: rust-chunking-scaling
+          use-sccache: "true"
+
+      - name: Chunking pipeline tests (release)
+        run: cargo test --locked --release -p xberg --no-default-features --features chunking --test chunking_pipeline
+        shell: bash
+
+      - name: Chunking scaling bench smoke
+        run: cargo bench --locked -p xberg --no-default-features --features chunking --bench chunking_scaling -- --test
+        shell: bash
+
   # #741 continued: `wasm-target` is only ever compiled by publish.yaml's `wasm-bindings`
   # job, which runs solely on a release tag *and* is `continue-on-error: true` (a WASM
   # build failure does not block the release, by design -- see that job's comment). That
