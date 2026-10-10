@@ -61,7 +61,8 @@ vecmath = "1"
 libloading = "0.9"
 
 [build-dependencies]
-bindgen = { version = "0.73", optional = true }
+# Use rustfmt to avoid coupling bindgen's syn major to the optional prettyplease dependency. ~keep
+bindgen = { version = "0.73", default-features = false, features = ["runtime", "logging"], optional = true }
 
 [lints.rust.unexpected_cfgs]
 level = "allow"

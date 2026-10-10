@@ -48,8 +48,14 @@ impl From<BindgenError> for BuildError {
 }
 
 fn main() -> Result<(), BuildError> {
+    println!("cargo:rustc-check-cfg=cfg(pdfium_bindings_generated)");
     #[cfg(feature = "bindings")]
-    build_bindings()?;
+    {
+        build_bindings()?;
+        if std::env::var("DOCS_RS").is_err() {
+            println!("cargo:rustc-cfg=pdfium_bindings_generated");
+        }
+    }
 
     if std::env::var("PDFIUM_STATIC_LIB_PATH").is_ok() {
         println!("cargo:rustc-cfg=pdfium_use_static");
@@ -163,10 +169,13 @@ fn build_bindings_for_one_pdfium_release(release: &str) -> Result<(), BuildError
             .collect::<Vec<_>>()
             .join("\n");
 
-        write(format!("include/{}/rust-import-wrapper.h", release), wrapper)?;
+        let out_path = PathBuf::from(var("OUT_DIR").expect("Cargo sets OUT_DIR for build scripts"));
+        let wrapper_path = out_path.join(format!("{release}-rust-import-wrapper.h"));
+        write(&wrapper_path, wrapper)?;
 
         let bindings = bindgen::Builder::default()
-            .header(format!("include/{}/rust-import-wrapper.h", release))
+            .header(wrapper_path.to_string_lossy())
+            .clang_arg(format!("-Iinclude/{release}"))
             .clang_arg("-DPDF_USE_SKIA")
             .clang_arg("-D_SKIA_SUPPORT_")
             .clang_arg("-DPDF_ENABLE_XFA")
@@ -183,9 +192,7 @@ fn build_bindings_for_one_pdfium_release(release: &str) -> Result<(), BuildError
         let bindings = bindings.clang_arg("-D_WIN32");
 
         let bindings = bindings.generate()?;
-        let out_path = PathBuf::from("src");
-
-        bindings.write_to_file(out_path.join(format!("bindgen/{}.rs", release)))?;
+        bindings.write_to_file(out_path.join(format!("{release}.rs")))?;
     }
 
     Ok(())

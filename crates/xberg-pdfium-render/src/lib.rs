@@ -9,6 +9,9 @@ mod bindgen {
     #![allow(non_snake_case)]
     #![allow(dead_code)]
 
+    #[cfg(pdfium_bindings_generated)]
+    include!(concat!(env!("OUT_DIR"), "/pdfium_7678.rs"));
+    #[cfg(not(pdfium_bindings_generated))]
     include!("bindgen/pdfium_7678.rs");
 
     pub(crate) type size_t = usize;
