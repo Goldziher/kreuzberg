@@ -303,16 +303,24 @@ fn group_indices_into_lines(all_spans: &[TextSpan], indices: &[usize]) -> Vec<Ve
         y_buckets.last_mut().expect("just pushed above").push(index);
     }
     let mut lines: Vec<Vec<usize>> = Vec::new();
-    for bucket in y_buckets {
+    for mut bucket in y_buckets {
+        // A bucket is in `y` order, and a right-column line set up to 1pt higher sorts before
+        // the left column's line, so the gap test below needs `x` order. ~keep
+        bucket.sort_by(|&a, &b| all_spans[a].bbox.left().total_cmp(&all_spans[b].bbox.left()));
         let mut run: Vec<usize> = Vec::new();
+        // Measured from the run's rightmost edge, so a span nested inside a longer one
+        // never opens a gap. ~keep
+        let mut run_right = f32::MIN;
         for index in bucket {
             if let Some(&last) = run.last() {
-                let gap = all_spans[index].bbox.left() - all_spans[last].bbox.right();
+                let gap = all_spans[index].bbox.left() - run_right;
                 let max_font = all_spans[last].font_size.max(all_spans[index].font_size);
                 if gap > max_font * MAX_INTRA_LINE_GAP_EM {
                     lines.push(std::mem::take(&mut run));
+                    run_right = f32::MIN;
                 }
             }
+            run_right = run_right.max(all_spans[index].bbox.right());
             run.push(index);
         }
         if !run.is_empty() {
@@ -4553,5 +4561,45 @@ mod tests {
             actual_right, expected_right,
             "the straddling line's 5 fragments must all move to its majority side (right), none left behind"
         );
+    }
+
+    /// Two columns whose baselines differ by 0.6pt (the right column set higher) share
+    /// `y` buckets. Without the per-bucket `x` sort the right line sorts first, the gap to
+    /// the left line is negative, and both columns' lines merge into one "line" that
+    /// `partition_lines_at` then sends to one side. ~keep
+    #[test]
+    fn partition_lines_at_separates_columns_whose_baselines_differ() {
+        let strategy = XYCutStrategy::new();
+        let mut spans = Vec::new();
+        for row in 0..3 {
+            let y = 300.0 - row as f32 * 15.0;
+            spans.push(make_span_text(40.0, y, 140.0, 10.0, "left column line", 10.0));
+            spans.push(make_span_text(220.0, y + 0.6, 140.0, 10.0, "right column line", 10.0));
+        }
+        let indices: Vec<usize> = (0..spans.len()).collect();
+
+        let (left, right) = strategy.partition_lines_at(&spans, &indices, 200.0);
+
+        assert_eq!(left, vec![0, 2, 4], "the left column's lines");
+        assert_eq!(right, vec![1, 3, 5], "the right column's lines");
+    }
+
+    /// A span nested inside a longer one on the same line (a fake-bold overprint, a
+    /// superscript set 0.5pt higher) must not open a gap: measured from the nested span's
+    /// own right edge, the next span looked 350pt away and the line tore at the split. ~keep
+    #[test]
+    fn partition_lines_at_keeps_a_line_with_a_nested_span_whole() {
+        let strategy = XYCutStrategy::new();
+        let spans = vec![
+            make_span_text(40.0, 300.0, 360.0, 10.0, "long run", 10.0),
+            make_span_text(50.0, 300.5, 10.0, 10.0, "nested", 10.0),
+            make_span_text(405.0, 300.0, 60.0, 10.0, "tail", 10.0),
+        ];
+        let indices: Vec<usize> = (0..spans.len()).collect();
+
+        let (left, right) = strategy.partition_lines_at(&spans, &indices, 402.0);
+
+        assert_eq!(left, indices, "the whole line stays together on one side");
+        assert!(right.is_empty(), "no span of the line is torn off: {right:?}");
     }
 }
