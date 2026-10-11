@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): two-column pages whose column baselines differ by up to 1pt are read in column order again.** The XY-cut
+  line grouping measured gaps between spans in `y` order, so a right-column line set slightly higher sorted first and
+  merged with the left column's line into one line, which the column split then sent to one side. Spans are now
+  ordered by `x` before gaps are measured, and a gap is measured from the line's rightmost edge so far. (GH#2097)
 - **(extraction, packaging): Xberg builds with zip 9.** Source-archive extraction, ZIP-based document and archive
   extraction, and MIME routing now handle zip 9's fallible entry names. Published dependency constraints select the
   supported zip 9 line instead of relying on the workspace lockfile.
