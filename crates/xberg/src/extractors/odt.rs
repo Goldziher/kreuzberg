@@ -359,7 +359,7 @@ pub(crate) fn pre_extract_images(
     let mut images = AHashMap::new();
     let mut total_bytes: u64 = 0;
     let names: Vec<String> = (0..archive.len())
-        .filter_map(|i| archive.by_index(i).ok().map(|f| f.name().to_string()))
+        .filter_map(|i| archive.by_index(i).ok()?.name().ok().map(Cow::into_owned))
         .collect();
 
     for name in names {
@@ -412,7 +412,7 @@ pub(crate) fn pre_extract_formulas(
 
     let mut formulas = AHashMap::new();
     let names: Vec<String> = (0..archive.len())
-        .filter_map(|i| archive.by_index(i).ok().map(|f| f.name().to_string()))
+        .filter_map(|i| archive.by_index(i).ok()?.name().ok().map(Cow::into_owned))
         .collect();
 
     for name in &names {

@@ -739,18 +739,17 @@ mod tests {
         git(&superproject, &["config", "user.name", "Super"]);
         std::fs::write(superproject.join("source.rs"), b"fn main() {}").unwrap();
         git(&superproject, &["add", "source.rs"]);
-        // it must be passed on the add invocation itself, as the clone subprocess ignores repo-local config.
         git(
             &superproject,
             &[
                 "-c",
                 "protocol.file.allow=always",
-                "submodule",
-                "add",
+                "clone",
                 corpus.to_str().unwrap(),
                 "test_documents",
             ],
         );
+        git(&superproject, &["add", "test_documents"]);
         git(&superproject, &["commit", "-m", "embed corpus submodule"]);
 
         assert_eq!(capture_repository(&superproject).dirty, Some(false));

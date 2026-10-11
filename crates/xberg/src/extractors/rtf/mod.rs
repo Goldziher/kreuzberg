@@ -33,6 +33,69 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use std::borrow::Cow;
 
+fn expand_binary_payloads<'a>(content: &'a [u8], budget: &mut SecurityBudget) -> Result<Cow<'a, [u8]>> {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+
+    let mut output: Option<Vec<u8>> = None;
+    let mut copied_until = 0usize;
+    let mut index = 0usize;
+    while index + 4 <= content.len() {
+        if &content[index..index + 4] != b"\\bin" {
+            index += 1;
+            continue;
+        }
+        let preceding_backslashes = content[..index].iter().rev().take_while(|byte| **byte == b'\\').count();
+        if preceding_backslashes % 2 == 1 {
+            index += 1;
+            continue;
+        }
+
+        let mut cursor = index + 4;
+        let digit_start = cursor;
+        while cursor < content.len() && content[cursor].is_ascii_digit() {
+            cursor += 1;
+        }
+        if cursor == digit_start {
+            index += 1;
+            continue;
+        }
+        let Ok(count_text) = std::str::from_utf8(&content[digit_start..cursor]) else {
+            index += 1;
+            continue;
+        };
+        let Ok(count) = count_text.parse::<usize>() else {
+            index += 1;
+            continue;
+        };
+        if content.get(cursor) == Some(&b' ') {
+            cursor += 1;
+        }
+        let Some(payload_end) = cursor.checked_add(count).filter(|end| *end <= content.len()) else {
+            index += 1;
+            continue;
+        };
+
+        budget.account_text(count)?;
+        let output = output.get_or_insert_with(|| Vec::with_capacity(content.len().saturating_add(count)));
+        output.extend_from_slice(&content[copied_until..index]);
+        output.push(b' ');
+        for byte in &content[cursor..payload_end] {
+            output.push(HEX[(byte >> 4) as usize]);
+            output.push(HEX[(byte & 0x0f) as usize]);
+        }
+        copied_until = payload_end;
+        index = payload_end;
+    }
+
+    Ok(match output {
+        Some(mut output) => {
+            output.extend_from_slice(&content[copied_until..]);
+            Cow::Owned(output)
+        }
+        None => Cow::Borrowed(content),
+    })
+}
+
 /// `ProcessingWarning::source` for every warning this extractor emits (#171).
 const RTF_WARNING_SOURCE: &str = "rtf";
 
@@ -304,7 +367,8 @@ impl InternalDocumentExtractor for RtfExtractor {
         tracing::debug!(format = "rtf", size_bytes = content.len(), "extraction starting");
         let mut budget = SecurityBudget::from_config(config);
         budget.account_text(content.len())?;
-        let rtf_content = String::from_utf8_lossy(content);
+        let normalized_content = expand_binary_payloads(content, &mut budget)?;
+        let rtf_content = String::from_utf8_lossy(&normalized_content);
         let plain = true;
 
         let (extracted_text, _tables, _images, _metas, _formatting_data) = extract_text_from_rtf(&rtf_content, plain);
@@ -418,6 +482,129 @@ mod tests {
 
         let (md, _, _, _, _) = extract_text_from_rtf(rtf_content, false);
         assert!(md.contains("![image]"), "Markdown output should contain image markers");
+    }
+
+    #[test]
+    fn should_extract_shppict_primary_without_nonshppict_fallback_duplicate() {
+        let rtf_content = concat!(
+            r"{\rtf1",
+            r"{\*\shppict{\pict\pngblip 89504e47}}",
+            r"{\nonshppict{\pict\pngblip 89504e47}}",
+            r"}"
+        );
+
+        let (_, _, images, _, _) = extract_text_from_rtf(rtf_content, true);
+
+        assert_eq!(images.len(), 1);
+        assert_eq!(images[0].data, b"\x89PNG");
+    }
+
+    #[test]
+    fn should_pair_shppict_fallback_across_escaped_line_break() {
+        let rtf_content = concat!(
+            r"{\rtf1",
+            r"{\*\shppict{\pict\pngblip 89504e47}}",
+            "\\\r\n  ",
+            r"{\nonshppict{\pict\pngblip 89504e47}}",
+            r"}"
+        );
+
+        let (_, _, images, _, _) = extract_text_from_rtf(rtf_content, true);
+
+        assert_eq!(images.len(), 1);
+        assert_eq!(images[0].data, b"\x89PNG");
+    }
+
+    #[test]
+    fn should_extract_property_bearing_shppict_without_nonshppict_fallback_duplicate() {
+        let rtf_content = concat!(
+            r"{\rtf1",
+            r"{\*\shppict{\pict{\*\picprop{\sp{\sn wzDescription}{\sv label}}}\pngblip 89504e47}}",
+            r"{\nonshppict{\pict\pngblip 89504e47}}",
+            r"}"
+        );
+
+        let (_, _, images, _, _) = extract_text_from_rtf(rtf_content, true);
+
+        assert_eq!(images.len(), 1);
+        assert_eq!(images[0].data, b"\x89PNG");
+    }
+
+    #[test]
+    fn should_extract_standalone_nonshppict_image() {
+        let rtf_content = r"{\rtf1{\nonshppict{\pict\pngblip 89504e47}}}";
+
+        let (_, _, images, _, _) = extract_text_from_rtf(rtf_content, true);
+
+        assert_eq!(images.len(), 1);
+        assert_eq!(images[0].data, b"\x89PNG");
+    }
+
+    #[test]
+    fn should_use_nonshppict_fallback_when_shppict_is_not_decodable() {
+        let rtf_content = concat!(
+            r"{\rtf1",
+            r"{\*\shppict{\pict\pngblip not-hex}}",
+            r"{\nonshppict{\pict\pngblip 89504e47}}",
+            r"}"
+        );
+
+        let (_, _, images, _, _) = extract_text_from_rtf(rtf_content, true);
+
+        assert_eq!(images.len(), 1);
+        assert_eq!(images[0].data, b"\x89PNG");
+    }
+
+    #[tokio::test]
+    async fn should_extract_binary_picture_payload() {
+        let mut rtf = br"{\rtf1{\pict\pngblip\bin8 ".to_vec();
+        rtf.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+        rtf.extend_from_slice(b"}}AFTER");
+
+        let document = RtfExtractor::new()
+            .extract_content(&rtf, "application/rtf", &ExtractionConfig::default())
+            .await
+            .expect("RTF extraction must succeed");
+
+        assert_eq!(document.images.len(), 1);
+        assert_eq!(document.images[0].data.as_ref(), b"\x89PNG\r\n\x1a\n");
+    }
+
+    #[tokio::test]
+    async fn should_reject_binary_picture_expansion_before_exceeding_content_limit() {
+        let mut rtf = br"{\rtf1{\pict\pngblip\bin8 ".to_vec();
+        rtf.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+        rtf.extend_from_slice(b"}}AFTER");
+        let config = ExtractionConfig {
+            security_limits: Some(crate::extractors::security::SecurityLimits {
+                max_content_size: rtf.len(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let error = RtfExtractor::new()
+            .extract_content(&rtf, "application/rtf", &config)
+            .await
+            .expect_err("binary expansion must respect max_content_size");
+
+        assert!(
+            error.to_string().contains("Content too large"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn should_not_expand_escaped_bin_text_as_a_binary_control_word() {
+        let input = br"{\rtf1 literal \\bin4 ABCD}";
+        let mut budget = SecurityBudget::from_limits(&crate::extractors::security::SecurityLimits::default());
+
+        assert_eq!(
+            expand_binary_payloads(input, &mut budget)
+                .expect("escaped control word must not consume budget")
+                .as_ref(),
+            input
+        );
     }
 
     #[test]

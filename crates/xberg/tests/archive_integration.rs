@@ -53,7 +53,7 @@ async fn test_zip_multiple_files() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("file1.txt", options).expect("Operation failed");
         zip.write_all(b"Content 1").expect("Operation failed");
@@ -104,7 +104,7 @@ async fn test_zip_nested_directories() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.add_directory("dir1/", options).expect("Operation failed");
         zip.add_directory("dir1/subdir/", options).expect("Operation failed");
@@ -279,7 +279,7 @@ async fn test_nested_archive() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("inner.zip", options).expect("Operation failed");
         zip.write_all(&inner_zip).expect("Operation failed");
@@ -322,7 +322,7 @@ async fn test_archive_mixed_formats() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("document.txt", options).expect("Operation failed");
         zip.write_all(b"Text document").expect("Operation failed");
@@ -419,7 +419,7 @@ async fn test_large_archive() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         for i in 0..100 {
             zip.start_file(format!("file_{}.txt", i), options)
@@ -467,7 +467,7 @@ async fn test_archive_with_special_characters() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("测试文件.txt", options).expect("Operation failed");
         zip.write_all("Unicode content".as_bytes())
@@ -572,7 +572,7 @@ fn create_simple_zip() -> Vec<u8> {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("test.txt", options).expect("Operation failed");
         zip.write_all(b"Hello from ZIP!").expect("Operation failed");

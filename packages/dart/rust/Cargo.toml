@@ -4,7 +4,6 @@
 # To verify freshness: alef verify
 
 [package]
-authors.workspace = true
 name = "xberg-dart"
 version.workspace = true
 edition = "2024"

@@ -19,13 +19,7 @@ dependencies:
 dev_dependencies:
   test: "^1.25.0"
   lints: "^6.1.0"
-  # Required by flutter_rust_bridge_codegen 2.x for sealed classes. Pinned to a
-  # stable release: flutter_rust_bridge_codegen 2.12.0 rejects a prerelease
-  # (4.0.0-dev.3 gets "InvalidDep: Please update version of freezed... >=1.0.0"
-  # from its own version gate, which excludes prereleases from a plain
-  # `>=1.0.0` bound) even though pub itself resolves it happily. Stable 4.0.0
-  # needs Dart SDK >=3.13.0, ahead of this package's ">=3.11.0 <4.0.0"
-  # constraint, so stay on the 3.x line until the SDK floor moves.
+  # Freezed is build-only, so its SDK floor does not constrain package consumers. ~keep
   freezed: ^4.0.1
   build_runner: "^2.15.0"
   json_serializable: "^6.13.2"

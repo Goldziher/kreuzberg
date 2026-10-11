@@ -26,7 +26,7 @@ fn zip_with_one_unreadable_member() -> Vec<u8> {
         let mut zip = ZipWriter::new(&mut cursor);
         // Stored (uncompressed) so the payload appears verbatim in the output and can
         // be corrupted below without disturbing any offset in the archive.
-        let options = FileOptions::<'_, ()>::default().compression_method(zip::CompressionMethod::Stored);
+        let options = FileOptions::<'_, '_, ()>::default().compression_method(zip::CompressionMethod::Stored);
 
         zip.start_file("good.txt", options).expect("write good.txt");
         zip.write_all(GOOD_PAYLOAD).expect("write good payload");
@@ -79,7 +79,7 @@ async fn should_not_warn_when_every_archive_member_reads() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default().compression_method(zip::CompressionMethod::Stored);
+        let options = FileOptions::<'_, '_, ()>::default().compression_method(zip::CompressionMethod::Stored);
         zip.start_file("good.txt", options).expect("write good.txt");
         zip.write_all(GOOD_PAYLOAD).expect("write good payload");
         zip.finish().expect("finish zip");

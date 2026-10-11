@@ -736,6 +736,11 @@ impl SyncExtractor for HtmlExtractor {
             }
         }
 
+        if config.runs_ocr_on_embedded_images() && !doc.images.is_empty() {
+            doc.pre_rendered_content = None;
+            doc.metadata.output_format = None;
+        }
+
         _span.record("element_count", doc.elements.len());
 
         Ok(doc)
@@ -1143,6 +1148,26 @@ mod tests {
             "expected one Image element in {:?}",
             doc.elements
         );
+    }
+
+    #[tokio::test]
+    async fn should_not_cache_markdown_before_inline_image_ocr_runs() {
+        let png_b64 =
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+        let html = format!(r#"<html><body><p>Stock list</p><img src="data:image/png;base64,{png_b64}"></body></html>"#);
+        let config = ExtractionConfig {
+            output_format: OutputFormat::Markdown,
+            ocr: Some(crate::core::config::OcrConfig::default()),
+            ..Default::default()
+        };
+
+        let doc = HtmlExtractor::new()
+            .extract_content(html.as_bytes(), "text/html", &config)
+            .await
+            .expect("HTML extraction must succeed");
+
+        assert!(doc.pre_rendered_content.is_none());
+        assert_eq!(doc.images.len(), 1);
     }
 
     #[tokio::test]

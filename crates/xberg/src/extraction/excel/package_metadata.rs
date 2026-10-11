@@ -352,7 +352,7 @@ pub(super) fn extract_xlsx_comments_from_file(file_path: &str) -> Option<String>
 fn extract_xlsx_comments_from_archive<R: Read + Seek>(archive: &mut zip::ZipArchive<R>) -> Option<String> {
     let mut comment_parts: Vec<String> = Vec::new();
     for i in 0..archive.len() {
-        let name = archive.by_index(i).ok()?.name().to_string();
+        let name = archive.by_index(i).ok()?.name().ok()?.into_owned();
         if name.starts_with("xl/comments") && name.ends_with(".xml") {
             comment_parts.push(name);
         }

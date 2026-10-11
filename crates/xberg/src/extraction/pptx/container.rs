@@ -150,9 +150,11 @@ impl<R: Read + Seek> PptxContainer<R> {
         let mut slide_paths = Vec::new();
         for i in 0..archive.len() {
             if let Ok(file) = archive.by_index(i) {
-                let name = file.name();
+                let name = file
+                    .name()
+                    .map_err(|error| XbergError::parsing(format!("Invalid ZIP entry name: {error}")))?;
                 if name.starts_with("ppt/slides/slide") && name.ends_with(".xml") {
-                    slide_paths.push(name.to_string());
+                    slide_paths.push(name.into_owned());
                 }
             }
         }

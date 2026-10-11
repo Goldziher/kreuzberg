@@ -67,7 +67,7 @@ fn test_extract_zip_text_content_includes_widened_extensions() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("main.rs", options).unwrap();
         zip.write_all(b"fn main() {}").unwrap();
@@ -107,7 +107,7 @@ fn test_extract_zip_metadata() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("test.txt", options).unwrap();
         zip.write_all(b"Hello, World!").unwrap();
@@ -164,7 +164,7 @@ fn test_extract_zip_text_content() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("test.txt", options).unwrap();
         zip.write_all(b"Hello, World!").unwrap();
@@ -190,7 +190,7 @@ fn non_utf8_zip_member_is_recovered_not_dropped() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
         zip.start_file("latin1.txt", options).unwrap();
         zip.write_all(b"caf\xe9").unwrap();
         zip.finish().unwrap();
@@ -255,7 +255,7 @@ fn test_extract_zip_metadata_with_directories() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.add_directory("dir1/", options).unwrap();
         zip.add_directory("dir1/subdir/", options).unwrap();
@@ -371,7 +371,7 @@ fn test_extract_zip_within_zip() {
     let mut inner_cursor = Cursor::new(Vec::new());
     {
         let mut inner_zip = ZipWriter::new(&mut inner_cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         inner_zip.start_file("inner.txt", options).unwrap();
         inner_zip.write_all(b"Nested content").unwrap();
@@ -383,7 +383,7 @@ fn test_extract_zip_within_zip() {
     let mut outer_cursor = Cursor::new(Vec::new());
     {
         let mut outer_zip = ZipWriter::new(&mut outer_cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         outer_zip.start_file("archive.zip", options).unwrap();
         outer_zip.write_all(&inner_bytes).unwrap();
@@ -457,7 +457,7 @@ fn test_extract_zip_corrupted_data() {
     let mut valid_cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut valid_cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("test.txt", options).unwrap();
         zip.write_all(b"content").unwrap();
@@ -538,7 +538,7 @@ fn test_extract_zip_multiple_text_files() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("file1.txt", options).unwrap();
         zip.write_all(b"Content 1").unwrap();
@@ -604,7 +604,7 @@ fn test_extract_zip_preserves_directory_structure() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.add_directory("root/", options).unwrap();
         zip.add_directory("root/sub1/", options).unwrap();
@@ -639,7 +639,7 @@ fn test_extract_zip_with_large_file() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         let large_content = "x".repeat(10_000);
 
@@ -664,7 +664,7 @@ fn test_extract_zip_with_many_files() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         for i in 0..100 {
             let filename = format!("file_{}.txt", i);
@@ -692,7 +692,7 @@ fn test_extract_zip_with_long_paths() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         let long_path = format!("{}/file.txt", "a".repeat(200));
 
@@ -793,7 +793,7 @@ fn test_extract_zip_text_content_filters_non_text_extensions() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("document.txt", options).unwrap();
         zip.write_all(b"Text file").unwrap();

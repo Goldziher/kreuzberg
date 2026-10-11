@@ -11,5 +11,5 @@ group :development do
   gem "rubocop", "~> 1.0"
   gem "rubocop-performance", "~> 1.0"
   gem "rubocop-rspec", "~> 3.0"
-  gem "steep", "~> 1.0"
+  gem "steep", "~> 2.1"
 end

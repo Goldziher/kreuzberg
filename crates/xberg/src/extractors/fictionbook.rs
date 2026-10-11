@@ -1123,6 +1123,10 @@ impl InternalDocumentExtractor for FictionBookExtractor {
             doc.pre_rendered_content = Some(crate::rendering::render_markdown(&doc));
             doc.metadata.output_format = Some("markdown".to_string());
         }
+        if config.runs_ocr_on_embedded_images() && !doc.images.is_empty() {
+            doc.pre_rendered_content = None;
+            doc.metadata.output_format = None;
+        }
 
         Ok(doc)
     }
@@ -1551,6 +1555,28 @@ mod tests {
             "expected one Image element in {:?}",
             doc.elements
         );
+    }
+
+    #[tokio::test]
+    async fn should_not_cache_markdown_before_binary_image_ocr_runs() {
+        let png_b64 =
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==";
+        let fb2 = format!(
+            r##"<FictionBook><body><section><p>Stock list</p><image l:href="#label.png"/></section></body><binary id="label.png" content-type="image/png">{png_b64}</binary></FictionBook>"##
+        );
+        let config = ExtractionConfig {
+            output_format: OutputFormat::Markdown,
+            ocr: Some(crate::core::config::OcrConfig::default()),
+            ..Default::default()
+        };
+
+        let doc = FictionBookExtractor::new()
+            .extract_content(fb2.as_bytes(), "application/x-fictionbook+xml", &config)
+            .await
+            .expect("FictionBook extraction must succeed");
+
+        assert!(doc.pre_rendered_content.is_none());
+        assert_eq!(doc.images.len(), 1);
     }
 
     /// A FictionBook declaring `windows-1251` must still extract its Cyrillic text.

@@ -813,6 +813,10 @@ impl InternalDocumentExtractor for EpubExtractor {
             output_format,
             ..Default::default()
         };
+        if config.runs_ocr_on_embedded_images() && !doc.images.is_empty() {
+            doc.pre_rendered_content = None;
+            doc.metadata.output_format = None;
+        }
 
         tracing::debug!(
             element_count = doc.elements.len(),
@@ -839,6 +843,39 @@ impl InternalDocumentExtractor for EpubExtractor {
 mod tests {
     use super::*;
 
+    fn epub_with_inline_image() -> Vec<u8> {
+        let mut bytes = Vec::new();
+        {
+            let mut archive = zip::ZipWriter::new(Cursor::new(&mut bytes));
+            let stored = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+            archive.start_file("mimetype", stored).unwrap();
+            std::io::Write::write_all(&mut archive, b"application/epub+zip").unwrap();
+            for (path, content) in [
+                (
+                    "META-INF/container.xml",
+                    br#"<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>"#.as_slice(),
+                ),
+                (
+                    "OEBPS/content.opf",
+                    br#"<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier>id</dc:identifier><dc:title>Stock</dc:title><dc:language>en</dc:language></metadata><manifest><item id="c1" href="chapter.xhtml" media-type="application/xhtml+xml"/><item id="p1" href="label.png" media-type="image/png"/></manifest><spine><itemref idref="c1"/></spine></package>"#.as_slice(),
+                ),
+                (
+                    "OEBPS/chapter.xhtml",
+                    br#"<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Stock list</p><img src="label.png"/></body></html>"#.as_slice(),
+                ),
+            ] {
+                archive.start_file(path, zip::write::SimpleFileOptions::default()).unwrap();
+                std::io::Write::write_all(&mut archive, content).unwrap();
+            }
+            archive
+                .start_file("OEBPS/label.png", zip::write::SimpleFileOptions::default())
+                .unwrap();
+            std::io::Write::write_all(&mut archive, b"\x89PNG").unwrap();
+            archive.finish().unwrap();
+        }
+        bytes
+    }
+
     #[test]
     fn test_epub_extractor_plugin_interface() {
         let extractor = EpubExtractor::new();
@@ -859,6 +896,23 @@ mod tests {
         let extractor = EpubExtractor::new();
         assert!(extractor.initialize().is_ok());
         assert!(extractor.shutdown().is_ok());
+    }
+
+    #[tokio::test]
+    async fn should_not_cache_markdown_before_spine_image_ocr_runs() {
+        let config = ExtractionConfig {
+            output_format: OutputFormat::Markdown,
+            ocr: Some(crate::core::config::OcrConfig::default()),
+            ..Default::default()
+        };
+
+        let doc = EpubExtractor::new()
+            .extract_content(&epub_with_inline_image(), "application/epub+zip", &config)
+            .await
+            .expect("EPUB extraction must succeed");
+
+        assert!(doc.pre_rendered_content.is_none());
+        assert_eq!(doc.images.len(), 1);
     }
 
     #[test]

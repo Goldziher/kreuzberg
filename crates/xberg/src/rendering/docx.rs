@@ -662,7 +662,7 @@ mod tests {
                 let mut entry = archive.by_index(index).expect("every entry should be readable");
                 let mut xml = String::new();
                 entry.read_to_string(&mut xml).expect("every part should be UTF-8");
-                (entry.name().to_string(), xml)
+                (entry.name().expect("every entry name should decode").into_owned(), xml)
             })
             .collect()
     }

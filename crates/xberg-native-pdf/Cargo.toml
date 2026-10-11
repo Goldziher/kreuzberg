@@ -113,7 +113,7 @@ tracing = "0.1"
 # feature on, so it is declared here rather than relied on by unification.
 unicode-bidi = { version = "0.3", default-features = false, features = ["hardcoded-data"] }
 unicode-normalization = "0.1"
-uuid = { version = "1.27", features = ["v4", "js"] }
+uuid = { version = "1.28", features = ["v4", "js"] }
 weezl = "0.2"
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]

@@ -32,7 +32,7 @@ fn test_archive_zip_bomb_detection() {
     {
         use zip::write::{FileOptions, ZipWriter};
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("large.txt", options).expect("Operation failed");
         let zeros = vec![0u8; 10 * 1024 * 1024];
@@ -68,7 +68,7 @@ fn test_archive_path_traversal_zip() {
     {
         use zip::write::{FileOptions, ZipWriter};
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("../../etc/passwd", options).expect("Operation failed");
         zip.write_all(b"malicious content").expect("Operation failed");
@@ -167,7 +167,7 @@ fn test_archive_absolute_paths_rejected() {
     {
         use zip::write::{FileOptions, ZipWriter};
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("/tmp/malicious.txt", options).expect("Operation failed");
         zip.write_all(b"malicious content").expect("Operation failed");
@@ -201,7 +201,7 @@ fn test_archive_deeply_nested_directories() {
     {
         use zip::write::{FileOptions, ZipWriter};
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         let deep_path = (0..100).map(|i| format!("dir{}", i)).collect::<Vec<_>>().join("/");
         let file_path = format!("{}/file.txt", deep_path);
@@ -243,7 +243,7 @@ fn test_archive_many_small_files() {
     {
         use zip::write::{FileOptions, ZipWriter};
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         for i in 0..1000 {
             zip.start_file(format!("file{}.txt", i), options)

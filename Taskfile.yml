@@ -53,10 +53,7 @@ includes:
     flatten: true
 
 vars:
-  # MUST match the pin in .github/workflows/ci-lint.yaml's "Verify generated plugin bundles are
-  # current" step, whose own comment requires the two move in lockstep. They had drifted since
-  # v1.1.0 (here 4.11.3, CI 4.11.0) and 4.11.3's output does NOT satisfy 4.11.0's verify -- so
-  # running `task plugin:generate` and committing the result turned CI red. Bump both together.
+  # This must match the pin in ci-lint.yaml because different ai-rulez versions emit different bundles. ~keep
   AI_RULEZ_VERSION: "4.11.0"
 
 tasks:
@@ -664,19 +661,19 @@ tasks:
   swift:format:
     desc: "Format Swift binding with swift format"
     cmds:
-      - swift format --in-place --recursive Sources
+      - swift format --in-place --recursive Sources Tests
     dir: packages/swift
 
   swift:lint:
     desc: "Lint Swift binding with swift format lint"
     cmds:
-      - swift format lint --recursive Sources
+      - swift format lint --recursive Sources Tests
     dir: packages/swift
 
   swift:test:
     desc: "Run Swift binding tests"
     cmds:
-      - cargo build --locked --release --manifest-path packages/swift/rust/Cargo.toml
+      - cargo build --locked --release --manifest-path rust/Cargo.toml
       - swift test
     dir: packages/swift
 
@@ -689,7 +686,7 @@ tasks:
   dart:test:
     desc: "Run Dart binding tests"
     cmds:
-      - cargo build --locked --release --manifest-path packages/dart/rust/Cargo.toml
+      - cargo build --locked --release --manifest-path rust/Cargo.toml
       - dart pub get
       - dart test
     dir: packages/dart

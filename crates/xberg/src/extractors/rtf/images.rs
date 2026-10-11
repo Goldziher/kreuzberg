@@ -137,6 +137,10 @@ pub(crate) fn extract_pict_image(chars: &mut std::iter::Peekable<std::str::Chars
             }
             '\\' => {
                 chars.next();
+                if matches!(chars.peek(), Some(&('{' | '}' | '\\'))) {
+                    chars.next();
+                    continue;
+                }
                 let (control_word, value) = parse_rtf_control_word(chars);
                 apply_pict_control_word(
                     chars,
@@ -151,7 +155,7 @@ pub(crate) fn extract_pict_image(chars: &mut std::iter::Peekable<std::str::Chars
                 chars.next();
             }
             _ => {
-                if ch.is_ascii_hexdigit() {
+                if depth == 0 && ch.is_ascii_hexdigit() {
                     hex_chars.push(ch);
                 }
                 chars.next();
@@ -226,5 +230,35 @@ mod tests {
             "the six-byte payload — including its embedded `}}` byte — must be consumed whole, \
              leaving only the group's real closing brace and the document text after it"
         );
+    }
+
+    #[test]
+    fn should_ignore_picture_property_group_when_decoding_hex_payload() {
+        let input = concat!(
+            r"{\*\picprop{\sp{\sn wzDescription}{\sv label}}{\sp{\sn wzName}{\sv picture.png}}}",
+            r"\picw1\pich1\pngblip 89504e47}AFTER"
+        );
+        let mut chars = input.chars().peekable();
+
+        let (metadata, image) = extract_pict_image(&mut chars);
+
+        assert_eq!(metadata, "image.png");
+        assert_eq!(image.expect("the root-level hex payload must decode").data, b"\x89PNG");
+        assert_eq!(chars.collect::<String>(), "}AFTER");
+    }
+
+    #[test]
+    fn should_ignore_escaped_braces_inside_picture_property_values() {
+        let input = concat!(
+            r"{\*\picprop{\sp{\sn wzDescription}{\sv label \{draft}}}",
+            r"\pngblip 89504e47}AFTER"
+        );
+        let mut chars = input.chars().peekable();
+
+        let (metadata, image) = extract_pict_image(&mut chars);
+
+        assert_eq!(metadata, "image.png");
+        assert_eq!(image.expect("the root-level hex payload must decode").data, b"\x89PNG");
+        assert_eq!(chars.collect::<String>(), "}AFTER");
     }
 }

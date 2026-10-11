@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling"]
+requires = ["hatchling>=1,<2"]
 
 [project]
 name = "llama-index-node-parser-xberg"

@@ -51,8 +51,9 @@ fn extract_entry<R: Read + ?Sized>(
     uncompressed_bytes: &mut u64,
     max_uncompressed_bytes: u64,
 ) -> io::Result<()> {
-    reject_symlink(file)?;
-    let Some(target_path) = archive_target_path(file, destination, expected_root)? else {
+    let name = file.name().map_err(invalid_archive)?.into_owned();
+    reject_symlink(file, &name)?;
+    let Some(target_path) = archive_target_path(file, destination, expected_root, &name)? else {
         return Ok(());
     };
     if file.is_dir() {
@@ -65,7 +66,6 @@ fn extract_entry<R: Read + ?Sized>(
         return Err(expanded_size_error(max_uncompressed_bytes));
     }
     let expected_size = file.size();
-    let name = file.name().to_string();
     let written = copy_archive_file(file, &target_path, remaining)?;
     if written != expected_size {
         return Err(io::Error::new(
@@ -79,11 +79,11 @@ fn extract_entry<R: Read + ?Sized>(
     Ok(())
 }
 
-fn reject_symlink<R: Read + ?Sized>(file: &zip::read::ZipFile<'_, R>) -> io::Result<()> {
+fn reject_symlink<R: Read + ?Sized>(file: &zip::read::ZipFile<'_, R>, name: &str) -> io::Result<()> {
     if file.unix_mode().is_some_and(|mode| mode & 0o170_000 == 0o120_000) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("source archive contains a symbolic link: {}", file.name()),
+            format!("source archive contains a symbolic link: {name}"),
         ));
     }
     Ok(())
@@ -93,11 +93,12 @@ fn archive_target_path<R: Read + ?Sized>(
     file: &zip::read::ZipFile<'_, R>,
     destination: &Path,
     expected_root: &str,
+    name: &str,
 ) -> io::Result<Option<std::path::PathBuf>> {
     let enclosed_path = file.enclosed_name().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("source archive contains an unsafe path: {}", file.name()),
+            format!("source archive contains an unsafe path: {name}"),
         )
     })?;
     let relative_path = enclosed_path.strip_prefix(expected_root).map_err(|_| {

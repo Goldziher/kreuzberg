@@ -471,6 +471,7 @@ owned_paths = [
   "packages/php/README.md",
   "packages/python/README.md",
   "packages/python/xberg/_xberg.pyi",
+  "packages/ruby/Gemfile",
   "packages/ruby/README.md",
   "packages/ruby/Rakefile",
   "packages/ruby/sig/types.rbs",

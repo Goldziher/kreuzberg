@@ -104,10 +104,11 @@ fn strip_markdown_fence(text: &str) -> &str {
 
 /// Strip JSON Schema fields that some providers don't support.
 ///
-/// `additionalProperties` is rejected by Gemini and Anthropic but required
-/// by OpenAI strict mode. We strip it only for providers known to reject it.
+/// ~keep `additionalProperties` is rejected by Gemini but required by native JSON
+/// schema output in OpenAI and Anthropic. Strip it only for Google providers.
 fn sanitize_schema_for_provider(schema: &Value, model: &str) -> Value {
-    let needs_strip = !model.starts_with("openai/");
+    let needs_strip =
+        model.starts_with("gemini/") || model.starts_with("google_ai/") || model.starts_with("vertex_ai/");
 
     if needs_strip {
         strip_additional_properties(schema)
@@ -241,7 +242,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn test_sanitize_schema_strips_for_non_openai() {
+    fn test_sanitize_schema_strips_for_google_providers() {
         let schema = json!({
             "type": "object",
             "properties": {
@@ -256,11 +257,20 @@ mod tests {
             "additionalProperties": false
         });
 
-        let sanitized = sanitize_schema_for_provider(&schema, "gemini/gemini-2.5-flash");
-        assert!(sanitized.get("additionalProperties").is_none());
-        assert!(sanitized["properties"]["nested"].get("additionalProperties").is_none());
-        assert_eq!(sanitized["type"], "object");
-        assert_eq!(sanitized["required"], json!(["name"]));
+        for model in [
+            "gemini/gemini-2.5-flash",
+            "google_ai/gemini-2.5-flash",
+            "vertex_ai/gemini-2.5-flash",
+        ] {
+            let sanitized = sanitize_schema_for_provider(&schema, model);
+            assert!(sanitized.get("additionalProperties").is_none(), "model={model}");
+            assert!(
+                sanitized["properties"]["nested"].get("additionalProperties").is_none(),
+                "model={model}"
+            );
+            assert_eq!(sanitized["type"], "object", "model={model}");
+            assert_eq!(sanitized["required"], json!(["name"]), "model={model}");
+        }
     }
 
     #[test]
@@ -273,6 +283,26 @@ mod tests {
         });
 
         let sanitized = sanitize_schema_for_provider(&schema, "openai/gpt-4o");
+        assert_eq!(sanitized, schema);
+    }
+
+    #[test]
+    fn test_sanitize_schema_preserves_for_anthropic_native_structured_output() {
+        let schema = json!({
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "nested": {
+                    "type": "object",
+                    "properties": { "x": { "type": "integer" } },
+                    "additionalProperties": false
+                }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+        });
+
+        let sanitized = sanitize_schema_for_provider(&schema, "anthropic/claude-haiku-4-5-20251001");
         assert_eq!(sanitized, schema);
     }
 }

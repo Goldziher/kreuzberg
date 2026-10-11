@@ -2172,13 +2172,14 @@ pub(crate) fn validate_archive_security(
         let file = archive
             .by_index_raw(i)
             .map_err(|e| DocxParseError::SecurityLimit(format!("Failed to read ZIP entry {}: {}", i, e)))?;
+        let name = file
+            .name()
+            .map_err(|e| DocxParseError::SecurityLimit(format!("Failed to decode ZIP entry {i}: {e}")))?;
         let size = file.size();
         if size > MAX_UNCOMPRESSED_FILE_SIZE {
             return Err(DocxParseError::SecurityLimit(format!(
                 "File '{}' uncompressed size {} bytes exceeds limit of {} bytes",
-                file.name(),
-                size,
-                MAX_UNCOMPRESSED_FILE_SIZE
+                name, size, MAX_UNCOMPRESSED_FILE_SIZE
             )));
         }
         total_uncompressed = total_uncompressed.saturating_add(size);
@@ -3322,14 +3323,16 @@ impl<R: Read + Seek> DocxParser<R> {
         let mut targets = Self::parse_header_footer_relationship_targets(&rels_xml);
 
         // Collect before touching `self.archive` mutably in the read loop below.
-        let mut orphans: Vec<(bool, u32, String)> = self
-            .archive
-            .file_names()
-            .filter_map(|name| {
-                let (is_header, index) = conventional_header_footer_part(name)?;
-                (!targets.iter().any(|(_, seen)| seen == name)).then(|| (is_header, index, name.to_string()))
-            })
-            .collect();
+        let mut orphans = Vec::new();
+        for name in self.archive.file_names() {
+            let name = name?;
+            let Some((is_header, index)) = conventional_header_footer_part(&name) else {
+                continue;
+            };
+            if !targets.iter().any(|(_, seen)| seen == name.as_ref()) {
+                orphans.push((is_header, index, name.into_owned()));
+            }
+        }
         // Headers before footers, each in numeric order, so output does not depend on
         // the order the zip central directory happens to list parts in.
         orphans.sort_by_key(|(is_header, index, _)| (!is_header, *index));

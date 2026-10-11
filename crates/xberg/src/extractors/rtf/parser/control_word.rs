@@ -17,6 +17,7 @@ pub(super) struct ControlWordCtx<'a> {
     pub(super) table_state: &'a mut Option<TableState>,
     pub(super) tables: &'a mut Vec<Table>,
     pub(super) images: &'a mut Vec<RtfImage>,
+    pub(super) suppress_picture: bool,
     pub(super) ensure_table: &'a dyn Fn(&mut Option<TableState>),
     pub(super) finalize_table: &'a dyn Fn(&mut Option<TableState>, &mut Vec<Table>),
     pub(super) plain: bool,
@@ -333,10 +334,12 @@ fn handle_u_control_word(
 /// placeholder unless plain-text output was requested.
 fn handle_pict_control_word(chars: &mut std::iter::Peekable<std::str::Chars>, ctx: &mut ControlWordCtx) {
     let (image_metadata, rtf_image) = extract_pict_image(chars);
-    if let Some(img) = rtf_image {
+    if let Some(img) = rtf_image
+        && !ctx.suppress_picture
+    {
         ctx.images.push(img);
     }
-    if !image_metadata.is_empty() && !ctx.plain {
+    if !image_metadata.is_empty() && !ctx.plain && !ctx.suppress_picture {
         let img_md = format!("![image]({image_metadata}) ");
         if let Some(state) = ctx.table_state.as_mut()
             && state.in_row

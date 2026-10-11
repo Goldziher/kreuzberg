@@ -136,9 +136,25 @@ fn remove_ods_row_whitespace(xml: &[u8]) -> Result<(Vec<u8>, bool)> {
 }
 
 #[cfg(any(feature = "excel", feature = "excel-wasm"))]
-fn read_zip_member_bounded<R: Read>(reader: R, limit: usize, member_name: &str) -> Result<Vec<u8>> {
+fn read_zip_member_bounded<R: Read + Seek>(
+    reader: &mut R,
+    header_start: u64,
+    compressed_size: u64,
+    crc32: u32,
+    limit: usize,
+    member_name: &str,
+) -> Result<Vec<u8>> {
+    let read_limit = u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1);
+    reader.seek(std::io::SeekFrom::Start(header_start))?;
+    let options = zip::read::ZipReadOptions::new()
+        .override_compressed_size(compressed_size)
+        .override_uncompressed_size(read_limit)
+        .override_crc(crc32);
+    let mut member = zip::read::read_zipfile_from_stream_with_options(reader, options)
+        .map_err(|error| XbergError::parsing(format!("Invalid spreadsheet ZIP entry '{member_name}': {error}")))?
+        .ok_or_else(|| XbergError::parsing(format!("Missing spreadsheet ZIP entry '{member_name}'")))?;
     let mut bytes = Vec::new();
-    reader.take(limit.saturating_add(1) as u64).read_to_end(&mut bytes)?;
+    member.by_ref().take(read_limit).read_to_end(&mut bytes)?;
     if bytes.len() > limit {
         return Err(XbergError::validation(format!(
             "Spreadsheet ZIP member '{member_name}' exceeds the configured {limit}-byte archive limit"
@@ -155,21 +171,42 @@ fn rewrite_spreadsheet_zip(
 ) -> Result<Option<Vec<u8>>> {
     use std::io::Write as _;
 
-    let mut archive = zip::ZipArchive::new(Cursor::new(data))
+    let archive = zip::ZipArchive::new(Cursor::new(data))
         .map_err(|error| XbergError::parsing(format!("Invalid spreadsheet ZIP: {error}")))?;
-    let mut entries = Vec::with_capacity(archive.len());
+    let mut entry_metadata = Vec::with_capacity(archive.len());
+    for index in 0..archive.len() {
+        let entry = archive
+            .by_index_data(index)
+            .map_err(|error| XbergError::parsing(format!("Invalid spreadsheet ZIP entry: {error}")))?;
+        let name = entry
+            .name()
+            .map_err(|error| XbergError::parsing(format!("Invalid spreadsheet ZIP entry name: {error}")))?
+            .into_owned();
+        entry_metadata.push((
+            name,
+            entry.is_dir(),
+            entry.header_start(),
+            entry.compressed_size(),
+            entry.crc32(),
+        ));
+    }
+    let mut reader = archive.into_inner();
+    let mut entries = Vec::with_capacity(entry_metadata.len());
     let mut actual_contents_size = 0usize;
     let mut changed = false;
-    for index in 0..archive.len() {
-        let mut entry = archive
-            .by_index(index)
-            .map_err(|error| XbergError::parsing(format!("Invalid spreadsheet ZIP entry: {error}")))?;
-        let name = entry.name().to_owned();
-        if entry.is_dir() {
+    for (name, is_dir, header_start, compressed_size, crc32) in entry_metadata {
+        if is_dir {
             entries.push((name, None));
             continue;
         }
-        let contents = read_zip_member_bounded(&mut entry, limits.max_archive_size, &name)?;
+        let contents = read_zip_member_bounded(
+            &mut reader,
+            header_start,
+            compressed_size,
+            crc32,
+            limits.max_archive_size,
+            &name,
+        )?;
         actual_contents_size = actual_contents_size
             .checked_add(contents.len())
             .ok_or_else(|| XbergError::validation("Spreadsheet ZIP aggregate size overflow".to_owned()))?;
@@ -229,17 +266,32 @@ fn normalize_xlsx_dimensions(data: &[u8], limits: &SecurityLimits) -> Result<Opt
 
 #[cfg(any(feature = "excel", feature = "excel-wasm"))]
 fn has_row_only_xlsx_dimensions<R: Read + Seek>(reader: R, limits: &SecurityLimits) -> Result<bool> {
-    let mut archive =
+    let archive =
         zip::ZipArchive::new(reader).map_err(|error| XbergError::parsing(format!("Invalid XLSX ZIP: {error}")))?;
+    let mut worksheets = Vec::new();
     for index in 0..archive.len() {
-        let mut entry = archive
-            .by_index(index)
+        let entry = archive
+            .by_index_data(index)
             .map_err(|error| XbergError::parsing(format!("Invalid XLSX ZIP entry: {error}")))?;
-        let name = entry.name().to_owned();
+        let name = entry
+            .name()
+            .map_err(|error| XbergError::parsing(format!("Invalid XLSX ZIP entry name: {error}")))?
+            .into_owned();
         if !name.starts_with("xl/worksheets/") || !name.ends_with(".xml") {
             continue;
         }
-        let contents = read_zip_member_bounded(&mut entry, limits.max_archive_size, &name)?;
+        worksheets.push((name, entry.header_start(), entry.compressed_size(), entry.crc32()));
+    }
+    let mut reader = archive.into_inner();
+    for (name, header_start, compressed_size, crc32) in worksheets {
+        let contents = read_zip_member_bounded(
+            &mut reader,
+            header_start,
+            compressed_size,
+            crc32,
+            limits.max_archive_size,
+            &name,
+        )?;
         if remove_row_only_xlsx_dimensions(&contents)?.1 {
             return Ok(true);
         }

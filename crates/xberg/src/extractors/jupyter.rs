@@ -22,7 +22,7 @@ use crate::plugins::{InternalDocumentExtractor, Plugin};
 #[cfg(feature = "notebook")]
 use crate::types::ProcessingWarning;
 #[cfg(feature = "notebook")]
-use crate::types::internal::InternalDocument;
+use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
 #[cfg(feature = "notebook")]
 use crate::types::internal_builder::InternalDocumentBuilder;
 #[cfg(feature = "notebook")]
@@ -1080,25 +1080,24 @@ impl JupyterExtractor {
             .and_then(Value::as_str)
             .map(str::to_owned);
         let additional = metadata.into_iter().collect();
-        let mut images = if config.jupyter_cell_rendering.includes_outputs() {
-            output_images
-        } else {
-            Vec::new()
-        };
-        images.extend(attachment_images);
-        for (index, image) in images.iter_mut().enumerate() {
+        let mut document = Self::build_internal_document_with_budget(
+            &notebook,
+            config.jupyter_cell_rendering,
+            plain,
+            &output_images,
+            &attachment_images,
+            budget,
+        )?
+        .unwrap_or_else(|| InternalDocumentBuilder::new("jupyter").build());
+        for (index, image) in document.images.iter_mut().enumerate() {
             image.image_index = index as u32;
         }
-        let mut document =
-            Self::build_internal_document_with_budget(&notebook, config.jupyter_cell_rendering, plain, budget)?
-                .unwrap_or_else(|| InternalDocumentBuilder::new("jupyter").build());
         document.mime_type = mime_type.to_string();
         document.metadata = Metadata {
             language,
             additional,
             ..Default::default()
         };
-        document.images = images;
         document.processing_warnings.extend(warnings);
         Ok(document)
     }
@@ -1117,15 +1116,29 @@ impl JupyterExtractor {
         plain: bool,
     ) -> Option<InternalDocument> {
         let mut budget = SecurityBudget::from_limits(&crate::extractors::security::SecurityLimits::default());
-        Self::build_internal_document_with_budget(notebook, rendering, plain, &mut budget)
+        Self::build_internal_document_with_budget(notebook, rendering, plain, &[], &[], &mut budget)
             .ok()
             .flatten()
+    }
+
+    fn attachment_placeholder_text(document: &InternalDocument, filename: &str) -> Option<String> {
+        let destination = format!("attachment:{filename}");
+        let uri = document
+            .uris
+            .iter()
+            .find(|uri| uri.kind == crate::types::UriKind::Image && uri.url == destination)?;
+        Some(match uri.label.as_deref() {
+            Some(label) => format!("[Image: {label} ({destination})]"),
+            None => format!("[Image: {destination}]"),
+        })
     }
 
     fn build_internal_document_with_budget(
         notebook: &Value,
         rendering: JupyterCellRendering,
         plain: bool,
+        output_images: &[ExtractedImage],
+        attachment_images: &[ExtractedImage],
         budget: &mut SecurityBudget,
     ) -> Result<Option<InternalDocument>> {
         let Some(cells) = notebook.get("cells").and_then(Value::as_array) else {
@@ -1147,7 +1160,7 @@ impl JupyterExtractor {
 
         let mut builder = InternalDocumentBuilder::new("jupyter");
 
-        for cell in cells {
+        for (cell_idx, cell) in cells.iter().enumerate() {
             budget.step()?;
             let cell_type = cell.get("cell_type").and_then(|t| t.as_str()).unwrap_or("unknown");
             let source_text = Self::extract_source(cell.get("source").unwrap_or(&Value::Null));
@@ -1179,8 +1192,35 @@ impl JupyterExtractor {
                     let events: Vec<pulldown_cmark::Event> =
                         pulldown_cmark::Parser::new_ext(trimmed, crate::extractors::markdown::markdown_options())
                             .collect();
-                    let cell_doc =
+                    let mut cell_doc =
                         crate::extractors::markdown::MarkdownExtractor::build_internal_document(&events, &None);
+                    let page_number = (cell_idx + 1) as u32;
+                    for image in attachment_images
+                        .iter()
+                        .filter(|image| image.page_number == Some(page_number))
+                    {
+                        let filename = image.description.as_deref().and_then(|description| {
+                            description.split_once(" attachment: ").map(|(_, filename)| filename)
+                        });
+                        let placeholder_text =
+                            filename.and_then(|filename| Self::attachment_placeholder_text(&cell_doc, filename));
+                        let image_index = cell_doc.push_image(image.clone());
+                        let placeholder = placeholder_text.and_then(|placeholder_text| {
+                            cell_doc.elements.iter_mut().find(|element| {
+                                matches!(element.kind, ElementKind::Paragraph) && element.text == placeholder_text
+                            })
+                        });
+                        if let Some(element) = placeholder {
+                            element.kind = ElementKind::Image { image_index };
+                            element.text = image.description.clone().unwrap_or_default();
+                        } else {
+                            cell_doc.push_element(InternalElement::text(
+                                ElementKind::Image { image_index },
+                                image.description.clone().unwrap_or_default(),
+                                0,
+                            ));
+                        }
+                    }
                     builder.append_document(cell_doc);
                 }
                 "code" => {
@@ -1228,6 +1268,18 @@ impl JupyterExtractor {
                             budget.step()?;
                             Self::push_output_element(&mut builder, output, plain, budget)?;
                         }
+                    }
+                    let page_number = (cell_idx + 1) as u32;
+                    for image in output_images
+                        .iter()
+                        .filter(|image| image.page_number == Some(page_number))
+                    {
+                        builder.push_image(
+                            image.description.as_deref(),
+                            image.clone(),
+                            image.page_number,
+                            image.bounding_box,
+                        );
                     }
                 }
                 _ => {
@@ -1339,10 +1391,121 @@ mod tests {
     use super::*;
     use crate::extractors::security::SecurityLimits;
     use crate::plugins::InternalDocumentExtractor;
-    use crate::types::internal::ElementKind;
 
     fn test_budget() -> SecurityBudget {
         SecurityBudget::from_limits(&SecurityLimits::default())
+    }
+
+    #[tokio::test]
+    async fn should_create_image_elements_for_output_and_attachment_images() {
+        let image = base64::engine::general_purpose::STANDARD.encode([0x89, 0x50, 0x4e, 0x47]);
+        let inline_image = format!("![inline](data:image/png;base64,{image})\n\n");
+        let notebook = json!({
+            "cells": [
+                {
+                    "cell_type": "markdown",
+                    "metadata": {},
+                    "source": [inline_image, "![label](attachment:label.png)"],
+                    "attachments": {"label.png": {"image/png": image}}
+                },
+                {
+                    "cell_type": "code",
+                    "execution_count": 1,
+                    "metadata": {},
+                    "source": ["show()"],
+                    "outputs": [{
+                        "output_type": "display_data",
+                        "metadata": {},
+                        "data": {"image/png": image}
+                    }]
+                }
+            ],
+            "metadata": {},
+            "nbformat": 4,
+            "nbformat_minor": 5
+        });
+        let config = ExtractionConfig {
+            ocr: Some(crate::core::config::OcrConfig::default()),
+            ..Default::default()
+        };
+
+        let doc = JupyterExtractor::new()
+            .extract_content(
+                serde_json::to_vec(&notebook).unwrap().as_slice(),
+                "application/x-ipynb+json",
+                &config,
+            )
+            .await
+            .expect("notebook extraction must succeed");
+
+        let image_indices: Vec<u32> = doc
+            .elements
+            .iter()
+            .filter_map(|element| match element.kind {
+                ElementKind::Image { image_index } => Some(image_index),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(doc.images.len(), 3);
+        assert_eq!(image_indices, vec![0, 1, 2]);
+        assert!(image_indices.iter().all(|index| (*index as usize) < doc.images.len()));
+    }
+
+    #[tokio::test]
+    async fn should_match_attachment_destinations_exactly_when_filenames_share_a_prefix() {
+        let image = base64::engine::general_purpose::STANDARD.encode([0x89, 0x50, 0x4e, 0x47]);
+        let notebook = json!({
+            "cells": [{
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "[download](attachment:plot.png)\n\n",
+                    "![long](attachment:plot.png.backup)\n\n",
+                    "![colon](<attachment:plot: detail.png>)\n\n",
+                    "![short](attachment:plot.png)"
+                ],
+                "attachments": {
+                    "plot.png": {"image/png": image},
+                    "plot.png.backup": {"image/png": image},
+                    "plot: detail.png": {"image/png": image}
+                }
+            }],
+            "metadata": {},
+            "nbformat": 4,
+            "nbformat_minor": 5
+        });
+        let config = ExtractionConfig {
+            ocr: Some(crate::core::config::OcrConfig::default()),
+            ..Default::default()
+        };
+
+        let doc = JupyterExtractor::new()
+            .extract_content(
+                serde_json::to_vec(&notebook).unwrap().as_slice(),
+                "application/x-ipynb+json",
+                &config,
+            )
+            .await
+            .expect("notebook extraction must succeed");
+
+        let image_indices: Vec<u32> = doc
+            .elements
+            .iter()
+            .filter_map(|element| match element.kind {
+                ElementKind::Image { image_index } => Some(image_index),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(image_indices, vec![1, 2, 0]);
+        assert_eq!(
+            doc.elements
+                .iter()
+                .filter(|element| {
+                    matches!(element.kind, ElementKind::Paragraph) && element.text.contains("attachment:")
+                })
+                .count(),
+            0
+        );
     }
 
     #[test]

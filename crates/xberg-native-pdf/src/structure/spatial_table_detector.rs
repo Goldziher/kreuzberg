@@ -4570,6 +4570,18 @@ fn cell_span_separator(prev: &TextSpan, current: &TextSpan) -> &'static str {
         return "";
     }
 
+    // Locale-independent numeric punctuation stays attached when the PDF
+    // splits a number immediately before its decimal/grouping separator. The
+    // digit-only suffix avoids swallowing sentence punctuation. ~keep
+    let prev_ends_in_digit = prev.text.trim_end().chars().next_back().is_some_and(|c| c.is_numeric());
+    let mut current_chars = current.text.trim_start().chars();
+    let starts_numeric_group = matches!(current_chars.next(), Some('.' | ',' | '\u{066B}' | '\u{066C}'))
+        && current_chars.clone().next().is_some()
+        && current_chars.all(|c| c.is_numeric());
+    if prev_ends_in_digit && starts_numeric_group {
+        return "";
+    }
+
     let prev_end_x = prev.bbox.x + prev.bbox.width;
     let gap = current.bbox.x - prev_end_x;
     let font_size = prev.font_size.max(current.font_size).max(1.0);
@@ -9265,6 +9277,31 @@ mod tests {
             ts(" superiori", 137.0, 200.0, 27.6, 7.83),
         ];
         assert_eq!(extract_cell_text(&[0, 1], &spans), "corrispettivi superiori");
+    }
+
+    /// GH#2092: a native PDF may draw the leading digits and the locale's
+    /// thousands-separator group as separate words with a visible glyph gap. ~keep
+    #[test]
+    fn cell_text_keeps_numeric_separator_group_attached() {
+        for separator in ['.', ',', '\u{066B}', '\u{066C}'] {
+            let suffix = format!("{separator}804");
+            let spans = vec![
+                ts("59", 100.0, 200.0, 10.0, 10.0),
+                ts(&suffix, 113.0, 200.0, 20.0, 10.0),
+            ];
+
+            assert_eq!(extract_cell_text(&[0, 1], &spans), format!("59{separator}804"));
+        }
+    }
+
+    #[test]
+    fn cell_text_does_not_attach_sentence_punctuation() {
+        let spans = vec![
+            ts("Section", 100.0, 200.0, 10.0, 10.0),
+            ts(".", 113.0, 200.0, 20.0, 10.0),
+        ];
+
+        assert_eq!(extract_cell_text(&[0, 1], &spans), "Section .");
     }
 
     /// A word that opens a cell can carry the same source-space prefix, but a

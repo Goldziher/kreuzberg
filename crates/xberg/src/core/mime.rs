@@ -1701,7 +1701,7 @@ fn detect_office_format_from_archive<R: Read + Seek>(archive: &mut zip::ZipArchi
     if has(archive, "Index/Presentation.iwa")
         || archive
             .file_names()
-            .any(|n| n.starts_with("Index/Slide-") || n.starts_with("Index/Slide_"))
+            .any(|name| name.is_ok_and(|name| name.starts_with("Index/Slide-") || name.starts_with("Index/Slide_")))
     {
         return Some(IWORK_KEYNOTE_MIME_TYPE);
     }
@@ -1765,7 +1765,7 @@ fn detect_ooxml_content_type<R: Read + Seek>(archive: &mut zip::ZipArchive<R>) -
     let mut content_types_index = None;
     for index in 0..archive.len() {
         let entry = archive.by_index(index).ok()?;
-        if entry.name() == CONTENT_TYPES_PATH && content_types_index.replace(index).is_some() {
+        if entry.name().ok()?.as_ref() == CONTENT_TYPES_PATH && content_types_index.replace(index).is_some() {
             return None;
         }
     }
@@ -1872,7 +1872,8 @@ fn detect_zip_mimetype_entry<R: Read + Seek>(archive: &mut zip::ZipArchive<R>) -
 
     let mut mimetype_index = None;
     for index in 0..archive.len() {
-        if archive.by_index(index).ok()?.name() == "mimetype" && mimetype_index.replace(index).is_some() {
+        if archive.by_index(index).ok()?.name().ok()?.as_ref() == "mimetype" && mimetype_index.replace(index).is_some()
+        {
             return None;
         }
     }
@@ -2123,11 +2124,11 @@ mod tests {
     use std::fs::File;
     use std::io::{Cursor, Write};
     use tempfile::tempdir;
-    use zip::write::FileOptions;
+    use zip::write::SimpleFileOptions;
 
     fn build_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
         let mut archive = zip::ZipWriter::new(Cursor::new(Vec::new()));
-        let options = FileOptions::<'_, ()>::default().compression_method(zip::CompressionMethod::Stored);
+        let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
         for (name, content) in entries {
             archive.start_file(*name, options).unwrap();
             archive.write_all(content).unwrap();

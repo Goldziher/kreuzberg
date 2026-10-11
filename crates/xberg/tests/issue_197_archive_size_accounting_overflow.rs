@@ -279,7 +279,7 @@ async fn should_still_accept_an_ordinary_archive() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
         zip.start_file("notes.txt", options).expect("write notes.txt");
         zip.write_all(b"Ordinary archive content.").expect("write payload");
         zip.finish().expect("finish zip");

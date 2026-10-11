@@ -6,7 +6,7 @@
 # for. 0.83.0 additionally fixes the php/napi/pyo3 mirror defaults, the elixir bytes
 # hop and the typescript/wasm mock-url builder that this repo's e2e legs were red on.
 # ~keep
-alef_version = "0.107.11"
+alef_version = "0.109.6"
 languages = [
   "python",
   "node",
@@ -32,15 +32,18 @@ node_package_manager = "pnpm"
 
 [workspace.ownership]
 user_owned = [
+  "Taskfile.yml",
   "e2e/csharp/Xberg.E2eTests.csproj",
   "e2e/dart/pubspec.yaml",
   "e2e/go/go.mod",
   "e2e/java/pom.xml",
   "e2e/kotlin_android/build.gradle.kts",
   "e2e/node/package.json",
+  "e2e/php/composer.json",
   "e2e/swift_e2e/Package.swift",
   "e2e/wasm/package.json",
   "e2e/zig/build.zig",
+  "packages/dart/pubspec.yaml",
   "packages/kotlin-android/gradle/wrapper/gradle-wrapper.properties",
   "packages/kotlin-android/src/test/kotlin/io/xberg/XbergScaffoldTest.kt",
   "packages/zig/test/xberg_test.zig",
@@ -353,6 +356,9 @@ exclude = [
   "**/vendored/**",
   "**/stopwords/**",
   "**/testdata/**",
+  # Vendored PDFium SDK headers must remain byte-identical to the packaged upstream
+  # release; clang-format rewrites them and obscures provenance without adding coverage. ~keep
+  "crates/xberg-pdfium-render/include/pdfium_*/**",
   # Lint coverage on the ~354 generated e2e files is deliberately zero, not accidentally
   # zero: they are per-language Alef output and cannot be made to satisfy hand-written-code
   # lint rules (docstring/annotation/complexity checks fire on generator structure, not
@@ -5339,10 +5345,7 @@ description = "High-performance document intelligence library"
 license = "MIT"
 repository = "https://github.com/xberg-io/xberg"
 homepage = "https://xberg.io"
-authors = [
-  "Na'aman Hirschfeld <naaman@xberg.io>",
-  "Tobias Perlstein <tobias@xberg.io>",
-]
+authors = ["Na'aman Hirschfeld <naaman@xberg.io>", "Tobias Perlstein <tobias@xberg.io>"]
 keywords = ["document", "extraction", "pdf", "ocr", "text"]
 
 [crates.scaffold.cargo]

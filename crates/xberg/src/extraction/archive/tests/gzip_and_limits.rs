@@ -73,7 +73,7 @@ fn test_zip_too_many_files_rejected() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         for i in 0..5 {
             let filename = format!("file_{}.txt", i);
@@ -304,7 +304,7 @@ fn test_zip_text_content_names_offending_member_when_it_exceeds_content_cap() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
         zip.start_file("huge.txt", options).unwrap();
         // Highly compressible filler large enough to dwarf a tiny cap without needing a
         // gigabyte-scale allocation in the test process.
@@ -341,7 +341,7 @@ fn test_zip_file_bytes_names_offending_member_when_it_exceeds_archive_cap() {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
         zip.start_file("huge.bin", options).unwrap();
         zip.write_all(&vec![0xABu8; 200_000]).unwrap();
         zip.finish().unwrap();

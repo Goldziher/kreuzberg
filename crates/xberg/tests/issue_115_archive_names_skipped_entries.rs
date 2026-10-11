@@ -18,7 +18,7 @@ fn zip_with_bookkeeping_junk() -> Vec<u8> {
     let mut cursor = Cursor::new(Vec::new());
     {
         let mut zip = ZipWriter::new(&mut cursor);
-        let options = FileOptions::<'_, ()>::default();
+        let options = FileOptions::<'_, '_, ()>::default();
 
         zip.start_file("report.txt", options).expect("write report.txt");
         zip.write_all(b"Quarterly report body.").expect("write report body");

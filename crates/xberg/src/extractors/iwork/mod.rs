@@ -111,7 +111,7 @@ pub(crate) fn collect_iwa_paths(content: &[u8]) -> Result<Vec<String>> {
     let iwa_paths: Vec<String> = (0..archive.len())
         .filter_map(|i| {
             archive.by_index(i).ok().and_then(|f| {
-                let name = f.name().to_string();
+                let name = f.name().ok()?.into_owned();
                 if name.ends_with(".iwa") { Some(name) } else { None }
             })
         })

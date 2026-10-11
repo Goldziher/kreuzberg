@@ -49,7 +49,10 @@ pub(crate) fn extract_zip_metadata(bytes: &[u8], limits: &SecurityLimits) -> Res
             .by_index(i)
             .map_err(|e| XbergError::parsing(format!("Failed to read ZIP entry: {}", e)))?;
 
-        let path = file.name().to_string();
+        let path = file
+            .name()
+            .map_err(|error| XbergError::parsing(format!("Invalid ZIP entry name: {error}")))?
+            .into_owned();
         let size = file.size();
         let is_dir = file.is_dir();
 
@@ -113,7 +116,10 @@ pub(crate) fn extract_zip_text_content(bytes: &[u8], limits: &SecurityLimits) ->
             .by_index(i)
             .map_err(|e| XbergError::parsing(format!("Failed to read ZIP entry: {}", e)))?;
 
-        let path = file.name().to_string();
+        let path = file
+            .name()
+            .map_err(|error| XbergError::parsing(format!("Invalid ZIP entry name: {error}")))?
+            .into_owned();
 
         if !file.is_dir() && TEXT_EXTENSIONS.iter().any(|ext| path.to_lowercase().ends_with(ext)) {
             // `zip` 2.4.2 builds the entry's `Read` impl as `Crc32Reader::new(Decompressor::new(..))`
@@ -194,7 +200,10 @@ pub(crate) fn extract_zip_file_bytes(bytes: &[u8], limits: &SecurityLimits) -> R
             continue;
         }
 
-        let path = file.name().to_string();
+        let path = file
+            .name()
+            .map_err(|error| XbergError::parsing(format!("Invalid ZIP entry name: {error}")))?
+            .into_owned();
         // See the comment in `extract_zip_text_content`: the underlying `zip` reader has no
         // `Take` on the decompressed side, so `size()` (the declared header value) bounds
         // nothing about this read. Cap it ourselves at `max_archive_size` -- the same budget

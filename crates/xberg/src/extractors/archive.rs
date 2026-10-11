@@ -611,7 +611,7 @@ mod tests {
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut zip = ZipWriter::new(&mut cursor);
-            let options = FileOptions::<'_, ()>::default();
+            let options = FileOptions::<'_, '_, ()>::default();
 
             zip.start_file("test.txt", options).unwrap();
             zip.write_all(b"Hello, World!").unwrap();
@@ -655,7 +655,7 @@ mod tests {
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut zip = ZipWriter::new(&mut cursor);
-            let options = FileOptions::<'_, ()>::default();
+            let options = FileOptions::<'_, '_, ()>::default();
 
             for (name, body) in [
                 ("zebra.txt", "zebra body"),
@@ -703,7 +703,7 @@ mod tests {
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut zip = ZipWriter::new(&mut cursor);
-            let options = FileOptions::<'_, ()>::default();
+            let options = FileOptions::<'_, '_, ()>::default();
 
             zip.start_file("report.txt", options).unwrap();
             zip.write_all(b"Quarterly report body.").unwrap();
@@ -782,7 +782,7 @@ mod tests {
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut zip = ZipWriter::new(&mut cursor);
-            let options = FileOptions::<'_, ()>::default();
+            let options = FileOptions::<'_, '_, ()>::default();
             for (name, content) in [("a.txt", "alpha"), ("b.txt", "bravo"), ("c.txt", "charlie")] {
                 zip.start_file(name, options).unwrap();
                 zip.write_all(content.as_bytes()).unwrap();
@@ -839,7 +839,7 @@ mod tests {
         let mut cursor = Cursor::new(Vec::new());
         {
             let mut zip = ZipWriter::new(&mut cursor);
-            let options = FileOptions::<'_, ()>::default();
+            let options = FileOptions::<'_, '_, ()>::default();
             zip.start_file("doc.md", options).unwrap();
             zip.write_all(markdown.as_bytes()).unwrap();
             zip.finish().unwrap();

@@ -39,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(extraction, packaging): Xberg builds with zip 9.** Source-archive extraction, ZIP-based document and archive
+  extraction, and MIME routing now handle zip 9's fallible entry names. Published dependency constraints select the
+  supported zip 9 line instead of relying on the workspace lockfile.
 - **(chunking): Markdown splitting scales to multi-megabyte inputs.** Semantic boundary lookups are indexed once
   instead of rescanning and sorting the remaining document for every emitted chunk, eliminating quadratic CPU time
   on large text-like files. Heading-context resolution walks a precomputed parent chain per chunk instead of replaying
@@ -61,19 +64,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   right before a sentence's `.` or `!`, or a `-`, `*` or `#` was followed by a unit too long to join it, that mark
   became a chunk of its own. Such a chunk is now filled from finer units instead. On the test corpus this removes
   under 3% of chunks (mostly list and heading markers in small chunk sizes) and moves only the boundaries around them.
-- **(chunking): YAML and JSON section chunks report where their section sits in the source.** Every section used to
-  carry `byte_start` and `byte_end` of 0, so all sections resolved to the first page and the offsets located nothing.
-  Sections now carry the byte range of their key through the end of their value, `first_page`, `last_page` and
 - **(chunking): opening quotes, typographic bullets and a closing mark after a full chunk stay with their text.** A
   `"` after a line break, or a `•` bullet, followed by a unit too long to join it was left as a chunk of its own, as
   was a closing `)` or `"` that spilled just past a full final chunk. The splitter now treats any non-alphanumeric
   mark as a mark, refills such a chunk from finer units, and ends the previous chunk a word sooner when only marks
   would remain. A leading whitespace run wider than `overlap` is no longer carried into the next chunk as overlap.
+- **(chunking): YAML and JSON section chunks report where their section sits in the source.** Every section used to
+  carry `byte_start` and `byte_end` of 0, so all sections resolved to the first page and the offsets located nothing.
+  Sections now carry the byte range of their key through the end of their value, `first_page`, `last_page` and
   `page_spans` cover the pages that range touches, and the pieces of a section that had to be split share that range.
   A section the scanner cannot place falls back to its nearest enclosing key.
 - **(chunking): attaching bounding boxes and node ids to chunks scales linearly on pages that hold many nodes.** Each
   chunk was compared with every body node on its page, which is quadratic when one page holds most of a large
   document. Pages with many nodes now use a text index; the matched nodes and boxes are identical.
+- **(structured extraction): Anthropic native JSON Schema requests retain closed-object constraints.** Structured
+  extraction no longer removes `additionalProperties: false` before calling Anthropic models through liter-llm.
+- **(pdf): native table cells keep numeric separators attached to their digits.** Thousands and decimal separators,
+  including Arabic separators, no longer gain a space when adjacent PDF glyph runs are assembled into a cell.
+  (GH#2092)
+- **(hwpx): pictures resolve when resource filenames include extensions.** HWPX image references now use a unique
+  filename-stem fallback when an exact resource key is unavailable, while ambiguous matches are skipped with a
+  warning instead of being chosen nondeterministically. (GH#2091)
+- **(rtf): pictures with nested property groups and binary payloads are extracted correctly.** Hex payload collection
+  no longer consumes nested picture-property bytes as image data, `\binN` payloads are decoded within
+  `max_content_size`, and `\nonshppict` fallback copies are not returned twice when separated from their primary copy
+  by a line break. (GH#2090)
+- **(jupyter): notebook pictures contribute their OCR text to output.** Attachment and code-output images now retain
+  exact source positions and image identities, including prefix-overlapping attachment names, so their recognized
+  text appears once in plain, Markdown, Djot and HTML output. (GH#2089)
+- **(html, epub, fictionbook): Markdown-family output keeps embedded-image OCR text.** Extractors now invalidate
+  pre-rendered markup before image OCR mutates the document, so recognized picture text is rendered once rather than
+  being omitted from Markdown and Djot output. (GH#2087)
 - **(pdf): a title set across a two-column page's gutter no longer moves the column split beside a lone label.** The
   whitespace-corridor search accepted the gap between a column and a lone header label or page number as a gutter, so
   the two columns were read line by line. That search now needs text on at least six rows on each side of a corridor,

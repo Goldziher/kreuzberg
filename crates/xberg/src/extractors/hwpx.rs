@@ -123,7 +123,10 @@ fn collect_section_formulas<R: Read + Seek>(archive: &mut zip::ZipArchive<R>) ->
     // parts are `section0` and `section2` gives positions 0 and 1 on both sides.
     let mut section_parts: Vec<(usize, String)> = archive
         .file_names()
-        .filter_map(|name| section_index_of(name).map(|digits| (digits, name.to_string())))
+        .filter_map(|name| {
+            let name = name.ok()?;
+            section_index_of(&name).map(|digits| (digits, name.into_owned()))
+        })
         .collect();
     section_parts.sort();
     let section_parts: Vec<(usize, String)> = section_parts
@@ -257,6 +260,7 @@ fn build_hwpx_internal_document(
 
     let mut image_index: usize = 0;
     let mut footnote_counter: u32 = 0;
+    let image_resources = ImageResourceLookup::new(&doc.resources);
 
     for section in &doc.sections {
         // Key on the section's own index. `unhwp` drops a section it cannot
@@ -309,47 +313,61 @@ fn build_hwpx_internal_document(
 
                     for inline in &p.content {
                         if let unhwp::model::InlineContent::Image(img_ref) = inline {
-                            if let Some(resource) = doc.resources.get(&img_ref.id) {
-                                let image = ExtractedImage {
-                                    data: Bytes::from(resource.data.clone()),
-                                    format: mime_to_format(resource.mime_type.as_deref().unwrap_or("")),
-                                    image_index: image_index as u32,
-                                    page_number: None,
-                                    width: img_ref.width,
-                                    height: img_ref.height,
-                                    colorspace: None,
-                                    bits_per_component: None,
-                                    is_mask: false,
-                                    description: img_ref.alt_text.clone(),
-                                    ocr_result: None,
-                                    bounding_box: None,
-                                    source_path: None,
-                                    image_kind: None,
-                                    kind_confidence: None,
-                                    cluster_id: None,
-                                    caption: None,
-                                    qr_codes: None,
-                                    data_base64: None,
-                                };
-                                builder.push_image(img_ref.alt_text.as_deref(), image, None, None);
-                                image_index += 1;
-                            } else {
-                                // `img_ref.id` names a resource that `doc.resources` never
-                                // received a binary payload for (a missing/unpacked media
-                                // part). A well-formed HWPX package always has a resource
-                                // entry for every image reference it emits, so this only
-                                // fires on a genuinely incomplete document -- and unlike the
-                                // resolved case above, nothing is pushed for it at all: the
-                                // image is silently absent from the output (#171).
-                                builder.add_warning(crate::core::diagnostics::warning(
-                                    HWPX_WARNING_SOURCE,
-                                    format!(
-                                        "Image reference '{}' has no corresponding entry in the document's \
-                                         resources; the image could not be extracted",
-                                        img_ref.id
-                                    ),
-                                ));
-                            }
+                            let resource = match image_resources.get(&img_ref.id) {
+                                ImageResourceMatch::Found(resource) => resource,
+                                ImageResourceMatch::Missing => {
+                                    // `img_ref.id` names a resource that `doc.resources` never
+                                    // received a binary payload for (a missing/unpacked media
+                                    // part). A well-formed HWPX package always has a resource
+                                    // entry for every image reference it emits, so this only
+                                    // fires on a genuinely incomplete document -- and unlike the
+                                    // resolved case above, nothing is pushed for it at all: the
+                                    // image is silently absent from the output (#171). ~keep
+                                    builder.add_warning(crate::core::diagnostics::warning(
+                                        HWPX_WARNING_SOURCE,
+                                        format!(
+                                            "Image reference '{}' has no corresponding entry in the document's \
+                                             resources; the image could not be extracted",
+                                            img_ref.id
+                                        ),
+                                    ));
+                                    continue;
+                                }
+                                ImageResourceMatch::Ambiguous => {
+                                    builder.add_warning(crate::core::diagnostics::warning(
+                                        HWPX_WARNING_SOURCE,
+                                        format!(
+                                            "Image reference '{}' matches multiple resource filenames by stem; \
+                                             image extraction is ambiguous and was skipped",
+                                            img_ref.id
+                                        ),
+                                    ));
+                                    continue;
+                                }
+                            };
+                            let image = ExtractedImage {
+                                data: Bytes::from(resource.data.clone()),
+                                format: mime_to_format(resource.mime_type.as_deref().unwrap_or("")),
+                                image_index: image_index as u32,
+                                page_number: None,
+                                width: img_ref.width,
+                                height: img_ref.height,
+                                colorspace: None,
+                                bits_per_component: None,
+                                is_mask: false,
+                                description: img_ref.alt_text.clone(),
+                                ocr_result: None,
+                                bounding_box: None,
+                                source_path: None,
+                                image_kind: None,
+                                kind_confidence: None,
+                                cluster_id: None,
+                                caption: None,
+                                qr_codes: None,
+                                data_base64: None,
+                            };
+                            builder.push_image(img_ref.alt_text.as_deref(), image, None, None);
+                            image_index += 1;
                         }
                     }
                 }
@@ -395,6 +413,42 @@ fn build_hwpx_internal_document(
     }
 
     builder.build()
+}
+
+#[derive(Clone, Copy)]
+enum ImageResourceMatch<'a> {
+    Found(&'a unhwp::model::Resource),
+    Missing,
+    Ambiguous,
+}
+
+struct ImageResourceLookup<'a> {
+    resources: &'a std::collections::HashMap<String, unhwp::model::Resource>,
+    stems: AHashMap<&'a str, ImageResourceMatch<'a>>,
+}
+
+impl<'a> ImageResourceLookup<'a> {
+    fn new(resources: &'a std::collections::HashMap<String, unhwp::model::Resource>) -> Self {
+        let mut stems = AHashMap::with_capacity(resources.len());
+        for (name, resource) in resources {
+            let Some(stem) = std::path::Path::new(name).file_stem().and_then(|stem| stem.to_str()) else {
+                continue;
+            };
+            stems
+                .entry(stem)
+                .and_modify(|entry| *entry = ImageResourceMatch::Ambiguous)
+                .or_insert(ImageResourceMatch::Found(resource));
+        }
+        Self { resources, stems }
+    }
+
+    fn get(&self, image_id: &str) -> ImageResourceMatch<'a> {
+        self.resources
+            .get(image_id)
+            .map(ImageResourceMatch::Found)
+            .or_else(|| self.stems.get(image_id).copied())
+            .unwrap_or(ImageResourceMatch::Missing)
+    }
 }
 
 /// Push a header's or footer's paragraphs, tagging every element with the given
@@ -1133,6 +1187,79 @@ mod tests {
             "a resolvable image must not warn, got {:?}",
             hwpx_warnings(&internal)
         );
+    }
+
+    #[test]
+    fn should_resolve_image_resource_when_filename_has_an_extension() {
+        let mut doc = Document::new();
+        doc.resources.insert(
+            "BIN0001.png".to_string(),
+            unhwp::model::Resource::new(unhwp::model::ResourceType::Image, vec![0x89, 0x50, 0x4E, 0x47]),
+        );
+        let mut section = Section::new(0);
+        let mut paragraph = Paragraph::new();
+        paragraph
+            .content
+            .push(InlineContent::Image(unhwp::model::ImageRef::new("BIN0001")));
+        section.content.push(Block::Paragraph(paragraph));
+        doc.sections.push(section);
+
+        let internal = build_hwpx_internal_document(doc, "application/haansofthwpx", &AHashMap::new());
+
+        assert_eq!(internal.images.len(), 1);
+        assert!(hwpx_warnings(&internal).is_empty());
+    }
+
+    #[test]
+    fn should_warn_instead_of_choosing_an_ambiguous_image_filename_stem() {
+        let mut doc = Document::new();
+        for filename in ["BIN0001.png", "BIN0001.jpg"] {
+            doc.resources.insert(
+                filename.to_string(),
+                unhwp::model::Resource::new(unhwp::model::ResourceType::Image, vec![0x89, 0x50, 0x4E, 0x47]),
+            );
+        }
+        let mut section = Section::new(0);
+        let mut paragraph = Paragraph::new();
+        paragraph
+            .content
+            .push(InlineContent::Image(unhwp::model::ImageRef::new("BIN0001")));
+        section.content.push(Block::Paragraph(paragraph));
+        doc.sections.push(section);
+
+        let internal = build_hwpx_internal_document(doc, "application/haansofthwpx", &AHashMap::new());
+
+        assert!(internal.images.is_empty());
+        assert_eq!(hwpx_warnings(&internal).len(), 1);
+        assert!(hwpx_warnings(&internal)[0].contains("ambiguous"));
+    }
+
+    #[test]
+    fn should_prefer_an_exact_image_resource_key_over_filename_stem_fallbacks() {
+        let mut doc = Document::new();
+        doc.resources.insert(
+            "BIN0001".to_string(),
+            unhwp::model::Resource::new(unhwp::model::ResourceType::Image, vec![1]),
+        );
+        for filename in ["BIN0001.png", "BIN0001.jpg"] {
+            doc.resources.insert(
+                filename.to_string(),
+                unhwp::model::Resource::new(unhwp::model::ResourceType::Image, vec![2]),
+            );
+        }
+        let mut section = Section::new(0);
+        let mut paragraph = Paragraph::new();
+        paragraph
+            .content
+            .push(InlineContent::Image(unhwp::model::ImageRef::new("BIN0001")));
+        section.content.push(Block::Paragraph(paragraph));
+        doc.sections.push(section);
+
+        let internal = build_hwpx_internal_document(doc, "application/haansofthwpx", &AHashMap::new());
+
+        assert_eq!(internal.images.len(), 1);
+        assert_eq!(internal.images[0].data.as_ref(), &[1]);
+        assert!(hwpx_warnings(&internal).is_empty());
     }
 
     /// #171: `build_paragraph_content`'s `InlineContent::Image` arm is a no-op

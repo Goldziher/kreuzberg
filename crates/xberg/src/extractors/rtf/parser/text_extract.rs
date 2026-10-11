@@ -198,6 +198,37 @@ struct TextEscapeCtx<'a> {
     annotation_depth: &'a mut i32,
     annotation_buf: &'a mut String,
     pending_atnid: &'a mut Option<i32>,
+    picture_groups: &'a mut Vec<PictureGroupState>,
+    pending_primary: &'a mut Option<PendingPrimary>,
+}
+
+#[derive(Clone, Copy, Default)]
+enum PictureRole {
+    #[default]
+    Direct,
+    Primary,
+    Fallback {
+        suppress: bool,
+    },
+}
+
+#[derive(Clone, Copy, Default)]
+struct PictureGroupState {
+    role: PictureRole,
+    wrapper: Option<PictureWrapper>,
+    image_start: usize,
+}
+
+#[derive(Clone, Copy)]
+enum PictureWrapper {
+    Primary,
+    Fallback,
+}
+
+#[derive(Clone, Copy)]
+struct PendingPrimary {
+    parent_depth: i32,
+    has_image: bool,
 }
 
 impl TextEscapeCtx<'_> {
@@ -207,6 +238,10 @@ impl TextEscapeCtx<'_> {
             table_state: self.table_state,
             tables: self.tables,
             images: self.images,
+            suppress_picture: matches!(
+                self.picture_groups.last().map(|group| group.role),
+                Some(PictureRole::Fallback { suppress: true })
+            ),
             ensure_table: self.ensure_table,
             finalize_table: self.finalize_table,
             plain: self.plain,
@@ -259,6 +294,7 @@ impl TextEscapeCtx<'_> {
 
     fn handle_literal(&mut self, next_ch: char, chars: &mut Peekable<Chars<'_>>) {
         chars.next();
+        *self.pending_primary = None;
         *self.expect_destination = false;
         if *self.in_fldinst {
             self.fldinst_content.push(next_ch);
@@ -292,6 +328,7 @@ impl TextEscapeCtx<'_> {
 
     fn handle_hex_escape(&mut self, chars: &mut Peekable<Chars<'_>>) {
         chars.next();
+        *self.pending_primary = None;
         *self.expect_destination = false;
         let bytes = parse_hex_escape_bytes(chars);
         if (*self.in_footnote || *self.in_shptxt || *self.in_annotation) && bytes.is_some() {
@@ -360,11 +397,37 @@ impl TextEscapeCtx<'_> {
             self.handle_skipped_control_word(&control_word, param, chars);
             return;
         }
+        *self.pending_primary = None;
         let mut ctx = self.control_word_ctx();
         handle_control_word(&control_word, param, chars, &mut ctx);
     }
 
     fn handle_destination(&mut self, control_word: &str, param: Option<i32>) -> bool {
+        if control_word == "shppict" {
+            *self.pending_primary = None;
+            if let Some(group) = self.picture_groups.last_mut() {
+                group.role = PictureRole::Primary;
+                group.wrapper = Some(PictureWrapper::Primary);
+                group.image_start = self.images.len();
+            }
+            *self.ignorable_pending = false;
+            return true;
+        }
+        if control_word == "nonshppict" {
+            let parent_depth = self.group_depth - 1;
+            let suppress = self
+                .pending_primary
+                .take()
+                .is_some_and(|primary| primary.parent_depth == parent_depth && primary.has_image);
+            if let Some(group) = self.picture_groups.last_mut() {
+                group.role = PictureRole::Fallback { suppress };
+                group.wrapper = Some(PictureWrapper::Fallback);
+                group.image_start = self.images.len();
+            }
+            *self.ignorable_pending = false;
+            return true;
+        }
+        *self.pending_primary = None;
         if *self.ignorable_pending {
             *self.ignorable_pending = false;
             if self.handle_ignorable_destination(control_word, param) {
@@ -613,6 +676,8 @@ pub(crate) fn extract_text_from_rtf(
     let mut expect_destination = false;
 
     let mut group_has_text: Vec<bool> = Vec::new();
+    let mut picture_groups = vec![PictureGroupState::default()];
+    let mut pending_primary = None;
 
     let mut pending_boundary_space = false;
 
@@ -652,6 +717,11 @@ pub(crate) fn extract_text_from_rtf(
                 group_depth += 1;
                 expect_destination = true;
                 group_has_text.push(false);
+                let role = picture_groups.last().map(|group| group.role).unwrap_or_default();
+                picture_groups.push(PictureGroupState {
+                    role,
+                    ..PictureGroupState::default()
+                });
                 let current_uc = uc_stack.last().copied().unwrap_or(1);
                 uc_stack.push(current_uc);
                 let current_hidden = hidden_stack.last().copied().unwrap_or(false);
@@ -667,6 +737,22 @@ pub(crate) fn extract_text_from_rtf(
                 group_depth -= 1;
                 expect_destination = false;
                 ignorable_pending = false;
+                if let Some(picture_group) = picture_groups.pop() {
+                    match picture_group.wrapper {
+                        Some(PictureWrapper::Primary) => {
+                            pending_primary = Some(PendingPrimary {
+                                parent_depth: group_depth,
+                                has_image: images.len() > picture_group.image_start,
+                            });
+                        }
+                        Some(PictureWrapper::Fallback) => pending_primary = None,
+                        None => {
+                            if pending_primary.is_some_and(|primary| primary.parent_depth >= group_depth) {
+                                pending_primary = None;
+                            }
+                        }
+                    }
+                }
                 fmt_tracker.pop(result.len());
                 if uc_stack.len() > 1 {
                     uc_stack.pop();
@@ -783,6 +869,8 @@ pub(crate) fn extract_text_from_rtf(
                     annotation_depth: &mut annotation_depth,
                     annotation_buf: &mut annotation_buf,
                     pending_atnid: &mut pending_atnid,
+                    picture_groups: &mut picture_groups,
+                    pending_primary: &mut pending_primary,
                 };
                 escape_ctx.handle(&mut chars);
             }
@@ -821,6 +909,7 @@ pub(crate) fn extract_text_from_rtf(
             }
             _ => {
                 expect_destination = false;
+                pending_primary = None;
                 if in_fldinst {
                     fldinst_content.push(ch);
                 }
