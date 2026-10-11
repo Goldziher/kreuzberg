@@ -82,7 +82,7 @@ Email both maintainers directly:
 - **Tobias Silva** — <tobias@xberg.io>
 
 You may also use GitHub's [private vulnerability
-reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
+reporting](https://github.com/xberg-io/xberg/security/advisories/new)
 on this repository, which opens a private channel with the maintainers.
 
 Include:
