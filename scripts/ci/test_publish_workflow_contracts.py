@@ -402,6 +402,7 @@ def test_php_linux_artifacts_are_floor_built_and_verified() -> None:
     upload = block.index("actions/upload-artifact@v7", verify)
 
     assert setup_zig < install_zigbuild < rebuild < package < verify < smoke < upload
+    assert 'version: "0.13.0"' in block
     assert 'TARGET_ARG="${TARGET}.${GLIBC_FLOOR}"' in block
     assert 'cargo zigbuild --locked -p xberg-php --release --target "${TARGET_ARG}"' in block
     assert "contains(matrix.platform.target, '-linux-gnu')" in block

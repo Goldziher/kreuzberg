@@ -1299,6 +1299,11 @@ jobs:
       - name: Setup Zig for PHP glibc floor
         if: contains(matrix.platform.target, '-linux-gnu')
         uses: xberg-io/actions/setup-zig@v1
+        # ~keep ext-php-rs bindgen uses the runner's libclang 18. Zig 0.17 ships newer
+        # ARM headers that libclang 18 cannot parse (`__mfp8` and NEON type failures).
+        # Zig 0.13 uses LLVM 18 headers while retaining glibc-versioned targets.
+        with:
+          version: "0.13.0"
 
       - name: Install cargo-zigbuild for PHP glibc floor
         if: contains(matrix.platform.target, '-linux-gnu')
