@@ -38,6 +38,7 @@ on:
 
 env:
   GLIBC_FLOOR: "2.28"
+  MACOSX_DEPLOYMENT_TARGET: "11.0"
   # jsDelivr (which serves the published @xberg-io/xberg-wasm package to the
   # live browser demo) hard-caps a single file at 50 MB and rejects the whole
   # package past 150 MB total -- either cap breached serves a 403 to every

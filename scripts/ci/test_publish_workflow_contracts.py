@@ -358,6 +358,12 @@ def test_go_release_matrix_covers_every_generated_setup_platform() -> None:
     assert 'return base + "-musl", nil' in setup
 
 
+def test_release_uses_supported_macos_deployment_floor() -> None:
+    workflow = WORKFLOW.read_text()
+    env = workflow[workflow.index("env:\n") : workflow.index("\npermissions:")]
+    assert 'MACOSX_DEPLOYMENT_TARGET: "11.0"' in env
+
+
 def test_go_release_packaging_matches_static_and_musl_setup_contracts() -> None:
     block = job_block(WORKFLOW.read_text(), "go-ffi-libraries")
     assert "task go:publish:package TARGET=${{ matrix.target }}" in block
@@ -503,6 +509,7 @@ if __name__ == "__main__":
     test_swift_dry_run_checks_run_artifact_without_release_mutation()
     test_glibc_ffi_jobs_build_lzma_statically()
     test_go_release_matrix_covers_every_generated_setup_platform()
+    test_release_uses_supported_macos_deployment_floor()
     test_go_release_packaging_matches_static_and_musl_setup_contracts()
     test_glibc_native_closures_are_strictly_verified()
     test_php_linux_artifacts_are_floor_built_and_verified()
