@@ -500,6 +500,9 @@ async fn run_pipeline_impl(
         }
     }
 
+    // Before the fold: the fold turns an OCR text anchor into a paragraph, and after it the
+    // picture of the anchor would read as a picture that nothing shows. ~keep
+    let inline_images = images_without_an_element(&doc);
     #[cfg(all(feature = "ocr", feature = "tokio-runtime"))]
     fold_embedded_image_ocr_text(&mut doc);
 
@@ -509,8 +512,8 @@ async fn run_pipeline_impl(
         page_markers::inject_page_marker_elements(&mut doc, &format);
     }
 
-    replace_embedded_image_markdown_with_ocr(&mut doc);
-    append_embedded_image_ocr_text(&mut doc);
+    replace_embedded_image_markdown_with_ocr(&mut doc, &inline_images);
+    append_embedded_image_ocr_text(&mut doc, &inline_images);
 
     let pp_config = config.postprocessor.as_ref();
     let postprocessing_enabled = pp_config.is_none_or(|processor_config| processor_config.enabled);
@@ -803,8 +806,9 @@ pub fn run_pipeline_sync(mut doc: InternalDocument, config: &ExtractionConfig) -
     // Mirror `run_pipeline`'s embedded-image OCR text handling (#219): without these,
     // `images.ocr_text_only` / `images.append_ocr_text` are silently ignored on the
     // sync (non-tokio, WASM) path even though the fields above are now set.
-    replace_embedded_image_markdown_with_ocr(&mut doc);
-    append_embedded_image_ocr_text(&mut doc);
+    let inline_images = images_without_an_element(&doc);
+    replace_embedded_image_markdown_with_ocr(&mut doc, &inline_images);
+    append_embedded_image_ocr_text(&mut doc, &inline_images);
 
     // Computed once, up front, from `doc` (independent of the later derivation and
     // content-mutating steps) and carried to the relocated `execute_chunking` call
@@ -1306,15 +1310,24 @@ fn image_ocr_text_rendering(config: &ExtractionConfig) -> (bool, bool) {
     (images.ocr_text_only, images.append_ocr_text)
 }
 
-/// Positions in `doc.images` of the pictures that no image element shows.
+/// Positions in `doc.images` of the pictures that no image element and no OCR text anchor
+/// shows.
 ///
 /// An inline `![alt](url)` placeholder pairs with these, in order. A picture with an image
-/// element gets its OCR text from the renderer, and pairing it here too would add the text
-/// a second time. ~keep
+/// element gets its OCR text from the renderer and a picture with an anchor gets it from the
+/// fold, and pairing it here too would add the text a second time. ~keep
 fn images_without_an_element(doc: &InternalDocument) -> Vec<usize> {
     let mut has_element = vec![false; doc.images.len()];
     for element in &doc.elements {
-        if let crate::types::internal::ElementKind::Image { image_index } = element.kind
+        #[cfg(all(feature = "ocr", feature = "tokio-runtime"))]
+        let anchored_image = element.image_ocr_text_anchor_index();
+        #[cfg(not(all(feature = "ocr", feature = "tokio-runtime")))]
+        let anchored_image: Option<u32> = None;
+        let image_index = match element.kind {
+            crate::types::internal::ElementKind::Image { image_index } => Some(image_index),
+            _ => anchored_image,
+        };
+        if let Some(image_index) = image_index
             && let Some(flag) = has_element.get_mut(image_index as usize)
         {
             *flag = true;
@@ -1327,12 +1340,11 @@ fn images_without_an_element(doc: &InternalDocument) -> Vec<usize> {
 
 /// Replace inline markdown image references with OCR text for formats (e.g. PPTX)
 /// that bake placeholders into paragraph text rather than using `ElementKind::Image`.
-fn replace_embedded_image_markdown_with_ocr(doc: &mut InternalDocument) {
-    if !doc.ocr_text_only || doc.images.is_empty() {
-        return;
-    }
-    let inline_images = images_without_an_element(doc);
-    if inline_images.is_empty() {
+///
+/// `inline_images` is the result of [`images_without_an_element`] for the document as the
+/// extractor made it.
+fn replace_embedded_image_markdown_with_ocr(doc: &mut InternalDocument, inline_images: &[usize]) {
+    if !doc.ocr_text_only || inline_images.is_empty() {
         return;
     }
 
@@ -1383,12 +1395,11 @@ fn replace_embedded_image_markdown_with_ocr(doc: &mut InternalDocument) {
 /// Append OCR text after inline markdown image references for formats (e.g. PPTX)
 /// that bake placeholders into paragraph text. Only runs when `append_ocr_text` is
 /// `true` and `ocr_text_only` is `false`.
-fn append_embedded_image_ocr_text(doc: &mut InternalDocument) {
-    if doc.ocr_text_only || !doc.append_ocr_text || doc.images.is_empty() {
-        return;
-    }
-    let inline_images = images_without_an_element(doc);
-    if inline_images.is_empty() {
+///
+/// `inline_images` is the result of [`images_without_an_element`] for the document as the
+/// extractor made it.
+fn append_embedded_image_ocr_text(doc: &mut InternalDocument, inline_images: &[usize]) {
+    if doc.ocr_text_only || !doc.append_ocr_text || inline_images.is_empty() {
         return;
     }
 

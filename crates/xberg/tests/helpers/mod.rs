@@ -320,6 +320,57 @@ pub mod pdf_helpers {
     }
 }
 
+/// A custom renderer whose output is one fixed line for every document.
+///
+/// Register it with `register_renderer` and ask for `OutputFormat::Custom(name)`: `content` is
+/// then `line`, so a test sees what a custom renderer's output does and does not carry.
+pub struct FixedLineRenderer {
+    pub name: &'static str,
+    pub line: &'static str,
+}
+
+impl xberg::plugins::Plugin for FixedLineRenderer {
+    fn name(&self) -> &str {
+        self.name
+    }
+}
+
+impl xberg::plugins::Renderer for FixedLineRenderer {
+    fn render_result(&self, _result: &ExtractedDocument) -> Result<String> {
+        Ok(self.line.to_string())
+    }
+}
+
+/// A custom renderer whose output is the pages of the document it receives.
+///
+/// Register it with `register_renderer` and ask for `OutputFormat::Custom(name)`: `content` is
+/// then [`pages_written`] for the pages the renderer received, so a test sees the page content a
+/// registered renderer reads.
+pub struct PageWritingRenderer {
+    pub name: &'static str,
+}
+
+/// One line per page, `page <number>: <content>`, with the content in its Rust debug form.
+pub fn pages_written(pages: &[xberg::types::PageContent]) -> String {
+    pages
+        .iter()
+        .map(|page| format!("page {}: {:?}", page.page_number, page.content))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+impl xberg::plugins::Plugin for PageWritingRenderer {
+    fn name(&self) -> &str {
+        self.name
+    }
+}
+
+impl xberg::plugins::Renderer for PageWritingRenderer {
+    fn render_result(&self, result: &ExtractedDocument) -> Result<String> {
+        Ok(pages_written(result.pages.as_deref().unwrap_or_default()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

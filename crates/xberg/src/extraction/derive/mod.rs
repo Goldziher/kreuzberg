@@ -878,9 +878,29 @@ fn derive_code_intelligence(doc: &mut InternalDocument) -> Option<serde_json::Va
 /// 7. Assembles the final `ExtractedDocument`
 #[cfg_attr(alef, alef(skip))]
 pub fn derive_extraction_result(
+    doc: InternalDocument,
+    include_document_structure: bool,
+    output_format: crate::core::config::OutputFormat,
+) -> ExtractedDocument {
+    derive(doc, include_document_structure, output_format, true)
+}
+
+/// Derive the document that the registry hands to a registered public renderer.
+///
+/// Its `content` is the plain rendering and it has the document structure. The caller gets
+/// the renderer's output, not this `content`, so its pages are built as for every output
+/// that is not plain: from the text of their elements only. ~keep
+pub(crate) fn derive_renderer_input(doc: InternalDocument) -> ExtractedDocument {
+    derive(doc, true, crate::core::config::OutputFormat::Plain, false)
+}
+
+/// The derivation pipeline. `is_result` says that the caller gets this document: then its
+/// `content` is the output when no formatted content is rendered.
+fn derive(
     mut doc: InternalDocument,
     include_document_structure: bool,
     output_format: crate::core::config::OutputFormat,
+    is_result: bool,
 ) -> ExtractedDocument {
     tracing::debug!(
         element_count = doc.elements.len(),
@@ -893,7 +913,14 @@ pub fn derive_extraction_result(
     let (content, mime_type) = derive_content_and_mime_type(&mut doc);
     let formatted_content = compute_formatted_content(&mut doc, &output_format);
 
-    let raw_pages = doc.prebuilt_pages.take().or_else(|| build_pages(&doc));
+    // `content`, the plain rendering, is the output the caller gets exactly when the caller
+    // gets this document and `formatted_content` is `None`: plain output, or a custom format
+    // name with no renderer. The document for a registered renderer is not the caller's. ~keep
+    let content_is_plain = is_result && formatted_content.is_none();
+    let raw_pages = doc
+        .prebuilt_pages
+        .take()
+        .or_else(|| build_pages(&doc, content_is_plain));
     let pages = apply_page_content_format(raw_pages, &doc, &output_format);
     let ocr_elements = doc.prebuilt_ocr_elements.take().or_else(|| build_ocr_elements(&doc));
 

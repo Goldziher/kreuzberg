@@ -104,6 +104,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(html, epub, fictionbook): Markdown-family output keeps embedded-image OCR text.** Extractors now invalidate
   pre-rendered markup before image OCR mutates the document, so recognized picture text is rendered once rather than
   being omitted from Markdown and Djot output. (GH#2087)
+- **(pptx, ocr): plain output of a PPTX file has the OCR text of a picture on a slide.** The text is in `content` and
+  in the content of the slide one time. Before, OCR read the picture and the text was in no part of the plain output.
+  The text is also there when `images.inject_placeholders` is `false` in Markdown, Djot and HTML output. (GH#2086)
+- **(ocr): text that has the form of a Markdown image reference does not repeat the OCR text of a picture.** When a
+  document had a paragraph such as `![label](label.png)` as text, and a picture whose OCR text is shown without a
+  placeholder, the text of the picture was in `content` two times. A PDF file with the default settings is such a
+  document. The text is now there one time. (GH#2093)
+- **(ppt, ocr): the content of a slide in `pages` has the OCR text of a picture in plain output.** OCR read the picture
+  on a PPT slide and the text was in `content` of plain output, but not in the content of the slide. Page content that
+  is built from the elements of a page now has the text one time, after the text of the picture, when `content` is the
+  plain rendering: in plain output, and in the output of a custom format name that has no renderer. Page content is
+  built that way when the extractor stores no pages: a PPT file is such a document, and a PDF file is one when page
+  extraction is not set. The page content of Markdown, Djot, HTML, JSON and a custom renderer does not change.
+  (GH#2088)
 - **(pdf): a title set across a two-column page's gutter no longer moves the column split beside a lone label.** The
   whitespace-corridor search accepted the gap between a column and a lone header label or page number as a gutter, so
   the two columns were read line by line. That search now needs text on at least six rows on each side of a corridor,

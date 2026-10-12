@@ -8,7 +8,13 @@ use crate::types::page::PageContent;
 use crate::types::tables::Table;
 
 /// Build per-page `PageContent` from page-grouped elements.
-pub(super) fn build_pages(doc: &InternalDocument) -> Option<Vec<PageContent>> {
+///
+/// `content_is_plain` says that `result.content` is the plain rendering of the document:
+/// plain output, or a custom format name with no renderer, which falls back to plain. Then
+/// a page has the OCR text of a picture where `render_plain` writes it, so `pages[n].content`
+/// and `result.content` agree. For every other output a page has the text of its elements
+/// only. ~keep
+pub(super) fn build_pages(doc: &InternalDocument, content_is_plain: bool) -> Option<Vec<PageContent>> {
     let mut page_map: std::collections::BTreeMap<u32, Vec<&InternalElement>> = std::collections::BTreeMap::new();
 
     for elem in &doc.elements {
@@ -39,6 +45,7 @@ pub(super) fn build_pages(doc: &InternalDocument) -> Option<Vec<PageContent>> {
                 if elem.kind.is_container_start() || elem.kind.is_container_end() {
                     continue;
                 }
+                let mut picture_ocr_text = None;
                 match elem.kind {
                     ElementKind::Table { table_index } => {
                         if let Some(arc_table) = arc_tables.get(table_index as usize) {
@@ -47,14 +54,22 @@ pub(super) fn build_pages(doc: &InternalDocument) -> Option<Vec<PageContent>> {
                     }
                     ElementKind::Image { image_index } if (image_index as usize) < doc.images.len() => {
                         image_indices.push(image_index);
+                        // The OCR text of a picture goes after the picture, as `render_plain`
+                        // writes it. An image element of a PDF document can hold that text as
+                        // its own text already. ~keep
+                        if content_is_plain {
+                            picture_ocr_text = crate::rendering::common::image_ocr_text(doc, elem, image_index)
+                                .filter(|ocr_text| *ocr_text != elem.text);
+                        }
                     }
                     _ => {}
                 }
-                if !elem.text.is_empty() {
+                let own_text = Some(elem.text.as_str()).filter(|text| !text.is_empty());
+                for block in [own_text, picture_ocr_text].into_iter().flatten() {
                     if !content.is_empty() {
                         content.push_str("\n\n");
                     }
-                    content.push_str(&elem.text);
+                    content.push_str(block);
                 }
             }
 

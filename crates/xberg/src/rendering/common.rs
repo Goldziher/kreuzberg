@@ -497,6 +497,27 @@ pub(crate) fn is_body_element(elem: &InternalElement) -> bool {
     elem.layer == ContentLayer::Body
 }
 
+/// The OCR text of the picture that the image element `elem` shows, where there is text to add.
+///
+/// `None` for a picture with no OCR text, and for a picture whose text whole-page OCR
+/// replaced. Plain output and the plain content of a page both read it here, so the two
+/// cannot disagree about a picture. ~keep
+pub(crate) fn image_ocr_text<'a>(
+    doc: &'a InternalDocument,
+    elem: &InternalElement,
+    image_index: u32,
+) -> Option<&'a str> {
+    if !elem.should_render_image_ocr() {
+        return None;
+    }
+    doc.images
+        .get(image_index as usize)?
+        .ocr_result
+        .as_ref()
+        .map(|result| result.content.as_str())
+        .filter(|content| !content.is_empty())
+}
+
 /// Check if an element is a container end marker.
 pub(crate) fn is_container_end(elem: &InternalElement) -> bool {
     elem.kind.is_container_end()

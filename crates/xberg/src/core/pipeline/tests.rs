@@ -2102,7 +2102,8 @@ fn test_append_ocr_text_for_pptx_images() {
         data_base64: None,
     });
 
-    super::append_embedded_image_ocr_text(&mut doc);
+    let inline_images = super::images_without_an_element(&doc);
+    super::append_embedded_image_ocr_text(&mut doc, &inline_images);
 
     assert_eq!(
         doc.elements.len(),
@@ -2119,10 +2120,7 @@ fn test_append_ocr_text_for_pptx_images() {
 /// source format, and one time for a picture that has an inline placeholder and an image element.
 #[cfg(feature = "tokio-runtime")]
 mod picture_ocr_text_rendering_tests {
-    use super::{
-        append_embedded_image_ocr_text, image_ocr_text_rendering, replace_embedded_image_markdown_with_ocr,
-        run_pipeline,
-    };
+    use super::{image_ocr_text_rendering, images_without_an_element, run_pipeline};
     use crate::core::config::{ExtractionConfig, ImageExtractionConfig, OutputFormat};
     use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
     use crate::types::{ExtractedDocument, ExtractedImage};
@@ -2144,6 +2142,18 @@ mod picture_ocr_text_rendering_tests {
 
     fn image_element(image_index: u32) -> InternalElement {
         InternalElement::text(ElementKind::Image { image_index }, "", 0)
+    }
+
+    /// The two inline steps as the pipeline runs them: with the pictures that nothing shows
+    /// in the document as the extractor made it.
+    fn append_embedded_image_ocr_text(document: &mut InternalDocument) {
+        let inline_images = images_without_an_element(document);
+        super::append_embedded_image_ocr_text(document, &inline_images);
+    }
+
+    fn replace_embedded_image_markdown_with_ocr(document: &mut InternalDocument) {
+        let inline_images = images_without_an_element(document);
+        super::replace_embedded_image_markdown_with_ocr(document, &inline_images);
     }
 
     /// A document as the DOCX extractor makes it: one paragraph and one image element.
@@ -2309,6 +2319,45 @@ mod picture_ocr_text_rendering_tests {
         replace_embedded_image_markdown_with_ocr(&mut replaced);
         let texts: Vec<&str> = replaced.elements.iter().map(|element| element.text.as_str()).collect();
         assert_eq!(texts, ["", OTHER_PICTURE_WORDS]);
+    }
+
+    #[cfg(all(any(feature = "pdf", feature = "office"), feature = "ocr"))]
+    #[tokio::test]
+    #[serial]
+    async fn an_inline_placeholder_does_not_take_the_words_of_a_picture_with_an_ocr_text_anchor() {
+        for (images, case) in [
+            (None, "no images block"),
+            (
+                Some(ImageExtractionConfig {
+                    ocr_text_only: true,
+                    ..Default::default()
+                }),
+                "ocr_text_only on",
+            ),
+        ] {
+            let mut document = InternalDocument::new("pdf");
+            document.push_element(InternalElement::text(ElementKind::Paragraph, INLINE_PLACEHOLDER, 0));
+            document.push_element(InternalElement::image_ocr_text_anchor(0, None));
+            document.images = vec![picture(PICTURE_WORDS)];
+            let config = ExtractionConfig {
+                images,
+                ..Default::default()
+            };
+
+            let result = run_pipeline(document, &config).await.expect("the pipeline runs");
+
+            assert!(
+                result.content.contains(INLINE_PLACEHOLDER),
+                "{case}: {:?}",
+                result.content
+            );
+            assert_eq!(
+                result.content.matches(PICTURE_WORDS).count(),
+                1,
+                "{case}: {:?}",
+                result.content
+            );
+        }
     }
 
     #[test]

@@ -118,6 +118,11 @@ pub(crate) enum PptxInternalSlideElement {
         target: String,
         image_index: Option<u32>,
     },
+    /// A picture that gets no placeholder. Its position keeps the place for the OCR text
+    /// of the picture `image_index`; with no element there, no later step can show it. ~keep
+    ImageOcrTextAnchor {
+        image_index: u32,
+    },
 }
 
 impl Default for PptxExtractionOptions {

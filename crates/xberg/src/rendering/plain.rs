@@ -11,8 +11,8 @@ use crate::types::document_structure::ContentLayer;
 use crate::types::internal::{ElementKind, InternalDocument};
 
 use super::common::{
-    annotation_display_text, annotation_type_label, get_admonition_kind, get_admonition_title, parse_metadata_entries,
-    render_table_plain,
+    annotation_display_text, annotation_type_label, get_admonition_kind, get_admonition_title, image_ocr_text,
+    parse_metadata_entries, render_table_plain,
 };
 
 /// Render an `InternalDocument` to plain text.
@@ -127,11 +127,8 @@ pub(crate) fn render_plain(doc: &InternalDocument) -> String {
                         out.push_str("]\n\n");
                     }
 
-                    if elem.should_render_image_ocr()
-                        && let Some(ocr_result) = &img.ocr_result
-                        && !ocr_result.content.is_empty()
-                    {
-                        out.push_str(&ocr_result.content);
+                    if let Some(ocr_text) = image_ocr_text(doc, elem, image_index) {
+                        out.push_str(ocr_text);
                         out.push_str("\n\n");
                     }
                 } else if !elem.text.trim().is_empty() {
@@ -432,6 +429,44 @@ mod tests {
         let doc = b.build();
         let out = render_plain(&doc);
         assert!(out.contains("[Image: A nice photo]"), "got: {}", out);
+    }
+
+    #[test]
+    fn test_render_plain_image_has_its_ocr_text_once_after_the_description() {
+        let mut b = InternalDocumentBuilder::new("test");
+        let image = crate::types::ExtractedImage {
+            description: Some("A nice photo".to_string()),
+            ocr_result: Some(Box::new(crate::types::ExtractedDocument {
+                content: "Crate 17 holds forty blue lanterns".to_string(),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        b.push_image(Some("A nice photo"), image, None, None);
+        let doc = b.build();
+        let out = render_plain(&doc);
+        assert_eq!(
+            out.trim_end(),
+            "[Image: A nice photo]\n\nCrate 17 holds forty blue lanterns"
+        );
+    }
+
+    #[test]
+    fn test_render_plain_image_with_empty_ocr_text_adds_no_empty_block() {
+        let mut b = InternalDocumentBuilder::new("test");
+        let image = crate::types::ExtractedImage {
+            description: Some("A nice photo".to_string()),
+            ocr_result: Some(Box::new(crate::types::ExtractedDocument {
+                content: String::new(),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        b.push_image(Some("A nice photo"), image, None, None);
+        b.push_paragraph("After", vec![], None, None);
+        let doc = b.build();
+        let out = render_plain(&doc);
+        assert_eq!(out, "[Image: A nice photo]\n\nAfter");
     }
 
     #[test]
