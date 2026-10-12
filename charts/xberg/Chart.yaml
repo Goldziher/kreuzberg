@@ -5,8 +5,8 @@ description: >-
   a Rust core. Extract text, metadata, images, and structured information from
   PDFs, Office documents, images, and 107 formats.
 type: application
-version: 1.3.8
-appVersion: "1.3.8"
+version: 1.3.9
+appVersion: "1.3.9"
 home: https://xberg.io
 sources:
   - https://github.com/xberg-io/xberg
@@ -40,7 +40,7 @@ annotations:
       url: https://github.com/xberg-io/xberg/issues
   artifacthub.io/images: |
     - name: xberg
-      image: ghcr.io/xberg-io/xberg:1.3.8
+      image: ghcr.io/xberg-io/xberg:1.3.9
   artifacthub.io/maintainers: |
     - name: "Na'aman Hirschfeld"
       email: naaman@xberg.io

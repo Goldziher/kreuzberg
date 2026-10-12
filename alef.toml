@@ -6,7 +6,7 @@
 # for. 0.83.0 additionally fixes the php/napi/pyo3 mirror defaults, the elixir bytes
 # hop and the typescript/wasm mock-url builder that this repo's e2e legs were red on.
 # ~keep
-alef_version = "0.109.6"
+alef_version = "0.110.1"
 languages = [
   "python",
   "node",
@@ -5305,7 +5305,7 @@ path = "../../packages/swift"
 path = "../../packages/zig"
 
 [crates.e2e.registry.packages.zig]
-hash = "xberg-v1.3.8-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+hash = "xberg-v1.3.9-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 [crates.e2e.packages.wasm]
 name = "@xberg-io/xberg-wasm"

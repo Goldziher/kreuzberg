@@ -1759,8 +1759,9 @@ typedef struct XBERGOcrMetadata XBERGOcrMetadata;
  * The warning in `ExtractedDocument::processing_warnings` stays available. One
  * warning can cover several pages: when an automatic OCR run of selected pages
  * fails as a whole, it adds one warning and one record for each selected page.
- * A failure of the OCR fallback for the whole document adds a warning and no
- * record. Repeated failures on one page make one record.
+ * When the OCR fallback for the whole document fails, it adds one warning and
+ * one record for each page that has no native text. Repeated failures on one
+ * page make one record.
  */
 typedef struct XBERGOcrPageFailure XBERGOcrPageFailure;
 /**
@@ -12208,6 +12209,13 @@ int32_t
 xberg_extraction_config_include_document_structure(XBERGAlefHandle handle);
 
 /**
+ * Get the `strict_parse` field from a `ExtractionConfig`.
+ * # Safety
+ * Pointer must be a valid handle returned by this library.
+ */
+int32_t xberg_extraction_config_strict_parse(XBERGAlefHandle handle);
+
+/**
  * Get the `acceleration` field from a `ExtractionConfig`.
  * A non-null returned handle is owned by the caller.
  * It must be freed with `xberg_acceleration_config_free`.
@@ -13242,6 +13250,27 @@ xberg_file_extraction_config_include_document_structure(XBERGAlefHandle handle);
  */
 int32_t xberg_file_extraction_config_has_include_document_structure(
     XBERGAlefHandle handle);
+
+/**
+ * Get the `strict_parse` field from a `FileExtractionConfig`.
+ * # Safety
+ * Pointer must be a valid handle returned by this library.
+ */
+int32_t xberg_file_extraction_config_strict_parse(XBERGAlefHandle handle);
+
+/**
+ * Report whether the `strict_parse` field on a `FileExtractionConfig` is
+ * `Some`.
+ *
+ * `xberg_file_extraction_config_strict_parse` cannot distinguish a `None` field
+ * from a legitimate zero-valued `Some` at the C ABI boundary -- there is no
+ * null representation for a numeric return, so both collapse to the same
+ * sentinel. Call this function first: `1` means the field getter's return value
+ * is meaningful, `0` means the field is absent and the getter's sentinel must
+ * be ignored, `-1` reports an invalid handle (see `xberg_last_error_code`). #
+ * Safety Pointer must be a valid handle returned by this library.
+ */
+int32_t xberg_file_extraction_config_has_strict_parse(XBERGAlefHandle handle);
 
 /**
  * Get the `layout` field from a `FileExtractionConfig`.

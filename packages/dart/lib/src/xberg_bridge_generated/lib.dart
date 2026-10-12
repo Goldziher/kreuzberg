@@ -8407,6 +8407,17 @@ class ExtractionConfig {
   /// Independent of `result_format` — can be combined with Unified or ElementBased.
   final bool includeDocumentStructure;
 
+  /// Fail extraction when a text-like document cannot be parsed in its own format.
+  ///
+  /// Default `false` (lenient): when structured parsing of YAML, JSON, TOML or XML fails
+  /// (for example a Helm template, which is not YAML until rendered), or when the XML
+  /// entity-length or table-cell security limit trips on a text-like input, the raw content
+  /// is extracted as plain text (truncated to `security_limits.max_content_size`) and the
+  /// reason is reported in `processing_warnings`. When `true`, those cases return the
+  /// original error. Limits aimed at hostile input (archive size, nesting, XML depth) are
+  /// never relaxed by this option.
+  final bool strictParse;
+
   /// Hardware acceleration configuration for ONNX Runtime models.
   ///
   /// Controls execution provider selection for layout detection and embedding
@@ -8548,6 +8559,7 @@ class ExtractionConfig {
     this.transcription,
     required this.useLayoutForMarkdown,
     required this.includeDocumentStructure,
+    required this.strictParse,
     this.acceleration,
     this.cacheNamespace,
     this.cacheTtlSecs,
@@ -8607,6 +8619,7 @@ class ExtractionConfig {
       transcription.hashCode ^
       useLayoutForMarkdown.hashCode ^
       includeDocumentStructure.hashCode ^
+      strictParse.hashCode ^
       acceleration.hashCode ^
       cacheNamespace.hashCode ^
       cacheTtlSecs.hashCode ^
@@ -8668,6 +8681,7 @@ class ExtractionConfig {
           transcription == other.transcription &&
           useLayoutForMarkdown == other.useLayoutForMarkdown &&
           includeDocumentStructure == other.includeDocumentStructure &&
+          strictParse == other.strictParse &&
           acceleration == other.acceleration &&
           cacheNamespace == other.cacheNamespace &&
           cacheTtlSecs == other.cacheTtlSecs &&
@@ -9030,6 +9044,9 @@ class FileExtractionConfig {
   /// Override document structure output for this file.
   final bool? includeDocumentStructure;
 
+  /// Override strict parsing for this file.
+  final bool? strictParse;
+
   /// Override layout detection for this file.
   final LayoutDetectionConfig? layout;
 
@@ -9102,6 +9119,7 @@ class FileExtractionConfig {
     this.resultFormat,
     this.outputFormat,
     this.includeDocumentStructure,
+    this.strictParse,
     this.layout,
     this.transcription,
     this.timeoutSecs,
@@ -9141,6 +9159,7 @@ class FileExtractionConfig {
       resultFormat.hashCode ^
       outputFormat.hashCode ^
       includeDocumentStructure.hashCode ^
+      strictParse.hashCode ^
       layout.hashCode ^
       transcription.hashCode ^
       timeoutSecs.hashCode ^
@@ -9182,6 +9201,7 @@ class FileExtractionConfig {
           resultFormat == other.resultFormat &&
           outputFormat == other.outputFormat &&
           includeDocumentStructure == other.includeDocumentStructure &&
+          strictParse == other.strictParse &&
           layout == other.layout &&
           transcription == other.transcription &&
           timeoutSecs == other.timeoutSecs &&
@@ -13778,9 +13798,9 @@ class OcrMetadata {
 ///
 /// The warning in `ExtractedDocument::processing_warnings` stays available. One warning
 /// can cover several pages: when an automatic OCR run of selected pages fails as a whole,
-/// it adds one warning and one record for each selected page. A failure of the OCR fallback
-/// for the whole document adds a warning and no record. Repeated failures on one page make
-/// one record.
+/// it adds one warning and one record for each selected page. When the OCR fallback for the
+/// whole document fails, it adds one warning and one record for each page that has no native
+/// text. Repeated failures on one page make one record.
 class OcrPageFailure {
   /// One-based page number in the source document.
   final PlatformInt64 page;

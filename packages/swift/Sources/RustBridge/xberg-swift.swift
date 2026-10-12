@@ -11497,6 +11497,10 @@ extension ExtractionConfigRef {
         __swift_bridge__$ExtractionConfig$include_document_structure(ptr)
     }
 
+    public func strictParse() -> Bool {
+        __swift_bridge__$ExtractionConfig$strict_parse(ptr)
+    }
+
     public func acceleration() -> Optional<AccelerationConfig> {
         { let val = __swift_bridge__$ExtractionConfig$acceleration(ptr); if val != nil { return AccelerationConfig(ptr: val!) } else { return nil } }()
     }
@@ -12235,6 +12239,10 @@ extension FileExtractionConfigRef {
 
     public func includeDocumentStructure() -> Optional<Bool> {
         __swift_bridge__$FileExtractionConfig$include_document_structure(ptr).intoSwiftRepr()
+    }
+
+    public func strictParse() -> Optional<Bool> {
+        __swift_bridge__$FileExtractionConfig$strict_parse(ptr).intoSwiftRepr()
     }
 
     public func layout() -> Optional<LayoutDetectionConfig> {

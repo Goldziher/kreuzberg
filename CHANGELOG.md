@@ -9,18 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.9] - 2026-10-12
+
 ### Added
 
-- **(pdf, ocr): a PDF page whose content OCR replaces can keep its text layer.** `PageConfig` has a new
-  `keep_native_content` setting, off by default. When enabled, replaced pages retain their original text layer in the
-  new `native_content` page field. The setting requires `extract_pages = true`; default output is unchanged. (GH#2069)
-- **(ocr): classic OCR models can use a dedicated deployment cache.** `XBERG_OCR_MODEL_CACHE_DIR`
-  supplies the default for PaddleOCR and Sceptre without redirecting other model families, while an explicit
-  request cache remains authoritative. `xberg cache seed-classic-ocr` provisions the complete verified catalog
-  and emits a deterministic machine-readable manifest for offline container builds. (GH#2072)
-- **(go): native setup supports static linking and musl assets.** The regenerated Go setup helper accepts
-  explicit link and platform selection, auto-detects musl Linux hosts, and consumes the release's static linker
-  metadata when static linking is requested.
 - **(config): `strict_parse` controls what happens when a text-like document cannot be parsed in its own format.**
   By default (`false`), a YAML, JSON, TOML or XML file that fails to parse, an XML or SVG file that trips
   `security_limits.max_entity_length`, and a CSV or TSV file that trips `security_limits.max_table_cells` are extracted
@@ -31,18 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **(ocr): the OCR text of a picture follows its placeholder in Markdown and HTML output by default.**
-  `images.append_ocr_text` now defaults to `true`, and a missing `images` block reads the same way. When OCR runs on
-  the embedded pictures of a document, Markdown and HTML output show the recognized text after the placeholder of each
-  picture, for every format that has pictures (PDF, DOCX, PPTX, HTML, EPUB and others). Plain and Djot output already
-  held the text. Before, Markdown output with the default settings showed the placeholder alone. Set `append_ocr_text`
-  to `false` to get the placeholder alone. (GH#2068)
-- **(ocr): the returned image of an image file has no `ocr_result` when the file has OCR text.** When the OCR read
-  of an image file such as a PNG gives text or a table, and an `images` block returns the file as an image,
-  `images[].ocr_result` of that image is now absent. The OCR text of the picture is the content of the document:
-  `content`, `tables` and `ocr_elements`. Before, `ocr_result` held a second OCR read of the same picture, made with
-  other settings. Text that only the second read found is no longer in `content` or anywhere in the result. The image
-  data, its format and its kind do not change. (GH#2068)
+- Updated dependencies, including `tree-sitter-language-pack` 1.22.1 (25 refreshed grammars), `zip` 9.0.2, `biblib` 0.10,
+  `html-escape` 0.3 and `unhwp` 0.19. `ort` stays at 2.0.0-rc.13 because rc.14 requires an `Environment` for every
+  session builder.
 
 ### Fixed
 
@@ -56,7 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aggregate result of the image manifest job, so a CLI image leg timing out skipped the chart for 1.3.6 to 1.3.8 while
   the container images shipped. It is now gated on the `xberg` and `xberg:<version>-core` manifests resolving, the only
   images the chart references. (GH#2106)
-
 - **(pdf): image bounding boxes are correct for images drawn inside a Form XObject with a `/Matrix`.** The form
   `/Matrix` was applied after the page transform instead of before it, so the form's page translation was scaled by
   its own matrix and `ExtractedImage.bounding_box` landed in the wrong place (a regression since 1.2.7). (GH#2103)
@@ -75,6 +57,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ordered by `x` before gaps are measured, and a gap is measured from the line's rightmost edge so far. A column cut
   that would separate short label/value rows whose baselines differ slightly is refused, so key-value rows and table
   rows read row by row. (GH#2097)
+- **(pptx, ocr): plain output of a PPTX file has the OCR text of a picture on a slide.** The text is in `content` and
+  in the content of the slide one time. Before, OCR read the picture and the text was in no part of the plain output.
+  The text is also there when `images.inject_placeholders` is `false` in Markdown, Djot and HTML output. (GH#2086)
+- **(ocr): text that has the form of a Markdown image reference does not repeat the OCR text of a picture.** When a
+  document had a paragraph such as `![label](label.png)` as text, and a picture whose OCR text is shown without a
+  placeholder, the text of the picture was in `content` two times. A PDF file with the default settings is such a
+  document. The text is now there one time. (GH#2093)
+- **(ppt, ocr): the content of a slide in `pages` has the OCR text of a picture in plain output.** OCR read the picture
+  on a PPT slide and the text was in `content` of plain output, but not in the content of the slide. Page content that
+  is built from the elements of a page now has the text one time, after the text of the picture, when `content` is the
+  plain rendering: in plain output, and in the output of a custom format name that has no renderer. Page content is
+  built that way when the extractor stores no pages: a PPT file is such a document, and a PDF file is one when page
+  extraction is not set. The page content of Markdown, Djot, HTML, JSON and a custom renderer does not change.
+  (GH#2088)
+- **(pdf, ocr): a failed OCR fallback for a whole PDF now reports its failed pages in `ocr_page_failures`.** When the
+  OCR run of a whole document failed and the native text was kept, the result had a warning and no record. Each page
+  that has no native text now has a record, as it does when OCR runs on the scanned pages only. A page that has
+  native text has no record. A page that failed in one OCR pipeline stage and got no text from a later stage had no
+  record either, and now has one. (GH#2083)
+
+## [1.3.8] - 2026-10-11
+
+### Added
+
+- **(pdf, ocr): a PDF page whose content OCR replaces can keep its text layer.** `PageConfig` has a new
+  `keep_native_content` setting, off by default. When enabled, replaced pages retain their original text layer in the
+  new `native_content` page field. The setting requires `extract_pages = true`; default output is unchanged. (GH#2069)
+- **(ocr): classic OCR models can use a dedicated deployment cache.** `XBERG_OCR_MODEL_CACHE_DIR`
+  supplies the default for PaddleOCR and Sceptre without redirecting other model families, while an explicit
+  request cache remains authoritative. `xberg cache seed-classic-ocr` provisions the complete verified catalog
+  and emits a deterministic machine-readable manifest for offline container builds. (GH#2072)
+- **(go): native setup supports static linking and musl assets.** The regenerated Go setup helper accepts
+  explicit link and platform selection, auto-detects musl Linux hosts, and consumes the release's static linker
+  metadata when static linking is requested.
+
+### Changed
+
+- **(ocr): the OCR text of a picture follows its placeholder in Markdown and HTML output by default.**
+  `images.append_ocr_text` now defaults to `true`, and a missing `images` block reads the same way. When OCR runs on
+  the embedded pictures of a document, Markdown and HTML output show the recognized text after the placeholder of each
+  picture, for every format that has pictures (PDF, DOCX, PPTX, HTML, EPUB and others). Plain and Djot output already
+  held the text. Before, Markdown output with the default settings showed the placeholder alone. Set `append_ocr_text`
+  to `false` to get the placeholder alone. (GH#2068)
+- **(ocr): the returned image of an image file has no `ocr_result` when the file has OCR text.** When the OCR read
+  of an image file such as a PNG gives text or a table, and an `images` block returns the file as an image,
+  `images[].ocr_result` of that image is now absent. The OCR text of the picture is the content of the document:
+  `content`, `tables` and `ocr_elements`. Before, `ocr_result` held a second OCR read of the same picture, made with
+  other settings. Text that only the second read found is no longer in `content` or anywhere in the result. The image
+  data, its format and its kind do not change. (GH#2068)
+
+### Fixed
+
 - **(extraction, packaging): Xberg builds with zip 9.** Source-archive extraction, ZIP-based document and archive
   extraction, and MIME routing now handle zip 9's fallible entry names. Published dependency constraints select the
   supported zip 9 line instead of relying on the workspace lockfile.
@@ -131,20 +165,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(html, epub, fictionbook): Markdown-family output keeps embedded-image OCR text.** Extractors now invalidate
   pre-rendered markup before image OCR mutates the document, so recognized picture text is rendered once rather than
   being omitted from Markdown and Djot output. (GH#2087)
-- **(pptx, ocr): plain output of a PPTX file has the OCR text of a picture on a slide.** The text is in `content` and
-  in the content of the slide one time. Before, OCR read the picture and the text was in no part of the plain output.
-  The text is also there when `images.inject_placeholders` is `false` in Markdown, Djot and HTML output. (GH#2086)
-- **(ocr): text that has the form of a Markdown image reference does not repeat the OCR text of a picture.** When a
-  document had a paragraph such as `![label](label.png)` as text, and a picture whose OCR text is shown without a
-  placeholder, the text of the picture was in `content` two times. A PDF file with the default settings is such a
-  document. The text is now there one time. (GH#2093)
-- **(ppt, ocr): the content of a slide in `pages` has the OCR text of a picture in plain output.** OCR read the picture
-  on a PPT slide and the text was in `content` of plain output, but not in the content of the slide. Page content that
-  is built from the elements of a page now has the text one time, after the text of the picture, when `content` is the
-  plain rendering: in plain output, and in the output of a custom format name that has no renderer. Page content is
-  built that way when the extractor stores no pages: a PPT file is such a document, and a PDF file is one when page
-  extraction is not set. The page content of Markdown, Djot, HTML, JSON and a custom renderer does not change.
-  (GH#2088)
 - **(pdf): a title set across a two-column page's gutter no longer moves the column split beside a lone label.** The
   whitespace-corridor search accepted the gap between a column and a lone header label or page number as a gutter, so
   the two columns were read line by line. That search now needs text on at least six rows on each side of a corridor,
@@ -181,11 +201,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image is not sent to OCR again, and the text is in `content` one time in every output format. With `ocr_text_only`,
   the placeholder of the image stays. An image file whose OCR read gives no text and no table is still read by image
   OCR, as before. (GH#2068)
-- **(pdf, ocr): a failed OCR fallback for a whole PDF now reports its failed pages in `ocr_page_failures`.** When the
-  OCR run of a whole document failed and the native text was kept, the result had a warning and no record. Each page
-  that has no native text now has a record, as it does when OCR runs on the scanned pages only. A page that has
-  native text has no record. A page that failed in one OCR pipeline stage and got no text from a later stage had no
-  record either, and now has one. (GH#2083)
 
 ## [1.3.7] - 2026-10-09
 

@@ -13,7 +13,7 @@ classifiers = [
 
 [dependency-groups]
 dev = [
-  "xberg>=1.3.8,<2",
+  "xberg>=1.3.9,<2",
   "llama-index-core>=0.14.23,<0.15",
   "mypy>=2.1.0",
   "pre-commit>=4.6",

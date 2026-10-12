@@ -13368,6 +13368,7 @@ const _: fn() = || {
         let _: Option<crate::TranscriptionConfig> = ExtractionConfig.transcription;
         let _: bool = ExtractionConfig.use_layout_for_markdown;
         let _: bool = ExtractionConfig.include_document_structure;
+        let _: bool = ExtractionConfig.strict_parse;
         let _: Option<crate::AccelerationConfig> = ExtractionConfig.acceleration;
         let _: Option<String> = ExtractionConfig.cache_namespace;
         let _: Option<i64> = ExtractionConfig.cache_ttl_secs;
@@ -13452,6 +13453,7 @@ const _: fn() = || {
         let _: Option<crate::ResultFormat> = FileExtractionConfig.result_format;
         let _: Option<crate::OutputFormat> = FileExtractionConfig.output_format;
         let _: Option<bool> = FileExtractionConfig.include_document_structure;
+        let _: Option<bool> = FileExtractionConfig.strict_parse;
         let _: Option<crate::LayoutDetectionConfig> = FileExtractionConfig.layout;
         let _: Option<crate::TranscriptionConfig> = FileExtractionConfig.transcription;
         let _: Option<i64> = FileExtractionConfig.timeout_secs;
@@ -18714,6 +18716,7 @@ impl SseDecode for crate::ExtractionConfig {
         let mut var_transcription = <Option<crate::TranscriptionConfig>>::sse_decode(deserializer);
         let mut var_useLayoutForMarkdown = <bool>::sse_decode(deserializer);
         let mut var_includeDocumentStructure = <bool>::sse_decode(deserializer);
+        let mut var_strictParse = <bool>::sse_decode(deserializer);
         let mut var_acceleration = <Option<crate::AccelerationConfig>>::sse_decode(deserializer);
         let mut var_cacheNamespace = <Option<String>>::sse_decode(deserializer);
         let mut var_cacheTtlSecs = <Option<i64>>::sse_decode(deserializer);
@@ -18770,6 +18773,7 @@ impl SseDecode for crate::ExtractionConfig {
             transcription: var_transcription,
             use_layout_for_markdown: var_useLayoutForMarkdown,
             include_document_structure: var_includeDocumentStructure,
+            strict_parse: var_strictParse,
             acceleration: var_acceleration,
             cache_namespace: var_cacheNamespace,
             cache_ttl_secs: var_cacheTtlSecs,
@@ -18929,6 +18933,7 @@ impl SseDecode for crate::FileExtractionConfig {
         let mut var_resultFormat = <Option<crate::ResultFormat>>::sse_decode(deserializer);
         let mut var_outputFormat = <Option<crate::OutputFormat>>::sse_decode(deserializer);
         let mut var_includeDocumentStructure = <Option<bool>>::sse_decode(deserializer);
+        let mut var_strictParse = <Option<bool>>::sse_decode(deserializer);
         let mut var_layout = <Option<crate::LayoutDetectionConfig>>::sse_decode(deserializer);
         let mut var_transcription = <Option<crate::TranscriptionConfig>>::sse_decode(deserializer);
         let mut var_timeoutSecs = <Option<i64>>::sse_decode(deserializer);
@@ -18965,6 +18970,7 @@ impl SseDecode for crate::FileExtractionConfig {
             result_format: var_resultFormat,
             output_format: var_outputFormat,
             include_document_structure: var_includeDocumentStructure,
+            strict_parse: var_strictParse,
             layout: var_layout,
             transcription: var_transcription,
             timeout_secs: var_timeoutSecs,
@@ -29662,6 +29668,7 @@ impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::ExtractionConfig> {
             self.0.transcription.into_into_dart().into_dart(),
             self.0.use_layout_for_markdown.into_into_dart().into_dart(),
             self.0.include_document_structure.into_into_dart().into_dart(),
+            self.0.strict_parse.into_into_dart().into_dart(),
             self.0.acceleration.into_into_dart().into_dart(),
             self.0.cache_namespace.into_into_dart().into_dart(),
             self.0.cache_ttl_secs.into_into_dart().into_dart(),
@@ -29829,6 +29836,7 @@ impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::FileExtractionConfig> {
             self.0.result_format.into_into_dart().into_dart(),
             self.0.output_format.into_into_dart().into_dart(),
             self.0.include_document_structure.into_into_dart().into_dart(),
+            self.0.strict_parse.into_into_dart().into_dart(),
             self.0.layout.into_into_dart().into_dart(),
             self.0.transcription.into_into_dart().into_dart(),
             self.0.timeout_secs.into_into_dart().into_dart(),
@@ -36836,6 +36844,7 @@ impl SseEncode for crate::ExtractionConfig {
         <Option<crate::TranscriptionConfig>>::sse_encode(self.transcription, serializer);
         <bool>::sse_encode(self.use_layout_for_markdown, serializer);
         <bool>::sse_encode(self.include_document_structure, serializer);
+        <bool>::sse_encode(self.strict_parse, serializer);
         <Option<crate::AccelerationConfig>>::sse_encode(self.acceleration, serializer);
         <Option<String>>::sse_encode(self.cache_namespace, serializer);
         <Option<i64>>::sse_encode(self.cache_ttl_secs, serializer);
@@ -36962,6 +36971,7 @@ impl SseEncode for crate::FileExtractionConfig {
         <Option<crate::ResultFormat>>::sse_encode(self.result_format, serializer);
         <Option<crate::OutputFormat>>::sse_encode(self.output_format, serializer);
         <Option<bool>>::sse_encode(self.include_document_structure, serializer);
+        <Option<bool>>::sse_encode(self.strict_parse, serializer);
         <Option<crate::LayoutDetectionConfig>>::sse_encode(self.layout, serializer);
         <Option<crate::TranscriptionConfig>>::sse_encode(self.transcription, serializer);
         <Option<i64>>::sse_encode(self.timeout_secs, serializer);

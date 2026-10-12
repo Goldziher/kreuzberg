@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    xberg (1.3.8)
+    xberg (1.3.9)
       rb_sys (>= 0.9.130, < 0.10)
       sorbet-runtime (~> 0.6)
 
@@ -193,7 +193,7 @@ CHECKSUMS
   unicode-display_width (3.3.0) sha256=4b7aa66a4b11db50f6f7e98411215cd0dd10eaecb665d36eec5bcacb3fa0b613
   unicode-emoji (4.3.0) sha256=11c02fa73290378c066bb0562cd4c87d8e1b706fbbe0059ca12746a4244de8ce
   uri (1.1.2) sha256=89292e98eabbef6248b0a0ed5e7e398e152f83f17560023a6d94a7f492b169fb
-  xberg (1.3.8)
+  xberg (1.3.9)
 
 BUNDLED WITH
   4.0.11

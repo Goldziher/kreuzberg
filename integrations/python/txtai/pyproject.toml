@@ -4,7 +4,7 @@ requires = ["hatchling>=1,<2"]
 
 [project]
 name = "txtai-xberg"
-version = "1.3.8"
+version = "1.3.9"
 description = "Xberg document extraction and chunking pipeline for txtai embeddings"
 readme = "README.md"
 keywords = [
@@ -47,7 +47,7 @@ classifiers = [
   "Topic :: Text Processing :: Indexing",
   "Typing :: Typed",
 ]
-dependencies = ["xberg>=1.3.8,<2"]
+dependencies = ["xberg>=1.3.9,<2"]
 optional-dependencies.txtai = ["txtai>=9.7,<10"]
 urls.Changelog = "https://github.com/xberg-io/xberg/blob/main/integrations/python/txtai/CHANGELOG.md"
 urls.Documentation = "https://docs.xberg.io"

@@ -19949,8 +19949,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ExtractionConfig dco_decode_extraction_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 55)
-      throw Exception('unexpected arr length: expect 55 but see ${arr.length}');
+    if (arr.length != 56)
+      throw Exception('unexpected arr length: expect 56 but see ${arr.length}');
     return ExtractionConfig(
       mimeDetectionPolicy: dco_decode_mime_detection_policy(arr[0]),
       useCache: dco_decode_bool(arr[1]),
@@ -19992,29 +19992,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       transcription: dco_decode_opt_box_autoadd_transcription_config(arr[33]),
       useLayoutForMarkdown: dco_decode_bool(arr[34]),
       includeDocumentStructure: dco_decode_bool(arr[35]),
-      acceleration: dco_decode_opt_box_autoadd_acceleration_config(arr[36]),
-      cacheNamespace: dco_decode_opt_String(arr[37]),
-      cacheTtlSecs: dco_decode_opt_box_autoadd_i_64(arr[38]),
-      email: dco_decode_opt_box_autoadd_email_config(arr[39]),
-      csv: dco_decode_opt_box_autoadd_csv_config(arr[40]),
-      geojson: dco_decode_opt_box_autoadd_geo_json_extraction_config(arr[41]),
-      concurrency: dco_decode_opt_box_autoadd_concurrency_config(arr[42]),
-      url: dco_decode_url_extraction_config(arr[43]),
-      maxArchiveDepth: dco_decode_i_64(arr[44]),
-      treeSitter: dco_decode_opt_box_autoadd_tree_sitter_config(arr[45]),
+      strictParse: dco_decode_bool(arr[36]),
+      acceleration: dco_decode_opt_box_autoadd_acceleration_config(arr[37]),
+      cacheNamespace: dco_decode_opt_String(arr[38]),
+      cacheTtlSecs: dco_decode_opt_box_autoadd_i_64(arr[39]),
+      email: dco_decode_opt_box_autoadd_email_config(arr[40]),
+      csv: dco_decode_opt_box_autoadd_csv_config(arr[41]),
+      geojson: dco_decode_opt_box_autoadd_geo_json_extraction_config(arr[42]),
+      concurrency: dco_decode_opt_box_autoadd_concurrency_config(arr[43]),
+      url: dco_decode_url_extraction_config(arr[44]),
+      maxArchiveDepth: dco_decode_i_64(arr[45]),
+      treeSitter: dco_decode_opt_box_autoadd_tree_sitter_config(arr[46]),
       structuredExtraction:
-          dco_decode_opt_box_autoadd_structured_extraction_config(arr[46]),
-      ner: dco_decode_opt_box_autoadd_ner_config(arr[47]),
-      redaction: dco_decode_opt_box_autoadd_redaction_config(arr[48]),
-      summarization: dco_decode_opt_box_autoadd_summarization_config(arr[49]),
-      translation: dco_decode_opt_box_autoadd_translation_config(arr[50]),
+          dco_decode_opt_box_autoadd_structured_extraction_config(arr[47]),
+      ner: dco_decode_opt_box_autoadd_ner_config(arr[48]),
+      redaction: dco_decode_opt_box_autoadd_redaction_config(arr[49]),
+      summarization: dco_decode_opt_box_autoadd_summarization_config(arr[50]),
+      translation: dco_decode_opt_box_autoadd_translation_config(arr[51]),
       pageClassification: dco_decode_opt_box_autoadd_page_classification_config(
-        arr[51],
+        arr[52],
       ),
       chunkClassification:
-          dco_decode_opt_box_autoadd_chunk_classification_config(arr[52]),
-      captioning: dco_decode_opt_box_autoadd_captioning_config(arr[53]),
-      qrCodes: dco_decode_opt_box_autoadd_bool(arr[54]),
+          dco_decode_opt_box_autoadd_chunk_classification_config(arr[53]),
+      captioning: dco_decode_opt_box_autoadd_captioning_config(arr[54]),
+      qrCodes: dco_decode_opt_box_autoadd_bool(arr[55]),
     );
   }
 
@@ -20110,8 +20111,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   FileExtractionConfig dco_decode_file_extraction_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 35)
-      throw Exception('unexpected arr length: expect 35 but see ${arr.length}');
+    if (arr.length != 36)
+      throw Exception('unexpected arr length: expect 36 but see ${arr.length}');
     return FileExtractionConfig(
       mimeDetectionPolicy: dco_decode_opt_box_autoadd_mime_detection_policy(
         arr[0],
@@ -20140,24 +20141,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       resultFormat: dco_decode_opt_box_autoadd_result_format(arr[18]),
       outputFormat: dco_decode_opt_box_autoadd_output_format(arr[19]),
       includeDocumentStructure: dco_decode_opt_box_autoadd_bool(arr[20]),
-      layout: dco_decode_opt_box_autoadd_layout_detection_config(arr[21]),
-      transcription: dco_decode_opt_box_autoadd_transcription_config(arr[22]),
-      timeoutSecs: dco_decode_opt_box_autoadd_i_64(arr[23]),
-      treeSitter: dco_decode_opt_box_autoadd_tree_sitter_config(arr[24]),
+      strictParse: dco_decode_opt_box_autoadd_bool(arr[21]),
+      layout: dco_decode_opt_box_autoadd_layout_detection_config(arr[22]),
+      transcription: dco_decode_opt_box_autoadd_transcription_config(arr[23]),
+      timeoutSecs: dco_decode_opt_box_autoadd_i_64(arr[24]),
+      treeSitter: dco_decode_opt_box_autoadd_tree_sitter_config(arr[25]),
       structuredExtraction:
-          dco_decode_opt_box_autoadd_structured_extraction_config(arr[25]),
-      url: dco_decode_opt_box_autoadd_url_extraction_config(arr[26]),
-      ner: dco_decode_opt_box_autoadd_ner_config(arr[27]),
-      redaction: dco_decode_opt_box_autoadd_redaction_config(arr[28]),
-      summarization: dco_decode_opt_box_autoadd_summarization_config(arr[29]),
-      translation: dco_decode_opt_box_autoadd_translation_config(arr[30]),
+          dco_decode_opt_box_autoadd_structured_extraction_config(arr[26]),
+      url: dco_decode_opt_box_autoadd_url_extraction_config(arr[27]),
+      ner: dco_decode_opt_box_autoadd_ner_config(arr[28]),
+      redaction: dco_decode_opt_box_autoadd_redaction_config(arr[29]),
+      summarization: dco_decode_opt_box_autoadd_summarization_config(arr[30]),
+      translation: dco_decode_opt_box_autoadd_translation_config(arr[31]),
       pageClassification: dco_decode_opt_box_autoadd_page_classification_config(
-        arr[31],
+        arr[32],
       ),
       chunkClassification:
-          dco_decode_opt_box_autoadd_chunk_classification_config(arr[32]),
-      captioning: dco_decode_opt_box_autoadd_captioning_config(arr[33]),
-      qrCodes: dco_decode_opt_box_autoadd_bool(arr[34]),
+          dco_decode_opt_box_autoadd_chunk_classification_config(arr[33]),
+      captioning: dco_decode_opt_box_autoadd_captioning_config(arr[34]),
+      qrCodes: dco_decode_opt_box_autoadd_bool(arr[35]),
     );
   }
 
@@ -29131,6 +29133,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     var var_useLayoutForMarkdown = sse_decode_bool(deserializer);
     var var_includeDocumentStructure = sse_decode_bool(deserializer);
+    var var_strictParse = sse_decode_bool(deserializer);
     var var_acceleration = sse_decode_opt_box_autoadd_acceleration_config(
       deserializer,
     );
@@ -29206,6 +29209,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       transcription: var_transcription,
       useLayoutForMarkdown: var_useLayoutForMarkdown,
       includeDocumentStructure: var_includeDocumentStructure,
+      strictParse: var_strictParse,
       acceleration: var_acceleration,
       cacheNamespace: var_cacheNamespace,
       cacheTtlSecs: var_cacheTtlSecs,
@@ -29382,6 +29386,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_includeDocumentStructure = sse_decode_opt_box_autoadd_bool(
       deserializer,
     );
+    var var_strictParse = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_layout = sse_decode_opt_box_autoadd_layout_detection_config(
       deserializer,
     );
@@ -29437,6 +29442,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       resultFormat: var_resultFormat,
       outputFormat: var_outputFormat,
       includeDocumentStructure: var_includeDocumentStructure,
+      strictParse: var_strictParse,
       layout: var_layout,
       transcription: var_transcription,
       timeoutSecs: var_timeoutSecs,
@@ -40429,6 +40435,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     sse_encode_bool(self.useLayoutForMarkdown, serializer);
     sse_encode_bool(self.includeDocumentStructure, serializer);
+    sse_encode_bool(self.strictParse, serializer);
     sse_encode_opt_box_autoadd_acceleration_config(
       self.acceleration,
       serializer,
@@ -40591,6 +40598,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_result_format(self.resultFormat, serializer);
     sse_encode_opt_box_autoadd_output_format(self.outputFormat, serializer);
     sse_encode_opt_box_autoadd_bool(self.includeDocumentStructure, serializer);
+    sse_encode_opt_box_autoadd_bool(self.strictParse, serializer);
     sse_encode_opt_box_autoadd_layout_detection_config(self.layout, serializer);
     sse_encode_opt_box_autoadd_transcription_config(
       self.transcription,
