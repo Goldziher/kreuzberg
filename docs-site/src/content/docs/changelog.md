@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(release): the Helm chart is published even when the CLI image build fails.** The chart publish was gated on the
+  aggregate result of the image manifest job, so a CLI image leg timing out skipped the chart for 1.3.6 to 1.3.8 while
+  the container images shipped. It is now gated on the `xberg` and `xberg:<version>-core` manifests resolving, the only
+  images the chart references. (GH#2106)
+
 - **(pdf): image bounding boxes are correct for images drawn inside a Form XObject with a `/Matrix`.** The form
   `/Matrix` was applied after the page transform instead of before it, so the form's page translation was scaled by
   its own matrix and `ExtractedImage.bounding_box` landed in the wrong place (a regression since 1.2.7). (GH#2103)
