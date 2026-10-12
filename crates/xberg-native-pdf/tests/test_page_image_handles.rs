@@ -642,3 +642,124 @@ fn handle_methods_take_ref_and_clone() {
     assert_eq!(h2.width, h.width);
     assert!(h.raw_compressed_bytes().is_ok(), "original handle still usable");
 }
+
+/// Build a one-page PDF with a 1x1 JPEG (object 5, `/Im0`) and Form XObjects
+/// `/Fm0..` (objects 6..). Each form is `(matrix, content, xobject_resources)`.
+fn build_pdf_with_forms(page_content: &str, forms: &[(&str, &str, &str)]) -> Vec<u8> {
+    let mut page_xobjects = String::from("/Im0 5 0 R ");
+    for i in 0..forms.len() {
+        page_xobjects.push_str(&format!("/Fm{i} {} 0 R ", 6 + i));
+    }
+
+    let mut pdf = b"%PDF-1.4\n".to_vec();
+    let mut offsets = vec![0usize];
+
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(
+        format!(
+            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R \
+             /Resources << /XObject << {page_xobjects}>> >> >>\nendobj\n"
+        )
+        .as_bytes(),
+    );
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(format!("4 0 obj\n<< /Length {} >>\nstream\n", page_content.len()).as_bytes());
+    pdf.extend_from_slice(page_content.as_bytes());
+    pdf.extend_from_slice(b"\nendstream\nendobj\n");
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(
+        format!(
+            "5 0 obj\n<< /Type /XObject /Subtype /Image /Width 1 /Height 1 \
+             /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {} >>\nstream\n",
+            MINIMAL_JPEG.len()
+        )
+        .as_bytes(),
+    );
+    pdf.extend_from_slice(MINIMAL_JPEG);
+    pdf.extend_from_slice(b"\nendstream\nendobj\n");
+
+    for (i, (matrix, content, resources)) in forms.iter().enumerate() {
+        offsets.push(pdf.len());
+        pdf.extend_from_slice(
+            format!(
+                "{} 0 obj\n<< /Type /XObject /Subtype /Form /BBox [0 0 1000 1000] /Matrix [{matrix}] \
+                 /Resources << /XObject << {resources} >> >> /Length {} >>\nstream\n",
+                6 + i,
+                content.len()
+            )
+            .as_bytes(),
+        );
+        pdf.extend_from_slice(content.as_bytes());
+        pdf.extend_from_slice(b"\nendstream\nendobj\n");
+    }
+
+    common::finalize_pdf(pdf, &offsets)
+}
+
+/// `(x0, y0, x1, y1)` of every image handle on page 0, in paint order.
+fn handle_boxes(pdf: Vec<u8>) -> Vec<(f32, f32, f32, f32)> {
+    let doc = PdfDocument::from_bytes(pdf).expect("open PDF");
+    let mut handles = doc.page_image_handles(0).expect("page_image_handles");
+    handles.sort_by_key(|h| h.paint_order);
+    handles
+        .iter()
+        .map(|h| (h.bbox.x, h.bbox.y, h.bbox.x + h.bbox.width, h.bbox.y + h.bbox.height))
+        .collect()
+}
+
+fn assert_box(actual: (f32, f32, f32, f32), expected: (f32, f32, f32, f32), what: &str) {
+    let close = |a: f32, b: f32| (a - b).abs() < 1e-3;
+    assert!(
+        close(actual.0, expected.0)
+            && close(actual.1, expected.1)
+            && close(actual.2, expected.2)
+            && close(actual.3, expected.3),
+        "{what}: expected {expected:?}, got {actual:?}"
+    );
+}
+
+/// GH#2103: the form `/Matrix` applies before the CTM in effect at `Do`
+/// (ISO 32000-1 §8.10.1), so a form drawn at `250 500` must not have its
+/// translation scaled by the form's own `/Matrix`.
+#[test]
+fn form_image_bbox_applies_form_matrix_before_ctm() {
+    let pdf = build_pdf_with_forms(
+        "q 2 0 0 2 250 500 cm /Fm0 Do Q\nq 200 0 0 150 50 100 cm /Im0 Do Q",
+        &[("0.25 0 0 0.25 0 0", "q 400 0 0 300 0 0 cm /Im0 Do Q", "/Im0 5 0 R")],
+    );
+    let boxes = handle_boxes(pdf);
+    assert_eq!(boxes.len(), 2, "form image plus direct image");
+    assert_box(boxes[0], (250.0, 500.0, 450.0, 650.0), "form image");
+    assert_box(boxes[1], (50.0, 100.0, 250.0, 250.0), "direct image");
+}
+
+/// A form `/Matrix` with both scale and translation, so that composing it with
+/// the CTM in the wrong order cannot coincide with the right answer.
+#[test]
+fn form_image_bbox_with_scaled_and_translated_form_matrix() {
+    let pdf = build_pdf_with_forms(
+        "q 2 0 0 3 100 200 cm /Fm0 Do Q",
+        &[("0.5 0 0 0.5 10 20", "q 40 0 0 30 0 0 cm /Im0 Do Q", "/Im0 5 0 R")],
+    );
+    let boxes = handle_boxes(pdf);
+    assert_eq!(boxes.len(), 1);
+    assert_box(boxes[0], (120.0, 260.0, 160.0, 305.0), "form image");
+}
+
+#[test]
+fn nested_form_image_bbox_composes_each_form_matrix_before_its_ctm() {
+    let pdf = build_pdf_with_forms(
+        "q 2 0 0 3 100 200 cm /Fm0 Do Q",
+        &[
+            ("0.5 0 0 0.5 10 20", "q 2 0 0 2 5 5 cm /Fm1 Do Q", "/Fm1 7 0 R"),
+            ("0.5 0 0 0.5 3 7", "q 40 0 0 30 0 0 cm /Im0 Do Q", "/Im0 5 0 R"),
+        ],
+    );
+    let boxes = handle_boxes(pdf);
+    assert_eq!(boxes.len(), 1);
+    assert_box(boxes[0], (131.0, 288.5, 171.0, 333.5), "nested form image");
+}

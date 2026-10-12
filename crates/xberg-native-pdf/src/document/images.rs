@@ -640,12 +640,15 @@ impl PdfDocument {
             }
         };
 
-        // Critical CTM composition:
-        // Start the form's internal graphics state with `parent_ctm * form_matrix`.
+        // Critical CTM composition (ISO 32000-1 §8.10.1): the form /Matrix is applied
+        // before the CTM in effect at `Do`. `a.multiply(b)` applies `a` first, so this is
+        // `form_matrix.multiply(parent_ctm)`; the reverse scales the page translation
+        // by the form matrix (GH#2103).
+        // Start the form's internal graphics state with that composition.
         // Every image (and nested Form) discovered inside will then have its
         // handle's bbox/rotation/ctm computed with the *final* transform that
         // will be active when the image is painted on the page. ~keep
-        let start_ctm = parent_ctm.multiply(&form_matrix);
+        let start_ctm = form_matrix.multiply(&parent_ctm);
         let mut ctm_stack = vec![start_ctm];
         let mut handles = Vec::new();
 
