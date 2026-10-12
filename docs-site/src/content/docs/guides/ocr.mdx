@@ -1203,7 +1203,7 @@ When OCR fails on one page of a PDF, Xberg keeps the other pages and reports the
 | `error`     | string  | Error text that the OCR backend returned.                                            |
 | `recovered` | boolean | `true` when the page still has content from native text or from its embedded images. |
 
-Repeated failures on one page make one record. When an automatic OCR run of selected pages fails as a whole, there is one warning for the run and one record for each selected page. When the OCR fallback for the whole document fails, there is a warning and no record, because that failure names no page. `ocr_page_failures` is absent (`None` in Python, `null` or omitted in JSON) when there is no record; it is never an empty list. The records are not in `metadata.additional`.
+Repeated failures on one page make one record. When an automatic OCR run of selected pages fails as a whole, there is one warning for the run and one record for each selected page. When the OCR fallback for the whole document fails, there is one warning and one record for each page that has no native text. `ocr_page_failures` is absent (`None` in Python, `null` or omitted in JSON) when there is no record; it is never an empty list. The records are not in `metadata.additional`.
 
 ```python title="ocr_page_failures.py"
 from xberg import ExtractInput, ExtractionConfig, OcrConfig, extract

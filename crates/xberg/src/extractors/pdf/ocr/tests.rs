@@ -5,7 +5,7 @@
 // ... }` block nested inside the old monolithic ocr.rs. The name match with the containing
 // file-module is therefore deliberate, not an oversight.
 #[allow(clippy::module_inception)]
-mod tests {
+pub(super) mod tests {
     use super::super::document::*;
     use super::super::pipeline::*;
     use super::super::rendering::*;
@@ -4548,7 +4548,10 @@ mod tests {
     }
 
     #[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
-    fn build_minimal_two_page_pdf_with_sizes(first: (f32, f32), second: (f32, f32)) -> Vec<u8> {
+    pub(in crate::extractors::pdf::ocr) fn build_minimal_two_page_pdf_with_sizes(
+        first: (f32, f32),
+        second: (f32, f32),
+    ) -> Vec<u8> {
         let mut buf = Vec::<u8>::new();
         buf.extend_from_slice(b"%PDF-1.4\n");
 
@@ -4822,7 +4825,10 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(cancelled, Err(crate::XbergError::Cancelled)));
+        assert!(matches!(
+            cancelled.map_err(crate::XbergError::from),
+            Err(crate::XbergError::Cancelled)
+        ));
         assert!(primary_widths.lock().unwrap().is_empty());
         assert!(fallback_widths.lock().unwrap().is_empty());
     }

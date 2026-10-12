@@ -112,9 +112,9 @@ pub struct LanguageConfidence {
 ///
 /// The warning in `ExtractedDocument::processing_warnings` stays available. One warning
 /// can cover several pages: when an automatic OCR run of selected pages fails as a whole,
-/// it adds one warning and one record for each selected page. A failure of the OCR fallback
-/// for the whole document adds a warning and no record. Repeated failures on one page make
-/// one record.
+/// it adds one warning and one record for each selected page. When the OCR fallback for the
+/// whole document fails, it adds one warning and one record for each page that has no native
+/// text. Repeated failures on one page make one record.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "api", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "alef-meta", alef(since = "1.3.7"))]

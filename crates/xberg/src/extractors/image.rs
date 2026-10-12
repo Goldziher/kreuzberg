@@ -3169,6 +3169,7 @@ impl ImageExtractor {
         }
         if let Some(pipeline_doc) = pipeline_doc {
             doc.processing_warnings.extend(pipeline_doc.processing_warnings);
+            doc.ocr_page_failures.extend(pipeline_doc.ocr_page_failures);
         }
 
         let trimmed = text.trim().to_string();
