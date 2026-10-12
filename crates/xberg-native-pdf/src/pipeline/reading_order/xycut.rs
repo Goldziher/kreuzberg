@@ -276,6 +276,9 @@ const MIN_PEELED_FULL_WIDTH_LINES: usize = 2;
 // across a column cut. A row's two cells are separated by the gutter (several ems); a
 // legend's own font runs abut at normal word/kern spacing.
 const MAX_INTRA_LINE_GAP_EM: f32 = 1.0;
+// A run narrower than this many ems is a label, a marker or a cell rather than a prose line.
+const LABEL_RUN_MAX_EM: f32 = 8.0;
+const MIN_LABEL_VALUE_ROWS: usize = 3;
 
 /// Group `indices` into visual lines: anchored (not chained) on `y`, top to bottom, and
 /// further split on `x` wherever consecutive items are more than `MAX_INTRA_LINE_GAP_EM`
@@ -2000,7 +2003,51 @@ impl XYCutStrategy {
             return None;
         }
 
+        if self.cuts_label_value_rows(all_spans, indices, split_x) {
+            return None;
+        }
+
         Some((left, right))
+    }
+
+    /// True when the cut at `split_x` would separate short label/value pairs that share a
+    /// row but sit a hair off each other's baseline (a key-value form, a numbered list's
+    /// marker from its text, a table's row header from its cells): at least
+    /// `MIN_LABEL_VALUE_ROWS` such rows have a left-side run and a right-side run, and most
+    /// have one side narrower than `LABEL_RUN_MAX_EM`. Prose columns fail the width test --
+    /// a column line is a full column wide -- so a real gutter is unaffected. Cutting here
+    /// would read every label before any value, so the caller falls back to a row cut.
+    /// Rows on one exact baseline are not counted: they were never joined by the line
+    /// grouping either, and their handling is left as it was. ~keep
+    fn cuts_label_value_rows(&self, all_spans: &[TextSpan], indices: &[usize], split_x: f32) -> bool {
+        let lines = group_indices_into_lines(all_spans, indices);
+        let extent = |line: &[usize]| -> (f32, f32, f32, f32) {
+            line.iter().fold((f32::MAX, f32::MIN, f32::MIN, 0.0f32), |acc, &i| {
+                let span = &all_spans[i];
+                (
+                    acc.0.min(span.bbox.left()),
+                    acc.1.max(span.bbox.right()),
+                    acc.2.max(span.bbox.y),
+                    acc.3.max(span.font_size),
+                )
+            })
+        };
+        let mut paired_rows = 0usize;
+        let mut short_rows = 0usize;
+        for pair in lines.windows(2) {
+            let (left_min, left_max, left_y, left_font) = extent(&pair[0]);
+            let (right_min, right_max, right_y, right_font) = extent(&pair[1]);
+            let offset = (left_y - right_y).abs();
+            if left_max > split_x || right_min < split_x || offset == 0.0 || offset > XYCUT_LINE_Y_TOLERANCE_PTS {
+                continue;
+            }
+            paired_rows += 1;
+            let narrow_side = (left_max - left_min).min(right_max - right_min);
+            if narrow_side < LABEL_RUN_MAX_EM * left_font.max(right_font) {
+                short_rows += 1;
+            }
+        }
+        paired_rows >= MIN_LABEL_VALUE_ROWS && short_rows * 5 >= paired_rows * 3
     }
 
     /// Fallback column split: find the deepest trough between the two
@@ -4601,5 +4648,65 @@ mod tests {
 
         assert_eq!(left, indices, "the whole line stays together on one side");
         assert!(right.is_empty(), "no span of the line is torn off: {right:?}");
+    }
+
+    /// The reporter's layout for GH#2097 at the level the column cut is decided: 13-line
+    /// prose columns at x=69 and x=444 whose baselines differ by 1.0pt. The cut must be
+    /// taken and each column's lines must land whole on their own side. ~keep
+    #[test]
+    fn horizontal_split_cuts_prose_columns_whose_baselines_differ_gh2097() {
+        let strategy = XYCutStrategy::new();
+        let mut spans = Vec::new();
+        for row in 0..13 {
+            let y = 600.0 - row as f32 * 12.0;
+            spans.push(make_span_text(
+                69.0,
+                y,
+                200.0,
+                10.0,
+                "left prose column line of words",
+                10.0,
+            ));
+            spans.push(make_span_text(
+                444.0,
+                y + 1.0,
+                200.0,
+                10.0,
+                "right prose column line of words",
+                10.0,
+            ));
+        }
+        let indices: Vec<usize> = (0..spans.len()).collect();
+
+        let (left, right) = strategy
+            .find_horizontal_split_indexed(&spans, &indices)
+            .expect("two prose columns must be cut at the gutter");
+
+        assert_eq!(left, (0..spans.len()).step_by(2).collect::<Vec<_>>(), "left column");
+        assert_eq!(right, (1..spans.len()).step_by(2).collect::<Vec<_>>(), "right column");
+    }
+
+    /// Short label / value rows whose value sits a hair above the label are a table, not
+    /// two columns: cutting between them reads every label before every value. Before the
+    /// `x`-ordered line grouping the value sorted first, the pair measured as one line and
+    /// the cut was refused; the grouping alone would now accept it. ~keep
+    #[test]
+    fn horizontal_split_keeps_label_value_rows_together() {
+        let strategy = XYCutStrategy::new();
+        for value_offset in [0.24f32, 0.6] {
+            let mut spans = Vec::new();
+            for row in 0..8 {
+                let y = 600.0 - row as f32 * 14.0;
+                let label_width = if row % 2 == 0 { 70.0 } else { 46.0 };
+                spans.push(make_span_text(40.0, y, label_width, 10.0, "Label", 10.0));
+                spans.push(make_span_text(220.0, y + value_offset, 70.0, 10.0, "Value", 10.0));
+            }
+            let indices: Vec<usize> = (0..spans.len()).collect();
+
+            assert!(
+                strategy.find_horizontal_split_indexed(&spans, &indices).is_none(),
+                "label/value rows with the value {value_offset}pt higher must not be cut into columns"
+            );
+        }
     }
 }
