@@ -497,6 +497,22 @@ def test_xberg_unit_artifacts_are_reclaimed_before_workspace_tests() -> None:
     assert re.search(r"(?m)^  cargo clean -p xberg \|\| exit$", between) is not None
 
 
+def test_helm_publish_does_not_depend_on_the_cli_image_manifest() -> None:
+    # The chart only references xberg:<version> and xberg:<version>-core. merge-docker is one
+    # matrix job, so a cli leg that fails (cli/amd64 timing out leaves a single-arch digest,
+    # which "Verify digests present" rejects) turns its aggregate result into `failure` and
+    # skipped the chart for v1.3.6-v1.3.8. ~keep
+    workflow = DOCKER_WORKFLOW.read_text()
+    helm = job_block(workflow, "publish-helm")
+    assert "merge-docker.result" not in helm
+    assert re.search(r"(?m)^      - chart-images$", helm) is not None
+    assert "needs.chart-images.result == 'success'" in helm
+    images = job_block(workflow, "chart-images")
+    assert "xberg-cli" not in images
+    assert "ghcr.io/xberg-io/xberg:${{ needs.prepare.outputs.version }}" in images
+    assert "ghcr.io/xberg-io/xberg:${{ needs.prepare.outputs.version }}-core" in images
+
+
 def test_publish_contracts_run_in_ci() -> None:
     assert "python3 scripts/ci/test_publish_workflow_contracts.py" in CI_WORKFLOW.read_text()
 
@@ -521,4 +537,5 @@ if __name__ == "__main__":
     test_docker_preflight_checks_out_the_resolved_candidate()
     test_macos_unit_tests_reclaim_artifacts_before_libheif()
     test_xberg_unit_artifacts_are_reclaimed_before_workspace_tests()
+    test_helm_publish_does_not_depend_on_the_cli_image_manifest()
     test_publish_contracts_run_in_ci()

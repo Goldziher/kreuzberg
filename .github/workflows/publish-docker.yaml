@@ -454,6 +454,38 @@ jobs:
         if: ${{ steps.check.outputs.push == 'true' }}
         run: docker buildx imagetools inspect ${{ matrix.image }}:${{ needs.prepare.outputs.version }}${{ matrix.tag_suffix }}
 
+  # merge-docker is a single matrix job, so one failed leg fails its aggregate result. The cli
+  # leg routinely does (cli/amd64 hits the 120 min build timeout, "Verify digests present"
+  # then rejects the lone arm64 digest), which skipped the chart for v1.3.6-v1.3.8 while the
+  # core/full images published fine. Gate the chart on the two images it references actually
+  # resolving instead of on the aggregate result. ~keep
+  chart-images:
+    name: Verify chart images resolve
+    needs:
+      - prepare
+      - merge-docker
+    if: ${{ !cancelled() && needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Inspect full and core manifests
+        run: |
+          set -euo pipefail
+          for tag in \
+            ghcr.io/xberg-io/xberg:${{ needs.prepare.outputs.version }} \
+            ghcr.io/xberg-io/xberg:${{ needs.prepare.outputs.version }}-core; do
+            docker buildx imagetools inspect "${tag}"
+          done
+
   # Publish the Helm chart only after the image manifests are pushed, so the
   # chart's image reference (ghcr.io/xberg-io/xberg:<version>) already resolves.
   # Delegates to the reusable publish-helm.yaml (sign + Artifact Hub metadata). ~keep
@@ -461,16 +493,10 @@ jobs:
     name: Publish Helm chart
     needs:
       - prepare
-      - merge-docker
+      - chart-images
     # !cancelled() rather than a bare outputs check: an `if` with no status function gets an
-    # implicit success(), which evaluates over the WHOLE needs graph, not just the direct
-    # needs. merge-docker's own always() lets it run and succeed, but it does not launder the
-    # failed build-docker ancestor for this job — so a cli build leg timing out skipped the
-    # chart on every release from v1.1.4 to v1.2.2 while the images themselves published fine.
-    # The chart references ghcr.io/xberg-io/xberg:<version> (core/full), never xberg-cli, so a
-    # cli failure is genuinely irrelevant here; what the chart does require is that the
-    # manifests published, which is what the merge-docker result check below asserts. ~keep
-    if: ${{ !cancelled() && needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && needs.merge-docker.result == 'success' }}
+    # implicit success() over the whole needs graph (this skipped the chart v1.1.4-v1.2.2). ~keep
+    if: ${{ !cancelled() && needs.prepare.outputs.release_docker == 'true' && needs.prepare.outputs.dry_run != 'true' && needs.chart-images.result == 'success' }}
     permissions:
       contents: read
       packages: write
