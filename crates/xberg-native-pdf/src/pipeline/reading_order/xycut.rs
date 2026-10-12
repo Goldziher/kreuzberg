@@ -354,13 +354,18 @@ impl Default for XYCutStrategy {
             // recursive band-separation of full-width header/footer rows
             // before column detection — a substantial XY-Cut redesign,
             // validated against the full CI corpus, not a local tweak. ~keep
-            min_valley_width: 15.0,
+            min_valley_width: Self::DEFAULT_MIN_VALLEY_WIDTH,
             prefer_horizontal: true,
         }
     }
 }
 
 impl XYCutStrategy {
+    /// Narrowest empty corridor, in points, the default strategy cuts through. A gutter
+    /// narrower than this is invisible to its projection-valley search, so a caller
+    /// repairing the pages the cut misses can use it as the boundary of that population. ~keep
+    pub const DEFAULT_MIN_VALLEY_WIDTH: f32 = 15.0;
+
     /// Create a new XY-Cut strategy with default parameters.
     pub fn new() -> Self {
         Self::default()

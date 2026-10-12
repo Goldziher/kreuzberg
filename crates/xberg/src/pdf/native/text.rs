@@ -1594,7 +1594,7 @@ fn detect_split_x(spans: &[xberg_native_pdf::layout::TextSpan], lines: &[SpanLin
         })
         .collect();
     if midpoints.len() < MIN_DENSE_COLUMN_SPLIT_LINES {
-        return None;
+        return sole_whitespace_gutter(spans, lines, page_width);
     }
     midpoints.sort_by(f32::total_cmp);
     let mid = midpoints.len() / 2;
@@ -2065,6 +2065,48 @@ fn page_whitespace_corridors(
         running_right = running_right.max(right);
     }
     corridors
+}
+
+/// The page's only whitespace corridor, when it is a gutter too narrow for the native
+/// XY-cut to find and the lines never share a baseline across it.
+///
+/// GH#2102: `detect_split_x` votes line by line, so it needs `MIN_DENSE_COLUMN_SPLIT_LINES`
+/// lines that each carry spans from BOTH columns. A column of margin notes set on its own
+/// leading beside the main text never pairs with it (the notes sit 9.6pt apart, the body
+/// 13pt), so the only lines that vote are the few that coincide -- and the table rows that
+/// used to make up the quorum are excluded since GH#1742. The corridor between the columns
+/// is still empty of ink from the top of the page to the bottom, which is the same
+/// whole-page evidence `redirect_split_out_of_content` already trusts to move a wrong split.
+///
+/// It is accepted on the same terms that redirect applies to a corridor (a column's worth of
+/// rows on each side, not a hanging-label indent, two sides that read as columns), and only
+/// when it is the page's single qualifying corridor: more than one is a table or a
+/// three-column page, which this two-column repair does not handle. It must also be narrower
+/// than `XYCutStrategy::DEFAULT_MIN_VALLEY_WIDTH`. A wider corridor is one the native
+/// `ColumnAware` order has already cut, and a page whose vote fell below quorum for that
+/// reason is deliberately handed back to it (GH#1756) rather than repaired here. ~keep
+fn sole_whitespace_gutter(
+    spans: &[xberg_native_pdf::layout::TextSpan],
+    lines: &[SpanLine],
+    page_width: f32,
+) -> Option<f32> {
+    let min_gutter = (page_width * MIN_DENSE_COLUMN_GUTTER_FRACTION).max(MIN_DENSE_COLUMN_GUTTER_PTS);
+    let max_gutter = page_width * MAX_DENSE_COLUMN_GUTTER_FRACTION;
+    let furniture_width = page_width * FULL_WIDTH_FURNITURE_FRACTION;
+    let max_label_width = page_width * MAX_DENSE_COLUMN_SPLIT_SNAP_SPAN_FRACTION;
+    let mut qualifying = page_whitespace_corridors(spans, lines, furniture_width, min_gutter)
+        .into_iter()
+        .filter(|&(left, right)| right - left <= max_gutter)
+        .filter(|&corridor| {
+            let mid = (corridor.0 + corridor.1) / 2.0;
+            both_sides_fill_column_rows(spans, lines, furniture_width, mid)
+                && !corridor_is_hanging_label_indent(spans, lines, max_label_width, corridor)
+                && both_sides_are_columns(spans, lines, furniture_width, mid)
+        });
+    let (left, right) = qualifying.next()?;
+    let is_sole = qualifying.next().is_none();
+    (is_sole && right - left < xberg_native_pdf::XYCutStrategy::DEFAULT_MIN_VALLEY_WIDTH)
+        .then_some((left + right) / 2.0)
 }
 
 /// Move a gutter estimate out of a repeated hanging-label band.
@@ -7475,5 +7517,177 @@ mod tests {
             position("shoreline it beautiful.") < position("Brand weather remarkable can rhythm say"),
             "the left column must be read whole before the right one: {order:?}"
         );
+    }
+
+    const GH2102_PAGE_WIDTH: f32 = 595.28;
+    const GH2102_NOTE_RIGHT_EDGE: f32 = 125.3;
+    const GH2102_MAIN_X: f32 = 138.3;
+    const GH2102_TABLE_COLUMNS: [(f32, f32); 5] =
+        [(155.8, 27.8), (219.5, 8.0), (294.4, 8.0), (357.9, 4.0), (413.6, 72.0)];
+
+    fn gh2102_note(index: usize, x_right: f32, top: f32) -> TextSpan {
+        let width = 60.0 + ((index * 7) % 20) as f32;
+        span_with_width(
+            &format!("margin note line {index}"),
+            x_right - width,
+            top - index as f32 * 9.6,
+            width,
+            8.0,
+            8.0,
+        )
+    }
+
+    /// GH#2102 geometry, taken from the reporter's page: 8pt notes right-aligned to x=125.3
+    /// on 9.6pt leading, a 10pt main column from x=138.3 on 13pt leading (a 13pt gutter), and
+    /// a margin label on the same baseline as the main heading. No note line shares a
+    /// baseline with a main line, so no line carries spans from both columns. The spans are
+    /// returned in the full-page-width Y-then-X order `ColumnAware` produced for it. ~keep
+    fn gh2102_margin_note_page(note_count: usize, with_table: bool) -> Vec<TextSpan> {
+        let mut spans = vec![
+            span_with_width("margin label", 82.4, 741.6, 42.9, 8.0, 8.0),
+            span_with_width("main", GH2102_MAIN_X, 741.6, 68.3, 11.0, 11.0),
+            span_with_width("heading", 206.6, 741.6, 20.8, 11.0, 11.0),
+            span_with_width("text", 227.4, 741.6, 106.9, 11.0, 11.0),
+        ];
+        spans.extend((0..note_count).map(|index| gh2102_note(index, GH2102_NOTE_RIGHT_EDGE, 732.0)));
+        for row in 0..8 {
+            let y = 714.9 - row as f32 * 13.0;
+            spans.push(span_with_width(
+                &format!("main body {row} a"),
+                GH2102_MAIN_X,
+                y,
+                200.0,
+                10.0,
+                10.0,
+            ));
+            spans.push(span_with_width(
+                &format!("main body {row} b"),
+                338.3,
+                y,
+                175.0,
+                10.0,
+                10.0,
+            ));
+        }
+        if with_table {
+            for row in 0..6 {
+                let y = 560.0 - row as f32 * 21.0;
+                for (column, &(x, width)) in GH2102_TABLE_COLUMNS.iter().enumerate() {
+                    spans.push(span_with_width(&format!("t{row}c{column}"), x, y, width, 8.0, 8.0));
+                }
+            }
+        }
+        spans.sort_by(|a, b| {
+            b.bbox
+                .y
+                .total_cmp(&a.bbox.y)
+                .then_with(|| a.bbox.x.total_cmp(&b.bbox.x))
+        });
+        spans
+    }
+
+    fn gh2102_expected_column_major(note_count: usize, with_table: bool) -> Vec<String> {
+        let mut expected = vec!["margin label".to_string()];
+        expected.extend((0..note_count).map(|index| format!("margin note line {index}")));
+        expected.extend(["main", "heading", "text"].map(String::from));
+        for row in 0..8 {
+            expected.push(format!("main body {row} a"));
+            expected.push(format!("main body {row} b"));
+        }
+        if with_table {
+            for row in 0..6 {
+                expected.extend((0..GH2102_TABLE_COLUMNS.len()).map(|column| format!("t{row}c{column}")));
+            }
+        }
+        expected
+    }
+
+    fn gh2102_corridor_count(spans: &[TextSpan], lines: &[SpanLine]) -> usize {
+        let min_gutter = (GH2102_PAGE_WIDTH * MIN_DENSE_COLUMN_GUTTER_FRACTION).max(MIN_DENSE_COLUMN_GUTTER_PTS);
+        let furniture_width = GH2102_PAGE_WIDTH * FULL_WIDTH_FURNITURE_FRACTION;
+        page_whitespace_corridors(spans, lines, furniture_width, min_gutter).len()
+    }
+
+    #[test]
+    fn margin_notes_on_their_own_leading_reorder_before_the_main_column_gh2102() {
+        let mut spans = gh2102_margin_note_page(12, false);
+
+        assert!(reorder_dense_two_column_page(&mut spans, GH2102_PAGE_WIDTH));
+
+        let expected = gh2102_expected_column_major(12, false);
+        assert_eq!(
+            spans.iter().map(|span| span.text.as_str()).collect::<Vec<_>>(),
+            expected.iter().map(String::as_str).collect::<Vec<_>>(),
+            "the margin label and its notes must be read whole before the main heading"
+        );
+    }
+
+    #[test]
+    fn margin_notes_beside_a_table_reorder_before_the_main_column_gh2102() {
+        let mut spans = gh2102_margin_note_page(12, true);
+
+        assert!(reorder_dense_two_column_page(&mut spans, GH2102_PAGE_WIDTH));
+
+        let expected = gh2102_expected_column_major(12, true);
+        assert_eq!(
+            spans.iter().map(|span| span.text.as_str()).collect::<Vec<_>>(),
+            expected.iter().map(String::as_str).collect::<Vec<_>>(),
+            "the table's own grid must not be what decides whether the notes are separated"
+        );
+    }
+
+    #[test]
+    fn a_few_notes_beside_the_main_text_are_not_a_gutter_gh2102() {
+        let spans = gh2102_margin_note_page(MIN_DENSE_COLUMN_SPANS_PER_SIDE - 2, false);
+        let order = spans_sorted_top_to_bottom(&spans);
+        let lines = group_into_lines(&spans, &order);
+        assert_eq!(
+            gh2102_corridor_count(&spans, &lines),
+            1,
+            "the fixture must still present the corridor, or this test would pass for the wrong reason"
+        );
+
+        assert_eq!(detect_split_x(&spans, &lines, GH2102_PAGE_WIDTH), None);
+    }
+
+    #[test]
+    fn two_whitespace_corridors_are_not_one_gutter_gh2102() {
+        let mut spans = gh2102_margin_note_page(12, false);
+        spans.retain(|span| !span.text.starts_with("main body"));
+        for row in 0..8 {
+            let y = 714.9 - row as f32 * 13.0;
+            spans.push(span_with_width(
+                &format!("main body {row} a"),
+                GH2102_MAIN_X,
+                y,
+                160.0,
+                10.0,
+                10.0,
+            ));
+            spans.push(span_with_width(
+                &format!("main body {row} b"),
+                298.3,
+                y,
+                172.0,
+                10.0,
+                10.0,
+            ));
+        }
+        spans.extend((0..12).map(|index| gh2102_note(index, 565.0, 731.0)));
+        spans.sort_by(|a, b| {
+            b.bbox
+                .y
+                .total_cmp(&a.bbox.y)
+                .then_with(|| a.bbox.x.total_cmp(&b.bbox.x))
+        });
+        let order = spans_sorted_top_to_bottom(&spans);
+        let lines = group_into_lines(&spans, &order);
+        assert_eq!(
+            gh2102_corridor_count(&spans, &lines),
+            2,
+            "the fixture must present two corridors, or this test would pass for the wrong reason"
+        );
+
+        assert_eq!(detect_split_x(&spans, &lines, GH2102_PAGE_WIDTH), None);
     }
 }
