@@ -1326,7 +1326,7 @@ biblatex = { version = "0.12", optional = true }
 # 0.8 moved regex matching to an unconditional `regex-lite`, so the old `regex`
 # feature is gone; it also carries quick-xml ^0.41, which unifies with the rest
 # of the graph and clears RUSTSEC-2026-0194/0195.
-biblib = { version = "0.9", default-features = false, features = ["ris", "pubmed", "xml"], optional = true }
+biblib = { version = "0.10", default-features = false, features = ["ris", "pubmed", "xml"], optional = true }
 bitvec = "1.1"
 blake3 = { workspace = true }
 bytes = { workspace = true }
@@ -1352,7 +1352,7 @@ flate2 = { version = "1.1", optional = true }
 hayro-jbig2 = { version = "0.3", default-features = false, features = ["std"], optional = true }
 hayro-jpeg2000 = { version = "0.4", default-features = false, features = ["std", "simd"], optional = true }
 hex = { workspace = true }
-html-escape = { version = "0.2.15", optional = true }
+html-escape = { version = "0.3.0", optional = true }
 html-to-markdown-rs = { workspace = true, features = ["inline-images", "metadata"], optional = true }
 icu_provider = { version = "2", features = ["sync"], optional = true }
 icu_segmenter = { version = "2", optional = true }
@@ -1511,7 +1511,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["s
 tract-onnx = { workspace = true, optional = true }
 # Typst's own parser, used to convert Typst math to LaTeX.
 typst-syntax = { version = "0.15.1", optional = true }
-unhwp = { version = "0.18.0", default-features = false, features = ["hwpx"], optional = true }
+unhwp = { version = "0.19.0", default-features = false, features = ["hwpx"], optional = true }
 unicode-normalization = { version = "0.1.25", optional = true }
 url = { workspace = true }
 urlencoding = "2"
@@ -1540,7 +1540,7 @@ xberg-native-pdf = { workspace = true, optional = true }
 # version requirement. Do not re-pin it here.
 xberg-tesseract = { path = "../xberg-tesseract", optional = true }
 zeroize = { version = "1", optional = true }
-zip = { version = "9.0.1", optional = true, default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.2", optional = true, default-features = false, features = ["deflate-flate2"] }
 
 # `tower` (GH#1381) unlocks the `cache`/`budget`/`rate_limit`/`cost_tracking`/`tracing`/
 # `cooldown_secs`/`health_check_secs` fields on liter-llm's `client::ClientConfigBuilder` —
@@ -1781,7 +1781,7 @@ tokio-test = "0.4"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = "1"
 wiremock = "0.6"
-zip = { version = "9.0.1", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.2", default-features = false, features = ["deflate-flate2"] }
 
 [[test]]
 name = "captioning_smoke"

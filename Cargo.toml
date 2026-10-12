@@ -59,7 +59,7 @@ bytes = { version = "1", features = ["serde"] }
 candle-core = { version = "0.11", default-features = false }
 candle-nn = { version = "0.11", default-features = false }
 candle-transformers = { version = "0.11", default-features = false }
-cc = "1.7"
+cc = "1.8"
 cfb = "0.15"
 chrono = "0.4"
 clap = { version = "4.6", features = ["derive", "color", "suggestions"] }
@@ -116,7 +116,7 @@ same-file = "1.0.6"
 sceptre = { version = "0.7.3", default-features = false }
 
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.152" }
+serde_json = { version = "1.0.154" }
 serde_toon_format = "0.2"
 sha2 = "0.11"
 similar = "3"
@@ -144,7 +144,7 @@ tracing = "0.1"
 # and WASM-safe; the top-level `tract` facade instead defaults to CUDA and bundles
 # GPU backends, so it is unusable here. See issue #1275.
 tract-onnx = { version = "0.23.8", default-features = false }
-tree-sitter-language-pack = { version = "1.21.3", default-features = false, features = ["serde"] }
+tree-sitter-language-pack = { version = "1.22.1", default-features = false, features = ["serde"] }
 url = "2.5.8"
 # usvg (re-exported by resvg) with only the `writer` feature so `Tree::to_string`
 # / `WriteOptions` are available for SVG sanitize re-serialization. `writer` pulls

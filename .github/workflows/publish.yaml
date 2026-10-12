@@ -5180,7 +5180,7 @@ jobs:
           ref: 8dfebd2b8b3700ff134f86886d5b44dca82abc18
           path: .tools/ai-rulez
       - name: Set up Go for ai-rulez
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: .tools/ai-rulez/go.mod
           cache-dependency-path: .tools/ai-rulez/go.sum
