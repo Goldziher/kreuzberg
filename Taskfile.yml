@@ -54,7 +54,7 @@ includes:
 
 vars:
   # This must match the pin in ci-lint.yaml because different ai-rulez versions emit different bundles. ~keep
-  AI_RULEZ_VERSION: "4.11.0"
+  AI_RULEZ_VERSION: "5.0.1"
 
 tasks:
   default:
@@ -289,7 +289,7 @@ tasks:
         cp -R .ai-rulez "$governance_verify_root/.ai-rulez"
         (
           cd "$governance_verify_root"
-          npx -y ai-rulez@{{.AI_RULEZ_VERSION}} generate --no-configure-cli-mcp --quiet
+          npx -y ai-rulez@{{.AI_RULEZ_VERSION}} generate --no-self-mcp --quiet
         )
 
   check:android:
