@@ -96,6 +96,8 @@ jobs:
       - name: Build the pinned plugin generator
         working-directory: .tools/ai-rulez
         shell: bash
+        env:
+          GOWORK: "off"
         run: |
           eval "$(./scripts/setup-liter-llm.sh --mode static --format export)"
           mkdir -p "$RUNNER_TEMP/ai-rulez-bin"
