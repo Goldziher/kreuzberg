@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rendering): a block with many inline annotations renders in linear time.** Building the inline nodes of one
+  paragraph rescanned every later annotation for each annotation, so Markdown or chunked extraction of a block dense
+  with emphasis, code spans and links grew quadratically (1 MiB: 29 s, 4 MiB: over 400 s). The scan now stops at the
+  end of the annotated span. The output does not change. (GH#2099)
 - **(extraction, packaging): Xberg builds with zip 9.** Source-archive extraction, ZIP-based document and archive
   extraction, and MIME routing now handle zip 9's fallible entry names. Published dependency constraints select the
   supported zip 9 line instead of relying on the workspace lockfile.

@@ -271,10 +271,16 @@ fn build_inlines<'a>(
 
         let span = &text[start as usize..end as usize];
 
+        // `sorted` is ordered by start, so the first annotation starting at or after `end` ends
+        // the scan. Without the cut every annotation rescans the whole tail, which is quadratic
+        // for a block with many annotations (GH#2099). ~keep
         let inner: Vec<TextAnnotation> = sorted[i + 1..]
             .iter()
-            .filter_map(|ia| {
+            .map_while(|ia| {
                 let is = text.ceil_char_boundary(ia.start.min(len) as usize) as u32;
+                (is < end).then_some((ia, is))
+            })
+            .filter_map(|(ia, is)| {
                 let ie = text.floor_char_boundary(ia.end.min(len) as usize) as u32;
                 if is >= start && ie <= end && is < ie {
                     Some(TextAnnotation {
@@ -1996,6 +2002,48 @@ mod tests {
         assert!(
             out.contains("Before degenerate table."),
             "surrounding content must still render; got: {out:?}"
+        );
+    }
+
+    fn bold_word_doc(words: usize) -> InternalDocument {
+        let text = "word ".repeat(words);
+        let annotations = (0..words as u32)
+            .map(|i| TextAnnotation {
+                start: i * 5,
+                end: i * 5 + 4,
+                kind: AnnotationKind::Bold,
+            })
+            .collect();
+        let mut b = InternalDocumentBuilder::new("test");
+        b.push_paragraph(&text, annotations, None, None);
+        b.build()
+    }
+
+    #[test]
+    fn test_many_disjoint_annotations_render_each_span() {
+        let out = render(&bold_word_doc(50));
+        assert_eq!(out.trim_end(), vec!["**word**"; 50].join(" "));
+    }
+
+    /// Annotations of one block are scanned once, not once per annotation (GH#2099). Quadratic
+    /// growth makes the large input about 64x slower than the small one; linear growth about 8x.
+    /// The floor keeps a fast small run from turning timer noise into a failure. ~keep
+    #[test]
+    fn test_render_time_scales_linearly_with_annotations_in_one_block() {
+        const SMALL: usize = 4_000;
+        const LARGE: usize = 32_000;
+        let time = |words: usize| {
+            let doc = bold_word_doc(words);
+            let start = std::time::Instant::now();
+            let out = render(&doc);
+            assert!(out.starts_with("**word** **word**"));
+            start.elapsed()
+        };
+        let small = time(SMALL).max(std::time::Duration::from_millis(20));
+        let large = time(LARGE);
+        assert!(
+            large < small * 24,
+            "{LARGE} annotations took {large:?} against {small:?} for {SMALL}: growth is superlinear"
         );
     }
 }
