@@ -234,6 +234,19 @@ export XBERG_DISABLE_OCR=true
 export XBERG_DISABLE_OCR=false
 ```
 
+### XBERG_STRICT_PARSE
+
+**Type**: `Boolean` (`true`/`1` or `false`/`0`, case-insensitive)
+**Default**: `false`
+
+Return an error when a YAML, JSON, TOML or XML document cannot be parsed, or when the XML entity-length or table-cell
+limit trips on a text-like input. When `false`, such input is extracted as plain text and the reason is recorded in
+`processing_warnings`.
+
+```bash title="Keep parse errors"
+export XBERG_STRICT_PARSE=true
+```
+
 ### XBERG_CHUNKING_MAX_CHARS
 
 **Type**: `usize` (positive integer)

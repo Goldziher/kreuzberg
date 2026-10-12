@@ -117,6 +117,18 @@ fn test_include_structure_applied() {
 }
 
 #[test]
+fn test_strict_parse_applied() {
+    let mut config = ExtractionConfig::default();
+    assert!(!config.strict_parse);
+    let overrides = ExtractionOverrides {
+        strict_parse: Some(true),
+        ..default_overrides()
+    };
+    overrides.apply(&mut config);
+    assert!(config.strict_parse);
+}
+
+#[test]
 fn test_validate_max_concurrent_zero() {
     let overrides = ExtractionOverrides {
         max_concurrent: Some(0),

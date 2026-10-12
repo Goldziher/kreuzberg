@@ -27,6 +27,7 @@ impl ExtractionConfig {
     /// - `XBERG_TOKEN_REDUCTION_MODE`: Token reduction mode ("off", "light", "moderate", "aggressive", or "maximum")
     /// - `XBERG_CHUNKING_TOKENIZER`: HuggingFace tokenizer model ID for token-based chunk sizing (requires `chunking-tokenizers` feature)
     /// - `XBERG_DISABLE_OCR`: Disable OCR entirely ("true" or "false")
+    /// - `XBERG_STRICT_PARSE`: Fail instead of falling back to plain text when YAML/JSON/TOML/XML parsing fails ("true" or "false")
     /// - `XBERG_LLM_MODEL`: LLM model for structured extraction (e.g., "openai/gpt-4o")
     /// - `XBERG_LLM_API_KEY`: API key for the structured extraction LLM provider. Applied only
     ///   when structured extraction is already configured — a credential never enables it.
@@ -242,6 +243,22 @@ impl ExtractionConfig {
                     return Err(XbergError::Validation {
                         message: format!(
                             "Invalid value for XBERG_DISABLE_OCR: '{}'. Must be 'true' or 'false'.",
+                            val
+                        ),
+                        source: None,
+                    });
+                }
+            };
+        }
+
+        if let Ok(val) = std::env::var("XBERG_STRICT_PARSE") {
+            self.strict_parse = match val.to_lowercase().as_str() {
+                "true" | "1" => true,
+                "false" | "0" => false,
+                _ => {
+                    return Err(XbergError::Validation {
+                        message: format!(
+                            "Invalid value for XBERG_STRICT_PARSE: '{}'. Must be 'true' or 'false'.",
                             val
                         ),
                         source: None,

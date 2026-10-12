@@ -373,6 +373,18 @@ pub struct ExtractionConfig {
     #[serde(default)]
     pub include_document_structure: bool,
 
+    /// Fail extraction when a text-like document cannot be parsed in its own format.
+    ///
+    /// Default `false` (lenient): when structured parsing of YAML, JSON, TOML or XML fails
+    /// (for example a Helm template, which is not YAML until rendered), or when the XML
+    /// entity-length or table-cell security limit trips on a text-like input, the raw content
+    /// is extracted as plain text (truncated to `security_limits.max_content_size`) and the
+    /// reason is reported in `processing_warnings`. When `true`, those cases return the
+    /// original error. Limits aimed at hostile input (archive size, nesting, XML depth) are
+    /// never relaxed by this option.
+    #[serde(default)]
+    pub strict_parse: bool,
+
     /// Hardware acceleration configuration for ONNX Runtime models.
     ///
     /// Controls execution provider selection for layout detection and embedding
@@ -621,6 +633,7 @@ impl Default for ExtractionConfig {
             jupyter_cell_rendering: JupyterCellRendering::Both,
             apply_notebook_cell_tags: true,
             include_document_structure: false,
+            strict_parse: false,
             acceleration: None,
             cache_namespace: None,
             cache_ttl_secs: None,
@@ -749,6 +762,7 @@ impl ExtractionConfig {
             ref result_format,
             ref output_format,
             ref include_document_structure,
+            ref strict_parse,
             #[cfg(feature = "layout-types")]
             ref layout,
             #[cfg(feature = "transcription-types")]
@@ -837,6 +851,9 @@ impl ExtractionConfig {
         }
         if let Some(v) = include_document_structure {
             config.include_document_structure = *v;
+        }
+        if let Some(v) = strict_parse {
+            config.strict_parse = *v;
         }
         #[cfg(feature = "layout-types")]
         if let Some(v) = layout {

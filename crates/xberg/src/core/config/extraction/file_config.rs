@@ -135,6 +135,10 @@ pub struct FileExtractionConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_document_structure: Option<bool>,
 
+    /// Override strict parsing for this file.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict_parse: Option<bool>,
+
     /// Override layout detection for this file.
     #[cfg(feature = "layout-types")]
     #[serde(skip_serializing_if = "Option::is_none")]

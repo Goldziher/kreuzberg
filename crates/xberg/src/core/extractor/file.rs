@@ -22,7 +22,7 @@ use tracing::Instrument;
 
 use super::helpers::get_extractor;
 
-fn ensure_builtin_extraction_method(doc: &mut crate::types::internal::InternalDocument, is_builtin: bool) {
+pub(super) fn ensure_builtin_extraction_method(doc: &mut crate::types::internal::InternalDocument, is_builtin: bool) {
     if !is_builtin {
         return;
     }
@@ -418,6 +418,16 @@ fn is_extractor_fallback_eligible(error: &XbergError) -> bool {
     matches!(error, XbergError::UnsupportedFormat(_) | XbergError::Plugin { .. })
 }
 
+/// Reads the head of `path` for plain-text recovery, bounded by the content budget.
+fn read_for_recovery(path: &Path, config: &ExtractionConfig) -> Option<Vec<u8>> {
+    use std::io::Read;
+    let mut content = Vec::new();
+    File::open(path)
+        .and_then(|file| file.take(super::lenient::read_budget(config)).read_to_end(&mut content))
+        .ok()?;
+    Some(content)
+}
+
 /// Extract without caching logic.
 ///
 /// Fetches extractor candidates for `mime_type` from the process-global
@@ -506,7 +516,14 @@ pub(crate) async fn extract_with_candidates(
                 );
                 last_error = Some(e);
             }
-            Err(e) => return Err(e),
+            Err(e) => {
+                if let Some(reason) = super::lenient::recovery_reason(&e, mime_type, config)
+                    && let Some(content) = read_for_recovery(path, config)
+                {
+                    return super::lenient::extract_plain_text(&content, mime_type, config, &reason).await;
+                }
+                return Err(e);
+            }
         }
     }
 
@@ -849,14 +866,24 @@ pub(in crate::core::extractor) async fn extract_bytes_with_extractor(
     let (extractor, is_builtin) = get_extractor(mime_type)?;
 
     #[cfg(feature = "otel")]
-    let mut doc = {
+    let extraction = {
         let stage_span = crate::telemetry::spans::extraction_stage_span(extractor.name(), extractor.priority());
         Box::pin(extractor.extract_content(content, mime_type, config))
             .instrument(stage_span)
-            .await?
+            .await
     };
     #[cfg(not(feature = "otel"))]
-    let mut doc = Box::pin(extractor.extract_content(content, mime_type, config)).await?;
+    let extraction = Box::pin(extractor.extract_content(content, mime_type, config)).await;
+
+    let mut doc = match extraction {
+        Ok(doc) => doc,
+        Err(e) => {
+            return match super::lenient::recovery_reason(&e, mime_type, config) {
+                Some(reason) => super::lenient::extract_plain_text(content, mime_type, config, &reason).await,
+                None => Err(e),
+            };
+        }
+    };
 
     ensure_builtin_extraction_method(&mut doc, is_builtin);
 

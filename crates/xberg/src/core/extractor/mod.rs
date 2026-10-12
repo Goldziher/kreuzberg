@@ -8,6 +8,7 @@
 mod bytes;
 mod file;
 mod helpers;
+mod lenient;
 
 #[allow(unused_imports)]
 pub(crate) use bytes::extract_bytes;

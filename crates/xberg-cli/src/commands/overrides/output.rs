@@ -45,6 +45,12 @@ impl ExtractionOverrides {
         }
     }
 
+    pub(super) fn apply_strict_parse(&self, config: &mut ExtractionConfig) {
+        if let Some(flag) = self.strict_parse {
+            config.strict_parse = flag;
+        }
+    }
+
     pub(super) fn apply_jupyter_cell_rendering(&self, config: &mut ExtractionConfig) {
         if let Some(rendering) = self.jupyter_cell_rendering {
             config.jupyter_cell_rendering = rendering.into();

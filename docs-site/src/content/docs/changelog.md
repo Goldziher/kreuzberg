@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(go): native setup supports static linking and musl assets.** The regenerated Go setup helper accepts
   explicit link and platform selection, auto-detects musl Linux hosts, and consumes the release's static linker
   metadata when static linking is requested.
+- **(config): `strict_parse` controls what happens when a text-like document cannot be parsed in its own format.**
+  By default (`false`), a YAML, JSON, TOML or XML file that fails to parse, an XML or SVG file that trips
+  `security_limits.max_entity_length`, and a CSV or TSV file that trips `security_limits.max_table_cells` are extracted
+  as plain text instead of failing, and the reason is recorded in `processing_warnings` (source `parse-fallback`).
+  Plain-text recovery is truncated to `security_limits.max_content_size` with a warning. Set `strict_parse = true`
+  (CLI `--strict-parse true`, environment `XBERG_STRICT_PARSE`) to keep the error. The limits are not loosened, and
+  limits aimed at hostile input (archive size, nesting, XML depth) still fail the extraction.
 
 ### Changed
 
@@ -41,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(extraction): a Helm template or other unparseable YAML, JSON, TOML or XML file no longer fails the extraction.**
+  The content is returned as plain text with a warning; `strict_parse = true` restores the error. (GH#2100)
+- **(extraction): an oversized XML entity or table no longer discards a text file.** A CSV over
+  `security_limits.max_table_cells` or an XML or SVG file over `security_limits.max_entity_length` is extracted as plain
+  text with a warning naming the limit that tripped; both limits remain adjustable through `security_limits`.
+  (GH#2101)
 - **(release): the Helm chart is published even when the CLI image build fails.** The chart publish was gated on the
   aggregate result of the image manifest job, so a CLI image leg timing out skipped the chart for 1.3.6 to 1.3.8 while
   the container images shipped. It is now gated on the `xberg` and `xberg:<version>-core` manifests resolving, the only

@@ -191,6 +191,11 @@ pub struct ExtractionOverrides {
     #[arg(long)]
     pub include_structure: Option<bool>,
 
+    /// Fail on unparseable YAML/JSON/TOML/XML and on table-cell or XML-entity limit hits instead of
+    /// falling back to plain text with a warning.
+    #[arg(long)]
+    pub strict_parse: Option<bool>,
+
     /// For Jupyter notebooks: render code cells as source, outputs, or both (default: both).
     /// Cells are never executed — outputs come only from those saved in the notebook.
     #[arg(long, value_enum)]
@@ -438,6 +443,7 @@ impl ExtractionOverrides {
         self.apply_quality_and_detection(config);
         self.apply_output_format(config);
         self.apply_include_structure(config);
+        self.apply_strict_parse(config);
         self.apply_jupyter_cell_rendering(config);
         self.apply_layout(config);
         self.apply_acceleration(config);
