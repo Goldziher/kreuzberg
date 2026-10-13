@@ -18,6 +18,7 @@ PUBDEV_WORKFLOW = Path(__file__).parents[2] / ".github" / "workflows" / "publish
 CI_WORKFLOW = Path(__file__).parents[2] / ".github" / "workflows" / "ci-lint.yaml"
 RUST_UNIT_SCRIPT = Path(__file__).parent / "rust" / "run-unit-tests.sh"
 PHP_ABI_SCRIPT = Path(__file__).parent / "verify-php-linux-abi.sh"
+PHP_STAGE_SCRIPT = Path(__file__).parent / "stage-php-linux-ort.sh"
 PUBLISHER_BOT = "xberg-dev-publisher[bot]"
 PUBLISH_PUB_SHA = "a25ae95253ee755ac5f691f7e1053dcb104cdee7"
 
@@ -395,13 +396,21 @@ def test_php_linux_artifacts_are_floor_built_and_verified() -> None:
     block = job_block(WORKFLOW.read_text(), "php-extension")
     setup_zig = block.index("Setup Zig for PHP glibc floor")
     install_zigbuild = block.index("Install cargo-zigbuild for PHP glibc floor")
+    setup_ort = block.index("Setup ONNX Runtime (Linux)")
+    first_build = block.index("xberg-io/actions/build-php-extension@v1")
     rebuild = block.index("Rebuild PHP extension at the glibc floor")
     package = block.index("xberg-io/actions/package-php-pie@v1")
+    stage_ort = block.index("scripts/ci/stage-php-linux-ort.sh")
     verify = block.index("scripts/ci/verify-php-linux-abi.sh")
     smoke = block.index("scripts/ci/smoke-test-php-debian12.sh")
     upload = block.index("actions/upload-artifact@v7", verify)
 
-    assert setup_zig < install_zigbuild < rebuild < package < verify < smoke < upload
+    assert (
+        setup_zig < install_zigbuild < setup_ort < first_build < rebuild < package < stage_ort < verify < smoke < upload
+    )
+    ort_step = block[setup_ort : block.index("xberg-io/actions/build-php-extension@v1")]
+    assert "if: contains(matrix.platform.target, '-linux-gnu')" in ort_step
+    assert "dest-dir: crates/xberg-php" in ort_step
     assert 'version: "0.13.0"' in block
     assert 'TARGET_ARG="${TARGET}.${GLIBC_FLOOR}"' in block
     assert 'cargo zigbuild --locked -p xberg-php --release --target "${TARGET_ARG}"' in block
@@ -410,34 +419,61 @@ def test_php_linux_artifacts_are_floor_built_and_verified() -> None:
     assert "cargo-features:" not in block
 
 
-def run_php_abi_fixture(profile: str, expected_digest: str | None = None) -> subprocess.CompletedProcess[str]:
+FAKE_PHP_OBJDUMP = (
+    "#!/bin/sh\n"
+    'if [ "$1" = "-p" ]; then\n'
+    '  case "${PHP_ABI_FIXTURE:?}" in\n'
+    "    static) printf '%s\\n' '  NEEDED       libc.so.6' ;;\n"
+    "    norpath) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' ;;\n"
+    "    *) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN' ;;\n"
+    "  esac\n"
+    "  exit 0\n"
+    "fi\n"
+    'case "${PHP_ABI_FIXTURE:?}" in\n'
+    "  unsafe) printf '%s\\n' '000 GLIBC_2.39 symbol' '000 GLIBCXX_3.4.31 symbol' '000 CXXABI_1.3.15 symbol' ;;\n"
+    "  unresolved) printf '%s\\n' '000 GLIBC_2.35 symbol'"
+    " '0000000000000000      D  *UND*\t0000000000000000  Base        _ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE15_M_replace_coldEPcmPKcmm'"
+    " '0000000000000000  w   D  *UND*\t0000000000000000  Base        _ZTVN10__cxxabiv117__class_type_infoE'"
+    " '0000000000000000      DF *UND*\t0000000000000000 (GLIBC_2.2.5) strlen' ;;\n"
+    "  *) printf '%s\\n' '000 GLIBC_2.35 symbol' '000 GLIBCXX_3.4.30 symbol' '000 CXXABI_1.3.13 symbol' ;;\n"
+    "esac\n"
+)
+
+
+def php_fixture_archive(root: Path, ort_members: tuple[str, ...]) -> Path:
+    payload = root / "payload"
+    payload.mkdir()
+    (payload / "xberg.so").write_bytes(b"ELF fixture")
+    archive = root / "php_xberg.tgz"
+    with tarfile.open(archive, "w:gz") as handle:
+        handle.add(payload / "xberg.so", arcname="xberg.so")
+        for member in ort_members:
+            (payload / member).write_bytes(b"ELF onnxruntime fixture")
+            handle.add(payload / member, arcname=member)
+    return archive
+
+
+def php_fixture_env(root: Path, profile: str) -> dict[str, str]:
+    bin_dir = root / "bin"
+    bin_dir.mkdir()
+    objdump = bin_dir / "objdump"
+    objdump.write_text(FAKE_PHP_OBJDUMP)
+    objdump.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+    env["PHP_ABI_FIXTURE"] = profile
+    return env
+
+
+def run_php_abi_fixture(
+    profile: str,
+    expected_digest: str | None = None,
+    ort_members: tuple[str, ...] = ("libonnxruntime.so.1",),
+) -> subprocess.CompletedProcess[str]:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        payload = root / "payload"
-        payload.mkdir()
-        (payload / "xberg.so").write_bytes(b"ELF fixture")
-        archive = root / "php_xberg.tgz"
-        with tarfile.open(archive, "w:gz") as handle:
-            handle.add(payload / "xberg.so", arcname="xberg.so")
-
-        bin_dir = root / "bin"
-        bin_dir.mkdir()
-        objdump = bin_dir / "objdump"
-        objdump.write_text(
-            "#!/bin/sh\n"
-            'case "${PHP_ABI_FIXTURE:?}" in\n'
-            "  safe) printf '%s\\n' '000 GLIBC_2.35 symbol' '000 GLIBCXX_3.4.30 symbol' '000 CXXABI_1.3.13 symbol' ;;\n"
-            "  unsafe) printf '%s\\n' '000 GLIBC_2.39 symbol' '000 GLIBCXX_3.4.31 symbol' '000 CXXABI_1.3.15 symbol' ;;\n"
-            "  unresolved) printf '%s\\n' '000 GLIBC_2.35 symbol'"
-            " '0000000000000000      D  *UND*\t0000000000000000  Base        _ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE15_M_replace_coldEPcmPKcmm'"
-            " '0000000000000000  w   D  *UND*\t0000000000000000  Base        _ZTVN10__cxxabiv117__class_type_infoE'"
-            " '0000000000000000      DF *UND*\t0000000000000000 (GLIBC_2.2.5) strlen' ;;\n"
-            "esac\n"
-        )
-        objdump.chmod(0o755)
-        env = os.environ.copy()
-        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
-        env["PHP_ABI_FIXTURE"] = profile
+        archive = php_fixture_archive(root, ort_members)
+        env = php_fixture_env(root, profile)
         env["EXPECTED_XBERG_SHA256"] = expected_digest or hashlib.sha256(b"ELF fixture").hexdigest()
         return run(["bash", str(PHP_ABI_SCRIPT), str(archive), "2.36", "3.4.30", "1.3.13"], root, env)
 
@@ -448,6 +484,7 @@ def test_php_linux_abi_gate_accepts_debian_12_compatible_symbols() -> None:
     assert "max GLIBC 2.35 <= 2.36" in result.stderr
     assert "max GLIBCXX 3.4.30 <= 3.4.30" in result.stderr
     assert "max CXXABI 1.3.13 <= 1.3.13" in result.stderr
+    assert "libonnxruntime.so.1 max GLIBC 2.35 <= 2.36" in result.stderr
     assert "packaged xberg.so matches the floor-built artifact" in result.stderr
 
 
@@ -457,6 +494,7 @@ def test_php_linux_abi_gate_rejects_both_symbol_floor_regressions() -> None:
     assert "requires GLIBC 2.39 > 2.36" in result.stderr
     assert "requires GLIBCXX 3.4.31 > 3.4.30" in result.stderr
     assert "requires CXXABI 1.3.15 > 1.3.13" in result.stderr
+    assert "libonnxruntime.so.1 requires GLIBC 2.39 > 2.36" in result.stderr
 
 
 def test_php_linux_abi_gate_rejects_unversioned_undefined_cxx_symbols() -> None:
@@ -477,6 +515,62 @@ def test_php_linux_abi_gate_rejects_a_different_packaged_binary() -> None:
     result = run_php_abi_fixture("safe", "0" * 64)
     assert result.returncode != 0
     assert "packaged xberg.so does not match the floor-built artifact" in result.stderr
+
+
+def test_php_linux_abi_gate_requires_dynamic_onnxruntime_shipped_beside_the_extension() -> None:
+    statically_linked = run_php_abi_fixture("static")
+    assert statically_linked.returncode != 0
+    assert "does not link libonnxruntime dynamically" in statically_linked.stderr
+
+    not_shipped = run_php_abi_fixture("safe", ort_members=())
+    assert not_shipped.returncode != 0
+    assert "libonnxruntime.so.1 is not shipped beside xberg.so" in not_shipped.stderr
+
+    no_rpath = run_php_abi_fixture("norpath")
+    assert no_rpath.returncode != 0
+    assert "has no $ORIGIN rpath" in no_rpath.stderr
+
+
+def run_php_stage_fixture(
+    profile: str, ort_files: tuple[str, ...]
+) -> tuple[subprocess.CompletedProcess[str], list[str], str]:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        archive = php_fixture_archive(root, ())
+        env = php_fixture_env(root, profile)
+        ort_dir = root / "ort"
+        ort_dir.mkdir()
+        for name in ort_files:
+            (ort_dir / name).write_bytes(b"ELF onnxruntime fixture")
+        result = run(["bash", str(PHP_STAGE_SCRIPT), str(archive), str(ort_dir)], root, env)
+        with tarfile.open(archive) as handle:
+            members = sorted(handle.getnames())
+        sidecar = Path(f"{archive}.sha256")
+        sidecar_text = sidecar.read_text() if sidecar.exists() else ""
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        if result.returncode == 0:
+            assert sidecar_text == f"{digest}  php_xberg.tgz\n"
+        return result, members, sidecar_text
+
+
+def test_php_stage_script_adds_the_needed_onnxruntime_beside_the_extension() -> None:
+    result, members, _ = run_php_stage_fixture("safe", ("libonnxruntime.so.1.24.2", "libonnxruntime.so"))
+    assert result.returncode == 0, result.stderr
+    assert members == ["libonnxruntime.so.1", "xberg.so"]
+
+
+def test_php_stage_script_refuses_a_statically_linked_extension() -> None:
+    result, members, _ = run_php_stage_fixture("static", ("libonnxruntime.so.1",))
+    assert result.returncode != 0
+    assert "does not link libonnxruntime dynamically" in result.stderr
+    assert members == ["xberg.so"]
+
+
+def test_php_stage_script_fails_when_the_runtime_is_missing() -> None:
+    result, members, _ = run_php_stage_fixture("safe", ())
+    assert result.returncode != 0
+    assert "no libonnxruntime.so.1 under" in result.stderr
+    assert members == ["xberg.so"]
 
 
 def test_cli_release_enables_metal_only_for_macos_arm64() -> None:
@@ -553,6 +647,10 @@ if __name__ == "__main__":
     test_php_linux_abi_gate_rejects_unversioned_undefined_cxx_symbols()
     test_php_linux_abi_gate_reports_no_unresolved_cxx_symbols_when_clean()
     test_php_linux_abi_gate_rejects_a_different_packaged_binary()
+    test_php_linux_abi_gate_requires_dynamic_onnxruntime_shipped_beside_the_extension()
+    test_php_stage_script_adds_the_needed_onnxruntime_beside_the_extension()
+    test_php_stage_script_refuses_a_statically_linked_extension()
+    test_php_stage_script_fails_when_the_runtime_is_missing()
     test_cli_release_enables_metal_only_for_macos_arm64()
     test_docker_preflight_checks_out_the_resolved_candidate()
     test_macos_unit_tests_reclaim_artifacts_before_libheif()

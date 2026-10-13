@@ -24,5 +24,20 @@ docker run --rm \
       exit 1
     }
     extension="$(find /tmp/xberg-extension -type f -name xberg.so -print -quit)"
+    extension_dir="$(dirname "$extension")"
+    ldd_report="$(ldd "$extension" 2>&1)"
+    printf "%s\n" "$ldd_report"
+    if printf "%s\n" "$ldd_report" | grep -q "not found"; then
+      echo "xberg.so has unresolved shared libraries in the unpacked archive layout" >&2
+      exit 1
+    fi
+    ort_resolved="$(printf "%s\n" "$ldd_report" | awk "/libonnxruntime/ { print \$3; exit }")"
+    case "$ort_resolved" in
+    "$extension_dir"/libonnxruntime.so*) ;;
+    *)
+      echo "libonnxruntime resolved to \"$ort_resolved\", expected a copy beside xberg.so" >&2
+      exit 1
+      ;;
+    esac
     php -n -d "extension=$extension" --ri xberg
   '

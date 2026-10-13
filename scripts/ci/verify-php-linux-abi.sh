@@ -46,38 +46,65 @@ if [ -n "${EXPECTED_XBERG_SHA256:-}" ]; then
   log "packaged xberg.so matches the floor-built artifact"
 fi
 
-symbols="$(objdump -T "$extension" 2>&1)" || die "xberg.so is not a readable ELF shared library: $symbols"
-glibc="$({ printf '%s\n' "$symbols" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' || true; } | sort -uV | tail -1)"
-glibcxx="$({ printf '%s\n' "$symbols" | grep -oE 'GLIBCXX_[0-9]+(\.[0-9]+)*' || true; } | sed 's/GLIBCXX_//' | sort -uV | tail -1)"
-cxxabi="$({ printf '%s\n' "$symbols" | grep -oE 'CXXABI_[0-9]+(\.[0-9]+)*' || true; } | sed 's/CXXABI_//' | sort -uV | tail -1)"
-
-[ -n "$glibc" ] || die "xberg.so has no versioned GLIBC symbols; ABI gate examined no glibc requirements"
-glibc="${glibc#GLIBC_}"
 failed=0
-if gt "$glibc" "$max_glibc"; then
-  log "xberg.so requires GLIBC $glibc > $max_glibc"
-  failed=1
-else
-  log "max GLIBC $glibc <= $max_glibc"
-fi
 
-if [ -z "$glibcxx" ]; then
-  log "no GLIBCXX symbols (libstdc++ is not a runtime requirement)"
-elif gt "$glibcxx" "$max_glibcxx"; then
-  log "xberg.so requires GLIBCXX $glibcxx > $max_glibcxx"
-  failed=1
-else
-  log "max GLIBCXX $glibcxx <= $max_glibcxx"
-fi
+check_floor() {
+  local file="$1" name glibc glibcxx cxxabi
+  name="$(basename "$file")"
+  symbols="$(objdump -T "$file" 2>&1)" || die "$name is not a readable ELF shared library: $symbols"
+  glibc="$({ printf '%s\n' "$symbols" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' || true; } | sort -uV | tail -1)"
+  glibcxx="$({ printf '%s\n' "$symbols" | grep -oE 'GLIBCXX_[0-9]+(\.[0-9]+)*' || true; } | sed 's/GLIBCXX_//' | sort -uV | tail -1)"
+  cxxabi="$({ printf '%s\n' "$symbols" | grep -oE 'CXXABI_[0-9]+(\.[0-9]+)*' || true; } | sed 's/CXXABI_//' | sort -uV | tail -1)"
 
-if [ -z "$cxxabi" ]; then
-  log "no CXXABI symbols (libstdc++ is not a runtime requirement)"
-elif gt "$cxxabi" "$max_cxxabi"; then
-  log "xberg.so requires CXXABI $cxxabi > $max_cxxabi"
-  failed=1
+  [ -n "$glibc" ] || die "$name has no versioned GLIBC symbols; ABI gate examined no glibc requirements"
+  glibc="${glibc#GLIBC_}"
+  if gt "$glibc" "$max_glibc"; then
+    log "$name requires GLIBC $glibc > $max_glibc"
+    failed=1
+  else
+    log "$name max GLIBC $glibc <= $max_glibc"
+  fi
+
+  if [ -z "$glibcxx" ]; then
+    log "$name has no GLIBCXX symbols (libstdc++ is not a runtime requirement)"
+  elif gt "$glibcxx" "$max_glibcxx"; then
+    log "$name requires GLIBCXX $glibcxx > $max_glibcxx"
+    failed=1
+  else
+    log "$name max GLIBCXX $glibcxx <= $max_glibcxx"
+  fi
+
+  if [ -z "$cxxabi" ]; then
+    log "$name has no CXXABI symbols (libstdc++ is not a runtime requirement)"
+  elif gt "$cxxabi" "$max_cxxabi"; then
+    log "$name requires CXXABI $cxxabi > $max_cxxabi"
+    failed=1
+  else
+    log "$name max CXXABI $cxxabi <= $max_cxxabi"
+  fi
+}
+
+# xberg.so must link ONNX Runtime dynamically and ship it beside itself. The pyke static archive
+# is built against GCC 13 libstdc++ and cannot load on Debian 12 once zig swaps in libc++. ~keep
+dynamic="$(objdump -p "$extension" 2>&1)" || die "xberg.so is not a readable ELF shared library: $dynamic"
+ort_soname="$(printf '%s\n' "$dynamic" | awk '$1 == "NEEDED" && $2 ~ /^libonnxruntime\.so/ { print $2; exit }')"
+[ -n "$ort_soname" ] || die "xberg.so does not link libonnxruntime dynamically (static pyke archive?)"
+log "xberg.so needs $ort_soname"
+# shellcheck disable=SC2016
+if printf '%s\n' "$dynamic" | grep -Eq '^[[:space:]]*(RUNPATH|RPATH)[[:space:]].*\$ORIGIN'; then
+  log "xberg.so rpath includes \$ORIGIN"
 else
-  log "max CXXABI $cxxabi <= $max_cxxabi"
+  log "xberg.so has no \$ORIGIN rpath, so $ort_soname would not resolve beside it"
+  failed=1
 fi
+ort_library="$(dirname "$extension")/$ort_soname"
+[ -f "$ort_library" ] || die "$ort_soname is not shipped beside xberg.so in the archive"
+log "$ort_soname is shipped beside xberg.so"
+
+check_floor "$extension"
+extension_symbols="$symbols"
+check_floor "$ort_library"
+symbols="$extension_symbols"
 
 # A statically linked C++ archive built against libstdc++ (the pyke ONNX Runtime) leaves its
 # std:: references undefined, and unversioned, when zig links libc++ instead. They carry no

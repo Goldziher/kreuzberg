@@ -1325,6 +1325,18 @@ jobs:
           ort-version: "1.24.2"
           dest-dir: crates/xberg-php
 
+      # The pyke static libonnxruntime.a is built against GCC 13 libstdc++; zigbuild links
+      # libc++ instead, leaving ~1,800 std:: symbols undefined and unversioned, so the
+      # extension cannot be dlopen'd on Debian 12. Link Microsoft's glibc-clean ONNX Runtime
+      # dynamically (ORT_STRATEGY=system) like the Dart/Java/C#/Python legs, and ship it
+      # beside xberg.so below. ~keep
+      - name: Setup ONNX Runtime (Linux)
+        if: contains(matrix.platform.target, '-linux-gnu')
+        uses: ./.github/actions/setup-onnx-runtime
+        with:
+          ort-version: "1.24.2"
+          dest-dir: crates/xberg-php
+
       - uses: xberg-io/actions/build-php-extension@v1
         with:
           crate-name: xberg-php
@@ -1381,6 +1393,20 @@ jobs:
           windows-compiler: ${{ contains(matrix.platform.target, 'windows') && 'vs17' || '' }}
           version: ${{ needs.prepare.outputs.version }}
           output-dir: dist/php-package
+
+      # xberg.so carries DT_NEEDED libonnxruntime.so.1 with a $ORIGIN rpath. The archive
+      # holds only xberg.so, so add the runtime beside it and refresh the checksum sidecar.
+      - name: Ship ONNX Runtime beside xberg.so (Linux)
+        if: contains(matrix.platform.target, '-linux-gnu')
+        shell: bash
+        run: |
+          shopt -s nullglob
+          archives=(dist/php-package/php_*.tgz)
+          [ "${#archives[@]}" = 1 ] || {
+            echo "::error::expected exactly one PHP Linux archive, found ${#archives[@]}"
+            exit 1
+          }
+          bash scripts/ci/stage-php-linux-ort.sh "${archives[0]}" "${ORT_LIB_LOCATION:?}"
 
       - name: Verify PHP Linux ABI is compatible with Debian 12
         if: contains(matrix.platform.target, '-linux-gnu')
