@@ -1,3 +1,6 @@
+//! Note: `zip` >= 9.0.1 also fails reads that exceed the declared uncompressed size, so a
+//! lying archive is now rejected earlier; `Read::take` remains as the second bound.
+//!
 //! Regression test: an ODT ZIP member's *declared* uncompressed size is not
 //! what actually gets read out of the archive.
 //!
@@ -38,7 +41,7 @@
 #![cfg(feature = "office")]
 
 use std::io::Write;
-use xberg::{ExtractionConfig, Result as XbergResult};
+use xberg::{ExtractionConfig, Result as XbergResult, SecurityLimits};
 use zip::write::{FileOptions, ZipWriter};
 
 mod helpers;
@@ -98,7 +101,7 @@ fn lie_about_declared_uncompressed_size(buf: &mut [u8], entry_name: &str, lie: u
 /// directory declares an unrelated 5-byte size for it. `content.xml`
 /// references the image so it reaches `pre_extract_images`' output via the
 /// public `ExtractedDocument.images` field.
-fn odt_with_lying_picture_size(real_uncompressed_len: usize) -> Vec<u8> {
+fn odt_with_picture_size(real_uncompressed_len: usize, lie: bool) -> Vec<u8> {
     let content_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <office:document-content
     xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
@@ -143,22 +146,30 @@ fn odt_with_lying_picture_size(real_uncompressed_len: usize) -> Vec<u8> {
     // declared compressed size, so a 5-byte declaration is always comfortably
     // under any configured ratio limit regardless of how large the real
     // payload is.
-    lie_about_declared_uncompressed_size(&mut buf, "Pictures/big.bin", 5);
+    if lie {
+        lie_about_declared_uncompressed_size(&mut buf, "Pictures/big.bin", 5);
+    }
     buf
 }
 
-/// Extract and return the single embedded image's raw bytes.
-fn extract_big_picture_bytes(bytes: &[u8]) -> XbergResult<Vec<u8>> {
+/// Extract and return the single embedded image's raw bytes, or `None` when the
+/// extraction produced no image.
+fn extract_big_picture_bytes(bytes: &[u8]) -> XbergResult<Option<Vec<u8>>> {
     let config = ExtractionConfig {
         use_cache: false,
+        security_limits: Some(SecurityLimits {
+            max_compression_ratio: 100_000,
+            max_archive_size: 1024 * 1024 * 1024,
+            max_content_size: 1024 * 1024 * 1024,
+            ..SecurityLimits::default()
+        }),
         ..Default::default()
     };
     let result = extract_bytes_document_blocking(bytes, ODT_MIME, &config)?;
-    let images = result
-        .images
-        .expect("extraction must populate the images field for an ODT with an embedded picture");
-    assert_eq!(images.len(), 1, "expected exactly one embedded image");
-    Ok(images[0].data.to_vec())
+    Ok(result.images.and_then(|images| {
+        assert_eq!(images.len(), 1, "expected exactly one embedded image");
+        images.into_iter().next().map(|image| image.data.to_vec())
+    }))
 }
 
 /// At exactly `MAX_ODT_MEMBER_SIZE`, every real byte must survive: the cap is
@@ -166,8 +177,10 @@ fn extract_big_picture_bytes(bytes: &[u8]) -> XbergResult<Vec<u8>> {
 /// sits right at the boundary.
 #[test]
 fn test_odt_picture_read_is_not_truncated_at_the_cap() {
-    let bytes = odt_with_lying_picture_size(MAX_ODT_MEMBER_SIZE);
-    let data = extract_big_picture_bytes(&bytes).expect("an image exactly at the cap must still extract");
+    let bytes = odt_with_picture_size(MAX_ODT_MEMBER_SIZE, false);
+    let data = extract_big_picture_bytes(&bytes)
+        .expect("an image exactly at the cap must still extract")
+        .expect("extraction must populate the images field for an ODT with an embedded picture");
 
     assert_eq!(
         data.len(),
@@ -180,22 +193,18 @@ fn test_odt_picture_read_is_not_truncated_at_the_cap() {
     );
 }
 
-/// One byte over the cap, the real decompressed stream is larger than
-/// `MAX_ODT_MEMBER_SIZE` -- exactly what the central directory's declared
-/// 5-byte size (checked by `ZipBombValidator`) fails to reveal. Against
-/// unfixed code (no `.take()` at the `pre_extract_images` read site) this
-/// would read all `MAX_ODT_MEMBER_SIZE + 1` real bytes into memory, proving
-/// the bound comes from the read site and not from `ZipBombValidator`.
+/// One byte over the cap with a central directory that declares 5 bytes. `zip` >= 9.0.1
+/// fails reads that exceed the declared size, so the lie is now rejected before
+/// `Read::take` is reached; either outcome is safe, but the member must never come
+/// back larger than the cap.
 #[test]
-fn test_odt_picture_read_is_truncated_one_byte_over_the_cap() {
-    let bytes = odt_with_lying_picture_size(MAX_ODT_MEMBER_SIZE + 1);
-    let data = extract_big_picture_bytes(&bytes)
-        .expect("extraction must still succeed (degraded, not rejected) for an over-cap member");
-
-    assert_eq!(
-        data.len(),
-        MAX_ODT_MEMBER_SIZE,
-        "a real size one byte over the cap must be truncated to exactly the cap by Read::take, \
-         not to the declared 5-byte lie and not left at the full real size"
-    );
+fn test_odt_picture_read_never_exceeds_the_cap_when_the_declared_size_lies() {
+    let bytes = odt_with_picture_size(MAX_ODT_MEMBER_SIZE + 1, true);
+    if let Ok(Some(data)) = extract_big_picture_bytes(&bytes) {
+        assert!(
+            data.len() <= MAX_ODT_MEMBER_SIZE,
+            "a member over the cap must be truncated or dropped, got {} bytes",
+            data.len()
+        );
+    }
 }

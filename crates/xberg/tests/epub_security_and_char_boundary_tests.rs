@@ -356,8 +356,9 @@ async fn test_bounded_read_fires_even_when_declared_size_understates_real_conten
              full, even when the ZIP's declared size claims otherwise",
         );
 
+    let message = error.to_string();
     assert!(
-        error.to_string().contains("Failed to parse OPF file"),
-        "expected the read to be truncated mid-document (an unterminated comment), got: {error}"
+        message.contains("Failed to parse OPF file") || message.contains("larger than its declared uncompressed size"),
+        "expected the read to be truncated mid-document or rejected by the zip reader, got: {error}"
     );
 }
