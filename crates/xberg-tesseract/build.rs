@@ -1922,6 +1922,14 @@ fn main() {
         return;
     }
 
+    // A release workflow exports `MACOSX_DEPLOYMENT_TARGET` for its macOS legs, and cmake then
+    // configures an iOS target as macOS: the static libraries come out with platform MACOS and
+    // the final iOS link fails. iOS takes `IPHONEOS_DEPLOYMENT_TARGET` instead. ~keep
+    if std::env::var("TARGET").is_ok_and(|target| target.contains("apple-ios")) {
+        // SAFETY: a build script is single-threaded at this point; nothing else reads the env.
+        unsafe { std::env::remove_var("MACOSX_DEPLOYMENT_TARGET") };
+    }
+
     // `dynamic-linking` is an explicit opt out of the vendored build, so it outranks the
     // default `build-tesseract` rather than being ignored beside it. Cargo features are
     // additive and a dependent cannot switch off a dependency's defaults, so precedence here
