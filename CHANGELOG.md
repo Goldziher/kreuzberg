@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so the two-column repair never saw a column beside the notes, and its bands were cut at every body line. The
   margin label was placed after the first body line and the following lines alternated between the columns. Spans
   that do not cross the split are no longer furniture; the same holds with the notes on the left. (GH#2109)
+- **(pdf): prose that runs across a table's inner gutter is no longer split between columns.** A bordered two-column
+  table beside a margin note let the table's gutter become a page-level column cut, and the full-width paragraphs
+  above and below it were scattered over both groups, so the opening paragraph was read after a lower heading and a
+  short last line such as `2017):` came before its own paragraph. A column cut is now refused when two or more
+  continuous lines have at least 60 pt of ink on each side of it. (GH#2110)
 
 ## [1.3.10] - 2026-10-13
 
