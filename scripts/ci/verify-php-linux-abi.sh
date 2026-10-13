@@ -79,5 +79,19 @@ else
   log "max CXXABI $cxxabi <= $max_cxxabi"
 fi
 
+# A statically linked C++ archive built against libstdc++ (the pyke ONNX Runtime) leaves its
+# std:: references undefined, and unversioned, when zig links libc++ instead. They carry no
+# GLIBCXX tag, so the version gates above cannot see them; dlopen then fails on any host whose
+# libstdc++ predates the symbol (Debian 12 has no GCC 13 `_M_replace_cold`). ~keep
+unresolved="$(printf '%s\n' "$symbols" | awk '/\*UND\*/ && $(NF-1) == "Base" && $NF ~ /^_Z/ && $0 !~ / w / { print $NF }' | sort -u)"
+unresolved_count="$(printf '%s' "$unresolved" | grep -c . || true)"
+if [ "$unresolved_count" != 0 ]; then
+  log "xberg.so leaves $unresolved_count C++ symbols undefined and unversioned, e.g.:"
+  printf '%s\n' "$unresolved" | head -5 | sed 's/^/verify-php-linux-abi:   /' >&2
+  failed=1
+else
+  log "no unresolved C++ symbols"
+fi
+
 [ "$failed" = 0 ] || die "artifact is incompatible with Debian 12"
 log "artifact satisfies the Debian 12 ABI floor"

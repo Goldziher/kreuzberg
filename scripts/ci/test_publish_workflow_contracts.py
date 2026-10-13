@@ -428,6 +428,10 @@ def run_php_abi_fixture(profile: str, expected_digest: str | None = None) -> sub
             'case "${PHP_ABI_FIXTURE:?}" in\n'
             "  safe) printf '%s\\n' '000 GLIBC_2.35 symbol' '000 GLIBCXX_3.4.30 symbol' '000 CXXABI_1.3.13 symbol' ;;\n"
             "  unsafe) printf '%s\\n' '000 GLIBC_2.39 symbol' '000 GLIBCXX_3.4.31 symbol' '000 CXXABI_1.3.15 symbol' ;;\n"
+            "  unresolved) printf '%s\\n' '000 GLIBC_2.35 symbol'"
+            " '0000000000000000      D  *UND*\t0000000000000000  Base        _ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE15_M_replace_coldEPcmPKcmm'"
+            " '0000000000000000  w   D  *UND*\t0000000000000000  Base        _ZTVN10__cxxabiv117__class_type_infoE'"
+            " '0000000000000000      DF *UND*\t0000000000000000 (GLIBC_2.2.5) strlen' ;;\n"
             "esac\n"
         )
         objdump.chmod(0o755)
@@ -453,6 +457,20 @@ def test_php_linux_abi_gate_rejects_both_symbol_floor_regressions() -> None:
     assert "requires GLIBC 2.39 > 2.36" in result.stderr
     assert "requires GLIBCXX 3.4.31 > 3.4.30" in result.stderr
     assert "requires CXXABI 1.3.15 > 1.3.13" in result.stderr
+
+
+def test_php_linux_abi_gate_rejects_unversioned_undefined_cxx_symbols() -> None:
+    result = run_php_abi_fixture("unresolved")
+    assert result.returncode != 0
+    assert "leaves 1 C++ symbols undefined and unversioned" in result.stderr
+    assert "_M_replace_coldEPcmPKcmm" in result.stderr
+    assert "_ZTVN10__cxxabiv117__class_type_infoE" not in result.stderr
+
+
+def test_php_linux_abi_gate_reports_no_unresolved_cxx_symbols_when_clean() -> None:
+    result = run_php_abi_fixture("safe")
+    assert result.returncode == 0, result.stderr
+    assert "no unresolved C++ symbols" in result.stderr
 
 
 def test_php_linux_abi_gate_rejects_a_different_packaged_binary() -> None:
@@ -532,6 +550,8 @@ if __name__ == "__main__":
     test_php_linux_artifacts_are_floor_built_and_verified()
     test_php_linux_abi_gate_accepts_debian_12_compatible_symbols()
     test_php_linux_abi_gate_rejects_both_symbol_floor_regressions()
+    test_php_linux_abi_gate_rejects_unversioned_undefined_cxx_symbols()
+    test_php_linux_abi_gate_reports_no_unresolved_cxx_symbols_when_clean()
     test_php_linux_abi_gate_rejects_a_different_packaged_binary()
     test_cli_release_enables_metal_only_for_macos_arm64()
     test_docker_preflight_checks_out_the_resolved_candidate()
