@@ -204,6 +204,12 @@ verify_local_closure() {
       log "dlopen probe for $(basename "$native"):"
       if python3 -c "import ctypes, sys; ctypes.CDLL(sys.argv[1])" "$native" >"$dlopen_report" 2>&1; then
         log "  dlopen($(basename "$native")) succeeded"
+      elif case "$(basename "$native")" in libxberg_nif*) true ;; *) false ;; esac &&
+        grep -q 'undefined symbol: enif_' "$dlopen_report"; then
+        # A NIF resolves enif_* from the BEAM that loads it, so a bare dlopen cannot satisfy
+        # them; rustler 0.39 references them directly. A missing soname still reads
+        # "cannot open shared object file", which this branch does not match. ~keep
+        log "  dlopen($(basename "$native")) reached the BEAM-provided enif_* symbols; closure resolved"
       else
         cat "$dlopen_report" >&2
         rm -f "$dlopen_report"
