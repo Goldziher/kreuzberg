@@ -1420,7 +1420,7 @@ org = { version = "0.3", optional = true }
 # `[features] cuda`/`tensorrt`) that callers must explicitly request together with a
 # matching CUDA/TensorRT-enabled ONNX Runtime build. `ort_discovery.rs` #[cfg]-gates the
 # corresponding EP construction code to match.
-ort = { version = "2.0.0-rc.13", default-features = false, features = ["std", "ndarray", "api-18"], optional = true }
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "ndarray", "api-18"], optional = true }
 outlook-pst = { version = "1.2.0", optional = true }
 parking_lot = { workspace = true }
 pastey = "0.2"

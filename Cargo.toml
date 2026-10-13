@@ -99,7 +99,7 @@ nom-exif = { version = "3.8", default-features = false }
 num_cpus = "1.17.0"
 once_cell = "1.21.4"
 
-ort = { version = "2.0.0-rc.13", default-features = false, features = ["std", "api-18"] }
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "api-18"] }
 parking_lot = "0.12.5"
 # Our fork of pdfium-render. `package =` keeps the extern crate name `pdfium_render`
 # (matches the `[lib] name = "pdfium_render"` in crates/xberg-pdfium-render/Cargo.toml),
