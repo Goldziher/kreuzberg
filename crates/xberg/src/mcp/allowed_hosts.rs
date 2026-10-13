@@ -94,7 +94,7 @@ pub fn read_mcp_allowed_hosts_from_file(path: impl AsRef<Path>) -> Result<Vec<St
     let parsed: ConfigFile = match extension.as_str() {
         "toml" => toml::from_str(&content)
             .map_err(|e| XbergError::validation(format!("Invalid TOML in {}: {}", path.display(), e)))?,
-        "yaml" | "yml" => serde_yaml_ng::from_str(&content)
+        "yaml" | "yml" => yaml_serde::from_str(&content)
             .map_err(|e| XbergError::validation(format!("Invalid YAML in {}: {}", path.display(), e)))?,
         "json" => serde_json::from_str(&content)
             .map_err(|e| XbergError::validation(format!("Invalid JSON in {}: {}", path.display(), e)))?,

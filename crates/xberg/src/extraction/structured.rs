@@ -7,7 +7,7 @@
 //!
 //! - **JSON**: Using `serde_json` with schema extraction
 //! - **JSONL/NDJSON**: Line-delimited JSON, parsed per-line via `serde_json`
-//! - **YAML**: Using `serde_yaml`
+//! - **YAML**: Using `yaml_serde`
 //! - **TOML**: Using `toml`
 //!
 //! # Features
@@ -419,12 +419,12 @@ pub(crate) fn parse_yaml(data: &[u8]) -> Result<StructuredDataResult> {
     let yaml_str =
         utf8_validation::from_utf8(data).map_err(|e| XbergError::parsing(format!("Invalid UTF-8 in YAML: {}", e)))?;
 
-    // `serde_yaml_ng::from_str` rejects input containing more than one `---`-separated
+    // `yaml_serde::from_str` rejects input containing more than one `---`-separated
     // document. Kubernetes manifests, Docker Compose bundles, and Ansible playbooks all use
     // multi-document YAML, so iterate the document stream via `Deserializer` instead
     // (xberg-io/xberg#167). A single-document input still deserializes to that document's
     // own value, unchanged from prior behavior; multiple documents are wrapped in an array. ~keep
-    let documents: Vec<serde_json::Value> = serde_yaml_ng::Deserializer::from_str(yaml_str)
+    let documents: Vec<serde_json::Value> = yaml_serde::Deserializer::from_str(yaml_str)
         .map(serde_json::Value::deserialize)
         .collect::<std::result::Result<Vec<_>, _>>()
         .map_err(|e| XbergError::parsing(format!("Failed to parse YAML: {}", e)))?;

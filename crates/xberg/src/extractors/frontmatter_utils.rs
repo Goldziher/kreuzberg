@@ -8,8 +8,8 @@
 
 use crate::types::{Metadata, ProcessingWarning};
 
-use serde_yaml_ng::Value as YamlValue;
 use std::borrow::Cow;
+use yaml_serde::Value as YamlValue;
 
 /// Frontmatter keys with a dedicated, typed home on [`Metadata`].
 ///
@@ -95,7 +95,7 @@ pub(crate) fn extract_frontmatter_with_warning(
     let frontmatter_str = &rest[..end];
     let remaining = frontmatter_remaining_content(rest, end);
 
-    match serde_yaml_ng::from_str::<YamlValue>(frontmatter_str) {
+    match yaml_serde::from_str::<YamlValue>(frontmatter_str) {
         Ok(value) => (Some(value), remaining.to_string(), None),
         Err(err) => (
             None,
@@ -209,12 +209,12 @@ fn toml_value_to_yaml(value: &toml::Value) -> YamlValue {
     match value {
         toml::Value::String(s) => YamlValue::String(s.clone()),
         toml::Value::Integer(i) => YamlValue::Number((*i).into()),
-        toml::Value::Float(f) => YamlValue::Number(serde_yaml_ng::Number::from(*f)),
+        toml::Value::Float(f) => YamlValue::Number(yaml_serde::Number::from(*f)),
         toml::Value::Boolean(b) => YamlValue::Bool(*b),
         toml::Value::Datetime(dt) => YamlValue::String(dt.to_string()),
         toml::Value::Array(arr) => YamlValue::Sequence(arr.iter().map(toml_value_to_yaml).collect()),
         toml::Value::Table(table) => {
-            let mut map = serde_yaml_ng::Mapping::new();
+            let mut map = yaml_serde::Mapping::new();
             for (k, v) in table {
                 map.insert(YamlValue::String(k.clone()), toml_value_to_yaml(v));
             }
@@ -241,7 +241,7 @@ fn toml_value_to_yaml(value: &toml::Value) -> YamlValue {
 /// # Examples
 ///
 /// ```rust,ignore
-/// let yaml = serde_yaml_ng::from_str("title: Test\nauthor: John").unwrap();
+/// let yaml = yaml_serde::from_str("title: Test\nauthor: John").unwrap();
 /// let metadata = extract_metadata_from_yaml(&yaml);
 /// assert_eq!(metadata.title.as_deref(), Some("Test"));
 /// ```
@@ -602,7 +602,7 @@ language: en
 version: 1.0
 "#;
 
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert_eq!(metadata.title.as_deref(), Some("Test Document"));
@@ -620,7 +620,7 @@ keywords: "single, keyword, string"
 tags: "tag1, tag2"
 "#;
 
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert_eq!(
@@ -632,7 +632,7 @@ tags: "tag1, tag2"
     #[test]
     fn test_unknown_frontmatter_key_preserved_in_additional() {
         let yaml_str = "title: Test\nslug: my-post\nweight: 10\ndraft: true\naliases:\n  - /old-url\n";
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert_eq!(metadata.title.as_deref(), Some("Test"));
@@ -660,7 +660,7 @@ tags: "tag1, tag2"
     fn test_known_keys_do_not_leak_into_additional() {
         let yaml_str = "title: Test\nauthor: Jane\ndate: 2024-01-15\nkeywords: [a, b]\ndescription: d\n\
                          abstract: ab\nsubject: s\ncategory: c\ntags: [t1]\nlanguage: en\nversion: \"1.0\"\n";
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert!(
@@ -673,7 +673,7 @@ tags: "tag1, tag2"
     #[test]
     fn test_author_sequence_produces_two_authors() {
         let yaml_str = "author:\n  - A\n  - B\n";
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert_eq!(metadata.authors, Some(vec!["A".to_string(), "B".to_string()]));
@@ -684,7 +684,7 @@ tags: "tag1, tag2"
     #[test]
     fn test_plural_authors_key_produces_authors() {
         let yaml_str = "authors:\n  - A\n  - B\n";
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert_eq!(metadata.authors, Some(vec!["A".to_string(), "B".to_string()]));
@@ -693,7 +693,7 @@ tags: "tag1, tag2"
     #[test]
     fn test_scalar_author_still_populates_created_by_and_authors() {
         let yaml_str = "author: Jane Doe\n";
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert_eq!(metadata.created_by.as_deref(), Some("Jane Doe"));
@@ -703,7 +703,7 @@ tags: "tag1, tag2"
     #[test]
     fn test_both_author_and_authors_present_plural_wins_for_authors_field() {
         let yaml_str = "author: Jane Doe\nauthors:\n  - Jane Doe\n  - John Roe\n";
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).unwrap();
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).unwrap();
         let metadata = extract_metadata_from_yaml(&yaml);
 
         // Precedence decision (xberg-io/xberg#154): plural `authors` wins for the

@@ -3,7 +3,7 @@
 //! This module provides methods for loading extraction configuration from
 //! TOML, YAML, and JSON files.
 //!
-//! Loading here is entirely generic (`toml`/`serde_yaml_ng`/`serde_json` deserializing
+//! Loading here is entirely generic (`toml`/`yaml_serde`/`serde_json` deserializing
 //! straight into `ExtractionConfig`). New `#[serde(default)]` fields on nested config
 //! types are picked up automatically with no change required in this file.
 
@@ -33,7 +33,7 @@ impl ExtractionConfig {
         let path = path.as_ref();
         let content = std::fs::read_to_string(path)
             .map_err(|e| XbergError::validation(format!("Failed to read config file {}: {}", path.display(), e)))?;
-        let config: Self = serde_yaml_ng::from_str(&content)
+        let config: Self = yaml_serde::from_str(&content)
             .map_err(|e| XbergError::validation(format!("Invalid YAML in {}: {}", path.display(), e)))?;
         config.validate()?;
         Ok(config)

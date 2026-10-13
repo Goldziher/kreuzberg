@@ -111,7 +111,7 @@ impl MarkdownExtractor {
     /// Kept as a 2-argument function for existing callers (e.g. the Jupyter notebook
     /// extractor's Markdown cell rendering) that have no JSX blocks to record. See
     /// [`Self::build_internal_document_with_jsx`] for the MDX entry point.
-    pub(crate) fn build_internal_document(events: &[Event], yaml: &Option<serde_yaml_ng::Value>) -> InternalDocument {
+    pub(crate) fn build_internal_document(events: &[Event], yaml: &Option<yaml_serde::Value>) -> InternalDocument {
         Self::build_internal_document_with_jsx(events, yaml, &[])
     }
 
@@ -125,20 +125,20 @@ impl MarkdownExtractor {
     /// (that's what [`Self::build_internal_document`] does).
     pub(crate) fn build_internal_document_with_jsx(
         events: &[Event],
-        yaml: &Option<serde_yaml_ng::Value>,
+        yaml: &Option<yaml_serde::Value>,
         raw_jsx_blocks: &[String],
     ) -> InternalDocument {
         use crate::types::builder;
         use crate::types::document_structure::TextAnnotation;
         let mut b = InternalDocumentBuilder::new("markdown");
 
-        if let Some(serde_yaml_ng::Value::Mapping(map)) = yaml {
+        if let Some(yaml_serde::Value::Mapping(map)) = yaml {
             let entries: Vec<(String, String)> = map
                 .iter()
                 .filter_map(|(k, v)| {
                     let key = k.as_str()?.to_string();
                     let val = match v {
-                        serde_yaml_ng::Value::String(s) => s.clone(),
+                        yaml_serde::Value::String(s) => s.clone(),
                         other => format!("{other:?}"),
                     };
                     Some((key, val))
@@ -1003,7 +1003,7 @@ impl InternalDocumentExtractor for MarkdownExtractor {
 mod tests {
     use super::super::frontmatter_utils::{cells_to_markdown, extract_frontmatter, extract_metadata_from_yaml};
     use super::*;
-    use serde_yaml_ng::Value as YamlValue;
+    use yaml_serde::Value as YamlValue;
 
     #[test]
     fn test_can_extract_markdown_mime_types() {
@@ -1261,7 +1261,7 @@ nested:
     email: "test@example.com"
 "#;
 
-        let yaml: YamlValue = serde_yaml_ng::from_str(yaml_str).expect("Valid YAML");
+        let yaml: YamlValue = yaml_serde::from_str(yaml_str).expect("Valid YAML");
         let metadata = extract_metadata_from_yaml(&yaml);
 
         assert_eq!(metadata.created_at, Some("2024-01-15".to_string()));

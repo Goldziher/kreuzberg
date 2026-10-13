@@ -94,17 +94,14 @@ pub(crate) fn parse_myst_text_notebook(content: &str, budget: &mut SecurityBudge
 }
 
 fn parse_myst_text_notebook_parts(
-    yaml: Option<&serde_yaml_ng::Value>,
+    yaml: Option<&yaml_serde::Value>,
     remaining: &str,
     budget: &mut SecurityBudget,
 ) -> Result<Option<TextNotebook>> {
     let Some(yaml) = yaml else {
         return Ok(None);
     };
-    if yaml
-        .get("kernelspec")
-        .and_then(serde_yaml_ng::Value::as_mapping)
-        .is_none()
+    if yaml.get("kernelspec").and_then(yaml_serde::Value::as_mapping).is_none()
         || !contains_code_cell(remaining, budget)?
     {
         return Ok(None);
@@ -622,7 +619,7 @@ fn contains_code_cell(content: &str, budget: &mut SecurityBudget) -> Result<bool
     Ok(false)
 }
 
-fn yaml_to_json_map(yaml: &serde_yaml_ng::Value) -> Option<Map<String, Value>> {
+fn yaml_to_json_map(yaml: &yaml_serde::Value) -> Option<Map<String, Value>> {
     serde_json::to_value(yaml).ok()?.as_object().cloned()
 }
 
@@ -744,7 +741,7 @@ fn parse_commented_header(lines: &[&str], budget: &mut SecurityBudget) -> Result
         }
         if payload.trim() == "---" {
             let yaml_source = joined_lines(&yaml_lines, budget)?;
-            let Some(yaml) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&yaml_source).ok() else {
+            let Some(yaml) = yaml_serde::from_str::<yaml_serde::Value>(&yaml_source).ok() else {
                 return Ok(None);
             };
             let Some(metadata) = yaml_to_json_map(&yaml) else {

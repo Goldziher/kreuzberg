@@ -5,7 +5,7 @@
 //! possible for RAG systems to index configuration files at the section level
 //! rather than as a single monolithic document.
 //!
-//! Both formats are parsed into a value tree (`serde_yaml_ng` for YAML,
+//! Both formats are parsed into a value tree (`yaml_serde` for YAML,
 //! `serde_json` for JSON) and walked with BFS to avoid stack overflow on
 //! deeply nested untrusted input (see RUSTSEC-2024-0012).
 
@@ -21,7 +21,7 @@ use super::section_spans::{Span, json_member_spans, yaml_member_spans};
 /// Split YAML or JSON text into per-section chunks.
 ///
 /// Detects JSON (starts with `{` or `[`) and parses with `serde_json`.
-/// Otherwise parses with `serde_yaml_ng`. Both are walked with BFS.
+/// Otherwise parses with `yaml_serde`. Both are walked with BFS.
 ///
 /// Falls back to plain text chunking if the input cannot be parsed
 /// or has no extractable mapping keys.
@@ -80,7 +80,7 @@ fn assign_source_spans(text: &str, is_json: bool, sections: &mut [Section]) {
 
 /// Parse JSON and flatten into leaf sections via BFS.
 ///
-/// Uses serde_json for strict JSON parsing, then converts to serde_yaml_ng::Value
+/// Uses serde_json for strict JSON parsing, then converts to yaml_serde::Value
 /// so both paths share the same BFS walker.
 fn flatten_json(text: &str) -> Result<Vec<Section>> {
     let json_val: serde_json::Value = match serde_json::from_str(text) {
@@ -91,7 +91,7 @@ fn flatten_json(text: &str) -> Result<Vec<Section>> {
         return Ok(Vec::new());
     }
     let yaml_str = serde_json::to_string(&json_val).unwrap_or_default();
-    let yaml_val: serde_yaml_ng::Value = match serde_yaml_ng::from_str(&yaml_str) {
+    let yaml_val: yaml_serde::Value = match yaml_serde::from_str(&yaml_str) {
         Ok(v) => v,
         Err(_) => return Ok(Vec::new()),
     };
@@ -108,7 +108,7 @@ fn flatten_json(text: &str) -> Result<Vec<Section>> {
 
 /// Parse YAML and flatten into leaf sections via BFS.
 fn flatten_yaml(text: &str) -> Result<Vec<Section>> {
-    let parsed: serde_yaml_ng::Value = match serde_yaml_ng::from_str(text) {
+    let parsed: yaml_serde::Value = match yaml_serde::from_str(text) {
         Ok(v) => v,
         Err(_) => return Ok(Vec::new()),
     };
@@ -129,9 +129,9 @@ fn flatten_yaml(text: &str) -> Result<Vec<Section>> {
 /// on deeply nested input (RUSTSEC-2024-0012).
 ///
 /// A node is a leaf if it is not a mapping/object, or is an empty mapping/object.
-fn flatten_value_tree(roots: impl Iterator<Item = (String, serde_yaml_ng::Value)>) -> Vec<Section> {
+fn flatten_value_tree(roots: impl Iterator<Item = (String, yaml_serde::Value)>) -> Vec<Section> {
     let mut sections: Vec<Section> = Vec::new();
-    let mut queue: VecDeque<(Vec<String>, serde_yaml_ng::Value)> = VecDeque::new();
+    let mut queue: VecDeque<(Vec<String>, yaml_serde::Value)> = VecDeque::new();
 
     for (key, val) in roots {
         queue.push_back((vec![key], val));
@@ -139,7 +139,7 @@ fn flatten_value_tree(roots: impl Iterator<Item = (String, serde_yaml_ng::Value)
 
     while let Some((path, value)) = queue.pop_front() {
         match value {
-            serde_yaml_ng::Value::Mapping(map) if !map.is_empty() => {
+            yaml_serde::Value::Mapping(map) if !map.is_empty() => {
                 for (k, v) in map {
                     if let Some(key_str) = k.as_str() {
                         let mut child_path = path.clone();
@@ -164,13 +164,13 @@ fn flatten_value_tree(roots: impl Iterator<Item = (String, serde_yaml_ng::Value)
 }
 
 /// Format a YAML value as a readable string for chunk content.
-fn format_yaml_value(value: &serde_yaml_ng::Value) -> String {
+fn format_yaml_value(value: &yaml_serde::Value) -> String {
     match value {
-        serde_yaml_ng::Value::String(s) => s.clone(),
-        serde_yaml_ng::Value::Null => "null".to_string(),
-        serde_yaml_ng::Value::Bool(b) => b.to_string(),
-        serde_yaml_ng::Value::Number(n) => n.to_string(),
-        other => serde_yaml_ng::to_string(other).unwrap_or_default().trim().to_string(),
+        yaml_serde::Value::String(s) => s.clone(),
+        yaml_serde::Value::Null => "null".to_string(),
+        yaml_serde::Value::Bool(b) => b.to_string(),
+        yaml_serde::Value::Number(n) => n.to_string(),
+        other => yaml_serde::to_string(other).unwrap_or_default().trim().to_string(),
     }
 }
 

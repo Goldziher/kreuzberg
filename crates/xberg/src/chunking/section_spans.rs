@@ -1,6 +1,6 @@
 //! Source byte ranges for the sections `yaml_section` derives from parsed YAML and JSON.
 //!
-//! `serde_yaml_ng` and `serde_json::Value` carry no source positions, so the ranges are
+//! `yaml_serde` and `serde_json::Value` carry no source positions, so the ranges are
 //! recovered from the text: a small string-aware scanner for JSON and an indentation-based
 //! line scan for YAML. A range runs from the start of a member's key to the end of its value.
 //! Both lookups return `None` for members they cannot place (anchors, complex keys, flow-style

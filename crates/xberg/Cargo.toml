@@ -1460,7 +1460,6 @@ serde = { workspace = true }
 # means the guarantee survives that dependency changing. See `issue_165_json_key_order`.
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_toon_format = { workspace = true }
-serde_yaml_ng = "0.10.0"
 sevenz-rust2 = { version = "0.20.2", optional = true }
 sha2 = { version = "0.11", optional = true }
 simdutf8 = { version = "0.1", optional = true }
@@ -1539,6 +1538,7 @@ xberg-native-pdf = { workspace = true, optional = true }
 # action injects the version at cargo-publish time, so crates.io still gets a
 # version requirement. Do not re-pin it here.
 xberg-tesseract = { path = "../xberg-tesseract", optional = true }
+yaml_serde = "0.10.7"
 zeroize = { version = "1", optional = true }
 zip = { version = "9.0.2", optional = true, default-features = false, features = ["deflate-flate2"] }
 

@@ -94,7 +94,7 @@ pub(crate) fn from_yaml_file(path: impl AsRef<Path>) -> Result<ServerConfig> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| XbergError::validation(format!("Failed to read config file {}: {}", path.display(), e)))?;
 
-    let config: ServerConfig = serde_yaml_ng::from_str(&content)
+    let config: ServerConfig = yaml_serde::from_str(&content)
         .map_err(|e| XbergError::validation(format!("Invalid YAML in {}: {}", path.display(), e)))?;
 
     Ok(config)
@@ -148,16 +148,16 @@ fn from_yaml_str(content: &str, path: &Path) -> Result<ServerConfig> {
         server: Option<ServerConfig>,
     }
 
-    if let Ok(root) = serde_yaml_ng::from_str::<RootConfig>(content) {
+    if let Ok(root) = yaml_serde::from_str::<RootConfig>(content) {
         if let Some(server) = root.server {
             return Ok(server);
         } else {
-            return serde_yaml_ng::from_str::<ServerConfig>(content)
+            return yaml_serde::from_str::<ServerConfig>(content)
                 .map_err(|e| XbergError::validation(format!("Invalid YAML in {}: {}", path.display(), e)));
         }
     }
 
-    serde_yaml_ng::from_str::<ServerConfig>(content)
+    yaml_serde::from_str::<ServerConfig>(content)
         .map_err(|e| XbergError::validation(format!("Invalid YAML in {}: {}", path.display(), e)))
 }
 
