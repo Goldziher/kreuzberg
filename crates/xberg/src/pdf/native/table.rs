@@ -348,6 +348,10 @@ pub(crate) struct HeuristicTableExtraction {
 /// anything the heuristic can derive, so we keep native and only fill in
 /// the gaps. Pass an empty set to run on every page.
 ///
+/// `artifacts` selects which tagged `/Artifact` spans enter the segments. It
+/// must match what the structured pipeline wants, because the returned
+/// segments are reused there instead of being extracted a second time.
+///
 /// This is invoked by `extractors::pdf::extraction` as a per-page fallback
 /// alongside [`extract_tables_native`] — typically for text-layer PDFs
 /// whose tables aren't drawn with explicit rule lines that xberg_native_pdf's grid
@@ -359,11 +363,12 @@ pub(crate) fn extract_tables_heuristic(
     doc: &mut NativeDocument,
     allow_single_column: bool,
     skip_pages: &HashSet<u32>,
+    artifacts: crate::pdf::native::hierarchy::ArtifactRetention,
 ) -> Result<HeuristicTableExtraction> {
     use crate::pdf::table_reconstruct::{HocrWord, segments_to_words};
 
-    let (per_page_segments, used_structure_tree) =
-        crate::pdf::native::hierarchy::extract_all_segments(doc).map_err(|e| {
+    let (per_page_segments, used_structure_tree) = crate::pdf::native::hierarchy::extract_all_segments(doc, artifacts)
+        .map_err(|e| {
             PdfError::TextExtractionFailed(format!(
                 "xberg_native_pdf hierarchy extraction failed for heuristic tables: {e}"
             ))
@@ -3191,8 +3196,8 @@ mod tests {
         let bytes = std::fs::read(&path).expect("read tiny.pdf");
         let mut doc = NativeDocument::open_bytes(&bytes).expect("open tiny.pdf");
         let skip = HashSet::new();
-        let extraction =
-            extract_tables_heuristic(&mut doc, false, &skip).expect("heuristic must not error on minimal PDF");
+        let extraction = extract_tables_heuristic(&mut doc, false, &skip, Default::default())
+            .expect("heuristic must not error on minimal PDF");
         assert!(
             extraction.tables.is_empty(),
             "expected no tables on minimal PDF, got: {:?}",
@@ -3214,7 +3219,8 @@ mod tests {
 
         let skip = HashSet::new();
         let page_count = doc.doc.page_count().expect("table fixture page count");
-        let extraction = extract_tables_heuristic(&mut doc, false, &skip).expect("heuristic must not error");
+        let extraction =
+            extract_tables_heuristic(&mut doc, false, &skip, Default::default()).expect("heuristic must not error");
         assert_eq!(
             extraction.hierarchy_segments.pages.len(),
             page_count,
@@ -3260,7 +3266,7 @@ mod tests {
         let bytes = std::fs::read(&path).expect("read embedded table fixture");
         let mut doc = NativeDocument::open_bytes(&bytes).expect("open embedded table fixture");
 
-        let tables = extract_tables_heuristic(&mut doc, false, &HashSet::new())
+        let tables = extract_tables_heuristic(&mut doc, false, &HashSet::new(), Default::default())
             .expect("heuristic extraction")
             .tables;
         let table = tables
@@ -3303,7 +3309,7 @@ mod tests {
         let bytes = std::fs::read(&path).expect("read ACN financial table fixture");
         let mut doc = NativeDocument::open_bytes(&bytes).expect("open ACN financial table fixture");
 
-        let tables = extract_tables_heuristic(&mut doc, false, &HashSet::new())
+        let tables = extract_tables_heuristic(&mut doc, false, &HashSet::new(), Default::default())
             .expect("heuristic extraction")
             .tables;
 
@@ -3369,7 +3375,7 @@ mod tests {
         let bytes = std::fs::read(&path).expect("read table_document.pdf");
         let mut doc = NativeDocument::open_bytes(&bytes).expect("open table_document.pdf");
 
-        let baseline = extract_tables_heuristic(&mut doc, false, &HashSet::new())
+        let baseline = extract_tables_heuristic(&mut doc, false, &HashSet::new(), Default::default())
             .expect("baseline heuristic")
             .tables;
         if baseline.is_empty() {
@@ -3378,7 +3384,7 @@ mod tests {
         let pages_baseline_touched: HashSet<u32> = baseline.iter().map(|t| t.page_number).collect();
 
         let skip = pages_baseline_touched.clone();
-        let suppressed = extract_tables_heuristic(&mut doc, false, &skip)
+        let suppressed = extract_tables_heuristic(&mut doc, false, &skip, Default::default())
             .expect("skip-pages heuristic")
             .tables;
 

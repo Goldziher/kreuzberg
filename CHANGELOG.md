@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   happens by chance when the halves use different leading (6 pt slide bullets beside 9.9 pt body text). Those
   coincidences were taken for a form's label/value rows, and the halves were read line by line. A cut is now refused
   only when the paired rows cover at least half of the lines on its sparser side. (GH#2116)
+- **(pdf): `include_headers` and `include_footers` keep tagged running headers and footers in Markdown output.**
+  Structured extraction dropped every `/Artifact` span before `content_filter` was read, so a tagged PDF's
+  `/Pagination /Header`, `/Footer` and `/PageNumber` text never reached Markdown or other structured output, while
+  plain text kept it. Those spans now follow `include_headers` / `include_footers` (page numbers follow either), and
+  `/Pagination /Watermark` spans follow `include_watermarks`. Defaults are unchanged. (GH#2120)
 
 ### Changed
 
