@@ -2043,6 +2043,55 @@ fn rtl_recovery_suspects(
     not(target_arch = "wasm32"),
     any(feature = "ocr", feature = "ocr-wasm", feature = "ocr-pipeline")
 ))]
+fn build_rtl_recovery_crops_blocking(
+    image_bytes: &[u8],
+    suspects: Vec<(usize, String, crate::types::OcrBoundingGeometry)>,
+    processed_width: Option<u32>,
+    processed_height: Option<u32>,
+    security_limits: &crate::extractors::security::SecurityLimits,
+) -> crate::Result<Vec<(usize, String, Vec<u8>)>> {
+    let image = crate::extraction::image::decode_image_to_rgb8_with_security_limits(image_bytes, security_limits)?;
+    let scale_x = image.width() as f64 / f64::from(processed_width.unwrap_or(image.width()));
+    let scale_y = image.height() as f64 / f64::from(processed_height.unwrap_or(image.height()));
+    let mut crops = Vec::with_capacity(suspects.len());
+    for (index, source, geometry) in suspects {
+        let crate::types::OcrBoundingGeometry::Rectangle {
+            left,
+            top,
+            width,
+            height,
+        } = geometry
+        else {
+            continue;
+        };
+        let left = (f64::from(left) * scale_x).round() as u32;
+        let top = (f64::from(top) * scale_y).round() as u32;
+        let width = (f64::from(width) * scale_x).round().max(1.0) as u32;
+        let height = (f64::from(height) * scale_y).round().max(1.0) as u32;
+        let x = left.saturating_sub(width / 2);
+        let y = top.saturating_sub(height);
+        let right = left.saturating_add(width + width / 2).min(image.width());
+        let bottom = top.saturating_add(height.saturating_mul(2)).min(image.height());
+        if right <= x
+            || bottom <= y
+            || u64::from(right - x) * u64::from(bottom - y) > RTL_IDENTIFIER_RECOVERY_MAX_CROP_PIXELS
+        {
+            continue;
+        }
+        let crop = image::imageops::crop_imm(&image, x, y, right - x, bottom - y).to_image();
+        let mut encoded = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgb8(crop)
+            .write_to(&mut encoded, image::ImageFormat::Png)
+            .map_err(|error| crate::XbergError::Other(format!("Failed to encode OCR recovery crop: {error}")))?;
+        crops.push((index, source, encoded.into_inner()));
+    }
+    Ok(crops)
+}
+
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(feature = "ocr", feature = "ocr-wasm", feature = "ocr-pipeline")
+))]
 async fn build_rtl_recovery_crops(
     image_bytes: std::sync::Arc<Vec<u8>>,
     suspects: Vec<(usize, String, crate::types::OcrBoundingGeometry)>,
@@ -2050,49 +2099,30 @@ async fn build_rtl_recovery_crops(
     processed_height: Option<u32>,
     security_limits: crate::extractors::security::SecurityLimits,
 ) -> crate::Result<Vec<(usize, String, Vec<u8>)>> {
-    tokio::task::spawn_blocking(move || {
-        let image = crate::extraction::image::decode_image_to_rgb8_with_security_limits(
+    #[cfg(feature = "tokio-runtime")]
+    {
+        tokio::task::spawn_blocking(move || {
+            build_rtl_recovery_crops_blocking(
+                image_bytes.as_slice(),
+                suspects,
+                processed_width,
+                processed_height,
+                &security_limits,
+            )
+        })
+        .await
+        .map_err(|error| crate::XbergError::Other(format!("OCR recovery crop worker failed: {error}")))?
+    }
+    #[cfg(not(feature = "tokio-runtime"))]
+    {
+        build_rtl_recovery_crops_blocking(
             image_bytes.as_slice(),
+            suspects,
+            processed_width,
+            processed_height,
             &security_limits,
-        )?;
-        let scale_x = image.width() as f64 / f64::from(processed_width.unwrap_or(image.width()));
-        let scale_y = image.height() as f64 / f64::from(processed_height.unwrap_or(image.height()));
-        let mut crops = Vec::with_capacity(suspects.len());
-        for (index, source, geometry) in suspects {
-            let crate::types::OcrBoundingGeometry::Rectangle {
-                left,
-                top,
-                width,
-                height,
-            } = geometry
-            else {
-                continue;
-            };
-            let left = (f64::from(left) * scale_x).round() as u32;
-            let top = (f64::from(top) * scale_y).round() as u32;
-            let width = (f64::from(width) * scale_x).round().max(1.0) as u32;
-            let height = (f64::from(height) * scale_y).round().max(1.0) as u32;
-            let x = left.saturating_sub(width / 2);
-            let y = top.saturating_sub(height);
-            let right = left.saturating_add(width + width / 2).min(image.width());
-            let bottom = top.saturating_add(height.saturating_mul(2)).min(image.height());
-            if right <= x
-                || bottom <= y
-                || u64::from(right - x) * u64::from(bottom - y) > RTL_IDENTIFIER_RECOVERY_MAX_CROP_PIXELS
-            {
-                continue;
-            }
-            let crop = image::imageops::crop_imm(&image, x, y, right - x, bottom - y).to_image();
-            let mut encoded = std::io::Cursor::new(Vec::new());
-            image::DynamicImage::ImageRgb8(crop)
-                .write_to(&mut encoded, image::ImageFormat::Png)
-                .map_err(|error| crate::XbergError::Other(format!("Failed to encode OCR recovery crop: {error}")))?;
-            crops.push((index, source, encoded.into_inner()));
-        }
-        Ok(crops)
-    })
-    .await
-    .map_err(|error| crate::XbergError::Other(format!("OCR recovery crop worker failed: {error}")))?
+        )
+    }
 }
 
 #[cfg(all(
