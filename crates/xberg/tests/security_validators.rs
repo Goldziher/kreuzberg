@@ -82,7 +82,10 @@ fn xml_oversize_text_fires_security_error() {
     let huge_text = "x".repeat(64);
     let payload = format!("<root>{}</root>", huge_text);
 
-    let cfg = config_with_tight_limits();
+    let cfg = ExtractionConfig {
+        strict_parse: true,
+        ..config_with_tight_limits()
+    };
     let err = extract_bytes_document_blocking(payload.as_bytes(), "application/xml", &cfg)
         .expect_err("oversize text must not extract successfully");
 
@@ -104,7 +107,10 @@ fn xml_oversize_attribute_fires_security_error() {
     let huge_attr = "v".repeat(128);
     let payload = format!("<root attr=\"{}\">ok</root>", huge_attr);
 
-    let cfg = config_with_tight_limits();
+    let cfg = ExtractionConfig {
+        strict_parse: true,
+        ..config_with_tight_limits()
+    };
     let err = extract_bytes_document_blocking(payload.as_bytes(), "application/xml", &cfg)
         .expect_err("oversize attribute must not extract successfully");
 
