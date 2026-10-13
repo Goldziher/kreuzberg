@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.10] - 2026-10-13
+
+### Fixed
+
+- **(deps): the unmaintained `unsafe-libyaml` is gone.** YAML parsing moved from `serde_yaml_ng` to `yaml_serde`
+  0.10.7, clearing RUSTSEC-2024-0449 without an ignore entry. (GH#2108)
+- **(deps): `ort` is pinned to exactly `2.0.0-rc.13`.** The caret requirement let a fresh resolve pick rc.14, whose
+  session builder needs an `Environment`, breaking downstream builds.
+- **(swift): the iOS libraries build again.** A workflow-wide `MACOSX_DEPLOYMENT_TARGET` made the Tesseract CMake
+  build compile iOS objects as macOS, so linking failed; `xberg-tesseract` now ignores the variable for iOS targets.
+- **(elixir): the NIF load check accepts BEAM-provided `enif_*` symbols.** Release builds of the NIF no longer fail the
+  `dlopen` probe on symbols only the BEAM supplies.
+- **(php): the Linux extension links ONNX Runtime dynamically.** The statically linked runtime needed GCC 13 libstdc++
+  symbols that the zigbuild toolchain replaces with libc++, so `xberg.so` could not load on Debian 12. `libonnxruntime`
+  now ships beside `xberg.so`, and the release gate fails on unversioned undefined C++ symbols.
+- **(zig): trait-bridge callbacks no longer crash when they return a string.** The generated vtable thunks declared
+  `char **` out-parameters as 16-byte optionals, so registering a post-processor segfaulted. Regenerated with alef
+  0.110.6.
+- **(ci): lint and e2e jobs are green again.** The ai-rulez generator is built with `GOWORK=off`, governance uses
+  ai-rulez 5.1.0, the integration npm lockfiles match vitest 5, the Ruby e2e lockfile matches the gemspec, and the
+  bounded-read and `strict_parse` tests follow `zip` 9.0.2 and the plain-text fallback.
+
 ## [1.3.9] - 2026-10-12
 
 ### Added

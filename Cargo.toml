@@ -25,7 +25,7 @@ default-members = ["crates/xberg", "crates/xberg-cli"]
 resolver = "2"
 
 [workspace.package]
-version = "1.3.9"
+version = "1.3.10"
 edition = "2024"
 rust-version = "1.92"
 authors = [
@@ -105,7 +105,7 @@ parking_lot = "0.12.5"
 # (matches the `[lib] name = "pdfium_render"` in crates/xberg-pdfium-render/Cargo.toml),
 # so any `use pdfium_render::...` call site is unaffected. Path dependency inside the
 # workspace; needs no [patch.crates-io] entry (see the note above that block).
-pdfium-render = { package = "xberg-pdfium-render", path = "./crates/xberg-pdfium-render", version = "1.3.9" }
+pdfium-render = { package = "xberg-pdfium-render", path = "./crates/xberg-pdfium-render", version = "1.3.10" }
 rayon = "1.12.0"
 reqwest = { version = "0.13.5", default-features = false }
 # SVG rendering (resvg re-exports tiny_skia and usvg; default-features = false
@@ -163,8 +163,8 @@ web-sys = { version = "0.3", features = [
     "Window",
     "Response",
 ] }
-xberg = { path = "./crates/xberg", version = "1.3.9", default-features = false }
-xberg-gliner = { path = "./crates/xberg-gliner", version = "1.3.9", default-features = false }
+xberg = { path = "./crates/xberg", version = "1.3.10", default-features = false }
+xberg-gliner = { path = "./crates/xberg-gliner", version = "1.3.10", default-features = false }
 # The native PDF engine, vendored into this workspace at crates/xberg-native-pdf. It began as
 # a fork of a third-party project; see ATTRIBUTIONS.md, which is now the ONLY place in this
 # repo that names the upstream. There is deliberately no `package =` alias: the extern crate
@@ -172,7 +172,7 @@ xberg-gliner = { path = "./crates/xberg-gliner", version = "1.3.9", default-feat
 # target (`module_path!()`, rooted at `[lib] name`) matches the crate you are reading. An alias
 # hiding a different lib name is what cost twelve days of dropped font warnings in GH#697.
 # Path dependency inside the workspace; needs no [patch.crates-io] entry.
-xberg-native-pdf = { path = "./crates/xberg-native-pdf", version = "1.3.9" }
+xberg-native-pdf = { path = "./crates/xberg-native-pdf", version = "1.3.10" }
 
 [patch.crates-io]
 # No out-of-tree sibling override is active, so the standing "do not release while a patch
