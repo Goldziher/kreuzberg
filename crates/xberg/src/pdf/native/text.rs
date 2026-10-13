@@ -1120,6 +1120,16 @@ const MAX_DENSE_COLUMN_SPLIT_SNAP_PASSES: usize = 4;
 // `single_column_page_with_wide_and_narrow_lines_is_not_split` regression
 // guard in the tests below).
 const FULL_WIDTH_FURNITURE_FRACTION: f32 = 0.55;
+
+/// A furniture width no span reaches, for the checks that ask about a split already chosen.
+///
+/// GH#2109: once the split is known, a span that does not cross it lies inside one column
+/// and cannot be furniture however wide it is; a line that does cross it is still a band
+/// boundary through `line_is_boundary`'s straddle test. A justified main column of one
+/// 375pt span per line beside a margin-note column is wider than
+/// `FULL_WIDTH_FURNITURE_FRACTION` of the page, and treating each of its lines as furniture
+/// cut the page into one-line bands that never reached the column quorum. ~keep
+const NO_WIDTH_FURNITURE: f32 = f32::INFINITY;
 // Two spans on the same visual line never differ in `y` by more than
 // sub-point float noise from the PDF coordinate transform; two distinct lines
 // are always at least a line-height apart (~14pt for the 11pt-font fixtures
@@ -2084,7 +2094,14 @@ fn page_whitespace_corridors(
 /// three-column page, which this two-column repair does not handle. It must also be narrower
 /// than `XYCutStrategy::DEFAULT_MIN_VALLEY_WIDTH`. A wider corridor is one the native
 /// `ColumnAware` order has already cut, and a page whose vote fell below quorum for that
-/// reason is deliberately handed back to it (GH#1756) rather than repaired here. ~keep
+/// reason is deliberately handed back to it (GH#1756) rather than repaired here.
+///
+/// GH#2109: a justified column is one span per line, and a column wider than
+/// `FULL_WIDTH_FURNITURE_FRACTION` of the page (375pt of 595pt, beside a note column) has
+/// every line discarded as furniture, so neither the corridor's edge nor the column quorum is
+/// visible. The corridor is therefore first sought with no span treated as furniture, and only
+/// when that finds none with the usual furniture exclusion, which still tolerates a header set
+/// across the gutter. ~keep
 fn sole_whitespace_gutter(
     spans: &[xberg_native_pdf::layout::TextSpan],
     lines: &[SpanLine],
@@ -2094,19 +2111,26 @@ fn sole_whitespace_gutter(
     let max_gutter = page_width * MAX_DENSE_COLUMN_GUTTER_FRACTION;
     let furniture_width = page_width * FULL_WIDTH_FURNITURE_FRACTION;
     let max_label_width = page_width * MAX_DENSE_COLUMN_SPLIT_SNAP_SPAN_FRACTION;
-    let mut qualifying = page_whitespace_corridors(spans, lines, furniture_width, min_gutter)
-        .into_iter()
-        .filter(|&(left, right)| right - left <= max_gutter)
-        .filter(|&corridor| {
-            let mid = (corridor.0 + corridor.1) / 2.0;
-            both_sides_fill_column_rows(spans, lines, furniture_width, mid)
-                && !corridor_is_hanging_label_indent(spans, lines, max_label_width, corridor)
-                && both_sides_are_columns(spans, lines, furniture_width, mid)
-        });
-    let (left, right) = qualifying.next()?;
-    let is_sole = qualifying.next().is_none();
-    (is_sole && right - left < xberg_native_pdf::XYCutStrategy::DEFAULT_MIN_VALLEY_WIDTH)
-        .then_some((left + right) / 2.0)
+    let qualifying_corridors = |corridor_furniture_width: f32| -> Vec<(f32, f32)> {
+        page_whitespace_corridors(spans, lines, corridor_furniture_width, min_gutter)
+            .into_iter()
+            .filter(|&(left, right)| right - left <= max_gutter)
+            .filter(|&corridor| {
+                let mid = (corridor.0 + corridor.1) / 2.0;
+                both_sides_fill_column_rows(spans, lines, NO_WIDTH_FURNITURE, mid)
+                    && !corridor_is_hanging_label_indent(spans, lines, max_label_width, corridor)
+                    && both_sides_are_columns(spans, lines, NO_WIDTH_FURNITURE, mid)
+            })
+            .collect()
+    };
+    let mut corridors = qualifying_corridors(NO_WIDTH_FURNITURE);
+    if corridors.is_empty() {
+        corridors = qualifying_corridors(furniture_width);
+    }
+    let &[(left, right)] = corridors.as_slice() else {
+        return None;
+    };
+    (right - left < xberg_native_pdf::XYCutStrategy::DEFAULT_MIN_VALLEY_WIDTH).then_some((left + right) / 2.0)
 }
 
 /// Move a gutter estimate out of a repeated hanging-label band.
@@ -2581,8 +2605,7 @@ pub(crate) fn reorder_dense_two_column_page(spans: &mut [xberg_native_pdf::layou
     let split_x = snap_split_left_of_hanging_labels(spans, &lines, page_width, detected_split_x);
     let split_x = redirect_split_out_of_content(spans, &lines, page_width, split_x);
 
-    let furniture_width = page_width * FULL_WIDTH_FURNITURE_FRACTION;
-    let bands = build_bands(spans, &lines, furniture_width, split_x);
+    let bands = build_bands(spans, &lines, NO_WIDTH_FURNITURE, split_x);
     let Some(final_order) = emit_band_order(spans, bands, split_x) else {
         return false;
     };
@@ -7689,5 +7712,82 @@ mod tests {
         );
 
         assert_eq!(detect_split_x(&spans, &lines, GH2102_PAGE_WIDTH), None);
+    }
+
+    const GH2109_NOTE_COUNT: usize = 12;
+    const GH2109_BODY_ROWS: usize = 10;
+    const GH2109_BODY_WIDTH: f32 = 375.0;
+    const GH2109_NOTE_WIDTH: f32 = 70.0;
+    const GH2109_GUTTER: f32 = 13.0;
+
+    /// GH#2109 geometry, taken from the reporter's page: a justified 10pt main column of one
+    /// 375pt span per line (wider than `FULL_WIDTH_FURNITURE_FRACTION` of the page) at `body_x`,
+    /// and 8pt notes at `note_x` on their own leading. No note line shares a baseline with a
+    /// body line. Spans are in the Y-then-X order `ColumnAware` produced. ~keep
+    fn gh2109_justified_body_with_notes(body_x: f32, note_x: f32) -> Vec<TextSpan> {
+        let mut spans: Vec<TextSpan> = (0..GH2109_BODY_ROWS)
+            .map(|row| {
+                span_with_width(
+                    &gh2109_body_text(row),
+                    body_x,
+                    741.9 - row as f32 * 13.0,
+                    GH2109_BODY_WIDTH,
+                    10.0,
+                    10.0,
+                )
+            })
+            .collect();
+        spans.extend((0..GH2109_NOTE_COUNT).map(|index| {
+            span_with_width(
+                &format!("note line {index}"),
+                note_x,
+                741.6 - index as f32 * 9.6,
+                GH2109_NOTE_WIDTH,
+                8.0,
+                8.0,
+            )
+        }));
+        spans.sort_by(|a, b| {
+            b.bbox
+                .y
+                .total_cmp(&a.bbox.y)
+                .then_with(|| a.bbox.x.total_cmp(&b.bbox.x))
+        });
+        spans
+    }
+
+    fn gh2109_body_text(row: usize) -> String {
+        format!("body line {row} {}", "justified running text ".repeat(3))
+    }
+
+    fn gh2109_expected(notes_first: bool) -> Vec<String> {
+        let body = (0..GH2109_BODY_ROWS).map(gh2109_body_text);
+        let notes = (0..GH2109_NOTE_COUNT).map(|index| format!("note line {index}"));
+        if notes_first {
+            notes.chain(body).collect()
+        } else {
+            body.chain(notes).collect()
+        }
+    }
+
+    fn assert_reordered(mut spans: Vec<TextSpan>, notes_first: bool) {
+        assert!(reorder_dense_two_column_page(&mut spans, GH2102_PAGE_WIDTH));
+        let expected = gh2109_expected(notes_first);
+        assert_eq!(
+            spans.iter().map(|span| span.text.as_str()).collect::<Vec<_>>(),
+            expected.iter().map(String::as_str).collect::<Vec<_>>(),
+        );
+    }
+
+    #[test]
+    fn right_margin_notes_are_read_after_a_justified_main_column_gh2109() {
+        let spans = gh2109_justified_body_with_notes(82.0, 82.0 + GH2109_BODY_WIDTH + GH2109_GUTTER);
+        assert_reordered(spans, false);
+    }
+
+    #[test]
+    fn left_margin_notes_are_read_before_a_justified_main_column_gh2109() {
+        let spans = gh2109_justified_body_with_notes(82.0 + GH2109_NOTE_WIDTH + GH2109_GUTTER, 82.0);
+        assert_reordered(spans, true);
     }
 }

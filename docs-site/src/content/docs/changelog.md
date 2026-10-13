@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **(pdf): a margin-note column beside a justified main column is read as its own block.** A main column set as one
+  span per line and wider than 55% of the page (375 pt of 595 pt) had every line discarded as full-width furniture,
+  so the two-column repair never saw a column beside the notes, and its bands were cut at every body line. The
+  margin label was placed after the first body line and the following lines alternated between the columns. Spans
+  that do not cross the split are no longer furniture; the same holds with the notes on the left. (GH#2109)
+
 ## [1.3.10] - 2026-10-13
 
 ### Fixed
