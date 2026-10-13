@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.10] - 2026-10-13
+
 ### Fixed
 
 - **(pdf): a margin-note column beside a justified main column is read as its own block.** A main column set as one
@@ -23,11 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   above and below it were scattered over both groups, so the opening paragraph was read after a lower heading and a
   short last line such as `2017):` came before its own paragraph. A column cut is now refused when two or more
   continuous lines have at least 60 pt of ink on each side of it. (GH#2110)
-
-## [1.3.10] - 2026-10-13
-
-### Fixed
-
 - **(deps): the unmaintained `unsafe-libyaml` is gone.** YAML parsing moved from `serde_yaml_ng` to `yaml_serde`
   0.10.7, clearing RUSTSEC-2024-0449 without an ignore entry. (GH#2108)
 - **(deps): `ort` is pinned to exactly `2.0.0-rc.13`.** The caret requirement let a fresh resolve pick rc.14, whose
