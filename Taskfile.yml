@@ -54,7 +54,7 @@ includes:
 
 vars:
   # This must match the pin in ci-lint.yaml because different ai-rulez versions emit different bundles. ~keep
-  AI_RULEZ_VERSION: "5.0.1"
+  AI_RULEZ_VERSION: "5.1.0"
 
 tasks:
   default:
