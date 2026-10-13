@@ -279,6 +279,10 @@ const MAX_INTRA_LINE_GAP_EM: f32 = 1.0;
 // A run narrower than this many ems is a label, a marker or a cell rather than a prose line.
 const LABEL_RUN_MAX_EM: f32 = 8.0;
 const MIN_LABEL_VALUE_ROWS: usize = 3;
+// GH#2110: a continuous line with at least this much ink on each side of a candidate column
+// cut is prose running across the gutter, not column content. Matches the minimum column
+// width a cut must leave on each side. ~keep
+const MIN_STRADDLING_INK_PTS: f32 = 60.0;
 
 /// Group `indices` into visual lines: anchored (not chained) on `y`, top to bottom, and
 /// further split on `x` wherever consecutive items are more than `MAX_INTRA_LINE_GAP_EM`
@@ -1668,6 +1672,22 @@ impl XYCutStrategy {
             .partition(|i| !goes_right.get(i).copied().unwrap_or(false))
     }
 
+    fn straddling_line_count(&self, all_spans: &[TextSpan], indices: &[usize], split_x: f32) -> usize {
+        group_indices_into_lines(all_spans, indices)
+            .iter()
+            .filter(|line| {
+                let (left_ink, right_ink) = line.iter().fold((0.0f32, 0.0f32), |(left, right), &i| {
+                    let bbox = &all_spans[i].bbox;
+                    (
+                        left + (bbox.right().min(split_x) - bbox.left()).max(0.0),
+                        right + (bbox.right() - bbox.left().max(split_x)).max(0.0),
+                    )
+                });
+                left_ink >= MIN_STRADDLING_INK_PTS && right_ink >= MIN_STRADDLING_INK_PTS
+            })
+            .count()
+    }
+
     fn is_single_column_region(&self, all_spans: &[TextSpan], indices: &[usize]) -> bool {
         if indices.len() < 3 {
             return false;
@@ -1920,6 +1940,15 @@ impl XYCutStrategy {
         let left_w = left_x_max - left_x_min;
         let right_w = right_x_max - right_x_min;
         if left_w < MIN_RESULT_WIDTH_PT || right_w < MIN_RESULT_WIDTH_PT {
+            return None;
+        }
+
+        // GH#2110: two or more prose lines that run across the cut -- the paragraphs above and
+        // below a two-column table -- have no column to belong to, and assigning each to the
+        // side holding most of its ink scatters one paragraph over both columns. Refuse the
+        // cut so the row split peels them off as bands first. The margin note that widens the
+        // region is why `peel_full_width_line_bands` never saw them as full-width. ~keep
+        if self.straddling_line_count(all_spans, indices, split_x) >= MIN_PEELED_FULL_WIDTH_LINES {
             return None;
         }
 
