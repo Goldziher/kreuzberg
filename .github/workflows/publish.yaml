@@ -5338,3 +5338,29 @@ jobs:
           assets: |
             dist/*-plugins-*.tar.gz
             dist/*-plugins-*.tar.gz.sha256
+
+  plugin-release-report:
+    name: Verify all plugin distribution jobs succeeded
+    needs: [prepare, publish-plugin-artifacts, publish-plugin-opencode, publish-plugin-hermes]
+    if: always() && needs.prepare.outputs.dry_run != 'true' && startsWith(needs.prepare.outputs.tag, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Reject failed or skipped plugin distribution
+        env:
+          RESULTS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import os
+
+          results = json.loads(os.environ['RESULTS_JSON'])
+          expected = {'prepare', 'publish-plugin-artifacts', 'publish-plugin-opencode', 'publish-plugin-hermes'}
+          if set(results) != expected:
+              raise SystemExit('Expected preparation and exactly three plugin distribution jobs')
+          failed = [name for name, job in results.items() if job['result'] != 'success']
+          if failed:
+              raise SystemExit(f"Incomplete plugin distribution: {', '.join(failed)}")
+          print('Verified preparation and 3/3 plugin distribution jobs succeeded')
+          PYTHON
