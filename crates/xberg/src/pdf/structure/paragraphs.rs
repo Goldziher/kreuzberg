@@ -245,8 +245,8 @@ pub(super) fn split_embedded_list_items(paragraphs: &mut Vec<PdfParagraph>) {
             .collect::<Vec<_>>()
             .join(" ");
 
-        let bullet_count = full_text.matches(['\u{2022}', '\u{00B7}']).count();
-        if bullet_count < 2 {
+        let separators = embedded_bullet_positions(&full_text);
+        if separators.len() < 2 {
             paragraphs.push(para);
             continue;
         }
@@ -254,7 +254,14 @@ pub(super) fn split_embedded_list_items(paragraphs: &mut Vec<PdfParagraph>) {
         let font_size = para.dominant_font_size;
         let is_bold = para.is_bold;
 
-        let parts: Vec<&str> = full_text.split(['\u{2022}', '\u{00B7}']).collect();
+        let mut parts: Vec<&str> = Vec::with_capacity(separators.len() + 1);
+        let mut start = 0;
+        for &position in &separators {
+            parts.push(&full_text[start..position]);
+            start = position + full_text[position..].chars().next().map_or(0, char::len_utf8);
+        }
+        parts.push(&full_text[start..]);
+
         let before = parts[0].trim().trim_end_matches('\u{00C2}').trim();
         if !before.is_empty() {
             paragraphs.push(text_to_paragraph(before, font_size, is_bold, false));
@@ -272,27 +279,47 @@ pub(super) fn split_embedded_list_items(paragraphs: &mut Vec<PdfParagraph>) {
     }
 }
 
+/// Byte offsets of the bullet glyphs in `text` that separate list items.
+///
+/// A glyph with a letter or digit directly on both sides sits inside running text, such as the
+/// `Gr•iar` of a table row (GH#2115), and is not an item marker.
+fn embedded_bullet_positions(text: &str) -> Vec<usize> {
+    let mut positions = Vec::new();
+    let mut previous: Option<char> = None;
+    let mut chars = text.char_indices().peekable();
+    while let Some((position, character)) = chars.next() {
+        if matches!(character, '\u{2022}' | '\u{00B7}') {
+            let next = chars.peek().map(|&(_, c)| c);
+            let glued = previous.is_some_and(char::is_alphanumeric) && next.is_some_and(char::is_alphanumeric);
+            if !glued {
+                positions.push(position);
+            }
+        }
+        previous = Some(character);
+    }
+    positions
+}
+
 /// Create a simple paragraph from text.
 fn text_to_paragraph(text: &str, font_size: f32, is_bold: bool, is_list_item: bool) -> PdfParagraph {
     use crate::pdf::hierarchy::SegmentData;
 
-    let segments: Vec<SegmentData> = text
-        .split_whitespace()
-        .map(|w| SegmentData {
-            text: w.to_string(),
-            x: 0.0,
-            y: 0.0,
-            width: 0.0,
-            height: 0.0,
-            font_size,
-            is_bold,
-            is_italic: false,
-            is_monospace: false,
-            baseline_y: 0.0,
-            rotation_degrees: 0.0,
-            assigned_role: None,
-        })
-        .collect();
+    // ~keep One segment rather than one per word: zero-geometry word segments on a shared baseline
+    // read as touching, so assembly welds them without spaces (GH#2115).
+    let segments = vec![SegmentData {
+        text: text.to_string(),
+        x: 0.0,
+        y: 0.0,
+        width: 0.0,
+        height: 0.0,
+        font_size,
+        is_bold,
+        is_italic: false,
+        is_monospace: false,
+        baseline_y: 0.0,
+        rotation_degrees: 0.0,
+        assigned_role: None,
+    }];
 
     let line = super::types::PdfLine {
         segments,
@@ -757,5 +784,40 @@ mod tests {
             2,
             "a complete heading must not absorb wider body prose merely because it opens lowercase"
         );
+    }
+
+    /// GH#2115: a table row whose two cells each carry a `•` between two letters is not a list.
+    #[test]
+    fn bullets_glued_between_letters_do_not_split_a_paragraph() {
+        let mut paragraphs = vec![make_body_paragraph(
+            "rearedu abnnef beh uagegWettGr\u{2022}iarGnrnlee ei etrn haleuG Dee retrHegtnte\u{2022}abeiuanfer od rhaWib",
+            8.0,
+        )];
+        split_embedded_list_items(&mut paragraphs);
+        assert_eq!(paragraphs.len(), 1, "mid-word bullets must not split the paragraph");
+        assert!(!paragraphs[0].is_list_item);
+    }
+
+    /// Items split off a paragraph keep their word spaces: word-per-segment items with zero
+    /// geometry were welded into one word by assembly (GH#2115).
+    #[test]
+    fn spaced_inline_bullets_split_into_items_that_keep_their_spaces() {
+        let mut paragraphs = vec![make_body_paragraph(
+            "Features \u{2022} fast start \u{2022} low memory use",
+            10.0,
+        )];
+        split_embedded_list_items(&mut paragraphs);
+        assert_eq!(paragraphs.len(), 3);
+        assert!(!paragraphs[0].is_list_item);
+        assert!(paragraphs[1].is_list_item && paragraphs[2].is_list_item);
+        for (paragraph, expected) in paragraphs[1..].iter().zip(["fast start", "low memory use"]) {
+            let segments = &paragraph.lines[0].segments;
+            assert_eq!(
+                segments.len(),
+                1,
+                "an item is one segment so its words are never welded"
+            );
+            assert_eq!(segments[0].text, expected);
+        }
     }
 }
