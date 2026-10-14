@@ -3888,8 +3888,7 @@ pub(crate) fn build_page_raster_image(
 /// - Plus the document itself and base allocations
 ///
 /// Both callers are `async fn`s on the OCR route, and reading free memory blocks: on Linux it
-/// reads `/proc/meminfo` and the cgroup files, and on macOS it spawns a `sysctl` child process
-/// and waits for it. Doing that on a runtime worker stalls every other task sharing the thread,
+/// reads `/proc/meminfo` and the cgroup files, and on macOS it calls `sysctlbyname`. Doing that on a runtime worker stalls every other task sharing the thread,
 /// so the read goes to the blocking pool and the result is awaited. A read that cannot be
 /// joined reports `None`, the same "could not tell" answer a failed query gives, which leaves
 /// the configured batch size alone.

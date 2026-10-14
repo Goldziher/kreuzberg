@@ -221,7 +221,7 @@ const TESSERACT_SESSION_MEMORY_BYTES: u64 = 512 * 1024 * 1024;
 /// reading. ~keep
 ///
 /// `None` means no limit was found: a Linux host whose `/proc` is not mounted, a
-/// macOS host whose `sysctl` fails, and every other platform. Callers then apply
+/// macOS host whose `sysctlbyname` call fails, and every other platform. Callers then apply
 /// no memory bound, the same "no tighter limit was found" branch
 /// [`cgroup_cpu_quota_cores`] takes. It is not a reading of zero.
 pub(crate) fn available_memory_bytes() -> Option<u64> {
@@ -326,12 +326,40 @@ fn parse_mem_available_bytes(contents: &str) -> Option<u64> {
 /// onto this reader does not change what it decides on a Mac. ~keep
 #[cfg(target_os = "macos")]
 fn read_available_memory_bytes() -> Option<u64> {
-    let output = std::process::Command::new("sysctl")
-        .args(["-n", "hw.memsize"])
-        .output()
-        .ok()?;
-    let total: u64 = std::str::from_utf8(&output.stdout).ok()?.trim().parse().ok()?;
+    half_of_physical_memory(sysctl_hw_memsize()?)
+}
+
+/// Half of the machine's physical memory, or `None` when the reading is zero.
+#[cfg(any(target_os = "macos", test))]
+fn half_of_physical_memory(total: u64) -> Option<u64> {
     (total > 0).then_some(total / 2)
+}
+
+/// Read `hw.memsize` in-process through `sysctlbyname(3)`.
+///
+/// Not a `sysctl -n hw.memsize` child process: `Command::output()` waits on the
+/// child with `waitpid`, and a host that sets `SIGCHLD` to `SIG_IGN` (the BEAM
+/// does) has the kernel reap the child itself, so the wait never returns and
+/// the first extraction hangs forever (GH#2117). ~keep
+#[cfg(target_os = "macos")]
+#[allow(unsafe_code)]
+fn sysctl_hw_memsize() -> Option<u64> {
+    let mut value: u64 = 0;
+    let mut len: libc::size_t = std::mem::size_of::<u64>();
+    // SAFETY: the name is a NUL-terminated C string literal; `oldp` points at a live
+    // `u64` and `oldlenp` at a live `size_t` holding that buffer's size, both valid
+    // for writes for the duration of the call; `newp` is null with `newlen` 0, so
+    // nothing is set.
+    let rc = unsafe {
+        libc::sysctlbyname(
+            c"hw.memsize".as_ptr(),
+            (&raw mut value).cast::<libc::c_void>(),
+            &raw mut len,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+    (rc == 0 && len == std::mem::size_of::<u64>()).then_some(value)
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -778,6 +806,26 @@ mod tests {
     use tracing_subscriber::{EnvFilter, Layer};
 
     use super::*;
+
+    #[test]
+    fn half_of_physical_memory_halves_and_rejects_zero() {
+        assert_eq!(
+            half_of_physical_memory(16 * 1024 * 1024 * 1024),
+            Some(8 * 1024 * 1024 * 1024)
+        );
+        assert_eq!(half_of_physical_memory(1), Some(0));
+        assert_eq!(half_of_physical_memory(0), None);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn sysctl_hw_memsize_reads_plausible_physical_memory_in_process() {
+        let total = sysctl_hw_memsize().expect("hw.memsize must be readable through sysctlbyname");
+        assert!(total >= 256 * 1024 * 1024, "implausibly small hw.memsize: {total}");
+        let available = read_available_memory_bytes().expect("macOS must report available memory");
+        assert_eq!(available, total / 2);
+        assert!(available > 0);
+    }
 
     #[cfg(feature = "captioning")]
     #[test]
