@@ -261,8 +261,9 @@ impl PptExtractor {
 }
 
 /// Resolve a slide's title and how many of its (already-trimmed) body's leading lines that
-/// title accounts for, given the file's own outline title, if any.
-fn resolve_slide_title(file_title: Option<&str>, trimmed: &str) -> (Option<String>, usize) {
+/// title accounts for, given the file's own outline title, if any, and whether the slide has
+/// a table.
+fn resolve_slide_title(file_title: Option<&str>, trimmed: &str, has_table: bool) -> (Option<String>, usize) {
     match file_title {
         Some(file_title) => {
             let joined = join_title_paragraphs(file_title);
@@ -272,7 +273,9 @@ fn resolve_slide_title(file_title: Option<&str>, trimmed: &str) -> (Option<Strin
         None => {
             let mut lines = trimmed.lines();
             let first_line = lines.next().unwrap_or("");
-            if !first_line.is_empty() && first_line.len() <= 80 && lines.clone().next().is_some() {
+            // A table's cells are not in `trimmed`, so a drawn title over a table is the only
+            // line there; it is still the slide's title, as it was when the cells were lines. ~keep
+            if !first_line.is_empty() && first_line.len() <= 80 && (has_table || lines.clone().next().is_some()) {
                 (Some(first_line.to_string()), 1)
             } else {
                 (None, 0)
@@ -310,10 +313,16 @@ fn push_deck_slide(builder: &mut InternalDocumentBuilder, slide: &PptSlideText, 
     // The file's own outline title (#1635) wins when it states one; the first-line
     // guess below is the fallback for a deck whose title is drawn on the canvas and
     // never entered in the outline view, which has no outline title to read at all.
-    let (title, header_lines) = resolve_slide_title(slide.title.as_deref(), trimmed);
+    let (title, header_lines) = resolve_slide_title(slide.title.as_deref(), trimmed, !slide.tables.is_empty());
     builder.push_slide(slide.number, title.as_deref(), None);
 
     push_slide_body(builder, trimmed, &title, header_lines);
+
+    // Each table follows the slide's other text and carries the slide's page, as a PPTX
+    // table does. ~keep
+    for table in &slide.tables {
+        builder.push_table_from_cells(table, Some(slide.number), None);
+    }
 
     // Inside the slide loop, so an image node sits on the slide that displays it
     // rather than behind the last one -- which is what made a picture-only slide
@@ -447,6 +456,7 @@ mod tests {
                 text: "First".to_string(),
                 title: None,
                 notes: None,
+                tables: Vec::new(),
             },
             // Picture-only: no text at all, so before the fix this slide had no content.
             PptSlideText {
@@ -454,12 +464,14 @@ mod tests {
                 text: String::new(),
                 title: None,
                 notes: None,
+                tables: Vec::new(),
             },
             PptSlideText {
                 number: 3,
                 text: "Third".to_string(),
                 title: None,
                 notes: None,
+                tables: Vec::new(),
             },
         ];
         let images = vec![image_on(Some(2), 0), image_on(None, 1)];
@@ -628,6 +640,7 @@ mod tests {
             text: "Section Divider".to_string(),
             title: Some("Section Divider".to_string()),
             notes: None,
+            tables: Vec::new(),
         }];
         let doc = PptExtractor::build_internal_document(&slides, &[]);
 
@@ -649,6 +662,7 @@ mod tests {
             text: "Special Databases:\nREACTIONS\nBody bullet one".to_string(),
             title: Some("Special Databases:\nREACTIONS".to_string()),
             notes: None,
+            tables: Vec::new(),
         }];
         let doc = PptExtractor::build_internal_document(&slides, &[]);
 
@@ -674,6 +688,7 @@ mod tests {
             text: format!("{long_title}\nBody text"),
             title: Some(long_title.to_string()),
             notes: None,
+            tables: Vec::new(),
         }];
         let doc = PptExtractor::build_internal_document(&slides, &[]);
 
@@ -691,11 +706,35 @@ mod tests {
             text: "Drawn Title\nDrawn body".to_string(),
             title: None,
             notes: None,
+            tables: Vec::new(),
         }];
         let doc = PptExtractor::build_internal_document(&slides, &[]);
 
         assert_eq!(slide_element_title(&doc, 1), Some("Drawn Title".to_string()));
         assert_eq!(paragraph_texts(&doc), vec!["Drawn body".to_string()]);
+    }
+
+    /// A table's cells are not in the slide text, so a drawn title over a table is the
+    /// slide's only line; it must still be taken as the title, as it was when the cells
+    /// were read as lines after it.
+    #[test]
+    fn should_take_the_only_line_over_a_table_as_the_title() {
+        let slides = vec![PptSlideText {
+            number: 1,
+            text: "Cases by region".to_string(),
+            title: None,
+            notes: None,
+            tables: vec![vec![
+                vec!["Region".to_string(), "Q1".to_string()],
+                vec!["North".to_string(), "27,039".to_string()],
+            ]],
+        }];
+        let doc = PptExtractor::build_internal_document(&slides, &[]);
+
+        assert_eq!(slide_element_title(&doc, 1), Some("Cases by region".to_string()));
+        assert!(paragraph_texts(&doc).is_empty(), "{:?}", paragraph_texts(&doc));
+        assert_eq!(doc.tables.len(), 1);
+        assert_eq!(doc.tables[0].cells[1], vec!["North", "27,039"]);
     }
 
     /// #1418 root-cause regression at the consumer side: `build_internal_document`
@@ -709,6 +748,7 @@ mod tests {
             text: "Title\n\nBody".to_string(),
             title: None,
             notes: None,
+            tables: Vec::new(),
         }];
         let doc = PptExtractor::build_internal_document(&slides, &[]);
 
@@ -739,18 +779,21 @@ mod tests {
                 text: "Slide One".to_string(),
                 title: None,
                 notes: None,
+                tables: Vec::new(),
             },
             PptSlideText {
                 number: 2,
                 text: String::new(),
                 title: None,
                 notes: None,
+                tables: Vec::new(),
             },
             PptSlideText {
                 number: 3,
                 text: "Slide Three".to_string(),
                 title: None,
                 notes: None,
+                tables: Vec::new(),
             },
         ];
         let doc = PptExtractor::build_internal_document(&slides, &[]);
@@ -776,6 +819,7 @@ mod tests {
             text: "Slide One".to_string(),
             title: None,
             notes: None,
+            tables: Vec::new(),
         }];
         let image = ExtractedImage {
             data: bytes::Bytes::from_static(b"\xFF\xD8\xFFfake-jpeg"),

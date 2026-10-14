@@ -70,6 +70,9 @@ pub struct PptSlideText {
     /// non-empty notes pages, which misattributes a note as soon as one slide in between
     /// has none. `None` when the slide has no notes, or the file cannot be read that way.
     pub notes: Option<String>,
+    /// The slide's tables, each as rows of cell text, in the order they are drawn. A table's
+    /// cells are not also in `text`. Empty for a slide with no table.
+    pub tables: Vec<Vec<Vec<String>>>,
 }
 
 /// Metadata extracted from PPT files.
@@ -219,9 +222,21 @@ pub(crate) fn extract_ppt_text(content: &[u8]) -> Result<PptExtractionResult> {
 /// `text` field. Computed before the synthetic-slide fallback runs, so
 /// `loose_texts` is never counted twice (once here, once folded in there).
 fn assemble_full_text(slides: &[PptSlideText], loose_texts: &[String]) -> String {
+    // A table reads as one line per row, its cells separated by tabs. ~keep
+    let tables: Vec<String> = slides
+        .iter()
+        .map(|s| {
+            s.tables
+                .iter()
+                .map(|table| table.iter().map(|row| row.join("\t")).collect::<Vec<_>>().join("\n"))
+                .collect::<Vec<_>>()
+                .join("\n\n")
+        })
+        .collect();
     slides
         .iter()
-        .map(|s| s.text.as_str())
+        .zip(&tables)
+        .flat_map(|(s, t)| [s.text.as_str(), t.as_str()])
         .chain(loose_texts.iter().map(String::as_str))
         .filter(|t| !t.trim().is_empty())
         .collect::<Vec<_>>()
@@ -295,6 +310,7 @@ pub(crate) fn extract_ppt_text_with_options(
             text: loose_texts.join("\n"),
             title: None,
             notes: None,
+            tables: Vec::new(),
         });
     }
     let slide_count = slides.len();
@@ -687,6 +703,7 @@ fn extract_texts_from_records(
     let mut in_slide_text = false;
     let mut slide_end: Option<usize> = None;
     let mut current_slide_texts: Vec<String> = Vec::new();
+    let mut current_slide_tables: Vec<Vec<Vec<String>>> = Vec::new();
     let mut in_notes = false;
     let mut notes_end: Option<usize> = None;
     let mut current_notes_texts: Vec<String> = Vec::new();
@@ -735,6 +752,7 @@ fn extract_texts_from_records(
                 text: current_slide_texts.join("\n"),
                 title: None,
                 notes: None,
+                tables: std::mem::take(&mut current_slide_tables),
             });
             current_slide_texts.clear();
             in_slide_text = false;
@@ -801,6 +819,7 @@ fn extract_texts_from_records(
                         text: current_slide_texts.join("\n"),
                         title: None,
                         notes: None,
+                        tables: std::mem::take(&mut current_slide_tables),
                     });
                     current_slide_texts.clear();
                 }
@@ -919,6 +938,17 @@ fn extract_texts_from_records(
                 pos = content_end;
                 continue;
             }
+            // A table is a group shape; its cells are read as a grid rather than as loose
+            // text, and the walk skips them. A group that is not a table is walked as before.
+            MSOFBT_SPGR_CONTAINER if is_container && in_slide_text && !in_notes => {
+                if let Some(table) = read_table(data, content_start, content_end) {
+                    if !table.is_empty() {
+                        current_slide_tables.push(table);
+                    }
+                    pos = content_end;
+                    continue;
+                }
+            }
             _ => {}
         }
 
@@ -938,6 +968,7 @@ fn extract_texts_from_records(
             text: current_slide_texts.join("\n"),
             title: None,
             notes: None,
+            tables: std::mem::take(&mut current_slide_tables),
         });
     }
 
@@ -1314,6 +1345,171 @@ fn extract_pictures_from_stream(
     }
 
     images
+}
+
+/// `OfficeArtSpgrContainer`: a group of shapes. PowerPoint 97-2003 draws a table as one.
+const MSOFBT_SPGR_CONTAINER: u16 = 0xF003;
+/// `OfficeArtSpContainer`: one shape.
+const MSOFBT_SP_CONTAINER: u16 = 0xF004;
+/// `OfficeArtFSP`; its `recInstance` is the shape type.
+const MSOFBT_FSP: u16 = 0xF00A;
+/// `OfficeArtChildAnchor`: a shape's rectangle (left, top, right, bottom) inside its group.
+const MSOFBT_CHILD_ANCHOR: u16 = 0xF00F;
+/// `tableProperties`, set on the shape of the group that draws a table.
+const MSO_PROPERTY_TABLE_PROPERTIES: u16 = 0x039F;
+/// `msosptLine`, the shape type of a table's border lines.
+const MSOSPT_LINE: u16 = 20;
+/// Bounds the grid of one table read from an untrusted stream.
+const MAX_TABLE_GRID_CELLS: usize = 10_000;
+
+/// One table cell: the top-left corner of its rectangle in the group, and its text.
+struct TableCell {
+    left: i32,
+    top: i32,
+    text: String,
+}
+
+/// Read the table a group shape draws, as rows of cell text; `None` when the group in
+/// `data[start..end]` is not a table, or no cell of it can be placed.
+///
+/// A table is a group whose own shape (its first child) carries `tableProperties`, with one
+/// text shape per cell and line shapes for the borders, each placed by its `ChildAnchor`.
+/// The cells are not stored in reading order -- a table can be stored bottom-right first --
+/// so the grid is rebuilt from the anchors: every distinct left edge starts a column and every
+/// distinct top edge a row. A cell spanning several columns or rows is written once at its
+/// top-left position and the positions it covers stay empty, as `grid_flatten` lays out a
+/// spanned cell for the other formats. Columns and rows empty throughout (such as a narrow
+/// spacer column) are left out, so a table with no text reads as empty. ~keep
+fn read_table(data: &[u8], start: usize, end: usize) -> Option<Vec<Vec<String>>> {
+    let children = child_records(data, start, end);
+    let (group_shape, shapes) = children.split_first()?;
+    if group_shape.rec_type != MSOFBT_SP_CONTAINER
+        || !shape_has_property(data, group_shape, MSO_PROPERTY_TABLE_PROPERTIES)
+    {
+        return None;
+    }
+    let mut cells = Vec::new();
+    for shape in shapes.iter().filter(|r| r.rec_type == MSOFBT_SP_CONTAINER) {
+        let mut records = Vec::new();
+        collect_art_records(data, shape.content_start, shape.content_end, 0, &mut records);
+        if records
+            .iter()
+            .any(|r| r.rec_type == MSOFBT_FSP && r.rec_instance == MSOSPT_LINE)
+        {
+            continue;
+        }
+        let Some(anchor) = records
+            .iter()
+            .find(|r| r.rec_type == MSOFBT_CHILD_ANCHOR && r.content_end - r.content_start >= 16)
+        else {
+            continue;
+        };
+        let edge = |i: usize| read_u32_le(data, anchor.content_start + 4 * i).map(|v| v as i32);
+        let (Some(left), Some(top), Some(right), Some(bottom)) = (edge(0), edge(1), edge(2), edge(3)) else {
+            continue;
+        };
+        if right <= left || bottom <= top {
+            continue;
+        }
+        cells.push(TableCell {
+            left,
+            top,
+            text: table_cell_text(data, &records),
+        });
+        if cells.len() > MAX_TABLE_GRID_CELLS {
+            return None;
+        }
+    }
+    if cells.is_empty() {
+        return None;
+    }
+
+    let edges = |edge: fn(&TableCell) -> i32| {
+        let mut all: Vec<i32> = cells.iter().map(edge).collect();
+        all.sort_unstable();
+        all.dedup();
+        all
+    };
+    let columns = edges(|c| c.left);
+    let rows = edges(|c| c.top);
+    if columns.len().checked_mul(rows.len())? > MAX_TABLE_GRID_CELLS {
+        return None;
+    }
+    let mut grid = vec![vec![String::new(); columns.len()]; rows.len()];
+    for cell in &cells {
+        // The edges are taken from the cells, so both lookups find the cell's own corner.
+        if let (Ok(r), Ok(c)) = (rows.binary_search(&cell.top), columns.binary_search(&cell.left))
+            && grid[r][c].is_empty()
+        {
+            grid[r][c].clone_from(&cell.text);
+        }
+    }
+    let kept: Vec<usize> = (0..columns.len())
+        .filter(|&c| grid.iter().any(|row| !row[c].is_empty()))
+        .collect();
+    Some(
+        grid.into_iter()
+            .filter(|row| row.iter().any(|text| !text.is_empty()))
+            .map(|row| kept.iter().map(|&c| row[c].clone()).collect())
+            .collect(),
+    )
+}
+
+/// The records directly inside `data[start..end]`, without descending into containers.
+fn child_records(data: &[u8], start: usize, end: usize) -> Vec<ArtRecord> {
+    let mut out = Vec::new();
+    let mut pos = start;
+    while pos + 8 <= end {
+        let rec_ver_instance = u16::from_le_bytes([data[pos], data[pos + 1]]);
+        let rec_type = u16::from_le_bytes([data[pos + 2], data[pos + 3]]);
+        let rec_len = u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize;
+        let content_start = pos + 8;
+        let Some(content_end) = content_start.checked_add(rec_len).filter(|&candidate| candidate <= end) else {
+            break;
+        };
+        out.push(ArtRecord {
+            rec_instance: rec_ver_instance >> 4,
+            rec_type,
+            content_start,
+            content_end,
+        });
+        pos = content_end;
+    }
+    out
+}
+
+/// Whether a shape's own property tables set `property`.
+fn shape_has_property(data: &[u8], shape: &ArtRecord, property: u16) -> bool {
+    child_records(data, shape.content_start, shape.content_end)
+        .iter()
+        .filter(|record| MSOFBT_OPT.contains(&record.rec_type))
+        .any(|record| {
+            (0..record.rec_instance as usize).any(|entry| {
+                let at = record.content_start + entry * FOPT_ENTRY_LEN;
+                at + FOPT_ENTRY_LEN <= record.content_end
+                    && u16::from_le_bytes([data[at], data[at + 1]]) & FOPT_PROPERTY_ID_MASK == property
+            })
+        })
+}
+
+/// A cell's text: its text atoms, cleaned, on one line.
+fn table_cell_text(data: &[u8], records: &[ArtRecord]) -> String {
+    let mut parts = Vec::new();
+    for record in records {
+        let Some(body) = data.get(record.content_start..record.content_end) else {
+            continue;
+        };
+        let text: String = match record.rec_type {
+            RT_TEXT_CHARS_ATOM => {
+                let units: Vec<u16> = body.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+                String::from_utf16_lossy(&units)
+            }
+            RT_TEXT_BYTES_ATOM => body.iter().map(|&b| cp1252_to_char(b)).collect(),
+            _ => continue,
+        };
+        parts.push(clean_ppt_text(&text));
+    }
+    parts.join(" ").split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Clean PPT text: replace control characters and normalize whitespace.

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **(ppt): a table on a legacy `.ppt` slide is extracted as a table.** PowerPoint 97-2003 draws a table as a group of
+  one text shape per cell, and the cells were read as loose lines in the order they are stored, which can be
+  bottom-right first, so a table came out as a run of values cut off from their headers. The grid is now rebuilt
+  from each cell's position and added after the slide's other text. A merged cell is written once at its top-left
+  position, as for the other formats, and a row or column with no text, such as a narrow spacer column, is left out.
+  A slide whose only line sits over a table keeps that line as its title.
+
 ## [1.3.10] - 2026-10-13
 
 ### Fixed
