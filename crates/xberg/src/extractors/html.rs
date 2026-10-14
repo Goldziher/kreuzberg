@@ -458,12 +458,54 @@ fn recover_table_captions(html: &str, doc: &mut InternalDocument) {
     }
 }
 
+/// Splits a CommonMark fence line into (fence char, run length, text after the run).
+fn fence_marker(line: &str) -> Option<(char, usize, &str)> {
+    let rest = line.trim_start_matches(' ');
+    if line.len() - rest.len() > 3 {
+        return None;
+    }
+    let fence_char = rest.chars().next().filter(|c| matches!(c, '`' | '~'))?;
+    let run = rest.chars().take_while(|&c| c == fence_char).count();
+    if run < 3 {
+        return None;
+    }
+    Some((fence_char, run, &rest[run..]))
+}
+
+/// Advances the fenced-code state over `line`; returns true when the line is an opening fence,
+/// fenced content, or a closing fence.
+fn advance_fence(state: &mut Option<(char, usize)>, line: &str) -> bool {
+    if let Some((open_char, open_len)) = *state {
+        let closes = fence_marker(line)
+            .is_some_and(|(c, len, rest)| c == open_char && len >= open_len && rest.trim().is_empty());
+        if closes {
+            *state = None;
+        }
+        return true;
+    }
+    // ~keep: a backtick fence's info string may not contain a backtick (CommonMark), otherwise it is inline code.
+    let opens = fence_marker(line).filter(|&(c, _, rest)| !(c == '`' && rest.contains('`')));
+    match opens {
+        Some((c, len, _)) => {
+            *state = Some((c, len));
+            true
+        }
+        None => false,
+    }
+}
+
 pub(crate) fn normalize_html_markdown(raw: String) -> String {
     let lines: Vec<&str> = raw.lines().collect();
     let mut pass1: Vec<String> = Vec::with_capacity(lines.len());
+    let mut fence: Option<(char, usize)> = None;
     let mut i = 0;
     while i < lines.len() {
         let line = lines[i];
+        if advance_fence(&mut fence, line) {
+            pass1.push(line.to_string());
+            i += 1;
+            continue;
+        }
         let line_trimmed = line.trim_end();
 
         if i + 1 < lines.len() {
@@ -493,7 +535,13 @@ pub(crate) fn normalize_html_markdown(raw: String) -> String {
     }
 
     let mut result = String::with_capacity(raw.len());
+    let mut fence: Option<(char, usize)> = None;
     for (idx, line) in pass1.iter().enumerate() {
+        if advance_fence(&mut fence, line) {
+            result.push_str(line);
+            result.push('\n');
+            continue;
+        }
         let is_atx_heading = line.starts_with('#');
         if is_atx_heading && idx > 0 {
             let prev = &pass1[idx - 1];
@@ -1438,6 +1486,41 @@ mod tests {
         let input = String::new();
         let output = normalize_html_markdown(input);
         assert!(output.is_empty(), "empty input should produce empty output");
+    }
+
+    #[test]
+    fn test_normalize_preserves_backtick_fenced_code_block() {
+        let input = "# Fence check\n\n```\ntitle: x\n---\n# a comment\nbanner\n=====\nend\n```\n".to_string();
+        let output = normalize_html_markdown(input.clone());
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_normalize_preserves_tilde_fenced_code_block() {
+        let input = "Intro\n\n~~~\nname\n---\n# comment\nbanner\n=====\n~~~\n".to_string();
+        let output = normalize_html_markdown(input.clone());
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_normalize_fence_closes_only_on_matching_longer_fence() {
+        let input = "````\ncode\n---\n```\n# still inside\n=====\n~~~~\n`````\n\n# After\n".to_string();
+        let output = normalize_html_markdown(input.clone());
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_normalize_unclosed_fence_preserves_rest_of_document() {
+        let input = "```\nkey: v\n---\n# note\nbanner\n=====\n".to_string();
+        let output = normalize_html_markdown(input.clone());
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_normalize_still_normalizes_prose_around_fenced_code() {
+        let input = "Title\n=====\n\n```\nx\n---\n# c\n```\n\nSub\n---\ntext\n# H\n".to_string();
+        let output = normalize_html_markdown(input);
+        assert_eq!(output, "# Title\n\n```\nx\n---\n# c\n```\n\n## Sub\ntext\n\n# H\n");
     }
 
     /// Test that extract_metadata=false is respected (issue #1171).
