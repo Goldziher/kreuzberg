@@ -16,9 +16,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(pdf): every JPEG 2000 image reports 8 bits per component.** A JPEG 2000 decode yields 8-bit samples, and the
   image dictionary's `/BitsPerComponent` is ignored for `/JPXDecode` (ISO 32000-1 Table 89). Only palette images
   reported 8; any other JPEG 2000 image with a stale `/BitsPerComponent` reported the dictionary's value. (GH#2112)
+- **(ppt): a table on a legacy `.ppt` slide is extracted as a table.** PowerPoint 97-2003 draws a table as a group of
+  one text shape per cell, and the cells were read as loose lines in the order they are stored, which can be
+  bottom-right first, so a table came out as a run of values cut off from their headers. The grid is now rebuilt
+  from each cell's position and added after the slide's other text. A merged cell is written once at its top-left
+  position, as for the other formats, and a row or column with no text, such as a narrow spacer column, is left out.
+  A slide whose only line sits over a table keeps that line as its title.
+- **(html): Markdown output no longer rewrites the contents of fenced code blocks.** Lines inside a ``` or ~~~ fence
+  were treated as prose, so a code line followed by `---` or `===` became a heading and the ruler was deleted, and a
+  blank line was inserted before every `#` line. Fenced code is now passed through unchanged. (GH#2118)
+- **(macos): the first extraction no longer hangs forever when the host ignores `SIGCHLD`.** Reading the machine's
+  physical memory spawned a `sysctl -n hw.memsize` child process, and a host that sets `SIGCHLD` to `SIG_IGN`, such
+  as the BEAM, has the kernel reap the child so the wait never returned. The value is now read in-process with
+  `sysctlbyname`. (GH#2117)
+- **(pdf): a `•` inside the text of a table row no longer turns the row into list items without word spaces.** A
+  bullet between two letters is not an item marker, and items split off a paragraph keep the spaces between their
+  words. (GH#2115)
+- **(pdf): two book pages printed side by side on one sheet are read left page, then right page again.** Since 1.3.9
+  the column cut was refused when a few short lines of one half sat within 1 pt of a body line of the other, which
+  happens by chance when the halves use different leading (6 pt slide bullets beside 9.9 pt body text). Those
+  coincidences were taken for a form's label/value rows, and the halves were read line by line. A cut is now refused
+  only when the paired rows cover at least half of the lines on its sparser side. (GH#2116)
+- **(php): the Linux extension no longer crashes when PHP exits.** The zig-built `xberg.so` registered static
+  destructors that outlived PHP's `dlclose` of the extension, so `exit()` jumped into unmapped memory (SIGSEGV).
+  The library is now linked `-z nodelete`, and the release gate checks for it. The linux-arm64 build uses thin
+  LTO to stay within the runner's memory. (GH#2113)
 
 ### Changed
 
+- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.0 and `tree-sitter-language-pack` 1.22.2.**
+  `ort` rc.14 builds sessions from a shared process environment, so every session in xberg, `xberg-gliner` and
+  `xberg-paddle-ocr` now takes it. `unhwp` 0.20, `zip` 9.0.3 and `tokio` 1.53.3 are also current.
 - **(deps): hayro-jpeg2000 0.4.1 is the minimum, and it resolves JPEG 2000 palettes itself.** 0.4.1 clamps a palette
   index that lossy coding pushes outside the palette, so xberg no longer reads the palette of an image without an
   `/Indexed` colour space and looks it up by hand. A project whose lockfile held 0.4.0 now gets the clamp for every

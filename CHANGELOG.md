@@ -35,9 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   happens by chance when the halves use different leading (6 pt slide bullets beside 9.9 pt body text). Those
   coincidences were taken for a form's label/value rows, and the halves were read line by line. A cut is now refused
   only when the paired rows cover at least half of the lines on its sparser side. (GH#2116)
+- **(php): the Linux extension no longer crashes when PHP exits.** The zig-built `xberg.so` registered static
+  destructors that outlived PHP's `dlclose` of the extension, so `exit()` jumped into unmapped memory (SIGSEGV).
+  The library is now linked `-z nodelete`, and the release gate checks for it. The linux-arm64 build uses thin
+  LTO to stay within the runner's memory. (GH#2113)
 
 ### Changed
 
+- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.0 and `tree-sitter-language-pack` 1.22.2.**
+  `ort` rc.14 builds sessions from a shared process environment, so every session in xberg, `xberg-gliner` and
+  `xberg-paddle-ocr` now takes it. `unhwp` 0.20, `zip` 9.0.3 and `tokio` 1.53.3 are also current.
 - **(deps): hayro-jpeg2000 0.4.1 is the minimum, and it resolves JPEG 2000 palettes itself.** 0.4.1 clamps a palette
   index that lossy coding pushes outside the palette, so xberg no longer reads the palette of an image without an
   `/Indexed` colour space and looks it up by hand. A project whose lockfile held 0.4.0 now gets the clamp for every
