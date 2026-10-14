@@ -1,7 +1,7 @@
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-Content-Hash: blake3:c551708aa62f1b25b1cea8041e8aab5b3101a1622317b7239d3de04d8a375754
-Source-Hash: blake3:3fca38eb564d0ed9c9194d070fd8dec96de727edc92e82954cb4b9af52cddbaf
+Content-Hash: blake3:723cd2abd915f92766e2dec9c90922b94ef60ad5ce81c606bd680b055e5c4717
+Source-Hash: blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b
 Schema-Version: v1
 -->
 
@@ -128,7 +128,7 @@ Main extraction configuration. All fields are optional and use sensible defaults
 | `enable_quality_processing` | bool                              | True        | Quality post-processing to clean and normalize extracted text.      |
 | `ocr`                       | OcrConfig \| None                 | None        | OCR configuration. None = OCR disabled.                             |
 | `force_ocr`                 | bool                              | False       | Force OCR even for searchable PDFs that contain extractable text.   |
-| `chunking`                  | ChunkingConfig \| None            | None        | Text chunking configuration. None = disabled.                      |
+| `xberg-chunking`                  | ChunkingConfig \| None            | None        | Text chunking configuration. None = disabled.                      |
 | `images`                    | ImageExtractionConfig \| None     | None        | Extract images FROM documents. None = no image extraction.         |
 | `pdf_options`               | PdfConfig \| None                 | None        | PDF-specific options.                                              |
 | `token_reduction`           | TokenReductionOptions \| None     | None        | Reduce token count in extracted content. None = no reduction.       |

@@ -1,0 +1,15 @@
+[[marketplaces]]
+name = "basemind"
+source = "Goldziher/basemind"
+type = "github"
+
+[marketplace]
+name = "xberg"
+description = "Document intelligence for coding agents, by Kreuzberg, Inc."
+members = ["plugin"]
+
+[marketplace.owner]
+name = "Kreuzberg, Inc."
+email = "contact@xberg.io"
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.

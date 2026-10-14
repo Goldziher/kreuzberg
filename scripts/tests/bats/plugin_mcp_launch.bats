@@ -97,6 +97,14 @@ make_cli() {
 	chmod +x "$target"
 }
 
+make_npx() {
+	local binary="$XBERG_WORK/npm-package/$BINARY_NAME"
+	make_cli "$binary" NPX
+	xberg_stub npx \
+		"[[ \"\$*\" == *'$NPM_PKG@latest'* ]] || exit 1" \
+		"printf '%s\\n' '$binary'"
+}
+
 # An executable that refuses to report a version, which is how the script decides a binary it
 # found is not usable.
 make_broken_cli() {
@@ -205,11 +213,11 @@ cached_binary() { printf '%s/bin/%s' "$PLUGIN_ROOT" "$BINARY_NAME"; }
 # --- npx, uvx and brew --------------------------------------------------------------------------
 
 @test "mcp-launch should_launch_through_npx_when_npx_can_run_the_package" {
-	make_cli "$XBERG_STUB_BIN/npx" NPX
+	make_npx
 	launch --stdio
 
 	xberg_assert_status 0
-	xberg_assert_output_contains "NPX[${NPM_PKG}@latest]"
+	xberg_assert_output_contains "NPX:ran"
 	# The user's own argv, not just the package the script names. Asserting only the package
 	# passes against a launcher that drops "$@" entirely. ~keep
 	xberg_assert_output_contains "NPX[--stdio]"

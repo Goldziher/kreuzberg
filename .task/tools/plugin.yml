@@ -2,7 +2,7 @@ version: "3"
 internal: true
 
 # Coding-agent plugin (Claude Code, Cursor, Codex, Gemini, Kimi, OpenCode, Factory,
-# Hermes, Pi). Single source of truth: plugin/.ai-rulez/config.toml + plugin/.ai-rulez/skills.
+# Hermes, Pi). Single source of truth: plugin/.ai-rulez/config.plugins.toml + plugin/.ai-rulez/skills.
 # ai-rulez generate --plugin fans it out to per-runtime bundles under plugin/ and the
 # repo-root marketplace index. Version tracks core via `task version:sync`. ~keep
 
@@ -14,11 +14,13 @@ tasks:
     desc: "Regenerate the plugin bundles + marketplace from plugin/.ai-rulez"
     cmds:
       - "{{.AI_RULEZ}} generate --plugin"
+      - python3 scripts/sync_public_skills.py
 
   verify:
     desc: "Verify generated plugin bundles match source (byte + BLAKE3 provenance)"
     cmds:
       - "{{.AI_RULEZ}} verify --plugin"
+      - python3 scripts/sync_public_skills.py --check
 
   test:
     desc: "Check OpenCode v2 tools and packed Pi resources"

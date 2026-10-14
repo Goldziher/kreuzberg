@@ -68,7 +68,7 @@ max_archive_size = 524288000
 
 ## CLI Flag Overrides
 
-`crates/xberg-cli/src/commands/overrides.rs`: the `ExtractionOverrides` struct's `validate()`
+`crates/xberg-cli/src/commands/overrides/mod.rs`: the `ExtractionOverrides` struct's `validate()`
 runs first, then `apply(self, config: &mut ExtractionConfig)` lays individual CLI flags over
 the merged config. There is no `apply_extraction_overrides()` and no `commands.rs` —
 `commands/` is a directory.

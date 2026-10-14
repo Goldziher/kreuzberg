@@ -1,9 +1,10 @@
 
 version = "5.0"
+default_layers = ["plugins"]
 name = 'Xberg'
 description = 'Rust document intelligence library with active Python, TypeScript/Node, Ruby, PHP, Go, Java, C#, Elixir, WebAssembly, Dart, Kotlin Android, Swift, Zig, and C FFI bindings'
 gitignore = true
-presets = ["claude", "codex", "opencode", "pi"]
+presets = ["claude", "codex", "opencode", "pi", "hermes", "gemini", "copilot"]
 builtins = [
   '!git-workflow',
   'rust',
@@ -36,30 +37,35 @@ compact = true
 [[includes]]
 name = 'xberg-core'
 source = 'https://github.com/xberg-io/agent-conventions.git'
+ref = "adb0caa92c4d8155fb1680618f72a321a832660b"
 path = 'modules/core'
 merge_strategy = 'local-override'
 
 [[includes]]
 name = 'xberg-languages'
 source = 'https://github.com/xberg-io/agent-conventions.git'
+ref = "adb0caa92c4d8155fb1680618f72a321a832660b"
 path = 'modules/languages'
 merge_strategy = 'local-override'
 
 [[includes]]
 name = 'xberg-cicd'
 source = 'https://github.com/xberg-io/agent-conventions.git'
+ref = "adb0caa92c4d8155fb1680618f72a321a832660b"
 path = 'modules/cicd'
 merge_strategy = 'local-override'
 
 [[includes]]
 name = 'xberg-infrastructure'
 source = 'https://github.com/xberg-io/agent-conventions.git'
+ref = "adb0caa92c4d8155fb1680618f72a321a832660b"
 path = 'modules/infrastructure'
 merge_strategy = 'local-override'
 
 [[includes]]
 name = 'xberg-e2e-generator'
 source = 'https://github.com/xberg-io/agent-conventions.git'
+ref = "adb0caa92c4d8155fb1680618f72a321a832660b"
 path = 'modules/e2e-generator'
 merge_strategy = 'local-override'
 
@@ -67,38 +73,19 @@ merge_strategy = 'local-override'
 name = 'alef'
 source = 'https://github.com/xberg-io/alef.git'
 
+ref = "f7195ed431bfd2e639edcabd611c70b62a3ed547"
 [[mcp_servers]]
 name = 'playwright'
 description = 'Playwright browser automation for E2E testing and docs verification'
 command = 'npx'
-args = ['-y', '@playwright/mcp@latest']
+args = ['-y', '@playwright/mcp@0.0.83']
 
 [defaults]
 effort = 'medium'
 
-[[marketplaces]]
-name = "basemind"
-source = "Goldziher/basemind"
-type = "github"
 
-[[plugins]]
-marketplace = "basemind"
-name = "basemind"
-scope = "project"
-enabled = true
+[mcp]
+self_server_command = ["ai-rulez", "mcp"]
 
-# Plugin authoring: `ai-rulez generate --plugin` fans plugin/.ai-rulez/config.toml
-# ([plugin] block) out to per-runtime bundles under plugin/ and emits the repo-root
-# marketplace index. Only read by `generate --plugin`; normal governance generation ignores it.
-[marketplace]
-name = "xberg"
-description = "Document intelligence for coding agents, by Kreuzberg, Inc."
-members = ["plugin"]
-
-[marketplace.owner]
-name = "Kreuzberg, Inc."
-email = "contact@xberg.io"
-
-# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
-[header]
-hashes = "full"
+[lock]
+include_outputs = false

@@ -78,15 +78,33 @@ Xberg is written following strict AI engineering practices. That is, its vibe co
 
 ### Conventions
 
-We use `ai-rulez`, created by @Goldziher, to manage our AI conventions. Running `task setup` will get you going, or run:
+Use the reviewed `ai-rulez` CLI (based on 5.2.1, with the CLI source revision pinned in CI) to manage agent conventions. Edit authored content under
+`.ai-rulez/`; `AGENTS.md`, `CLAUDE.md` and harness directories are generated outputs.
+The main `config.toml` selects the `plugins` layer through `default_layers`; marketplace and
+plugin settings live separately in `config.plugins.toml`.
 
 ```sh
-task governance:generate
+ai-rulez validate --no-local
+ai-rulez generate --no-local --strict-config
+task governance:check
 ```
 
-This scaffolds the local AI agent conventions, including `CLAUDE.md`, `AGENTS.md`, subagents, and skills. Run
-`task governance:verify` after changing `.ai-rulez/`; CI runs the same pinned validation and render check without
-modifying the checkout.
+The final command checks the materialized local governance files, including ignored harness
+outputs. Installing governance hooks requires Python 3.11 or newer. Run `task governance:hooks:install` to install the repository's reviewed Poly hooks.
+The hooks validate staged sources and verify shipped plugin artifacts where present; CI also
+validates the authored content. Shared convention modules come from `xberg-io/agent-conventions`;
+Git credentials are needed when an included repository requires access.
+
+Product plugin sources live under `plugin/.ai-rulez/`. Keep public skills, generated runtime
+adapters and their installation guide in sync:
+
+```sh
+ai-rulez generate --plugin --no-local --strict-config
+ai-rulez verify --plugin
+```
+
+See [the plugin guide](plugin/README.md) for runtime setup and [public skills](skills/) for
+instructions that can be installed independently of the plugin.
 
 ### Customization
 

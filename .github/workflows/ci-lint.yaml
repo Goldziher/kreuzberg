@@ -49,6 +49,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install Task
         uses: xberg-io/actions/install-task@54a96fe62890b0843bb33365f72926b6415c06f9
+      - name: Install reviewed ai-rulez
+        uses: xberg-io/actions/setup-ai-rulez@6b88aedd553b798d084927cc8a0feeb88b3f6f1b
+        with:
+          source-revision: 2b71103d759ce17f294c468f17d981cf4d8a8211
       - name: Validate AI governance inputs
         run: task governance:verify
 
@@ -82,29 +86,13 @@ jobs:
       # match plugin/.ai-rulez (BLAKE3 provenance). Pinned to the ai-rulez version that
       # generates them; bump in lockstep with the generator. Regenerate with
       # `task plugin:generate`. ~keep
-      - name: Check out the Pi-capable ai-rulez generator
-        uses: actions/checkout@v7
+      - name: Install ai-rulez
+        uses: xberg-io/actions/setup-ai-rulez@6b88aedd553b798d084927cc8a0feeb88b3f6f1b
         with:
-          repository: Goldziher/ai-rulez
-          ref: 8dfebd2b8b3700ff134f86886d5b44dca82abc18
-          path: .tools/ai-rulez
-      - name: Set up Go for ai-rulez
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: .tools/ai-rulez/go.mod
-          cache-dependency-path: .tools/ai-rulez/go.sum
-      - name: Build the pinned plugin generator
-        working-directory: .tools/ai-rulez
-        shell: bash
-        env:
-          GOWORK: "off"
-        run: |
-          eval "$(./scripts/setup-liter-llm.sh --mode static --format export)"
-          mkdir -p "$RUNNER_TEMP/ai-rulez-bin"
-          go build -o "$RUNNER_TEMP/ai-rulez-bin/ai-rulez" ./cmd/ai-rulez
-          echo "$RUNNER_TEMP/ai-rulez-bin" >> "$GITHUB_PATH"
+          source-revision: 2b71103d759ce17f294c468f17d981cf4d8a8211
       - name: Verify generated plugin bundles are current
-        run: ai-rulez verify --plugin
+        run: |
+          ai-rulez verify --plugin
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
@@ -112,6 +100,19 @@ jobs:
         run: |
           node --test scripts/tests/opencode-plugin.test.mjs
           python3 scripts/verify_pi_package.py
+
+      - name: Install uv for Hermes contract tests
+        uses: astral-sh/setup-uv@v10.3.0
+      - name: Verify Hermes discovery and tool calls
+        run: uv run --no-project --python 3.11 --with mcp==1.28.1 --with PyYAML==6.0.3 python scripts/tests/test_hermes_plugin.py
+
+      - name: Verify public skills and export ownership
+        run: |
+          python3 scripts/tests/test_public_skills.py
+          python3 scripts/sync_public_skills.py --check
+
+      - name: Verify actual npm launcher working directory
+        run: python3 scripts/tests/test_mcp_launcher_cwd.py
 
   submodule-gitlinks:
     if: github.event.pull_request.draft != true

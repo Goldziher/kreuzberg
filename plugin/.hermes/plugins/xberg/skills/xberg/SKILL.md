@@ -1,22 +1,17 @@
 ---
-name: xberg
-description: >-
-  Extract text, tables, metadata, and images from 107 document formats
-  (PDF, Office, images, HTML, email, archives, academic) using Xberg.
-  Use when writing code that calls Xberg APIs in Python, Node.js/TypeScript,
-  Rust, or CLI. Covers installation, extraction (sync/async), configuration
-  (OCR, chunking, output format), batch processing, error handling, and plugins.
+description: Extract text, tables, metadata, and images from 107 document formats (PDF, Office, images, HTML, email, archives, academic) using Xberg. Use when writing code that calls Xberg APIs in Python, Node.js/TypeScript, Rust, or CLI. Covers installation, extraction (sync/async), configuration (OCR, chunking, output format), batch processing, error handling, and plugins.
 license: Elastic-2.0
 metadata:
-  author: xberg-io
-  version: "0.1.0"
-  repository: https://github.com/xberg-io/xberg
+    author: xberg-io
+    version: "0.1.0"
+    repository: https://github.com/xberg-io/xberg
+name: xberg
 ---
 
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-Content-Hash: blake3:8d1ddd2c0fd7b6e9473737826178427138c3fac45cedd5b6c3d0b8a243739deb
-Source-Hash: blake3:3fca38eb564d0ed9c9194d070fd8dec96de727edc92e82954cb4b9af52cddbaf
+Content-Hash: blake3:5c39696cf46f9dabada4de547cf7b610394f57c4002ed5d2055fc83521fa3141
+Source-Hash: blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b
 Schema-Version: v1
 -->
 
@@ -68,8 +63,8 @@ tokio = { version = "1", features = ["full"] }
 ```bash
 brew install xberg-io/tap/xberg
 # or run without a persistent install (the CLI proxy package self-installs the binary):
-npx @xberg-io/xberg-cli --help
-uvx --from xberg-cli xberg --help
+npx @xberg-io/xberg-cli@1.3.10 --help
+uvx --from xberg-cli==1.3.8 xberg --help
 # or download a prebuilt binary from the latest GitHub release:
 #   https://github.com/xberg-io/xberg/releases/latest
 # or build from source:
@@ -220,7 +215,7 @@ xberg extract doc.pdf --config-json '{"ocr":{"backend":"tesseract","language":"d
 
 ## Batch Processing
 
-`extract_batch` takes a list of `ExtractInput`s and returns one envelope whose `results` array holds a document per input (in input order); per-input failures are reported in `result.errors`.
+`extract_batch` takes a list of `ExtractInput`s and returns one envelope whose `results` array holds documents in discovery order; one input may yield multiple documents. Per-input failures are reported in `result.errors` with an input index.
 
 ### Python
 
@@ -416,12 +411,12 @@ Detailed reference files for specific topics:
 
 Task-focused sibling skills go deeper than this overview:
 
-- **extracting-with-ocr** — OCR backends, language packs, force-OCR, tuning.
-- **extracting-tables** — layout-aware table detection and table models.
-- **chunking** — chunk size/overlap, markdown/yaml/semantic chunkers, the `chunk` command.
-- **extracting-keywords** — YAKE/RAKE keywords, language detection, the `embed` command.
-- **batch-extraction** — the `batch` command, `--file-configs`, parallelism, error recovery.
-- **picking-a-format** — choosing `--format` / `--content-format` per consumer.
+- **xberg-extracting-with-ocr** — OCR backends, language packs, force-OCR, tuning.
+- **xberg-extracting-tables** — layout-aware table detection and table models.
+- **xberg-chunking** — chunk size/overlap, markdown/yaml/semantic chunkers, the `chunk` command.
+- **xberg-extracting-keywords** — YAKE/RAKE keywords, language detection, the `embed` command.
+- **xberg-batch-extraction** — the `batch` command, `--file-configs`, parallelism, error recovery.
+- **xberg-picking-a-format** — choosing `--format` / `--content-format` per consumer.
 
 Full documentation: <https://docs.xberg.io>
 GitHub: <https://github.com/xberg-io/xberg>

@@ -52,10 +52,6 @@ includes:
     taskfile: ./.task/tools/general.yml
     flatten: true
 
-vars:
-  # This must match the pin in ci-lint.yaml because different ai-rulez versions emit different bundles. ~keep
-  AI_RULEZ_VERSION: "5.1.0"
-
 tasks:
   default:
     desc: "List available tasks"
@@ -70,7 +66,7 @@ tasks:
       - task: governance:generate
       - task: integrations:sync
       - command -v poly >/dev/null 2>&1 || brew install goldziher/tap/poly
-      - poly hooks install
+      - task: governance:hooks:install
 
   build:
     desc: "Build Rust core library only (debug)"
@@ -268,14 +264,14 @@ tasks:
       - task: lint:check
 
   governance:generate:
-    desc: "Generate local AI governance files with the pinned ai-rulez version"
+    desc: "Generate local AI governance files with the reviewed ai-rulez CLI"
     cmds:
-      - npx -y ai-rulez@{{.AI_RULEZ_VERSION}} generate
+      - ai-rulez generate
 
   governance:validate:
     desc: "Validate the root AI governance configuration"
     cmds:
-      - npx -y ai-rulez@{{.AI_RULEZ_VERSION}} validate
+      - ai-rulez validate
 
   governance:verify:
     desc: "Validate that AI governance inputs resolve and render without modifying the checkout"
@@ -289,7 +285,7 @@ tasks:
         cp -R .ai-rulez "$governance_verify_root/.ai-rulez"
         (
           cd "$governance_verify_root"
-          npx -y ai-rulez@{{.AI_RULEZ_VERSION}} generate --no-self-mcp --quiet
+          ai-rulez generate --no-self-mcp --quiet
         )
 
   check:android:
@@ -716,3 +712,46 @@ tasks:
       - cargo clean
       - alef clean
       - rm -rf coverage.lcov dist/ .alef/
+
+  governance:hooks:install:
+    desc: Provision machine preferences and install reviewed AI governance hooks
+    cmds:
+      - |
+        python3 - <<'PYTHON'
+        import pathlib
+        import shutil
+        import subprocess
+        import tomllib
+
+        if shutil.which("ai-rulez") is None:
+            raise SystemExit("Install the reviewed ai-rulez CLI before installing hooks")
+        preferences = pathlib.Path("poly.local.toml")
+        text = preferences.read_text() if preferences.exists() else ""
+        data = tomllib.loads(text)
+        if "hook_preferences" not in data:
+            preferences.write_text(text.rstrip() + '\n\n[hook_preferences]\nchannels = ["system"]\n')
+        elif "system" not in data["hook_preferences"].get("channels", []):
+            raise SystemExit("Add system to hook_preferences.channels in poly.local.toml")
+        subprocess.run(["poly", "hooks", "install"], check=True)
+        PYTHON
+
+  plugin:hermes:test:
+    desc: Verify the Hermes bridge against a real MCP stdio fixture
+    cmds:
+      - uv run --no-project --python 3.11 --with mcp==1.28.1 --with PyYAML==6.0.3 python scripts/tests/test_hermes_plugin.py
+
+  governance:check:
+    desc: Check materialized local governance outputs against shared sources
+    cmds:
+      - ai-rulez generate --check --no-local --strict-config
+
+  plugin:skills:test:
+    desc: Verify public skill ownership and resource freshness
+    cmds:
+      - python3 scripts/tests/test_public_skills.py
+      - python3 scripts/sync_public_skills.py --check
+
+  plugin:launcher:test:
+    desc: Verify npm launcher preserves caller directory and relative configuration
+    cmds:
+      - python3 scripts/tests/test_mcp_launcher_cwd.py

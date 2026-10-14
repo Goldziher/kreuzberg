@@ -27,7 +27,10 @@ def verify_archive(archive: Path, expected_name: str, expected_skills: int, expe
             if name.startswith("package/.pi/prompts/") and name.endswith(".md")
         ),
     }
-    if metadata.get("pi") != expected_resources:
+    actual_resources = metadata.get("pi", {})
+    if set(actual_resources) != set(expected_resources) or any(
+        sorted(actual_resources[kind]) != paths for kind, paths in expected_resources.items()
+    ):
         raise ValueError("Pi resource paths must name only the packed product skills and prompts")
     required = {
         "package/" + metadata["main"],
@@ -53,7 +56,7 @@ def main() -> None:
     plugin = root / "plugin"
     metadata = json.loads((plugin / "package.json").read_text())
     skills = len(list((plugin / ".ai-rulez/skills").glob("*/SKILL.md")))
-    prompts = len(list((plugin / ".ai-rulez/commands").glob("*.md")))
+    prompts = sum(path.name not in {"index.md", "log.md"} for path in (plugin / ".ai-rulez/commands").glob("*.md"))
     with tempfile.TemporaryDirectory(prefix="pi-package-") as destination:
         result = subprocess.run(
             ["npm", "pack", "--json", "--ignore-scripts", "--offline", "--pack-destination", destination],

@@ -1,0 +1,6 @@
+description = "Extract scanned documents with OCR"
+prompt = """
+OCR this document: {{args}}
+
+Read the extracting-with-ocr skill. Confirm the document needs OCR and language packs are installed. Use `xberg extract <file> --force-ocr=true` when forced OCR is appropriate. Preserve paths as separate arguments and report OCR failures.
+"""

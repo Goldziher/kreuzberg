@@ -202,6 +202,71 @@
     ".codex/agents/xberg-developer.toml",
     ".codex/agents/zig-specialist.toml",
     ".codex/config.toml",
+    ".gemini/agents/c-ffi-specialist.md",
+    ".gemini/agents/code-reviewer.md",
+    ".gemini/agents/csharp-specialist.md",
+    ".gemini/agents/dart-specialist.md",
+    ".gemini/agents/devops-engineer.md",
+    ".gemini/agents/docs-writer.md",
+    ".gemini/agents/e2e-generator-engineer.md",
+    ".gemini/agents/elixir-specialist.md",
+    ".gemini/agents/extraction-engineer.md",
+    ".gemini/agents/ffi-engineer.md",
+    ".gemini/agents/go-specialist.md",
+    ".gemini/agents/java-specialist.md",
+    ".gemini/agents/jni-specialist.md",
+    ".gemini/agents/kotlin-android-specialist.md",
+    ".gemini/agents/ocr-engineer.md",
+    ".gemini/agents/performance-engineer.md",
+    ".gemini/agents/php-specialist.md",
+    ".gemini/agents/plugin-engineer.md",
+    ".gemini/agents/polyglot-architect.md",
+    ".gemini/agents/python-specialist.md",
+    ".gemini/agents/r-specialist.md",
+    ".gemini/agents/release-engineer.md",
+    ".gemini/agents/ruby-specialist.md",
+    ".gemini/agents/rust-core-engineer.md",
+    ".gemini/agents/security-auditor.md",
+    ".gemini/agents/swift-specialist.md",
+    ".gemini/agents/test-writer.md",
+    ".gemini/agents/typescript-specialist.md",
+    ".gemini/agents/wasm-specialist.md",
+    ".gemini/agents/xberg-developer.md",
+    ".gemini/agents/zig-specialist.md",
+    ".gemini/settings.json",
+    ".github/agents/c-ffi-specialist.agent.md",
+    ".github/agents/code-reviewer.agent.md",
+    ".github/agents/csharp-specialist.agent.md",
+    ".github/agents/dart-specialist.agent.md",
+    ".github/agents/devops-engineer.agent.md",
+    ".github/agents/docs-writer.agent.md",
+    ".github/agents/e2e-generator-engineer.agent.md",
+    ".github/agents/elixir-specialist.agent.md",
+    ".github/agents/extraction-engineer.agent.md",
+    ".github/agents/ffi-engineer.agent.md",
+    ".github/agents/go-specialist.agent.md",
+    ".github/agents/java-specialist.agent.md",
+    ".github/agents/jni-specialist.agent.md",
+    ".github/agents/kotlin-android-specialist.agent.md",
+    ".github/agents/ocr-engineer.agent.md",
+    ".github/agents/performance-engineer.agent.md",
+    ".github/agents/php-specialist.agent.md",
+    ".github/agents/plugin-engineer.agent.md",
+    ".github/agents/polyglot-architect.agent.md",
+    ".github/agents/python-specialist.agent.md",
+    ".github/agents/r-specialist.agent.md",
+    ".github/agents/release-engineer.agent.md",
+    ".github/agents/ruby-specialist.agent.md",
+    ".github/agents/rust-core-engineer.agent.md",
+    ".github/agents/security-auditor.agent.md",
+    ".github/agents/swift-specialist.agent.md",
+    ".github/agents/test-writer.agent.md",
+    ".github/agents/typescript-specialist.agent.md",
+    ".github/agents/wasm-specialist.agent.md",
+    ".github/agents/xberg-developer.agent.md",
+    ".github/agents/zig-specialist.agent.md",
+    ".github/prompts/iterate.prompt.md",
+    ".github/prompts/parallelize.prompt.md",
     ".mcp.json",
     ".opencode/agents/c-ffi-specialist.md",
     ".opencode/agents/code-reviewer.md",
@@ -270,14 +335,57 @@
     ".pi/mcp.json",
     ".pi/prompts/iterate.md",
     ".pi/prompts/parallelize.md",
+    ".vscode/mcp.json",
     "AGENTS.md",
     "CLAUDE.md",
     "opencode.json"
   ],
   "merged": {
     ".codex/config.toml": [],
+    ".gemini/settings.json": [],
     ".mcp.json": [],
     ".pi/mcp.json": [],
+    ".vscode/mcp.json": [],
     "opencode.json": []
+  },
+  "servers": {
+    ".codex/config.toml": [
+      [
+        "mcp_servers",
+        "playwright"
+      ]
+    ],
+    ".gemini/settings.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
+      [
+        "mcpServers",
+        "playwright"
+      ]
+    ],
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
+      [
+        "mcpServers",
+        "playwright"
+      ]
+    ],
+    ".pi/mcp.json": [
+      [
+        "mcpServers",
+        "playwright"
+      ]
+    ],
+    "opencode.json": [
+      [
+        "mcp",
+        "playwright"
+      ]
+    ]
   }
 }
