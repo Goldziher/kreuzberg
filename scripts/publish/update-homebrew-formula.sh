@@ -41,12 +41,43 @@ fi
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
+# A retried release can delete and recreate the tag (v1.3.10: the tag moved between a
+# cancelled run and its retry, leaving the formula pinned to the OLD archive's sha256).
+# Resolve the tag's commit before and after, and refuse to pin if it moved or if it is
+# not the commit this run checked out. ~keep
+tag_commit() { gh api "repos/xberg-io/xberg/commits/${tag}" --jq .sha; }
+commit_before="$(tag_commit)"
+[[ -n "$commit_before" ]] || {
+  echo "Could not resolve tag ${tag}" >&2
+  exit 1
+}
+checked_out="$(git rev-parse HEAD 2>/dev/null || true)"
+if [[ -n "$checked_out" && "$commit_before" != "$checked_out" ]]; then
+  echo "Tag ${tag} resolves to ${commit_before}, but this run checked out ${checked_out}" >&2
+  exit 1
+fi
+
 echo "Fetching source tarball from ${github_archive}..."
 curl -fsSL "$github_archive" -o "${workdir}/${asset_name}"
-sha256=$(shasum -a 256 "${workdir}/${asset_name}" | awk '{print $1}')
+local_sha=$(shasum -a 256 "${workdir}/${asset_name}" | awk '{print $1}')
 
 echo "Publishing stable source tarball as release asset ${asset_name}..."
 gh release upload "$tag" "${workdir}/${asset_name}" --repo xberg-io/xberg --clobber
+
+# Pin the sha256 of the asset as it now exists on the release (that is what the formula
+# url serves), not of the pre-upload download. ~keep
+mkdir "${workdir}/published"
+gh release download "$tag" --repo xberg-io/xberg --pattern "$asset_name" --dir "${workdir}/published"
+sha256=$(shasum -a 256 "${workdir}/published/${asset_name}" | awk '{print $1}')
+if [[ "$sha256" != "$local_sha" ]]; then
+  echo "Published asset sha256 ${sha256} differs from uploaded ${local_sha}" >&2
+  exit 1
+fi
+commit_after="$(tag_commit)"
+if [[ "$commit_after" != "$commit_before" ]]; then
+  echo "Tag ${tag} moved during the formula update (${commit_before} -> ${commit_after})" >&2
+  exit 1
+fi
 
 echo "  url:    $tarball_url"
 echo "  sha256: $sha256"

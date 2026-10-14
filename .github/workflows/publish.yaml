@@ -3557,6 +3557,11 @@ jobs:
             xberg-ffi-*.tar.gz
             # Elixir NIF
             libxberg_nif-*.tar.gz
+            # PHP PIE (a missing Linux leg shipped silently from 1.3.7 to 1.3.10, #2113)
+            php_xberg-*-x86_64-linux-glibc-nts.tgz
+            php_xberg-*-arm64-linux-glibc-nts.tgz
+            php_xberg-*-arm64-darwin-bsdlibc-nts.tgz
+            php_xberg-*-nts-vs17-x86_64.zip
 
       - uses: actions/download-artifact@v8
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
@@ -4497,10 +4502,14 @@ jobs:
     # Pins release-asset URLs that persist on the release, so a SKIPPED upload-cli
     # on a same-tag retry (asset already uploaded) must not skip the formula bump;
     # only a genuine upload failure should. Independent of all other channels. ~keep
+    # `always()` also runs on a cancelled workflow: run 38443926351 was cancelled yet this job
+    # pushed the 1.3.10 formula while the release had 0 assets (#2119). `!cancelled()` plus an
+    # explicit success/skipped check on the upload closes that; the asset-presence step below
+    # covers the skipped-because-already-uploaded retry. ~keep
     if: >-
-      ${{ always()
-      && needs.upload-cli-release.result != 'failure'
-      && needs.publish-crates.result != 'failure'
+      ${{ !cancelled()
+      && (needs.upload-cli-release.result == 'success' || needs.upload-cli-release.result == 'skipped')
+      && (needs.publish-crates.result == 'success' || needs.publish-crates.result == 'skipped')
       && needs.prepare.outputs.release_homebrew == 'true'
       && needs.prepare.outputs.is_tag == 'true'
       && (needs.check-homebrew.outputs.exists != 'true' || needs.prepare.outputs.force_republish == 'true') }}
@@ -4535,6 +4544,21 @@ jobs:
           token: ${{ steps.tap-token.outputs.token }}
           path: homebrew-tap
           persist-credentials: true
+
+      - name: Verify CLI assets exist on the release
+        if: ${{ needs.prepare.outputs.dry_run != 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          count="$(gh release view "$TAG" --repo xberg-io/xberg --json assets --jq '[.assets[].name | select(startswith("xberg-cli-"))] | length')"
+          echo "xberg-cli-* assets on ${TAG}: ${count}"
+          [ "$count" -gt 0 ] || {
+            echo "::error::release ${TAG} has no xberg-cli-* assets; refusing to update the Homebrew formula"
+            exit 1
+          }
 
       - name: Update formula files
         env:
