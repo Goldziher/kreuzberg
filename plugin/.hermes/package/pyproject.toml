@@ -6,9 +6,14 @@ build-backend = 'hatchling.build'
 name = 'xberg-hermes-plugin'
 version = '1.3.11'
 description = 'Local document extraction: text, tables, metadata, images from 107 formats with optional OCR.'
+license = 'MIT'
 requires-python = '>=3.11'
 dependencies = ['mcp==1.28.1', 'PyYAML==6.0.3']
 keywords = ['document-intelligence', 'extraction', 'ocr', 'pdf', 'tables']
+
+[project.readme]
+content-type = 'text/markdown'
+text = "# xberg Hermes plugin\n\nLocal document extraction: text, tables, metadata, images from 107 formats with optional OCR.\n\nInstall this package in the same Python environment as Hermes Agent:\n\n```sh\npython -m pip install xberg-hermes-plugin\n```\n\nEnable the plugin through Hermes Agent's plugin configuration. Available registrations depend on the plugin's authored Hermes adapter.\n"
 
 [project.entry-points]
 [project.entry-points.'hermes_agent.plugins']

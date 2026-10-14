@@ -53,7 +53,7 @@ jobs:
         uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
         with:
           ai-rulez-version: "5.3.0"
-          source-revision: "1dd46d774f156f3d170ecd1b702598b12d1eaf5b"
+          source-revision: "12aa1103ddfb1baf1a439df5b479b0129bba27c1"
       - name: Validate AI governance inputs
         run: task governance:verify
 
@@ -91,7 +91,7 @@ jobs:
         uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
         with:
           ai-rulez-version: "5.3.0"
-          source-revision: "1dd46d774f156f3d170ecd1b702598b12d1eaf5b"
+          source-revision: "12aa1103ddfb1baf1a439df5b479b0129bba27c1"
       - name: Verify generated plugin bundles are current
         run: |
           ai-rulez verify --plugin
@@ -105,6 +105,15 @@ jobs:
 
       - name: Install uv for Hermes contract tests
         uses: astral-sh/setup-uv@v10.3.0
+      - name: Validate Hermes distribution metadata
+        shell: bash
+        run: |
+          wheel_dir=$(mktemp -d)
+          [ -n "$wheel_dir" ] && [ -d "$wheel_dir" ]
+          uv build --wheel --out-dir "$wheel_dir" plugin/.hermes/package
+          wheels=("$wheel_dir"/*.whl)
+          [ "${#wheels[@]}" -eq 1 ] && [ -f "${wheels[0]}" ]
+          uvx --from twine==7.0.0 --with packaging==26.3 twine check --strict "${wheels[0]}"
       - name: Verify Hermes discovery and tool calls
         run: uv run --no-project --python 3.11 --with mcp==1.28.1 --with PyYAML==6.0.3 python scripts/tests/test_hermes_plugin.py
 

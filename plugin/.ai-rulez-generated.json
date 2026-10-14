@@ -1,6 +1,6 @@
 {
   "schema_version": "v1",
-  "source_hash": "blake3:c11e7de556bb52f5c4c92ca0f6fb07de7f865f6876c27a948de932d4a456d827",
+  "source_hash": "blake3:662aa704cf97ad20f02258c9dcd1c73822213a426e27ec7ebc292d3f599fb7c2",
   "outputs": {
     ".claude-plugin/plugin.json": {
       "content_hash": "blake3:eadef0a46e211d9233fd213d29969e726c4821c73fe74178c0286e60546b18cb",
@@ -307,7 +307,7 @@
       "mode": "0644"
     },
     ".hermes/package/pyproject.toml": {
-      "content_hash": "blake3:5011e52460485c8797f90268269ec55ef7a2929fb1c4ed9cd1ad860966b6dda2",
+      "content_hash": "blake3:5d4f86d907cf1dc954c3908b057b578fb80daf35affd5f8ef4bfa5fa69b0cf91",
       "mode": "0644"
     },
     ".hermes/package/src/xberg_hermes_plugin/__init__.py": {

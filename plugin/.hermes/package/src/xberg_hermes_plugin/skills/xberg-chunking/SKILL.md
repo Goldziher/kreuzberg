@@ -6,7 +6,7 @@ name: xberg-chunking
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
 Content-Hash: blake3:aaaffebaf030b1c214ffc0a869f0a63366360a5a568638f6996b98e75901d121
-Source-Hash: blake3:c11e7de556bb52f5c4c92ca0f6fb07de7f865f6876c27a948de932d4a456d827
+Source-Hash: blake3:662aa704cf97ad20f02258c9dcd1c73822213a426e27ec7ebc292d3f599fb7c2
 Schema-Version: v1
 -->
 
