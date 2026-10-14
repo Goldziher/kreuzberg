@@ -1702,7 +1702,7 @@ pub fn extract_image_from_xobject(
     // collapsed to their high byte above (and an Indexed base always expands
     // to 8-bit RGB), so the stored pixels are 8-bit per component in those
     // cases too. ~keep
-    let effective_bpc = if is_jbig2 || is_ccitt || bits_per_component == 16 {
+    let stored_depth = if is_jbig2 || is_ccitt || bits_per_component == 16 {
         8
     } else {
         stored_bpc
@@ -1712,9 +1712,14 @@ pub fn extract_image_from_xobject(
     // reduce and the JBIG2 decoder's 8-bit output both land here. Cleared
     // centrally so a codec expansion cannot forget the flag — the JBIG2
     // branch did, and reported raw samples at 8 bpc against a declared 1. ~keep
-    if i64::from(effective_bpc) != i64::from(bits_per_component) {
+    if i64::from(stored_depth) != i64::from(bits_per_component) {
         samples_are_raw = false;
     }
+    // A JPEG 2000 decode yields 8-bit samples, and ISO 32000-1 Table 89 says a
+    // /JPXDecode image's /BitsPerComponent is ignored, so the reported depth is
+    // 8 whatever the dictionary declares (GH#1901). This is not a move out of
+    // the raw sample space, so it does not take part in the check above. ~keep
+    let effective_bpc = if is_jpx { 8 } else { stored_depth };
     let mut image = PdfImage::new(width, height, color_space, effective_bpc, data);
     image.set_samples_are_raw(samples_are_raw);
     image.set_decode_folded_in(decode_folded_in);
@@ -5422,5 +5427,34 @@ mod palette_expansion_tests {
             (PixelFormat::RGB, &[255, 0, 0, 0, 0, 255][..])
         );
         assert_eq!(image.bits_per_component(), 8);
+    }
+
+    /// A JPEG 2000 image with no palette reports the 8 bits per component its decoded samples have,
+    /// not a stale `/BitsPerComponent`, which ISO 32000-1 Table 89 says is ignored. (GH#1901)
+    #[test]
+    fn a_jpeg2000_image_reports_8_bits_per_component() {
+        use crate::object::Object;
+        const INDICES_GREY_JP2: &[u8] = include_bytes!("../../tests/fixtures/jpx/gh1885_indices_grey.jp2");
+        let mut dict = std::collections::HashMap::new();
+        dict.insert("Subtype".to_string(), Object::Name("Image".to_string()));
+        dict.insert("Width".to_string(), Object::Integer(120));
+        dict.insert("Height".to_string(), Object::Integer(40));
+        dict.insert("BitsPerComponent".to_string(), Object::Integer(4));
+        dict.insert("ColorSpace".to_string(), Object::Name("DeviceGray".to_string()));
+        dict.insert("Filter".to_string(), Object::Name("JPXDecode".to_string()));
+        let xobject = Object::Stream {
+            dict,
+            data: bytes::Bytes::from_static(INDICES_GREY_JP2),
+        };
+        let image = extract_image_from_xobject(None, &xobject, None, None).expect("a greyscale JPEG 2000 image");
+        let ImageData::Raw { pixels, format } = image.data() else {
+            panic!("raw pixels expected");
+        };
+        assert_eq!((*format, pixels.len()), (PixelFormat::Grayscale, 120 * 40));
+        assert_eq!(image.bits_per_component(), 8);
+        assert!(
+            image.samples_are_raw(),
+            "the decoded samples are the image's own samples, so a colour-key /Mask still applies"
+        );
     }
 }
