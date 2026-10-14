@@ -162,69 +162,11 @@ fn find_box<'a>(bytes: &'a [u8], wanted: &[u8; 4]) -> Option<&'a [u8]> {
     None
 }
 
-/// A palette carried in a JP2 file's own `pclr` box (ISO/IEC 15444-1 I.5.3.4).
-pub struct CodestreamPalette {
-    /// Components per palette entry: 1, 3 or 4.
-    pub columns: u8,
-    /// One byte per component, entry after entry.
-    pub entries: Vec<u8>,
-}
-
-/// The palette of a JP2 file whose header maps its one index component through a `pclr` box, in
-/// the only shape xberg resolves itself: 8-bit unsigned entries, at most 256 of them, 1, 3 or 4
-/// columns in order, and a colour specification that is grey, sRGB or CMYK when it names one.
-///
-/// hayro-jpeg2000 0.4 resolves this palette without clamping, so a lossily coded index near the
-/// last entry can either fail or resolve differently with architecture-specific floating-point
-/// rounding (GH#1903). Reading it here lets the caller clamp the indices and look them up in it,
-/// in the palette's own colour space. Any
-/// other shape returns `None` and decodes as before. ~keep
-pub fn codestream_palette(bytes: &[u8]) -> Option<CodestreamPalette> {
+/// The number of columns in a JP2 file's `pclr` palette box (ISO/IEC 15444-1 I.5.3.4), the
+/// component count the palette resolves each index to, or `None` when the file carries no palette.
+pub fn codestream_palette_columns(bytes: &[u8]) -> Option<u8> {
     let header = find_box(bytes, b"jp2h")?;
-    let pclr = find_box(header, b"pclr")?;
-    let entry_count = usize::from(u16::from_be_bytes(pclr.get(0..2)?.try_into().ok()?));
-    let columns = *pclr.get(2)?;
-    let depths = pclr.get(3..3 + usize::from(columns))?;
-    // `B` stores the depth minus one, with the top bit set for signed values: 7 is unsigned 8-bit. ~keep
-    if !(1..=256).contains(&entry_count) || !matches!(columns, 1 | 3 | 4) || depths.iter().any(|&b| b != 7) {
-        return None;
-    }
-    let start = 3 + usize::from(columns);
-    let entries = pclr.get(start..start + entry_count * usize::from(columns))?.to_vec();
-
-    // The first channels must be palette columns 0.. in order, all read from component 0 (`MTYP` 1
-    // is a palette mapping); any channel after them must map a component directly (`MTYP` 0), as an
-    // opacity component does. ~keep
-    let cmap = find_box(header, b"cmap")?;
-    if cmap.len() % 4 != 0 || cmap.len() < 4 * usize::from(columns) {
-        return None;
-    }
-    let (palette_channels, direct_channels) = cmap.split_at(4 * usize::from(columns));
-    let in_order = palette_channels
-        .chunks_exact(4)
-        .zip(0u8..)
-        .all(|(channel, column)| channel == [0, 0, 1, column]);
-    if !in_order || direct_channels.chunks_exact(4).any(|channel| channel[2] != 0) {
-        return None;
-    }
-
-    // An enumerated colour space other than CMYK (12), sRGB (16) or grey (17), or one whose
-    // component count differs from the palette's, is left to the decoder. ~keep
-    if let Some(colr) = find_box(header, b"colr")
-        && colr.first() == Some(&1)
-    {
-        let enumcs = u32::from_be_bytes(colr.get(3..7)?.try_into().ok()?);
-        let expected = match enumcs {
-            12 => 4,
-            16 => 3,
-            17 => 1,
-            _ => return None,
-        };
-        if expected != columns {
-            return None;
-        }
-    }
-    Some(CodestreamPalette { columns, entries })
+    find_box(header, b"pclr")?.get(2).copied()
 }
 
 /// The component count to treat as declared when the image dictionary named no `/ColorSpace` at all
@@ -316,11 +258,10 @@ pub fn decode_jpx(bytes: &[u8], declared_components: Option<u8>) -> Result<JpxIm
 ///
 /// ISO 32000-1 §7.4.9 says a `/ColorSpace` entry overrides any colour specification in the
 /// JPEG 2000 data, and a `pclr` palette box is one: pdf.js decodes such an image with the
-/// codestream palette switched off for the same reason. It is also the only way these images
-/// decode at all. A lossily coded index plane rings around every edge, so samples land a little
-/// outside `0..=255`; hayro-jpeg2000 0.4 looks each one up unclamped, which can fail or produce
-/// architecture-dependent output. Rounding and clamping to `highest_index`, the last entry the
-/// dictionary's palette holds, maps that ringing to the nearest real index deterministically. ~keep
+/// codestream palette switched off for the same reason. A lossily coded index plane rings around
+/// every edge, so samples land a little outside the palette. Rounding and clamping to
+/// `highest_index`, the last entry the dictionary's palette holds, maps that ringing to the nearest
+/// real index. ~keep
 ///
 /// The index plane is the first component. hayro-jpeg2000 reports the colour channels it found,
 /// and with palette resolution off it reports an image carrying a `pclr` box as one grey channel
@@ -1011,18 +952,14 @@ mod tests {
         );
     }
 
-    /// A JP2 file mapping its index component through a `pclr` box yields that palette, an
-    /// opacity channel after the palette columns included; a file with no `pclr` and a bare
-    /// codestream yield none. (GH#1903)
+    /// The `pclr` box's column count is read from the JP2 header; a file with no palette box and a
+    /// bare codestream have none.
     #[test]
-    fn codestream_palette_reads_the_pclr_box() {
-        let palette = super::codestream_palette(PALETTE_CMYK_JP2).expect("the fixture carries a pclr box");
-        assert_eq!(palette.columns, 4);
-        assert_eq!(palette.entries.len(), 256 * 4);
-        let with_alpha = super::codestream_palette(PALETTE_ALPHA_JP2).expect("an opacity channel maps directly");
-        assert_eq!(with_alpha.entries, palette.entries);
-        assert!(super::codestream_palette(INDICES_GREY_JP2).is_none());
-        assert!(super::codestream_palette(RGBA_J2K).is_none());
+    fn codestream_palette_columns_reads_the_pclr_box() {
+        assert_eq!(super::codestream_palette_columns(PALETTE_CMYK_JP2), Some(4));
+        assert_eq!(super::codestream_palette_columns(PALETTE_ALPHA_JP2), Some(4));
+        assert_eq!(super::codestream_palette_columns(INDICES_GREY_JP2), None);
+        assert_eq!(super::codestream_palette_columns(RGBA_J2K), None);
     }
 
     fn jp2_box(kind: &[u8; 4], contents: &[u8]) -> Vec<u8> {
@@ -1033,125 +970,6 @@ mod tests {
         out.extend_from_slice(kind);
         out.extend_from_slice(contents);
         out
-    }
-
-    /// A JP2 header holding the given `pclr`, `cmap` and optional `colr` contents; the palette
-    /// reader needs nothing past the header.
-    fn palette_header(pclr: &[u8], cmap: &[u8], colr: Option<&[u8]>) -> Vec<u8> {
-        let mut header = Vec::new();
-        if let Some(colr) = colr {
-            header.extend(jp2_box(b"colr", colr));
-        }
-        header.extend(jp2_box(b"pclr", pclr));
-        header.extend(jp2_box(b"cmap", cmap));
-        let mut file = jp2_box(b"jP  ", &[0x0D, 0x0A, 0x87, 0x0A]);
-        file.extend(jp2_box(b"jp2h", &header));
-        file
-    }
-
-    /// `pclr` contents: `entries` palette entries of `depths.len()` columns, each entry's bytes
-    /// counting up from 0.
-    fn pclr(entries: u16, depths: &[u8]) -> Vec<u8> {
-        let mut out = entries.to_be_bytes().to_vec();
-        out.push(u8::try_from(depths.len()).expect("few columns"));
-        out.extend_from_slice(depths);
-        out.extend((0..usize::from(entries) * depths.len()).map(|i| i as u8));
-        out
-    }
-
-    const RGB_CMAP: [u8; 12] = [0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 2];
-    const SRGB_COLR: [u8; 7] = [1, 0, 0, 0, 0, 0, 16];
-
-    fn read(pclr: &[u8], cmap: &[u8], colr: Option<&[u8]>) -> Option<(u8, Vec<u8>)> {
-        super::codestream_palette(&palette_header(pclr, cmap, colr)).map(|p| (p.columns, p.entries))
-    }
-
-    /// Each supported and rejected palette entry shape. (GH#1903) ~keep
-    #[test]
-    fn codestream_palette_accepts_only_the_shape_it_can_resolve() {
-        let good = read(&pclr(2, &[7, 7, 7]), &RGB_CMAP, Some(&SRGB_COLR));
-        assert_eq!(
-            good,
-            Some((3, vec![0, 1, 2, 3, 4, 5])),
-            "control: an 8-bit sRGB palette"
-        );
-
-        assert_eq!(read(&pclr(2, &[15, 15, 15]), &RGB_CMAP, None), None, "16-bit entries");
-        assert_eq!(read(&pclr(2, &[0x87, 7, 7]), &RGB_CMAP, None), None, "signed entries");
-        assert_eq!(read(&pclr(2, &[7, 7]), &RGB_CMAP[..8], None), None, "two columns");
-        assert_eq!(read(&pclr(0, &[7, 7, 7]), &RGB_CMAP, None), None, "no entries");
-        assert_eq!(
-            read(&pclr(257, &[7, 7, 7]), &RGB_CMAP, None),
-            None,
-            "more entries than an index byte reaches"
-        );
-        assert!(
-            read(&pclr(256, &[7, 7, 7]), &RGB_CMAP, None).is_some(),
-            "control: 256 entries"
-        );
-        let short = pclr(2, &[7, 7, 7]);
-        assert_eq!(
-            read(&short[..short.len() - 1], &RGB_CMAP, None),
-            None,
-            "truncated entries"
-        );
-    }
-
-    #[test]
-    fn codestream_palette_requires_ordered_channel_maps() {
-        let swapped = [0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 2];
-        assert_eq!(read(&pclr(2, &[7, 7, 7]), &swapped, None), None, "columns out of order");
-        let other_component = [0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 2];
-        assert_eq!(
-            read(&pclr(2, &[7, 7, 7]), &other_component, None),
-            None,
-            "palette read from component 1"
-        );
-        let mut with_opacity = RGB_CMAP.to_vec();
-        with_opacity.extend_from_slice(&[0, 1, 0, 0]);
-        assert!(
-            read(&pclr(2, &[7, 7, 7]), &with_opacity, None).is_some(),
-            "control: a direct opacity channel"
-        );
-        let mut fourth_palette_channel = RGB_CMAP.to_vec();
-        fourth_palette_channel.extend_from_slice(&[0, 0, 1, 2]);
-        assert_eq!(
-            read(&pclr(2, &[7, 7, 7]), &fourth_palette_channel, None),
-            None,
-            "a fourth palette channel"
-        );
-        assert_eq!(read(&pclr(2, &[7, 7, 7]), &RGB_CMAP[..11], None), None, "a ragged cmap");
-    }
-
-    #[test]
-    fn codestream_palette_accepts_only_supported_colour_spaces() {
-        assert_eq!(
-            read(&pclr(2, &[7, 7, 7]), &RGB_CMAP, Some(&[1, 0, 0, 0, 0, 0, 18])),
-            None,
-            "sYCC"
-        );
-        assert_eq!(
-            read(&pclr(2, &[7, 7, 7]), &RGB_CMAP, Some(&[1, 0, 0, 0, 0, 0, 17])),
-            None,
-            "grey, three columns"
-        );
-        assert!(
-            read(&pclr(2, &[7]), &RGB_CMAP[..4], Some(&[1, 0, 0, 0, 0, 0, 17])).is_some(),
-            "control: grey"
-        );
-        assert!(
-            read(
-                &pclr(2, &[7, 7, 7, 7]),
-                &[RGB_CMAP.as_slice(), &[0, 0, 1, 3]].concat(),
-                Some(&[1, 0, 0, 0, 0, 0, 12])
-            )
-            .is_some(),
-            "control: CMYK"
-        );
-        assert!(
-            read(&pclr(2, &[7, 7, 7]), &RGB_CMAP, Some(&[2, 0, 0])).is_some(),
-            "an ICC colr is read by count"
-        );
     }
 
     /// A box with `LBox` 0 runs to the end of the file; one whose `XLBox` runs past it yields what

@@ -1461,7 +1461,6 @@ pub fn extract_image_from_xobject(
             data: jpx_data,
             width: jpx_width,
             height: jpx_height,
-            palette: codestream_palette,
             opacity,
         } = decode_jpx_image(
             xobject,
@@ -1479,27 +1478,6 @@ pub fn extract_image_from_xobject(
         width = jpx_width;
         height = jpx_height;
         jpx_opacity = opacity;
-        // An image with no `/Indexed` whose codestream carries its own palette decodes to indices,
-        // looked up here into the palette's own device space rather than RGB: a CMYK palette
-        // stays CMYK, so the image keeps its declared space and its process plates. (GH#1903) ~keep
-        let jpx_data = match (codestream_palette, jpx_data) {
-            (Some(palette), ImageData::Raw { pixels: indices, .. }) => {
-                samples_are_raw = false;
-                stored_bpc = 8;
-                ImageData::Raw {
-                    pixels: expand_indexed_to_base_samples(
-                        &indices,
-                        &palette.palette,
-                        palette.components,
-                        width,
-                        height,
-                        8,
-                    )?,
-                    format: palette.base_fmt,
-                }
-            }
-            (_, data) => data,
-        };
         // An `/Indexed` image decodes to one index byte per pixel, looked up in the
         // dictionary's palette exactly as any other codec's index stream is below. (GH#1885) ~keep
         if let Some(ir) = indexed_resolution.as_ref()
@@ -3142,8 +3120,7 @@ fn pack_image_mask_rows(pixels: &[u8], width: u32, height: u32) -> Result<Vec<u8
 /// `JpxDecoder` is a pass-through, so `decode_stream_*` yields the raw JPEG 2000
 /// codestream, which `hayro-jpeg2000` (`decoders::jpx::decode_jpx`) decodes to
 /// 8-bit component-interleaved samples. An `/Indexed` image, given its resolved palette in
-/// `indexed`, decodes instead to one palette index per pixel. So does an image whose codestream
-/// carries its own palette, and that palette is returned for the caller to look the indices up in.
+/// `indexed`, decodes instead to one palette index per pixel.
 ///
 /// Returns the decoded pixels alongside the width and height the codestream itself declares,
 /// which the caller must use in place of the dictionary's `declared_size` -- see the size check
@@ -3164,18 +3141,8 @@ fn decode_jpx_image(
     };
 
     // ISO 32000-1 §7.4.9 puts the `/Indexed` palette in charge, so any `pclr` palette in the
-    // codestream is not applied; the caller looks the indices up. (GH#1885) An image with no
-    // `/Indexed` whose codestream carries its own palette decodes to indices the same way, and
-    // that palette is returned for the lookup. (GH#1903) ~keep
-    let codestream_palette = if indexed.is_some() {
-        None
-    } else {
-        codestream_palette_resolution(&codestream, color_space, color_space_is_placeholder)?
-    };
-    if let Some(highest_index) = indexed
-        .or(codestream_palette.as_ref())
-        .map(IndexedResolution::highest_index)
-    {
+    // codestream is not applied; the caller looks the indices up. (GH#1885) ~keep
+    if let Some(highest_index) = indexed.map(IndexedResolution::highest_index) {
         let indices = crate::decoders::jpx::decode_jpx_indices(&codestream, highest_index)?;
         warn_on_jpx_size_mismatch(declared_size, (indices.width, indices.height));
         return Ok(JpxDecoded {
@@ -3185,9 +3152,19 @@ fn decode_jpx_image(
             },
             width: indices.width,
             height: indices.height,
-            palette: codestream_palette,
             opacity: indices.opacity,
         });
+    }
+    // An explicit `/ColorSpace` is authoritative (ISO 32000-1 §7.4.9), so a codestream palette that
+    // resolves to a different component count is rejected rather than reinterpreted. ~keep
+    if !color_space_is_placeholder
+        && let Some(columns) = crate::decoders::jpx::codestream_palette_columns(&codestream)
+        && usize::from(columns) != color_space.components()
+    {
+        return Err(Error::UnsupportedFilter(format!(
+            "JPXDecode: codestream palette has {columns} components, but /ColorSpace has {}",
+            color_space.components()
+        )));
     }
     // ISO 32000-1 §7.4.9 makes the XObject's `/ColorSpace` authoritative over the codestream, and
     // it is load-bearing rather than informational: for a BARE codestream hayro-jpeg2000 infers
@@ -3234,7 +3211,6 @@ fn decode_jpx_image(
         },
         width: img.width,
         height: img.height,
-        palette: None,
         opacity: img.opacity,
     })
 }
@@ -3260,55 +3236,13 @@ fn warn_on_jpx_size_mismatch(declared: (u32, u32), codestream: (u32, u32)) {
     });
 }
 
-/// A decoded `/JPXDecode` image: its samples, the codestream's own size, the codestream's
-/// palette when the samples are indices into it, and its opacity channel when it carries one.
+/// A decoded `/JPXDecode` image: its samples, the codestream's own size, and its opacity channel
+/// when it carries one.
 struct JpxDecoded {
     data: ImageData,
     width: u32,
     height: u32,
-    palette: Option<IndexedResolution>,
     opacity: Option<Vec<u8>>,
-}
-
-/// The codestream's own `pclr` palette as an [`IndexedResolution`], when the image dictionary
-/// leaves room for it: it named no `/ColorSpace`, or a device space with as many components as a
-/// palette entry. Any other declared space is authoritative (ISO 32000-1 §7.4.9): a component
-/// count mismatch is rejected, while an equal-width non-device space decodes as before. ~keep
-fn codestream_palette_resolution(
-    codestream: &[u8],
-    color_space: &ColorSpace,
-    color_space_is_placeholder: bool,
-) -> Result<Option<IndexedResolution>> {
-    let Some(palette) = crate::decoders::jpx::codestream_palette(codestream) else {
-        return Ok(None);
-    };
-    let base_fmt = match palette.columns {
-        1 => PixelFormat::Grayscale,
-        3 => PixelFormat::RGB,
-        4 => PixelFormat::CMYK,
-        _ => return Ok(None),
-    };
-    let component_count_fits = color_space.components() == usize::from(palette.columns);
-    if !color_space_is_placeholder && !component_count_fits {
-        return Err(Error::UnsupportedFilter(format!(
-            "JPXDecode: codestream palette has {} components, but /ColorSpace has {}",
-            palette.columns,
-            color_space.components()
-        )));
-    }
-    let declared_is_device = matches!(
-        color_space,
-        ColorSpace::DeviceGray | ColorSpace::DeviceRGB | ColorSpace::DeviceCMYK
-    );
-    if !color_space_is_placeholder && !declared_is_device {
-        return Ok(None);
-    }
-    Ok(Some(IndexedResolution {
-        base_fmt,
-        components: usize::from(palette.columns),
-        palette: palette.entries,
-        base_profile: None,
-    }))
 }
 
 /// Expand an inline image's abbreviated dictionary (ISO 32000-1 §8.9.7 Table 91)
@@ -5353,13 +5287,13 @@ mod palette_expansion_tests {
     #[test]
     fn a_codestream_palette_without_indexed_keeps_the_palette_device_space() {
         use crate::object::Object;
-        const PALETTE_CMYK_JP2: &[u8] = include_bytes!("../../tests/fixtures/jpx/gh1885_palette_cmyk.jp2");
-        let palette = crate::decoders::jpx::codestream_palette(PALETTE_CMYK_JP2).expect("the fixture's pclr box");
+        // The fixture's `pclr` entry `i` is CMYK `(0, 0, 0, 255 - i)`.
+        let palette = (0..=255u8).rev().flat_map(|k| [0, 0, 0, k]).collect();
         let indexed = Object::Array(vec![
             Object::Name("Indexed".to_string()),
             Object::Name("DeviceCMYK".to_string()),
             Object::Integer(255),
-            Object::String(palette.entries.clone()),
+            Object::String(palette),
         ]);
         let oracle = decode_indexed_image_in_base_space(None, &jpx_xobject(Some(indexed)), None, None)
             .expect("the /Indexed image")
