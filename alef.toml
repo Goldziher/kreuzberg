@@ -5673,5 +5673,5 @@ clear_fn = "clear_tokenizer_backends"
 [[workspace.poly.hooks-sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "ee42eef34f2922e4e75b75f25b1215b9492bb1aa"
+revision = "v5.3.0"
 hooks = ["ai-rulez-validate", "ai-rulez-plugin-verify"]

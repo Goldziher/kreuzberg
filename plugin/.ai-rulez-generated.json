@@ -1,6 +1,6 @@
 {
   "schema_version": "v1",
-  "source_hash": "blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b",
+  "source_hash": "blake3:e3f971402b546016b7336a1a078432a17b4e15efad115f1a5ead8136fe2182c6",
   "outputs": {
     ".claude-plugin/plugin.json": {
       "content_hash": "blake3:aa7dbcde655c45ccf1701acdd562cc1aaf516a33c7cb8292660d12c2405fb46d",
@@ -915,11 +915,11 @@
       "mode": "0644"
     },
     ".opencode/ai-rulez-bundle.json": {
-      "content_hash": "blake3:9128087fcf16225256fc79505f114cb06745a4a309bc355e13383103fc412ad1",
+      "content_hash": "blake3:8680b5f3eaeaf3e693bdf6c651f4748fa5afaf07618447a570445c2feda49d37",
       "mode": "0644"
     },
     ".opencode/ai-rulez-content.js": {
-      "content_hash": "blake3:011ec20caa671eb4bd4e886b09e15f720a786de4bf747419efd0690889fc5549",
+      "content_hash": "blake3:822c510deb007e4f72877ad42f29918d0499f210ae363e82d465a0f0331ab294",
       "mode": "0644"
     },
     ".opencode/commands/xberg-extract.md": {

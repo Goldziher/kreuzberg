@@ -185,7 +185,7 @@ MIT. The skill content uses Elastic-2.0 references to the upstream [xberg](https
 ## Generated runtime bundles
 
 `plugin/.ai-rulez/config.toml` loads `config.plugins.toml` through the `plugins` layer;
-skills, commands and runtime adapters are authored alongside it. AI-Rulez 5.2.1 generates
+skills, commands and runtime adapters are authored alongside it. AI-Rulez 5.3.0 generates
 all eleven supported runtimes: Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory,
 Hermes, Pi, Agent Plugins and Copilot. Codex ships both manifest layouts; repository-root
 Claude and Codex marketplace indexes point to the `plugin` bundle. Cursor also has a marketplace index.
