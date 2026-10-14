@@ -169,8 +169,6 @@ fn rewrite_spreadsheet_zip(
     limits: &SecurityLimits,
     mut transform: impl FnMut(&str, &[u8]) -> Result<(Vec<u8>, bool)>,
 ) -> Result<Option<Vec<u8>>> {
-    use std::io::Write as _;
-
     let archive = zip::ZipArchive::new(Cursor::new(data))
         .map_err(|error| XbergError::parsing(format!("Invalid spreadsheet ZIP: {error}")))?;
     let mut entry_metadata = Vec::with_capacity(archive.len());
@@ -225,7 +223,14 @@ fn rewrite_spreadsheet_zip(
         return Ok(None);
     }
 
-    let mut rewritten = Vec::with_capacity(data.len());
+    write_spreadsheet_zip(entries, data.len()).map(Some)
+}
+
+#[cfg(any(feature = "excel", feature = "excel-wasm"))]
+fn write_spreadsheet_zip(entries: Vec<(String, Option<Vec<u8>>)>, capacity: usize) -> Result<Vec<u8>> {
+    use std::io::Write as _;
+
+    let mut rewritten = Vec::with_capacity(capacity);
     {
         let mut writer = zip::ZipWriter::new(Cursor::new(&mut rewritten));
         for (name, contents) in entries {
@@ -250,7 +255,7 @@ fn rewrite_spreadsheet_zip(
             .finish()
             .map_err(|error| XbergError::parsing(format!("Failed to finish spreadsheet ZIP: {error}")))?;
     }
-    Ok(Some(rewritten))
+    Ok(rewritten)
 }
 
 #[cfg(any(feature = "excel", feature = "excel-wasm"))]

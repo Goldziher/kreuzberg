@@ -1362,8 +1362,10 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
                         upright_data,
                         &original_config,
                         &config_clone,
-                        whole_page_raster,
-                        false,
+                        crate::extractors::image::SparseRetryPolicy {
+                            whole_page_raster,
+                            allow_standard_retry: false,
+                        },
                         cancel_token.as_ref(),
                     )
                     .await;
@@ -1507,8 +1509,10 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
                     upright_data,
                     &ocr_config_resolved,
                     config_for_page.as_ref(),
-                    whole_page_raster,
-                    false,
+                    crate::extractors::image::SparseRetryPolicy {
+                        whole_page_raster,
+                        allow_standard_retry: false,
+                    },
                     config.cancel_token.as_ref(),
                 )
                 .await;
@@ -2860,8 +2864,10 @@ pub(super) async fn extract_with_ocr_for_page(
                         upright_data,
                         &original_config,
                         &config_clone,
-                        whole_page_raster,
-                        false,
+                        crate::extractors::image::SparseRetryPolicy {
+                            whole_page_raster,
+                            allow_standard_retry: false,
+                        },
                         cancel_token.as_ref(),
                     )
                     .await;
@@ -2987,8 +2993,10 @@ pub(super) async fn extract_with_ocr_for_page(
                             upright_data,
                             &ocr_config_owned,
                             config_for_page.as_ref(),
-                            whole_page_raster,
-                            false,
+                            crate::extractors::image::SparseRetryPolicy {
+                                whole_page_raster,
+                                allow_standard_retry: false,
+                            },
                             config.cancel_token.as_ref(),
                         )
                         .await

@@ -75,6 +75,15 @@ pub enum ExtractInputSource {
     Stdin,
 }
 
+/// Where a single-document extraction writes its extracted images and its output document.
+#[derive(Debug, Clone, Default)]
+pub struct ExtractDestinations {
+    /// Directory the extracted images are written to; the current directory when `None`.
+    pub output_dir: Option<PathBuf>,
+    /// File the extracted document is written to instead of stdout.
+    pub output: Option<PathBuf>,
+}
+
 /// Execute single document extraction command.
 ///
 /// `process_start` is the [`Instant`] captured as early as feasible in `main()`. It is used only
@@ -90,10 +99,10 @@ pub fn extract_command(
     config: ExtractionConfig,
     mime_type: Option<String>,
     format: WireFormat,
-    output_dir: Option<PathBuf>,
-    output: Option<PathBuf>,
+    destinations: ExtractDestinations,
     process_start: Option<Instant>,
 ) -> Result<()> {
+    let ExtractDestinations { output_dir, output } = destinations;
     let emit_stage_timing = stage_timing_requested();
 
     refuse_binary_output_to_terminal(&config, &format, output.is_some())?;
@@ -111,10 +120,7 @@ pub fn extract_command(
 
     match format {
         WireFormat::Text => {
-            if let Some(images) = &result.images {
-                let dir = output_dir.as_deref().unwrap_or(Path::new("."));
-                write_extracted_images(images, dir)?;
-            }
+            write_result_images(&result, output_dir.as_deref())?;
             let written = if output.is_some() {
                 Ok(())
             } else if let Some(binary_format) = requested_binary_format(&config) {
@@ -146,10 +152,7 @@ pub fn extract_command(
             );
         }
         WireFormat::Toon => {
-            if let Some(images) = &result.images {
-                let dir = output_dir.as_deref().unwrap_or(Path::new("."));
-                write_extracted_images(images, dir)?;
-            }
+            write_result_images(&result, output_dir.as_deref())?;
             // Serialize the same envelope the JSON path emits. Previously this serialized the
             // bare `ExtractedDocument`, so TOON consumers lost the timing/peak-memory fields
             // that JSON consumers get.
@@ -167,6 +170,13 @@ pub fn extract_command(
         }
     }
 
+    Ok(())
+}
+
+fn write_result_images(result: &ExtractedDocument, output_dir: Option<&Path>) -> Result<()> {
+    if let Some(images) = &result.images {
+        write_extracted_images(images, output_dir.unwrap_or(Path::new(".")))?;
+    }
     Ok(())
 }
 

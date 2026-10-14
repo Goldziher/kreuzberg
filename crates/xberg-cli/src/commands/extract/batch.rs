@@ -17,10 +17,6 @@ use super::manifest::build_batch_inputs;
 use super::runtime::block_on_extract_batch;
 
 /// Execute batch extraction command with optional per-file configuration overrides
-#[expect(
-    clippy::print_stdout,
-    reason = "batch extraction results are the command's stdout result output"
-)]
 pub fn batch_command(
     uris: Vec<String>,
     file_configs_map: Option<std::collections::HashMap<String, serde_json::Value>>,
@@ -54,63 +50,101 @@ pub fn batch_command(
             write_batch_errors(&envelope.errors, &mut diagnostics).context("Failed to write batch errors")?;
             fail_batch_errors(&envelope.errors)?;
         }
-        WireFormat::Text => {
-            let inputs = build_batch_inputs(&uris, file_configs_map.as_ref())?;
-            refuse_binary_text_output(&config, &inputs, content_output_dir.is_some())?;
-            let batch_result = run_batch_sync(inputs, &config)?;
-            if let Some(dir) = &content_output_dir {
-                write_batch_documents(&uris, &batch_result.results, &config, dir)?;
-            }
-            let dir = output_dir.as_deref().unwrap_or(Path::new("."));
-            let mut diagnostics = std::io::stderr().lock();
-            for (i, result) in batch_result.results.iter().enumerate() {
-                if let Some(images) = &result.images {
-                    write_extracted_images(images, dir)?;
-                }
-                if content_output_dir.is_none() {
-                    println!("{}", style::header(&format!("=== Document {} ===", i + 1)));
-                    println!("{} {}", style::label("MIME Type:"), style::success(&result.mime_type));
-                    println!("{}\n{}", style::label("Content:"), result.content);
-                    println!();
-                }
-                // Warnings go to `stderr` for the same reason as in `extract_command`: the
-                // batch text stream is content, not diagnostics.
-                write_processing_warnings(&result.processing_warnings, &mut diagnostics)
-                    .context("Failed to write processing warnings")?;
-            }
-            write_batch_errors(&batch_result.errors, &mut diagnostics).context("Failed to write batch errors")?;
-            fail_batch_errors(&batch_result.errors)?;
-        }
-        WireFormat::Toon => {
-            let total_t0 = Instant::now();
-            let inputs = build_batch_inputs(&uris, file_configs_map.as_ref())?;
-            let (output, per_file_ms) = run_json_batch_sync(inputs, &config)?;
-            let total_ms = total_t0.elapsed().as_secs_f64() * 1000.0;
-            if let Some(dir) = &content_output_dir {
-                write_batch_documents(&uris, &output.results, &config, dir)?;
-            }
-            let dir = output_dir.as_deref().unwrap_or(Path::new("."));
-            for result in &output.results {
-                if let Some(images) = &result.images {
-                    write_extracted_images(images, dir)?;
-                }
-            }
-            let envelope = BatchEnvelope {
-                results: output.results,
-                total_ms,
-                per_file_ms,
-                errors: output.errors,
-            };
-            println!(
-                "{}",
-                serde_toon::to_string(&envelope).context("Failed to serialize batch extraction results to TOON")?
-            );
-            let mut diagnostics = std::io::stderr().lock();
-            write_batch_errors(&envelope.errors, &mut diagnostics).context("Failed to write batch errors")?;
-            fail_batch_errors(&envelope.errors)?;
-        }
+        WireFormat::Text => batch_text_output(
+            &uris,
+            file_configs_map.as_ref(),
+            &config,
+            output_dir.as_deref(),
+            content_output_dir.as_deref(),
+        )?,
+        WireFormat::Toon => batch_toon_output(
+            &uris,
+            file_configs_map.as_ref(),
+            &config,
+            output_dir.as_deref(),
+            content_output_dir.as_deref(),
+        )?,
     }
 
+    Ok(())
+}
+
+#[expect(
+    clippy::print_stdout,
+    reason = "batch extraction results are the command's stdout result output"
+)]
+fn batch_text_output(
+    uris: &[String],
+    file_configs_map: Option<&std::collections::HashMap<String, serde_json::Value>>,
+    config: &ExtractionConfig,
+    output_dir: Option<&Path>,
+    content_output_dir: Option<&Path>,
+) -> Result<()> {
+    let inputs = build_batch_inputs(uris, file_configs_map)?;
+    refuse_binary_text_output(config, &inputs, content_output_dir.is_some())?;
+    let batch_result = run_batch_sync(inputs, config)?;
+    if let Some(dir) = content_output_dir {
+        write_batch_documents(uris, &batch_result.results, config, dir)?;
+    }
+    let dir = output_dir.unwrap_or(Path::new("."));
+    let mut diagnostics = std::io::stderr().lock();
+    for (i, result) in batch_result.results.iter().enumerate() {
+        if let Some(images) = &result.images {
+            write_extracted_images(images, dir)?;
+        }
+        if content_output_dir.is_none() {
+            println!("{}", style::header(&format!("=== Document {} ===", i + 1)));
+            println!("{} {}", style::label("MIME Type:"), style::success(&result.mime_type));
+            println!("{}\n{}", style::label("Content:"), result.content);
+            println!();
+        }
+        // Warnings go to `stderr` for the same reason as in `extract_command`: the
+        // batch text stream is content, not diagnostics.
+        write_processing_warnings(&result.processing_warnings, &mut diagnostics)
+            .context("Failed to write processing warnings")?;
+    }
+    write_batch_errors(&batch_result.errors, &mut diagnostics).context("Failed to write batch errors")?;
+    fail_batch_errors(&batch_result.errors)?;
+    Ok(())
+}
+
+#[expect(
+    clippy::print_stdout,
+    reason = "batch extraction results are the command's stdout result output"
+)]
+fn batch_toon_output(
+    uris: &[String],
+    file_configs_map: Option<&std::collections::HashMap<String, serde_json::Value>>,
+    config: &ExtractionConfig,
+    output_dir: Option<&Path>,
+    content_output_dir: Option<&Path>,
+) -> Result<()> {
+    let total_t0 = Instant::now();
+    let inputs = build_batch_inputs(uris, file_configs_map)?;
+    let (output, per_file_ms) = run_json_batch_sync(inputs, config)?;
+    let total_ms = total_t0.elapsed().as_secs_f64() * 1000.0;
+    if let Some(dir) = content_output_dir {
+        write_batch_documents(uris, &output.results, config, dir)?;
+    }
+    let dir = output_dir.unwrap_or(Path::new("."));
+    for result in &output.results {
+        if let Some(images) = &result.images {
+            write_extracted_images(images, dir)?;
+        }
+    }
+    let envelope = BatchEnvelope {
+        results: output.results,
+        total_ms,
+        per_file_ms,
+        errors: output.errors,
+    };
+    println!(
+        "{}",
+        serde_toon::to_string(&envelope).context("Failed to serialize batch extraction results to TOON")?
+    );
+    let mut diagnostics = std::io::stderr().lock();
+    write_batch_errors(&envelope.errors, &mut diagnostics).context("Failed to write batch errors")?;
+    fail_batch_errors(&envelope.errors)?;
     Ok(())
 }
 

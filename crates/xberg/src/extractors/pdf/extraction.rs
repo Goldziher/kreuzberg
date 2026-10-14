@@ -50,6 +50,15 @@ type TableExtractionResult = (
     Vec<crate::types::ProcessingWarning>,
 );
 
+#[cfg(all(feature = "ocr", feature = "tokio-runtime"))]
+fn anchor_images_as_ocr_text(document: &mut crate::types::internal::InternalDocument) {
+    for element in &mut document.elements {
+        if let crate::types::internal::ElementKind::Image { image_index } = element.kind {
+            *element = crate::types::internal::InternalElement::image_ocr_text_anchor(image_index, element.page);
+        }
+    }
+}
+
 fn attach_native_table_grids(
     document: &mut crate::types::internal::InternalDocument,
     tables: &[Table],
@@ -840,14 +849,7 @@ pub(crate) fn extract_all_from_native_document(
                 attach_native_table_grids(&mut structured_doc, &tables, &native_table_grids)?;
                 #[cfg(all(feature = "ocr", feature = "tokio-runtime"))]
                 if image_anchor == ImageAnchor::OcrTextOnly {
-                    for element in &mut structured_doc.elements {
-                        if let crate::types::internal::ElementKind::Image { image_index } = element.kind {
-                            *element = crate::types::internal::InternalElement::image_ocr_text_anchor(
-                                image_index,
-                                element.page,
-                            );
-                        }
-                    }
+                    anchor_images_as_ocr_text(&mut structured_doc);
                 }
                 tracing::debug!(
                     elements = structured_doc.elements.len(),

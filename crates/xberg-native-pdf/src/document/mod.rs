@@ -1778,6 +1778,7 @@ mod open_signals_tests;
 
 mod annotations;
 mod catalog;
+mod classify;
 mod columns;
 mod extract_api;
 mod fonts;

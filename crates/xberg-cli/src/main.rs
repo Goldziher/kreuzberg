@@ -754,7 +754,84 @@ impl From<ContentOutputFormatArg> for ContentOutputFormat {
 
 #[expect(
     clippy::print_stdout,
-    reason = "detect/formats/version/api-schema results are the CLI's stdout output contract"
+    reason = "the detected MIME type is the command's stdout result output"
+)]
+fn detect_command(path: PathBuf, format: WireFormat) -> Result<()> {
+    validate_file_exists(&path)?;
+
+    let path_str = path.to_string_lossy().to_string();
+    let mime_type = detect_mime_type(path_str.clone(), true).with_context(|| {
+        format!(
+            "Failed to detect MIME type for file '{}'. Ensure the file is readable.",
+            path.display()
+        )
+    })?;
+
+    match format {
+        WireFormat::Text => {
+            println!("{}", style::success(&mime_type));
+        }
+        WireFormat::Json => {
+            let output = json!({
+                "path": path_str,
+                "mime_type": mime_type,
+            });
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .context("Failed to serialize MIME type detection result to JSON")?
+            );
+        }
+        WireFormat::Toon => {
+            let output = json!({
+                "path": path_str,
+                "mime_type": mime_type,
+            });
+            println!(
+                "{}",
+                serde_toon::to_string(&output).context("Failed to serialize MIME type detection result to TOON")?
+            );
+        }
+    }
+    Ok(())
+}
+
+#[expect(
+    clippy::print_stdout,
+    reason = "version information is the command's stdout result output"
+)]
+fn version_command(format: WireFormat) -> Result<()> {
+    let version = env!("CARGO_PKG_VERSION");
+    let name = env!("CARGO_PKG_NAME");
+
+    match format {
+        WireFormat::Text => {
+            println!("{} {}", style::label(name), style::success(version));
+        }
+        WireFormat::Json => {
+            let output = version_json();
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output).context("Failed to serialize version information to JSON")?
+            );
+        }
+        WireFormat::Toon => {
+            let output = json!({
+                "name": name,
+                "version": version,
+            });
+            println!(
+                "{}",
+                serde_toon::to_string(&output).context("Failed to serialize version information to TOON")?
+            );
+        }
+    }
+    Ok(())
+}
+
+#[expect(
+    clippy::print_stdout,
+    reason = "formats/api-schema results are the CLI's stdout output contract"
 )]
 fn main() -> Result<()> {
     // Captured as early as feasible for the optional per-stage cold-start timing breakdown (see
@@ -819,7 +896,14 @@ fn main() -> Result<()> {
             apply_json_overrides(&mut config, config_json, config_json_base64)?;
             overrides.apply(&mut config);
 
-            extract_command(input, config, mime_type, format, output_dir, output, process_start)?;
+            extract_command(
+                input,
+                config,
+                mime_type,
+                format,
+                commands::extract::ExtractDestinations { output_dir, output },
+                process_start,
+            )?;
         }
 
         Commands::Batch {
@@ -869,45 +953,7 @@ fn main() -> Result<()> {
             batch_command(input_uris, file_configs_map, config, format, output_dir, output)?;
         }
 
-        Commands::Detect { path, format } => {
-            validate_file_exists(&path)?;
-
-            let path_str = path.to_string_lossy().to_string();
-            let mime_type = detect_mime_type(path_str.clone(), true).with_context(|| {
-                format!(
-                    "Failed to detect MIME type for file '{}'. Ensure the file is readable.",
-                    path.display()
-                )
-            })?;
-
-            match format {
-                WireFormat::Text => {
-                    println!("{}", style::success(&mime_type));
-                }
-                WireFormat::Json => {
-                    let output = json!({
-                        "path": path_str,
-                        "mime_type": mime_type,
-                    });
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&output)
-                            .context("Failed to serialize MIME type detection result to JSON")?
-                    );
-                }
-                WireFormat::Toon => {
-                    let output = json!({
-                        "path": path_str,
-                        "mime_type": mime_type,
-                    });
-                    println!(
-                        "{}",
-                        serde_toon::to_string(&output)
-                            .context("Failed to serialize MIME type detection result to TOON")?
-                    );
-                }
-            }
-        }
+        Commands::Detect { path, format } => detect_command(path, format)?,
 
         Commands::Formats { format } => {
             // Resolved against the extractor registry rather than the core's static catalogue,
@@ -936,34 +982,7 @@ fn main() -> Result<()> {
             }
         }
 
-        Commands::Version { format } => {
-            let version = env!("CARGO_PKG_VERSION");
-            let name = env!("CARGO_PKG_NAME");
-
-            match format {
-                WireFormat::Text => {
-                    println!("{} {}", style::label(name), style::success(version));
-                }
-                WireFormat::Json => {
-                    let output = version_json();
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&output)
-                            .context("Failed to serialize version information to JSON")?
-                    );
-                }
-                WireFormat::Toon => {
-                    let output = json!({
-                        "name": name,
-                        "version": version,
-                    });
-                    println!(
-                        "{}",
-                        serde_toon::to_string(&output).context("Failed to serialize version information to TOON")?
-                    );
-                }
-            }
-        }
+        Commands::Version { format } => version_command(format)?,
 
         #[cfg(feature = "api")]
         Commands::Serve {

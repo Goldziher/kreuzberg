@@ -68,6 +68,21 @@ pub(crate) fn chunk_semantic(
     let ceiling = resolve_ceiling(config);
     let merged = merge::merge_segments(text, &segments, &boundaries, ceiling, config.overlap);
 
+    let chunks = build_chunks(text, merged, page_boundaries, config)?;
+
+    Ok(ChunkingResult {
+        chunk_count: chunks.len(),
+        chunks,
+    })
+}
+
+/// Resolve heading context, page provenance and token counts for each merged chunk.
+fn build_chunks(
+    text: &str,
+    merged: Vec<merge::MergedChunk>,
+    page_boundaries: Option<&[PageBoundary]>,
+    config: &ChunkingConfig,
+) -> Result<Vec<Chunk>> {
     let heading_map = build_heading_map(text);
     let page_index = match page_boundaries {
         Some(boundaries) if !merged.is_empty() => Some(PageIndex::new(boundaries)?),
@@ -110,10 +125,7 @@ pub(crate) fn chunk_semantic(
         });
     }
 
-    Ok(ChunkingResult {
-        chunk_count: chunks.len(),
-        chunks,
-    })
+    Ok(chunks)
 }
 
 /// Split `text` into fine-grained segments, recording each segment's byte offset

@@ -8,6 +8,7 @@
 
 mod control_word;
 mod formatting_extract;
+mod group_close;
 mod text_extract;
 
 pub(crate) use formatting_extract::{extract_rtf_formatting, spans_to_annotations};

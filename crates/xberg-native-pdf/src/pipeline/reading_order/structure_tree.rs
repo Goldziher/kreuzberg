@@ -49,6 +49,84 @@ impl StructureTreeStrategy {
     }
 }
 
+fn is_rtl_dominant(spans: &[TextSpan]) -> bool {
+    let rtl_characters = spans
+        .iter()
+        .flat_map(|span| span.text.chars())
+        .filter(|character| character.is_alphabetic() && crate::text::is_rtl_text(*character as u32))
+        .count();
+    let ltr_characters = spans
+        .iter()
+        .flat_map(|span| span.text.chars())
+        .filter(|character| character.is_alphabetic() && !crate::text::is_rtl_text(*character as u32))
+        .count();
+    rtl_characters > ltr_characters
+}
+
+/// X position of the widest gap in `xs_sorted`, or `None` when it is too narrow to be a column gutter.
+fn column_gutter_position(xs_sorted: &[f32], x_min: f32, x_extent: f32) -> Option<f32> {
+    let mut largest_gap = 0.0_f32;
+    let mut largest_gap_at = x_min;
+    for w in xs_sorted.windows(2) {
+        let gap = w[1] - w[0];
+        if gap > largest_gap {
+            largest_gap = gap;
+            largest_gap_at = (w[0] + w[1]) * 0.5;
+        }
+    }
+    // The gap must be a substantial fraction of the page width to be
+    // considered a column gutter (not just inter-word whitespace). ~keep
+    if largest_gap < x_extent * 0.1 || largest_gap < 30.0 {
+        return None;
+    }
+    Some(largest_gap_at)
+}
+
+fn distinct_baselines(ordered_spans: &[&TextSpan], columns: &[u8], column: u8) -> Vec<f32> {
+    let mut baselines: Vec<f32> = ordered_spans
+        .iter()
+        .zip(columns)
+        .filter(|(_, candidate)| **candidate == column)
+        .map(|(span, _)| span.bbox.y)
+        .collect();
+    baselines.sort_by(|a, b| crate::utils::safe_float_cmp(*a, *b));
+    baselines.into_iter().fold(Vec::<f32>::new(), |mut lines, baseline| {
+        if lines
+            .last()
+            .is_none_or(|last| (baseline - last).abs() >= BASELINE_DEDUP_TOLERANCE)
+        {
+            lines.push(baseline);
+        }
+        lines
+    })
+}
+
+fn column_lines_are_paired(ordered_spans: &[&TextSpan], left_lines: &[f32], right_lines: &[f32]) -> bool {
+    // Both sides of a real column gutter recur through the same vertical
+    // region. A compact table beside single-column prose can create two X
+    // clusters and many spans, but not four paired text lines. ~keep
+    let mut heights: Vec<f32> = ordered_spans.iter().map(|span| span.bbox.height).collect();
+    heights.sort_by(|a, b| crate::utils::safe_float_cmp(*a, *b));
+    let line_pair_tolerance = heights[heights.len() / 2].max(1.0) * COLUMN_LINE_PAIR_HEIGHT_RATIO;
+    let paired_left_lines = left_lines
+        .iter()
+        .filter(|left| {
+            right_lines
+                .iter()
+                .any(|right| (*left - right).abs() <= line_pair_tolerance)
+        })
+        .count();
+    let paired_right_lines = right_lines
+        .iter()
+        .filter(|right| {
+            left_lines
+                .iter()
+                .any(|left| (*right - left).abs() <= line_pair_tolerance)
+        })
+        .count();
+    paired_left_lines >= MIN_COLUMN_SIDE_LINES && paired_right_lines >= MIN_COLUMN_SIDE_LINES
+}
+
 /// Detect whether applying `mcid_order` to `spans` would produce a
 /// horizontal zigzag pattern — a reliable signal that MCIDs were
 /// assigned in content-stream order rather than visual reading order
@@ -63,17 +141,7 @@ impl StructureTreeStrategy {
 ///    (a column-respecting order crosses columns only at bottom-of-one /
 ///    top-of-next transitions).
 fn mcid_order_zigzags_columns(spans: &[TextSpan], mcid_order: &[u32]) -> bool {
-    let rtl_characters = spans
-        .iter()
-        .flat_map(|span| span.text.chars())
-        .filter(|character| character.is_alphabetic() && crate::text::is_rtl_text(*character as u32))
-        .count();
-    let ltr_characters = spans
-        .iter()
-        .flat_map(|span| span.text.chars())
-        .filter(|character| character.is_alphabetic() && !crate::text::is_rtl_text(*character as u32))
-        .count();
-    let rtl_dominant = rtl_characters > ltr_characters;
+    let rtl_dominant = is_rtl_dominant(spans);
     let mcid_to_idx: std::collections::HashMap<u32, usize> = spans
         .iter()
         .enumerate()
@@ -109,20 +177,9 @@ fn mcid_order_zigzags_columns(spans: &[TextSpan], mcid_order: &[u32]) -> bool {
         return false;
     }
 
-    let mut largest_gap = 0.0_f32;
-    let mut largest_gap_at = x_min;
-    for w in xs_sorted.windows(2) {
-        let gap = w[1] - w[0];
-        if gap > largest_gap {
-            largest_gap = gap;
-            largest_gap_at = (w[0] + w[1]) * 0.5;
-        }
-    }
-    // The gap must be a substantial fraction of the page width to be
-    // considered a column gutter (not just inter-word whitespace). ~keep
-    if largest_gap < x_extent * 0.1 || largest_gap < 30.0 {
+    let Some(largest_gap_at) = column_gutter_position(&xs_sorted, x_min, x_extent) else {
         return false;
-    }
+    };
 
     let columns: Vec<u8> = ordered_x
         .iter()
@@ -133,52 +190,12 @@ fn mcid_order_zigzags_columns(spans: &[TextSpan], mcid_order: &[u32]) -> bool {
     if left_support < MIN_COLUMN_SIDE_LINES || right_support < MIN_COLUMN_SIDE_LINES {
         return false;
     }
-    let distinct_lines = |column: u8| {
-        let mut baselines: Vec<f32> = ordered_spans
-            .iter()
-            .zip(&columns)
-            .filter(|(_, candidate)| **candidate == column)
-            .map(|(span, _)| span.bbox.y)
-            .collect();
-        baselines.sort_by(|a, b| crate::utils::safe_float_cmp(*a, *b));
-        baselines.into_iter().fold(Vec::<f32>::new(), |mut lines, baseline| {
-            if lines
-                .last()
-                .is_none_or(|last| (baseline - last).abs() >= BASELINE_DEDUP_TOLERANCE)
-            {
-                lines.push(baseline);
-            }
-            lines
-        })
-    };
-    let left_lines = distinct_lines(0);
-    let right_lines = distinct_lines(1);
+    let left_lines = distinct_baselines(&ordered_spans, &columns, 0);
+    let right_lines = distinct_baselines(&ordered_spans, &columns, 1);
     if left_lines.len() < MIN_COLUMN_SIDE_LINES || right_lines.len() < MIN_COLUMN_SIDE_LINES {
         return false;
     }
-    // Both sides of a real column gutter recur through the same vertical
-    // region. A compact table beside single-column prose can create two X
-    // clusters and many spans, but not four paired text lines. ~keep
-    let mut heights: Vec<f32> = ordered_spans.iter().map(|span| span.bbox.height).collect();
-    heights.sort_by(|a, b| crate::utils::safe_float_cmp(*a, *b));
-    let line_pair_tolerance = heights[heights.len() / 2].max(1.0) * COLUMN_LINE_PAIR_HEIGHT_RATIO;
-    let paired_left_lines = left_lines
-        .iter()
-        .filter(|left| {
-            right_lines
-                .iter()
-                .any(|right| (*left - right).abs() <= line_pair_tolerance)
-        })
-        .count();
-    let paired_right_lines = right_lines
-        .iter()
-        .filter(|right| {
-            left_lines
-                .iter()
-                .any(|left| (*right - left).abs() <= line_pair_tolerance)
-        })
-        .count();
-    if paired_left_lines < MIN_COLUMN_SIDE_LINES || paired_right_lines < MIN_COLUMN_SIDE_LINES {
+    if !column_lines_are_paired(&ordered_spans, &left_lines, &right_lines) {
         return false;
     }
 

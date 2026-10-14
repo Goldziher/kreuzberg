@@ -171,6 +171,24 @@ fn single_success_result(
     }
 }
 
+fn reject_zero_timeout(timeout: Duration, cancel_token: &xberg::cancellation::CancellationToken) -> Result<()> {
+    if timeout.is_zero() {
+        cancel_token.cancel();
+        return Err(Error::Timeout(
+            "Batch extraction exceeded 0ns; retained Engine is no longer reusable".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn sum_file_sizes(file_paths: &[&Path]) -> u64 {
+    file_paths
+        .iter()
+        .filter_map(|path| std::fs::metadata(path).ok())
+        .map(|m| m.len())
+        .sum()
+}
+
 /// Validate the per-file OCR arrays against `file_paths` and build one `ExtractInput` per file.
 ///
 /// # Errors
@@ -684,18 +702,9 @@ impl FrameworkAdapter for NativeAdapter {
         config.cancel_token = Some(cancel_token.clone());
         let inputs = build_batch_inputs(file_paths, force_ocr, ocr_languages, &config)?;
 
-        if timeout.is_zero() {
-            cancel_token.cancel();
-            return Err(Error::Timeout(
-                "Batch extraction exceeded 0ns; retained Engine is no longer reusable".to_string(),
-            ));
-        }
+        reject_zero_timeout(timeout, &cancel_token)?;
 
-        let total_file_size: u64 = file_paths
-            .iter()
-            .filter_map(|path| std::fs::metadata(path).ok())
-            .map(|m| m.len())
-            .sum();
+        let total_file_size = sum_file_sizes(file_paths);
 
         let monitor = ResourceMonitor::new();
         let sampling_interval_ms = Self::calculate_adaptive_sampling_interval(total_file_size);

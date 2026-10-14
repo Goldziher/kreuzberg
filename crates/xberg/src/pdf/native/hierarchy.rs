@@ -673,33 +673,7 @@ fn extract_segments_from_page_inner(
             return Ok(Vec::new());
         }
     };
-    let has_rtl = page_text_data.spans.iter().any(|span| {
-        span.text
-            .chars()
-            .any(|character| xberg_native_pdf::text::is_rtl_text(character as u32))
-    });
-    let mut used_structure_order = false;
-    if has_rtl {
-        match xberg_native_pdf::pipeline::order_page_spans(&doc.doc, page_index, page_text_data.spans.clone()) {
-            Ok(ordered)
-                if ordered.iter().any(|span| {
-                    span.order_info.source
-                        == xberg_native_pdf::pipeline::ordered_span::ReadingOrderSource::StructureTree
-                }) =>
-            {
-                page_text_data.spans = ordered.into_iter().map(|span| span.span).collect();
-                preserve_rtl_structure_boundaries(&mut page_text_data.spans);
-                used_structure_order = true;
-            }
-            Ok(_) => {}
-            Err(error) => {
-                tracing::debug!(
-                    page = page_index,
-                    "RTL structure reading order failed for hierarchy: {error}"
-                );
-            }
-        }
-    }
+    let used_structure_order = apply_rtl_structure_order(doc, page_index, &mut page_text_data.spans);
     if !used_structure_order {
         reorder_page_reading_order(
             &mut page_text_data.spans,
@@ -746,6 +720,42 @@ fn extract_segments_from_page_inner(
         .collect();
 
     Ok(dedupe_redrawn_segments(segments))
+}
+
+/// Reorder `spans` by the structure tree when the page holds RTL text and the tree supplies
+/// the order. Returns whether the structure-tree order was applied.
+fn apply_rtl_structure_order(
+    doc: &NativeDocument,
+    page_index: usize,
+    spans: &mut Vec<xberg_native_pdf::layout::TextSpan>,
+) -> bool {
+    let has_rtl = spans.iter().any(|span| {
+        span.text
+            .chars()
+            .any(|character| xberg_native_pdf::text::is_rtl_text(character as u32))
+    });
+    if !has_rtl {
+        return false;
+    }
+    match xberg_native_pdf::pipeline::order_page_spans(&doc.doc, page_index, spans.clone()) {
+        Ok(ordered)
+            if ordered.iter().any(|span| {
+                span.order_info.source == xberg_native_pdf::pipeline::ordered_span::ReadingOrderSource::StructureTree
+            }) =>
+        {
+            *spans = ordered.into_iter().map(|span| span.span).collect();
+            preserve_rtl_structure_boundaries(spans);
+            true
+        }
+        Ok(_) => false,
+        Err(error) => {
+            tracing::debug!(
+                page = page_index,
+                "RTL structure reading order failed for hierarchy: {error}"
+            );
+            false
+        }
+    }
 }
 
 fn preserve_rtl_structure_boundaries(spans: &mut [xberg_native_pdf::layout::TextSpan]) {

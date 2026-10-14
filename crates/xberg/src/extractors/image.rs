@@ -2433,15 +2433,29 @@ async fn select_rtl_retry_result(
     not(target_arch = "wasm32"),
     any(feature = "ocr", feature = "ocr-wasm", feature = "ocr-pipeline")
 ))]
+/// Which sparse-output retries [`process_whole_image_ocr_with_sparse_retry`] may attempt.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SparseRetryPolicy {
+    pub(crate) whole_page_raster: bool,
+    pub(crate) allow_standard_retry: bool,
+}
+
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(feature = "ocr", feature = "ocr-wasm", feature = "ocr-pipeline")
+))]
 pub(crate) async fn process_whole_image_ocr_with_sparse_retry(
     backend: &std::sync::Arc<dyn crate::plugins::OcrBackend>,
     image_bytes: std::sync::Arc<Vec<u8>>,
     original_config: &crate::core::config::OcrConfig,
     effective_config: &crate::core::config::OcrConfig,
-    whole_page_raster: bool,
-    allow_standard_retry: bool,
+    retry_policy: SparseRetryPolicy,
     cancel_token: Option<&crate::cancellation::CancellationToken>,
 ) -> crate::Result<crate::types::ExtractedDocument> {
+    let SparseRetryPolicy {
+        whole_page_raster,
+        allow_standard_retry,
+    } = retry_policy;
     if cancel_token.is_some_and(crate::cancellation::CancellationToken::is_cancelled) {
         return Err(crate::XbergError::Cancelled);
     }
@@ -2926,8 +2940,10 @@ impl ImageExtractor {
             std::sync::Arc::new(ocr_input.to_vec()),
             ocr_config,
             &ocr_config_with_format,
-            true,
-            true,
+            SparseRetryPolicy {
+                whole_page_raster: true,
+                allow_standard_retry: true,
+            },
             config.cancel_token.as_ref(),
         )
         .await?;
@@ -4953,8 +4969,10 @@ mod tests {
                 std::sync::Arc::new(vec![1]),
                 &original,
                 &effective,
-                true,
-                false,
+                SparseRetryPolicy {
+                    whole_page_raster: true,
+                    allow_standard_retry: false,
+                },
                 None,
             )
             .await
@@ -5060,8 +5078,10 @@ mod tests {
                 std::sync::Arc::new(vec![1]),
                 &original,
                 &effective,
-                true,
-                false,
+                SparseRetryPolicy {
+                    whole_page_raster: true,
+                    allow_standard_retry: false,
+                },
                 None,
             )
             .await
@@ -5164,8 +5184,10 @@ mod tests {
                 std::sync::Arc::new(encoded.into_inner()),
                 &original,
                 &effective,
-                true,
-                false,
+                SparseRetryPolicy {
+                    whole_page_raster: true,
+                    allow_standard_retry: false,
+                },
                 None,
             )
             .await
@@ -5438,7 +5460,15 @@ mod tests {
                     .await
                     .expect("PSM 11 baseline must complete");
                 let selected = process_whole_image_ocr_with_sparse_retry(
-                    &backend, image, &original, &effective, true, false, None,
+                    &backend,
+                    image,
+                    &original,
+                    &effective,
+                    SparseRetryPolicy {
+                        whole_page_raster: true,
+                        allow_standard_retry: false,
+                    },
+                    None,
                 )
                 .await
                 .expect("RTL sparse retry must complete");

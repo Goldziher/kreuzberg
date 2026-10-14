@@ -1133,6 +1133,64 @@ impl JupyterExtractor {
         })
     }
 
+    fn attach_cell_images(cell_doc: &mut InternalDocument, attachment_images: &[ExtractedImage], page_number: u32) {
+        for image in attachment_images
+            .iter()
+            .filter(|image| image.page_number == Some(page_number))
+        {
+            let filename = image
+                .description
+                .as_deref()
+                .and_then(|description| description.split_once(" attachment: ").map(|(_, filename)| filename));
+            let placeholder_text = filename.and_then(|filename| Self::attachment_placeholder_text(cell_doc, filename));
+            let image_index = cell_doc.push_image(image.clone());
+            let placeholder = placeholder_text.and_then(|placeholder_text| {
+                cell_doc
+                    .elements
+                    .iter_mut()
+                    .find(|element| matches!(element.kind, ElementKind::Paragraph) && element.text == placeholder_text)
+            });
+            if let Some(element) = placeholder {
+                element.kind = ElementKind::Image { image_index };
+                element.text = image.description.clone().unwrap_or_default();
+            } else {
+                cell_doc.push_element(InternalElement::text(
+                    ElementKind::Image { image_index },
+                    image.description.clone().unwrap_or_default(),
+                    0,
+                ));
+            }
+        }
+    }
+
+    fn code_cell_attributes(cell: &Value, cell_language: Option<&str>) -> AHashMap<String, String> {
+        let mut attrs = AHashMap::new();
+        if let Some(language) = cell_language {
+            attrs.insert("language".to_string(), language.to_string());
+        }
+        if let Some(exec_count) = cell.get("execution_count") {
+            match exec_count {
+                Value::Number(n) => {
+                    attrs.insert("execution_count".to_string(), n.to_string());
+                }
+                Value::Null => {
+                    attrs.insert("execution_count".to_string(), "null".to_string());
+                }
+                _ => {}
+            }
+        }
+        if let Some(tags) = cell
+            .get("metadata")
+            .and_then(|m| m.get("tags"))
+            .and_then(|t| t.as_array())
+            && !tags.is_empty()
+        {
+            let tag_strs: Vec<&str> = tags.iter().filter_map(|v| v.as_str()).collect();
+            attrs.insert("tags".to_string(), tag_strs.join(","));
+        }
+        attrs
+    }
+
     fn build_internal_document_with_budget(
         notebook: &Value,
         rendering: JupyterCellRendering,
@@ -1195,32 +1253,7 @@ impl JupyterExtractor {
                     let mut cell_doc =
                         crate::extractors::markdown::MarkdownExtractor::build_internal_document(&events, &None);
                     let page_number = (cell_idx + 1) as u32;
-                    for image in attachment_images
-                        .iter()
-                        .filter(|image| image.page_number == Some(page_number))
-                    {
-                        let filename = image.description.as_deref().and_then(|description| {
-                            description.split_once(" attachment: ").map(|(_, filename)| filename)
-                        });
-                        let placeholder_text =
-                            filename.and_then(|filename| Self::attachment_placeholder_text(&cell_doc, filename));
-                        let image_index = cell_doc.push_image(image.clone());
-                        let placeholder = placeholder_text.and_then(|placeholder_text| {
-                            cell_doc.elements.iter_mut().find(|element| {
-                                matches!(element.kind, ElementKind::Paragraph) && element.text == placeholder_text
-                            })
-                        });
-                        if let Some(element) = placeholder {
-                            element.kind = ElementKind::Image { image_index };
-                            element.text = image.description.clone().unwrap_or_default();
-                        } else {
-                            cell_doc.push_element(InternalElement::text(
-                                ElementKind::Image { image_index },
-                                image.description.clone().unwrap_or_default(),
-                                0,
-                            ));
-                        }
-                    }
+                    Self::attach_cell_images(&mut cell_doc, attachment_images, page_number);
                     builder.append_document(cell_doc);
                 }
                 "code" => {
@@ -1232,30 +1265,7 @@ impl JupyterExtractor {
                             .and_then(Value::as_str)
                             .or(kernel_lang);
                         let idx = builder.push_code(trimmed, cell_language, None, None);
-                        let mut attrs = AHashMap::new();
-                        if let Some(language) = cell_language {
-                            attrs.insert("language".to_string(), language.to_string());
-                        }
-                        if let Some(exec_count) = cell.get("execution_count") {
-                            match exec_count {
-                                Value::Number(n) => {
-                                    attrs.insert("execution_count".to_string(), n.to_string());
-                                }
-                                Value::Null => {
-                                    attrs.insert("execution_count".to_string(), "null".to_string());
-                                }
-                                _ => {}
-                            }
-                        }
-                        if let Some(tags) = cell
-                            .get("metadata")
-                            .and_then(|m| m.get("tags"))
-                            .and_then(|t| t.as_array())
-                            && !tags.is_empty()
-                        {
-                            let tag_strs: Vec<&str> = tags.iter().filter_map(|v| v.as_str()).collect();
-                            attrs.insert("tags".to_string(), tag_strs.join(","));
-                        }
+                        let attrs = Self::code_cell_attributes(cell, cell_language);
                         if !attrs.is_empty() {
                             builder.set_attributes(idx, attrs);
                         }

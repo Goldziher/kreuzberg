@@ -625,7 +625,7 @@ traineddata = "traineddata"
 "tools/benchmark-harness/baselines/initial_baseline.json" = ["file-too-long"]
 "tools/benchmark-harness/guardrails.json" = ["file-too-long"]
 # --- quality-debt baseline (generated) ---
-# 471 size/complexity rule attachments across 175 files that predate these metrics, listed per file
+# 465 size/complexity rule attachments across 169 files that predate these metrics, listed per file
 # rather than switching the rules off, so the metrics still fire on every file NOT listed
 # here -- new code stays covered, and each path below is one discrete unit of work.
 #
@@ -678,7 +678,6 @@ traineddata = "traineddata"
   "function-too-long",
   "nesting-too-deep",
 ]
-"crates/xberg-native-pdf/src/document/open.rs" = ["file-too-long"]
 "crates/xberg-native-pdf/src/document/pages.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -742,8 +741,6 @@ traineddata = "traineddata"
   "function-too-long",
   "nesting-too-deep",
 ]
-"crates/xberg-native-pdf/src/fonts/cff_encoding.rs" = ["file-too-long"]
-"crates/xberg-native-pdf/src/fonts/cmap.rs" = ["file-too-long"]
 "crates/xberg-native-pdf/src/fonts/font_dict.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -854,7 +851,6 @@ traineddata = "traineddata"
 "crates/xberg/src/core/split.rs" = ["file-too-long", "function-too-long"]
 "crates/xberg/src/embeddings/mod.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
 "crates/xberg/src/engine/extract_impl.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
-"crates/xberg/src/engine/extract_impl/tests.rs" = ["file-too-long"]
 "crates/xberg/src/engine/structured/prompts.rs" = ["nesting-too-deep", "too-many-parameters"]
 "crates/xberg/src/extraction/docx/parser.rs" = [
   "cyclomatic-complexity",
@@ -865,7 +861,6 @@ traineddata = "traineddata"
 "crates/xberg/src/extraction/ppt/mod.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/extraction/pptx/tests.rs" = ["file-too-long", "function-too-long"]
 "crates/xberg/src/extractors/archive.rs" = ["function-too-long", "too-many-parameters"]
-"crates/xberg/src/extractors/asciidoc.rs" = ["file-too-long"]
 "crates/xberg/src/extractors/djot_format/extractor.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -1086,7 +1081,6 @@ traineddata = "traineddata"
 "crates/xberg/src/types/metadata.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/tests/pdf_image_extraction_tests.rs" = ["file-too-long"]
 "crates/xberg/tests/pdf_markdown_regression.rs" = ["file-too-long"]
-"crates/xberg/tests/pipeline_integration.rs" = ["file-too-long"]
 "docs-site/src/content/docs/cli/usage.mdx" = ["file-too-long"]
 "docs-site/src/content/docs/guides/ocr.mdx" = ["file-too-long"]
 "scripts/ci/check-ffi-declaration-parity.py" = ["function-too-long"]

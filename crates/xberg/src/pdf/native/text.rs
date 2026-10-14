@@ -784,6 +784,20 @@ fn order_spans_with_inline_fragments<'a>(
     ordered
 }
 
+fn is_ltr_pair(previous: &xberg_native_pdf::layout::TextSpan, span: &xberg_native_pdf::layout::TextSpan) -> bool {
+    is_ltr_writing_mode(previous)
+        && is_ltr_writing_mode(span)
+        && !has_rtl_or_bidi_content(&previous.text)
+        && !has_rtl_or_bidi_content(&span.text)
+}
+
+fn has_rtl_content(previous: &xberg_native_pdf::layout::TextSpan, span: &xberg_native_pdf::layout::TextSpan) -> bool {
+    has_rtl_or_bidi_content(&previous.text)
+        || has_rtl_or_bidi_content(&span.text)
+        || previous.rtl_draw_logical
+        || span.rtl_draw_logical
+}
+
 fn append_span_separator(
     text: &mut String,
     previous: &xberg_native_pdf::layout::TextSpan,
@@ -817,11 +831,7 @@ fn append_span_separator(
     let baseline_gap = (previous_baseline - span_baseline).abs();
 
     let reset_threshold = previous.font_size.max(span.font_size) * ROW_RESET_MIN_BACKTRACK_EMS;
-    let is_ltr_pair = is_ltr_writing_mode(previous)
-        && is_ltr_writing_mode(span)
-        && !has_rtl_or_bidi_content(&previous.text)
-        && !has_rtl_or_bidi_content(&span.text);
-    if allow_ltr_row_resets && is_ltr_pair && span_start < previous_start - reset_threshold {
+    if allow_ltr_row_resets && is_ltr_pair(previous, span) && span_start < previous_start - reset_threshold {
         if baseline_gap > paragraph_gap_threshold {
             text.push_str("\n\n");
         } else {
@@ -844,12 +854,7 @@ fn append_span_separator(
 
     let effective_height = span.bbox.height.max(previous.bbox.height).max(span.font_size * 0.5);
     if baseline_gap < effective_height * 0.5 {
-        let is_rtl_advance = span_start < previous_start
-            && (has_rtl_or_bidi_content(&previous.text)
-                || has_rtl_or_bidi_content(&span.text)
-                || previous.rtl_draw_logical
-                || span.rtl_draw_logical);
-        let visual_gap = if is_rtl_advance {
+        let visual_gap = if span_start < previous_start && has_rtl_content(previous, span) {
             previous_start - span_end
         } else {
             span_start - previous_end

@@ -2,6 +2,7 @@
 //! dispatch (`handle_control_word` and its per-word helpers).
 
 use super::control_word::{ControlWordCtx, handle_control_word};
+use super::group_close::{close_annotation_group, close_footnote_group, close_listtext_group, close_shptxt_group};
 use super::{
     FldrsltCloseState, FormattingTracker, ParagraphMeta, RtfFormattingData, close_fldinst_group, close_fldrslt_group,
     consume_adjacent_hex_escape, parse_font_charset_table, parse_rtf_color_table, resolve_decode_codepage,
@@ -49,107 +50,6 @@ const SKIP_DESTINATIONS: &[&str] = &[
     "fcharset",
     "pgdsctbl",
 ];
-
-/// Close a `\listtext`/`\pntext` group if this `}` ends it, marking the
-/// current list item as ordered when its buffered text looks like a numbered
-/// or lettered marker (e.g. `1.` or `a)`). ~keep
-fn close_listtext_group(
-    group_depth: i32,
-    in_listtext: &mut bool,
-    listtext_depth: i32,
-    listtext_buf: &mut String,
-    cur_ordered: &mut bool,
-) {
-    if !*in_listtext || group_depth >= listtext_depth {
-        return;
-    }
-    *in_listtext = false;
-    let lt = listtext_buf.trim();
-    let is_ordered = lt
-        .strip_suffix('.')
-        .or_else(|| lt.strip_suffix(')'))
-        .is_some_and(|prefix| {
-            let p = prefix.trim();
-            if p.chars().all(|c| c.is_ascii_digit()) && !p.is_empty() {
-                return true;
-            }
-            if p.chars().all(|c| c.is_ascii_alphabetic()) && !p.is_empty() {
-                return true;
-            }
-            false
-        });
-    if is_ordered {
-        *cur_ordered = true;
-    }
-    listtext_buf.clear();
-}
-
-/// Close a `\footnote` destination if this `}` ends it, recording the
-/// buffered note text.
-fn close_footnote_group(
-    group_depth: i32,
-    in_footnote: &mut bool,
-    footnote_depth: i32,
-    footnote_buf: &mut String,
-    footnotes: &mut Vec<String>,
-) {
-    if !*in_footnote || group_depth >= footnote_depth {
-        return;
-    }
-    *in_footnote = false;
-    let note = footnote_buf.trim().to_string();
-    if !note.is_empty() {
-        footnotes.push(note);
-    }
-    footnote_buf.clear();
-}
-
-/// Close a `\shptxt` (drawing-object/text-box text) destination if this `}`
-/// ends it, recording the buffered text-box text.
-fn close_shptxt_group(
-    group_depth: i32,
-    in_shptxt: &mut bool,
-    shptxt_depth: i32,
-    shptxt_buf: &mut String,
-    text_boxes: &mut Vec<String>,
-) {
-    if !*in_shptxt || group_depth >= shptxt_depth {
-        return;
-    }
-    *in_shptxt = false;
-    let text_box = shptxt_buf.trim().to_string();
-    if !text_box.is_empty() {
-        text_boxes.push(text_box);
-    }
-    shptxt_buf.clear();
-}
-
-/// Close an `\annotation` (Word comment) destination if this `}` ends it,
-/// labeling the comment with its `\atnid` (if any) or a running counter.
-fn close_annotation_group(
-    group_depth: i32,
-    in_annotation: &mut bool,
-    annotation_depth: i32,
-    annotation_buf: &mut String,
-    comments: &mut Vec<String>,
-    pending_atnid: &mut Option<i32>,
-) {
-    if !*in_annotation || group_depth >= annotation_depth {
-        return;
-    }
-    *in_annotation = false;
-    let comment = annotation_buf.trim().to_string();
-    if !comment.is_empty() {
-        let label = pending_atnid
-            .take()
-            .map(|id| id.to_string())
-            .unwrap_or_else(|| (comments.len() + 1).to_string());
-        comments.push(format!("[Comment {label}]: {comment}"));
-    } else {
-        *pending_atnid = None;
-    }
-    annotation_buf.clear();
-}
 
 struct TextEscapeCtx<'a> {
     result: &'a mut String,
@@ -229,6 +129,29 @@ enum PictureWrapper {
 struct PendingPrimary {
     parent_depth: i32,
     has_image: bool,
+}
+
+/// Settle `pending_primary` when a picture group's closing `}` is reached.
+fn close_picture_group(
+    picture_group: PictureGroupState,
+    group_depth: i32,
+    image_count: usize,
+    pending_primary: &mut Option<PendingPrimary>,
+) {
+    match picture_group.wrapper {
+        Some(PictureWrapper::Primary) => {
+            *pending_primary = Some(PendingPrimary {
+                parent_depth: group_depth,
+                has_image: image_count > picture_group.image_start,
+            });
+        }
+        Some(PictureWrapper::Fallback) => *pending_primary = None,
+        None => {
+            if pending_primary.is_some_and(|primary| primary.parent_depth >= group_depth) {
+                *pending_primary = None;
+            }
+        }
+    }
 }
 
 impl TextEscapeCtx<'_> {
@@ -738,20 +661,7 @@ pub(crate) fn extract_text_from_rtf(
                 expect_destination = false;
                 ignorable_pending = false;
                 if let Some(picture_group) = picture_groups.pop() {
-                    match picture_group.wrapper {
-                        Some(PictureWrapper::Primary) => {
-                            pending_primary = Some(PendingPrimary {
-                                parent_depth: group_depth,
-                                has_image: images.len() > picture_group.image_start,
-                            });
-                        }
-                        Some(PictureWrapper::Fallback) => pending_primary = None,
-                        None => {
-                            if pending_primary.is_some_and(|primary| primary.parent_depth >= group_depth) {
-                                pending_primary = None;
-                            }
-                        }
-                    }
+                    close_picture_group(picture_group, group_depth, images.len(), &mut pending_primary);
                 }
                 fmt_tracker.pop(result.len());
                 if uc_stack.len() > 1 {
