@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: xberg-io/actions/setup-ai-rulez@6b88aedd553b798d084927cc8a0feeb88b3f6f1b
         with:
-          source-revision: "8f764e95a161851c2c974beb1d23cb775ebdce32"
+          source-revision: "02a8bf25768d37648d4dac35f049c3671c9f7308"
       - uses: xberg-io/actions/validate-ai-rulez@6b88aedd553b798d084927cc8a0feeb88b3f6f1b
         with:
           expected-config-count: "2"
