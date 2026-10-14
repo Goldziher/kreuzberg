@@ -5269,6 +5269,8 @@ jobs:
 
   publish-plugin-artifacts:
     name: Publish all plugin runtime artifacts
+    permissions:
+      contents: write
     needs: [prepare, release-finalize]
     if: ${{ !cancelled() && needs.prepare.outputs.dry_run != 'true' && needs.release-finalize.result == 'success' }}
     runs-on: ubuntu-latest
