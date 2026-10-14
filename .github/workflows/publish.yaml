@@ -1368,8 +1368,18 @@ jobs:
         shell: bash
         env:
           TARGET: ${{ matrix.platform.target }}
+          # All three linux-arm64 legs of v1.3.10 died with exit 143 ("runner received a shutdown
+          # signal", not the 90 min timeout) 16-26 min into the final xberg-php fat-LTO compile
+          # of this second cold build, while the first build had finished in 17 min. Thin LTO
+          # bounds the single-module memory peak, like the release-musl profile; x86_64 keeps fat LTO. ~keep
+          CARGO_PROFILE_RELEASE_LTO: ${{ contains(matrix.platform.target, 'aarch64') && 'thin' || 'fat' }}
         run: |
           set -euo pipefail
+          # zig's linker never emits the __cxa_finalize(__dso_handle) crtbegin does, so the
+          # __cxa_atexit handlers of xberg.so's static C++ objects survive PHP's dlclose and
+          # jump into unmapped memory at exit() (SIGSEGV, docker exit 139). NODELETE makes
+          # dlclose a no-op for this DSO. ~keep
+          export RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-Wl,-z,nodelete"
           TARGET_ARG="${TARGET}.${GLIBC_FLOOR}"
           cargo zigbuild --locked -p xberg-php --release --target "${TARGET_ARG}"
           source="target/${TARGET}/release/libxberg_php.so"

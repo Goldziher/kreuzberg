@@ -10,7 +10,7 @@ php_version="${2:?usage: smoke-test-php-debian12.sh <php-archive.tgz> <php-versi
 }
 artifact="$(cd "$(dirname "$artifact")" && pwd)/$(basename "$artifact")"
 
-docker run --rm \
+docker run --rm --cap-add SYS_PTRACE \
   --volume "$artifact:/tmp/xberg.tgz:ro" \
   "php:${php_version}-cli-bookworm" \
   sh -euc '
@@ -39,5 +39,13 @@ docker run --rm \
       exit 1
       ;;
     esac
-    php -n -d "extension=$extension" --ri xberg
+    if ! php -n -d "extension=$extension" --ri xberg; then
+      status=$?
+      # ~keep The extension loads and --ri prints, then PHP segfaults at process exit (v1.3.10,
+      # exit 139). Print the faulting stack and loaded C++ runtimes so the next failure names the frame.
+      DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends gdb >/dev/null
+      gdb -batch -ex run -ex bt -ex "info sharedlibrary" \
+        --args php -n -d "extension=$extension" --ri xberg >&2 || true
+      exit "$status"
+    fi
   '

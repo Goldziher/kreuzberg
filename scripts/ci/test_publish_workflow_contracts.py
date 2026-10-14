@@ -425,7 +425,7 @@ FAKE_PHP_OBJDUMP = (
     '  case "${PHP_ABI_FIXTURE:?}" in\n'
     "    static) printf '%s\\n' '  NEEDED       libc.so.6' ;;\n"
     "    norpath) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' ;;\n"
-    "    *) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN' ;;\n"
+    "    *) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN' '  FLAGS_1      Flags: NOW NODELETE' ;;\n"
     "  esac\n"
     "  exit 0\n"
     "fi\n"

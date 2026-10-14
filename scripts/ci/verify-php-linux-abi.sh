@@ -97,6 +97,12 @@ else
   log "xberg.so has no \$ORIGIN rpath, so $ort_soname would not resolve beside it"
   failed=1
 fi
+if printf '%s\n' "$dynamic" | grep -Eq 'FLAGS_1.*NODELETE'; then
+  log "xberg.so is NODELETE (dlclose keeps its atexit handlers mapped)"
+else
+  log "xberg.so is not NODELETE: PHP's dlclose unmaps it and exit() jumps into freed text (SIGSEGV)"
+  failed=1
+fi
 ort_library="$(dirname "$extension")/$ort_soname"
 [ -f "$ort_library" ] || die "$ort_soname is not shipped beside xberg.so in the archive"
 log "$ort_soname is shipped beside xberg.so"
