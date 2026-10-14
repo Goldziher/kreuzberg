@@ -17,6 +17,20 @@ Self-host:
 /plugin install xberg@xberg
 ```
 
+### Kimi installation and compatibility
+
+From a checkout of this repository, install with the Python Kimi CLI version used for native
+plugin validation:
+
+```sh
+uvx --from kimi-cli==1.51.0 kimi plugin install ./plugin
+```
+
+Native plugin installation was validated with Python Kimi CLI 1.51.0. The replacement
+`@moonshot-ai/kimi-code` 2.1.1 does not provide a `plugin` CLI subcommand; its interactive
+plugin loading has not been verified. These results do not establish compatibility with
+newer Kimi releases.
+
 ### Pi
 
 From a checkout of this repository, run:
