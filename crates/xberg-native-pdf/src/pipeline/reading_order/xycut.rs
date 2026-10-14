@@ -2061,6 +2061,16 @@ impl XYCutStrategy {
                 )
             })
         };
+        let mut left_lines = 0usize;
+        let mut right_lines = 0usize;
+        for line in &lines {
+            let (line_min, line_max, _, _) = extent(line);
+            if line_max <= split_x {
+                left_lines += 1;
+            } else if line_min >= split_x {
+                right_lines += 1;
+            }
+        }
         let mut paired_rows = 0usize;
         let mut short_rows = 0usize;
         for pair in lines.windows(2) {
@@ -2076,7 +2086,12 @@ impl XYCutStrategy {
                 short_rows += 1;
             }
         }
-        paired_rows >= MIN_LABEL_VALUE_ROWS && short_rows * 5 >= paired_rows * 3
+        // Two columns of different leading meet within a point of each other's baseline by
+        // chance now and then; a form pairs (nearly) every row. Require the pairs to cover at
+        // least half of the sparser side's lines. ~keep
+        paired_rows >= MIN_LABEL_VALUE_ROWS
+            && short_rows * 5 >= paired_rows * 3
+            && paired_rows * 2 >= left_lines.min(right_lines)
     }
 
     /// Fallback column split: find the deepest trough between the two
@@ -4737,5 +4752,89 @@ mod tests {
                 "label/value rows with the value {value_offset}pt higher must not be cut into columns"
             );
         }
+    }
+
+    /// GH#2116 geometry on an 842 x 595 pt two-up sheet: a left slide of short 6pt bullet
+    /// lines (x 138..208, y 340..450) beside right body text of full 295pt lines at 9.9pt
+    /// leading 11.9 (x 484, y 270..472). The two leadings differ, so four of the bullets sit
+    /// 0.5pt off a body baseline by chance. Returns `(spans, left_count)`; the left spans
+    /// come first. ~keep
+    fn gh2116_two_up_sheet() -> (Vec<TextSpan>, usize) {
+        let body_y = |k: usize| 270.0 + k as f32 * 11.9;
+        let mut spans = Vec::new();
+        for k in [6, 8, 10, 12] {
+            spans.push(make_span_text(
+                138.0,
+                body_y(k) + 0.5,
+                70.0,
+                6.0,
+                "slide bullet text",
+                6.0,
+            ));
+        }
+        for k in 6..16 {
+            spans.push(make_span_text(
+                138.0,
+                body_y(k) + 6.0,
+                70.0,
+                6.0,
+                "slide bullet text",
+                6.0,
+            ));
+        }
+        let left_count = spans.len();
+        for k in 0..18 {
+            spans.push(make_span_text(
+                484.0,
+                body_y(k),
+                295.0,
+                9.9,
+                "right page body text line of words",
+                9.9,
+            ));
+        }
+        (spans, left_count)
+    }
+
+    /// A column cut was refused here since 1.3.9: `cuts_label_value_rows` read four
+    /// coincidentally near baselines as label/value rows, the page fell through to the row
+    /// split, and the two halves were read line by line. Four paired rows out of 14 left
+    /// lines are not a form. ~keep
+    #[test]
+    fn horizontal_split_cuts_two_up_pages_with_chance_baseline_matches_gh2116() {
+        let (spans, left_count) = gh2116_two_up_sheet();
+        let indices: Vec<usize> = (0..spans.len()).collect();
+        let strategy = XYCutStrategy::new();
+
+        let (left, right) = strategy
+            .find_horizontal_split_indexed(&spans, &indices)
+            .expect("the 160pt gutter between the halves must be cut");
+
+        assert_eq!(left, (0..left_count).collect::<Vec<_>>(), "left half");
+        assert_eq!(right, (left_count..spans.len()).collect::<Vec<_>>(), "right half");
+    }
+
+    #[test]
+    fn partition_reads_the_left_page_before_the_right_page_gh2116() {
+        let (spans, left_count) = gh2116_two_up_sheet();
+        let indices: Vec<usize> = (0..spans.len()).collect();
+        let strategy = XYCutStrategy::new();
+
+        let order: Vec<usize> = strategy
+            .partition_indexed(&spans, &indices)
+            .into_iter()
+            .flatten()
+            .collect();
+
+        assert_eq!(order.len(), spans.len(), "no span may be dropped");
+        let last_left = order.iter().rposition(|&i| i < left_count).expect("left spans present");
+        let first_right = order
+            .iter()
+            .position(|&i| i >= left_count)
+            .expect("right spans present");
+        assert!(
+            last_left < first_right,
+            "every left span precedes every right span: {order:?}"
+        );
     }
 }
