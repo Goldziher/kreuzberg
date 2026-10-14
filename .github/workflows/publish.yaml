@@ -5199,27 +5199,11 @@ jobs:
           registry-url: "https://registry.npmjs.org/"
       # Plain ESM adapter — no build step. Skip if this version is already on npm so a
       # release re-run is idempotent (publish-npm has no built-in skip-existing). ~keep
-      - name: Check out the Pi-capable ai-rulez generator
-        uses: actions/checkout@v7
+      - name: Install ai-rulez
+        uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
         with:
-          repository: Goldziher/ai-rulez
-          ref: 8dfebd2b8b3700ff134f86886d5b44dca82abc18
-          path: .tools/ai-rulez
-      - name: Set up Go for ai-rulez
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: .tools/ai-rulez/go.mod
-          cache-dependency-path: .tools/ai-rulez/go.sum
-      - name: Build the pinned plugin generator
-        working-directory: .tools/ai-rulez
-        shell: bash
-        env:
-          GOWORK: "off"
-        run: |
-          eval "$(./scripts/setup-liter-llm.sh --mode static --format export)"
-          mkdir -p "$RUNNER_TEMP/ai-rulez-bin"
-          go build -o "$RUNNER_TEMP/ai-rulez-bin/ai-rulez" ./cmd/ai-rulez
-          echo "$RUNNER_TEMP/ai-rulez-bin" >> "$GITHUB_PATH"
+          ai-rulez-version: "5.3.0"
+          source-revision: "1dd46d774f156f3d170ecd1b702598b12d1eaf5b"
       - name: Verify plugin bundles match the pinned generator
         run: |
           ai-rulez verify --plugin
@@ -5263,6 +5247,16 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
+      - name: Install ai-rulez
+        uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        with:
+          ai-rulez-version: "5.3.0"
+          source-revision: "1dd46d774f156f3d170ecd1b702598b12d1eaf5b"
+      - name: Verify plugin source and generated artifacts
+        uses: xberg-io/actions/verify-ai-rulez-plugin@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        with:
+          config-directory: .ai-rulez
+          version-sync-script: scripts/sync_integration_versions.py
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -5274,3 +5268,48 @@ jobs:
         with:
           packages-dir: dist-hermes
           dry-run: ${{ needs.prepare.outputs.dry_run }}
+
+  publish-plugin-artifacts:
+    name: Publish all plugin runtime artifacts
+    permissions:
+      contents: write
+    needs: [prepare, release-finalize]
+    if: ${{ !cancelled() && needs.prepare.outputs.dry_run != 'true' && needs.release-finalize.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          fetch-depth: 0
+      - name: Install ai-rulez
+        uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        with:
+          ai-rulez-version: "5.3.0"
+          source-revision: "1dd46d774f156f3d170ecd1b702598b12d1eaf5b"
+      - name: Verify public skill exports
+        run: python3 scripts/sync_public_skills.py --check
+      - name: Package all supported plugin runtimes
+        uses: xberg-io/actions/package-ai-rulez-plugin@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        with:
+          tag: ${{ needs.prepare.outputs.tag }}
+          config-directory: .ai-rulez
+          version-sync-script: scripts/sync_integration_versions.py
+      - name: Archive verified runtime bundles and marketplace indexes
+        shell: bash
+        env:
+          PLUGIN_TAG: ${{ needs.prepare.outputs.tag }}
+          PLUGIN_PRODUCT: xberg
+        run: |
+          set -euo pipefail
+          test -n "$PLUGIN_TAG"
+          bundle="dist/${PLUGIN_PRODUCT}-plugins-${PLUGIN_TAG//\//-}.tar.gz"
+          tar --sort=name --mtime="@$(git show -s --format=%ct HEAD)" \
+            --owner=0 --group=0 --numeric-owner -cf - -C dist/plugin . | gzip -n > "$bundle"
+          (cd dist && sha256sum "$(basename "$bundle")") > "$bundle.sha256"
+      - name: Attach verified plugin archive and metadata
+        uses: xberg-io/actions/upload-release-assets@v1
+        with:
+          tag: ${{ needs.prepare.outputs.tag }}
+          assets: |
+            dist/*-plugins-*.tar.gz
+            dist/*-plugins-*.tar.gz.sha256

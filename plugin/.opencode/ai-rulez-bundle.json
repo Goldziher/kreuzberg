@@ -1,4 +1,5 @@
 {
+  "plugin": "xberg",
   "mcp": {
     "xberg": {
       "type": "local",
@@ -11,33 +12,33 @@
     }
   },
   "skills": {
-    "batch-extraction": {
-      "name": "batch-extraction",
-      "description": "Use when extracting from many files at once with shared config, bounded parallelism, per-file overrides, and error recovery. Covers the `batch` command, `--file-configs`, `--max-concurrent`, and output layout."
-    },
-    "chunking": {
-      "name": "chunking",
-      "description": "Use when splitting extracted text into chunks for LLM context windows or RAG ingestion. Covers chunk size, overlap, markdown/yaml/semantic chunkers, tokenizer-based sizing, and the standalone `chunk` command."
-    },
-    "extracting-keywords": {
-      "name": "extracting-keywords",
-      "description": "Use when extracting keywords (YAKE/RAKE) from documents — and, secondarily, when detecting document language or generating embeddings for RAG and search. Covers the keyword config (and its feature gating), `--detect-language`, and the standalone `embed` command with real flags."
-    },
-    "extracting-tables": {
-      "name": "extracting-tables",
-      "description": "Use when extracting tabular data from PDFs, spreadsheets, or images. Covers layout-aware table detection, table model selection, output formats (markdown / JSON cells), and known limits."
-    },
-    "extracting-with-ocr": {
-      "name": "extracting-with-ocr",
-      "description": "Use when extracting text from scanned PDFs, photographed pages, or images that have no embedded text layer. Covers OCR backends, language packs, force-OCR, and performance tuning."
-    },
-    "picking-a-format": {
-      "name": "picking-a-format",
-      "description": "Use when choosing an output format for extracted documents — plain text, markdown, djot, HTML, JSON, or DocTags. Maps consumer (LLM, parser, archive) to the right `--format` / `--content-format` pair."
-    },
     "xberg": {
       "name": "xberg",
       "description": "Extract text, tables, metadata, and images from 107 document formats (PDF, Office, images, HTML, email, archives, academic) using Xberg. Use when writing code that calls Xberg APIs in Python, Node.js/TypeScript, Rust, or CLI. Covers installation, extraction (sync/async), configuration (OCR, chunking, output format), batch processing, error handling, and plugins."
+    },
+    "xberg-batch-extraction": {
+      "name": "xberg-batch-extraction",
+      "description": "Use when extracting from many files at once with shared config, bounded parallelism, per-file overrides, and error recovery. Covers the `batch` command, `--file-configs`, `--max-concurrent`, and output layout."
+    },
+    "xberg-chunking": {
+      "name": "xberg-chunking",
+      "description": "Use when splitting extracted text into chunks for LLM context windows or RAG ingestion. Covers chunk size, overlap, markdown/yaml/semantic chunkers, tokenizer-based sizing, and the standalone `chunk` command."
+    },
+    "xberg-extracting-keywords": {
+      "name": "xberg-extracting-keywords",
+      "description": "Use when extracting keywords (YAKE/RAKE) from documents — and, secondarily, when detecting document language or generating embeddings for RAG and search. Covers the keyword config (and its feature gating), `--detect-language`, and the standalone `embed` command with real flags."
+    },
+    "xberg-extracting-tables": {
+      "name": "xberg-extracting-tables",
+      "description": "Use when extracting tabular data from PDFs, spreadsheets, or images. Covers layout-aware table detection, table model selection, output formats (markdown / JSON cells), and known limits."
+    },
+    "xberg-extracting-with-ocr": {
+      "name": "xberg-extracting-with-ocr",
+      "description": "Use when extracting text from scanned PDFs, photographed pages, or images that have no embedded text layer. Covers OCR backends, language packs, force-OCR, and performance tuning."
+    },
+    "xberg-picking-a-format": {
+      "name": "xberg-picking-a-format",
+      "description": "Use when choosing an output format for extracted documents — plain text, markdown, djot, HTML, JSON, or DocTags. Maps consumer (LLM, parser, archive) to the right `--format` / `--content-format` pair."
     }
   },
   "commands": {

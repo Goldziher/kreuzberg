@@ -14,7 +14,7 @@ tasks:
       - "{{.ALEF}} sync-versions"
       # Integrations are versioned + published in lockstep with core (including rc);
       # alef only syncs the alef-managed binding manifests, so sync integrations too.
-      # This also writes plugin/.ai-rulez/config.toml [plugin].version. ~keep
+      # This also writes plugin/.ai-rulez/config.plugins.toml [plugin].version. ~keep
       - "python3 scripts/sync_integration_versions.py"
       # Regenerate the coding-agent plugin bundles from the just-synced config so the
       # per-runtime manifests under plugin/ carry the new version. ~keep

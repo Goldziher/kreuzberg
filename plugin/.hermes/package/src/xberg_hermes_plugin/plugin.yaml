@@ -1,5 +1,8 @@
 name: "xberg"
-version: "1.3.8"
+version: "1.3.10"
 description: "Local document extraction: text, tables, metadata, images from 107 formats with optional OCR."
 author: "Kreuzberg, Inc."
 kind: "standalone"
+python_dependencies:
+  - "mcp==1.28.1"
+  - "PyYAML==6.0.3"

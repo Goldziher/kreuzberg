@@ -47,12 +47,13 @@ if have "$BINARY_NAME"; then
 fi
 
 if want npx && have npx; then
-  log "probing npx $NPM_PKG@latest ..."
+  log "resolving npx $NPM_PKG@latest ..."
   scratch="$(mktemp -d)"
-  if (cd "$scratch" && npx -y "$NPM_PKG@latest" --version >/dev/null 2>&1); then
-    log "launching via npx $NPM_PKG@latest"
-    cd "$scratch"
-    exec npx -y "$NPM_PKG@latest" "$@"
+  # Resolve in an empty project, then execute the selected binary in the caller's cwd. ~keep
+  if npm_bin="$(cd "$scratch" && npx -y --package "$NPM_PKG@latest" --call "command -v ${BINARY_NAME%.exe}" 2>/dev/null)" && runnable "$npm_bin"; then
+    rm -rf "$scratch"
+    log "launching npm package binary $npm_bin"
+    exec "$npm_bin" "$@"
   fi
   rm -rf "$scratch"
   log "npx $NPM_PKG not available (no CLI bin yet); falling through"

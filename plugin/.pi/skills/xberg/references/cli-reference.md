@@ -1,7 +1,7 @@
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-Content-Hash: blake3:cd55a9d089a4fe188a64803a05bf46b418949673c0b952c381eefdd2416457f5
-Source-Hash: blake3:3fca38eb564d0ed9c9194d070fd8dec96de727edc92e82954cb4b9af52cddbaf
+Content-Hash: blake3:b9281b07af57a10b362019da24d8545036e83015038e2f5902bfe167f165ecec
+Source-Hash: blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b
 Schema-Version: v1
 -->
 
@@ -422,7 +422,7 @@ xberg batch *.pdf --config extraction-config.toml
 
 ```bash
 # Extract to JSON for downstream processing
-xberg extract file.pdf --format json | jq '.content'
+xberg extract file.pdf --format json | jq '.result.content'
 
 # Batch process with error handling
 xberg batch docs/*.pdf --format json || exit 1

@@ -1,5 +1,10 @@
 ---
-description: "Extract a document locally with Xberg"
+type: Reference
+title: Xberg Extract
+description: Extract a document locally with Xberg
+x-ai-rulez:
+  kind: command
+  id: xberg-extract
 ---
 
 Extract this document: $ARGUMENTS

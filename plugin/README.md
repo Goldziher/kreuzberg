@@ -17,6 +17,20 @@ Self-host:
 /plugin install xberg@xberg
 ```
 
+### Kimi installation and compatibility
+
+From a checkout of this repository, install with the Python Kimi CLI version used for native
+plugin validation:
+
+```sh
+uvx --from kimi-cli==1.51.0 kimi plugin install ./plugin
+```
+
+Native plugin installation was validated with Python Kimi CLI 1.51.0. The replacement
+`@moonshot-ai/kimi-code` 2.1.1 does not provide a `plugin` CLI subcommand; its interactive
+plugin loading has not been verified. These results do not establish compatibility with
+newer Kimi releases.
+
 ### Pi
 
 From a checkout of this repository, run:
@@ -76,12 +90,12 @@ sudo apt install tesseract-ocr-*   # Debian/Ubuntu
 | Skill | Trigger |
 |-------|---------|
 | **xberg** | Extract text, tables, metadata, and images from 107 document formats (PDF, Office, images, HTML, email, archives, academic) using Xberg. Use when writing code that calls Xberg APIs in Python, Node.js/TypeScript, Rust, or CLI. Covers installation, extraction (sync/async), configuration (OCR, chunking, output format), batch processing, error handling, and plugins. |
-| **extracting-with-ocr** | Use when extracting text from scanned PDFs, photographed pages, or images that have no embedded text layer. Covers OCR backends, language packs, force-OCR, and performance tuning. |
-| **extracting-tables** | Use when extracting tabular data from PDFs, spreadsheets, or images. Covers layout-aware table detection, table model selection, output formats (markdown / JSON cells), and known limits. |
-| **chunking** | Use when splitting extracted text into chunks for LLM context windows or RAG ingestion. Covers chunk size, overlap, markdown/yaml/semantic chunkers, tokenizer-based sizing, and the standalone `chunk` command. |
-| **extracting-keywords** | Use when extracting keywords (YAKE/RAKE), detecting document language, or generating embeddings for RAG and search. Covers the keyword config, `--detect-language`, and the standalone `embed` command. |
-| **batch-extraction** | Use when extracting from many files at once with shared config, bounded parallelism, per-file overrides, and error recovery. Covers the `batch` command, `--file-configs`, `--max-concurrent`, and output layout. |
-| **picking-a-format** | Use when choosing an output format for extracted documents — text, markdown, djot, html, or JSON. Maps consumer (LLM, parser, archive) to the right `--format` / `--content-format` pair. |
+| **xberg-extracting-with-ocr** | Use when extracting text from scanned PDFs, photographed pages, or images that have no embedded text layer. Covers OCR backends, language packs, force-OCR, and performance tuning. |
+| **xberg-extracting-tables** | Use when extracting tabular data from PDFs, spreadsheets, or images. Covers layout-aware table detection, table model selection, output formats (markdown / JSON cells), and known limits. |
+| **xberg-chunking** | Use when splitting extracted text into chunks for LLM context windows or RAG ingestion. Covers chunk size, overlap, markdown/yaml/semantic chunkers, tokenizer-based sizing, and the standalone `chunk` command. |
+| **xberg-extracting-keywords** | Use when extracting keywords (YAKE/RAKE), detecting document language, or generating embeddings for RAG and search. Covers the keyword config, `--detect-language`, and the standalone `embed` command. |
+| **xberg-batch-extraction** | Use when extracting from many files at once with shared config, bounded parallelism, per-file overrides, and error recovery. Covers the `batch` command, `--file-configs`, `--max-concurrent`, and output layout. |
+| **xberg-picking-a-format** | Use when choosing an output format for extracted documents — text, markdown, djot, html, or JSON. Maps consumer (LLM, parser, archive) to the right `--format` / `--content-format` pair. |
 
 **Reference materials** (linked from the `xberg` skill):
 
@@ -167,3 +181,55 @@ MIT. The skill content uses Elastic-2.0 references to the upstream [xberg](https
 - **Marketplace**: this repo — `/plugin marketplace add xberg-io/xberg`
 - **Upstream**: [xberg-io/xberg](https://github.com/xberg-io/xberg)
 - **Related plugins**: [crawlberg](https://github.com/xberg-io/crawlberg)
+
+## Generated runtime bundles
+
+`plugin/.ai-rulez/config.toml` loads `config.plugins.toml` through the `plugins` layer;
+skills, commands and runtime adapters are authored alongside it. AI-Rulez 5.3.0 generates
+all eleven supported runtimes: Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory,
+Hermes, Pi, Agent Plugins and Copilot. Codex ships both manifest layouts; repository-root
+Claude and Codex marketplace indexes point to the `plugin` bundle. Cursor also has a marketplace index.
+
+Pi packages skills and prompts without MCP integration. Copilot packages skills and MCP configuration, but does not package slash commands or hooks.
+Hermes includes a Python package under `.hermes/package`; OpenCode and Pi share the npm package.
+The Agent Plugins manifest uses the stable 1.0 specification. Runtime capabilities differ;
+install the CLI before using skills in a runtime without MCP registration.
+
+Run `ai-rulez generate --plugin` from the repository root to regenerate and
+`ai-rulez verify --plugin` to compare current source output and provenance.
+The release workflow packages every runtime into a deterministic archive, checksums,
+and marketplace metadata; npm and PyPI retain their existing publishing jobs.
+
+## Hermes runtime setup
+
+Install the product CLI with MCP support and put it on Hermes' PATH before using the plugin.
+The Hermes adapter registers every bundled skill under the product namespace and provides
+`xberg_call`, which calls the selected native MCP tool with `tool_arguments` through a local
+stdio session. Select `tool: "list_tools"` first to inspect the server's exact request schemas. Hermes skills are selected explicitly; they are not automatically appended to the
+system prompt. Enable the plugin in Hermes configuration; project plugins also require
+`HERMES_ENABLE_PROJECT_PLUGINS=true`.
+
+The bridge uses the installed CLI directly. The auto-installing launchers used by other MCP clients
+are not included in the Hermes Python wheel. Provider credentials are inherited from the environment,
+and are needed for provider-backed requests. Missing CLIs, unavailable tools and model preparation
+fail with an actionable request error. CLI result data remains untrusted document content.
+
+## Public Agent Skills
+
+The repository-root `skills/` directory contains the same generated skills and supporting
+resources as `plugin/skills/`. Install them independently of a plugin runtime:
+
+```sh
+npx skills add xberg-io/xberg --skill xberg
+```
+
+Edit `plugin/.ai-rulez/skills`, then run `task plugin:generate` to regenerate runtime
+bundles and synchronize the public export. `task plugin:verify` checks both projections;
+`task plugin:skills:test` verifies resource freshness, ownership and symlink protection.
+The public ownership manifest records SHA-256 hashes of every exported file.
+
+Download integrity: the launcher currently relies on HTTPS for direct binary downloads.
+Verify release checksums separately when available before manually installing an archive.
+
+Launcher and visual assets are authored in `plugin/.ai-rulez/scripts/` and
+`plugin/.ai-rulez/assets/`; `task plugin:generate` copies them into the runtime bundle.

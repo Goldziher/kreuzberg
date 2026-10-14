@@ -1,0 +1,62 @@
+# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
+# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
+
+version = 1
+ai_rulez_version = '5.3.0'
+scope = 'all'
+outputs_pinned = true
+tree = 'sha256:0980bed5252bbe87750d1c87c9a806277fed2813c18786c5c5846ee77c277cdb'
+
+[[item]]
+kind = 'command'
+id = 'xberg-extract'
+path = 'commands/xberg-extract.md'
+digest = 'sha256:ca7f9bcfdde7fac181be5455722ea8515a10bdd803ff43b2f8a94217848c17c6'
+
+[[item]]
+kind = 'command'
+id = 'xberg-ocr'
+path = 'commands/xberg-ocr.md'
+digest = 'sha256:5f8f6a9e4b3eaf59645ba3311129405c69668df0a423c43024296a455e1b0575'
+
+[[item]]
+kind = 'skill'
+id = 'xberg'
+path = 'skills/xberg'
+digest = 'sha256:74d6e669dcea621da983a18276eedc9331b6db403098ba631bc95807bb390c9c'
+
+[[item]]
+kind = 'skill'
+id = 'xberg-batch-extraction'
+path = 'skills/xberg-batch-extraction'
+digest = 'sha256:ce46cfd7a86addeca01eae79a83d570352ed42d2b4153cb5f9bbeb89a344c6ef'
+
+[[item]]
+kind = 'skill'
+id = 'xberg-chunking'
+path = 'skills/xberg-chunking'
+digest = 'sha256:f8d25dbc83c3c6d10b9742775bb50f86b5ade45b70fa2602f2eefd4cc079cefd'
+
+[[item]]
+kind = 'skill'
+id = 'xberg-extracting-keywords'
+path = 'skills/xberg-extracting-keywords'
+digest = 'sha256:e3b0194adf3c0df2e55ab1e417d09e6fdf6f5a2d2a84a4f485fca5a5deb0d143'
+
+[[item]]
+kind = 'skill'
+id = 'xberg-extracting-tables'
+path = 'skills/xberg-extracting-tables'
+digest = 'sha256:f96b5b4e79064c12c18207cf0889a55ffb1a51a1c6518820f3a6905f6f348d36'
+
+[[item]]
+kind = 'skill'
+id = 'xberg-extracting-with-ocr'
+path = 'skills/xberg-extracting-with-ocr'
+digest = 'sha256:8a458e8911dac92d426e803b7b0f1ac39b578608f658673f5b3092133c847d7a'
+
+[[item]]
+kind = 'skill'
+id = 'xberg-picking-a-format'
+path = 'skills/xberg-picking-a-format'
+digest = 'sha256:b4677a02d4876c82ac72b5b986a379242628ad891200c38e7262acf25d7858fe'

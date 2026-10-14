@@ -41,7 +41,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # Coding-agent plugin source of truth: ai-rulez generates every per-runtime manifest
 # under plugin/ from this file's `[plugin].version`. Uses the native/semver form (also
 # what ai-rulez expects); ai-rulez renders the PEP 440 form for the Hermes wheel. ~keep
-PLUGIN_CONFIG = "plugin/.ai-rulez/config.toml"
+PLUGIN_CONFIG = "plugin/.ai-rulez/config.plugins.toml"
+if not (ROOT / PLUGIN_CONFIG).exists():
+    PLUGIN_CONFIG = "plugin/.ai-rulez/config.toml"
 
 # Helm chart. The chart is a published artifact (oci://ghcr.io/xberg-io/charts/xberg) AND is
 # installable straight from a checkout, so its version has to track core like every other

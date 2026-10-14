@@ -3,10 +3,12 @@
   "source_hash": "blake3:a09205341aa7804ab41b3ce5af19456e5e789f73ebd42571f396f2634b272fac",
   "outputs": {
     ".agents/plugins/marketplace.json": {
-      "content_hash": "blake3:aba2ee097279e07151e48085987d89a62e71be383dc24e284f4098344b07b9df"
+      "content_hash": "blake3:aba2ee097279e07151e48085987d89a62e71be383dc24e284f4098344b07b9df",
+      "mode": "0644"
     },
     ".claude-plugin/marketplace.json": {
-      "content_hash": "blake3:2c72215641cd746339a8cc410ff617ee3fc1bf376a8dfaefe3a58b02ab3c475f"
+      "content_hash": "blake3:2c72215641cd746339a8cc410ff617ee3fc1bf376a8dfaefe3a58b02ab3c475f",
+      "mode": "0644"
     }
   }
 }

@@ -1,7 +1,7 @@
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-Content-Hash: blake3:a8f2b7b96ef3d33120ab21586c9f7db80c4d17eba727757ff0e94cee6e7d28c0
-Source-Hash: blake3:3fca38eb564d0ed9c9194d070fd8dec96de727edc92e82954cb4b9af52cddbaf
+Content-Hash: blake3:025df7e4b6c9e1dd2a98b81236a46d427816da719521512e3b03bc2ae15ae065
+Source-Hash: blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b
 Schema-Version: v1
 -->
 
@@ -106,7 +106,7 @@ max_archive_depth = 3
 | `cache_ttl_secs`             | int \| null      | `null`        | Per-request cache TTL in seconds. `0` skips the cache entirely                               |
 | `qr_codes`                   | boolean \| null  | `null`        | Enable QR-code detection in extracted images                                                 |
 
-Nested sections (each `None`/unset by default unless noted): `ocr`, `chunking`, `content_filter`, `images`, `pdf_options`, `token_reduction`, `language_detection`, `pages`, `keywords`, `postprocessor`, `html_output`, `security_limits`, `layout`, `transcription`, `acceleration`, `email`, `tree_sitter`, `structured_extraction`, `ner`, `redaction`, `summarization`, `translation`, `page_classification`, `captioning`, and `url`. The `url` section always has a default (it is not optional). The sections documented below are the ones most commonly set in config files.
+Nested sections (each `None`/unset by default unless noted): `ocr`, `xberg-chunking`, `content_filter`, `images`, `pdf_options`, `token_reduction`, `language_detection`, `pages`, `keywords`, `postprocessor`, `html_output`, `security_limits`, `layout`, `transcription`, `acceleration`, `email`, `tree_sitter`, `structured_extraction`, `ner`, `redaction`, `summarization`, `translation`, `page_classification`, `captioning`, and `url`. The `url` section always has a default (it is not optional). The sections documented below are the ones most commonly set in config files.
 
 ### OCR Configuration
 
@@ -449,7 +449,7 @@ result = await extract_batch(
 )
 ```
 
-**Overridable fields:** `enable_quality_processing`, `ocr`, `force_ocr`, `force_ocr_pages`, `disable_ocr`, `chunking`, `content_filter`, `images`, `pdf_options`, `token_reduction`, `language_detection`, `pages`, `keywords`, `postprocessor`, `html_output` (and `html_options`), `result_format`, `output_format`, `include_document_structure`, `layout`, `transcription`, `timeout_secs`, `tree_sitter`, `structured_extraction`, `url`, `ner`, `redaction`, `summarization`, `translation`, `page_classification`, `captioning`, `qr_codes`.
+**Overridable fields:** `enable_quality_processing`, `ocr`, `force_ocr`, `force_ocr_pages`, `disable_ocr`, `xberg-chunking`, `content_filter`, `images`, `pdf_options`, `token_reduction`, `language_detection`, `pages`, `keywords`, `postprocessor`, `html_output` (and `html_options`), `result_format`, `output_format`, `include_document_structure`, `layout`, `transcription`, `timeout_secs`, `tree_sitter`, `structured_extraction`, `url`, `ner`, `redaction`, `summarization`, `translation`, `page_classification`, `captioning`, `qr_codes`.
 
 **Batch-level only (not overridable per input):** `max_concurrent_extractions`, `use_cache`, `acceleration`, `security_limits`.
 

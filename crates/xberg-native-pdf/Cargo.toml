@@ -86,7 +86,7 @@ flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
 getrandom = "0.4"
 harfrust = "0.14"
 hayro-jbig2 = { version = "0.3", default-features = false }
-hayro-jpeg2000 = { version = "0.4", default-features = false }
+hayro-jpeg2000 = { version = "0.4.1", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
 jpeg-decoder = { version = "0.3", default-features = false }                               # default = ["rayon"]; this crate has no other rayon user ~keep
 md-5 = "0.11"

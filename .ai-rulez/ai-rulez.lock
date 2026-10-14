@@ -1,0 +1,649 @@
+# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.
+# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.
+
+version = 1
+ai_rulez_version = '5.3.0'
+scope = 'all'
+tree = 'sha256:5c6a222205ba3a2f3bf78a3fdfe88f01f4f4e7e7c8a095a4d0ce7ac29c0e5c82'
+
+[[include]]
+name = 'xberg-cicd'
+source = 'https://github.com/xberg-io/agent-conventions.git'
+path = 'modules/cicd'
+ref = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:3b972d8ac73b39811806ac7b893971d5085d8aebf8f5ff1e3caf73192872c907'
+
+[[include]]
+name = 'xberg-core'
+source = 'https://github.com/xberg-io/agent-conventions.git'
+path = 'modules/core'
+ref = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:928ea503f561803c0348ad403dd7e006d5d61e2e4ab2304c809f80a4175c848d'
+
+[[include]]
+name = 'xberg-e2e-generator'
+source = 'https://github.com/xberg-io/agent-conventions.git'
+path = 'modules/e2e-generator'
+ref = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:161ad1d0131847fbcc9b611385aff060acb58497b70a3a58455b4a53fafc3c3c'
+
+[[include]]
+name = 'xberg-infrastructure'
+source = 'https://github.com/xberg-io/agent-conventions.git'
+path = 'modules/infrastructure'
+ref = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:ae53f6c24d342f6b4fef63aef585dae081f2d5d64976377327f6c1f86d9665ff'
+
+[[include]]
+name = 'xberg-languages'
+source = 'https://github.com/xberg-io/agent-conventions.git'
+path = 'modules/languages'
+ref = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:09710d8a5d1493bcb3dc9a54aab1dc5df7434ad4e810447d0c77cd5dcba16f52'
+
+[[skill]]
+name = 'alef'
+source = 'https://github.com/xberg-io/alef.git'
+path = 'skills/alef'
+ref = '613e2b06975b1d3a0d776ca141dec7b540e9ed74'
+commit = '613e2b06975b1d3a0d776ca141dec7b540e9ed74'
+digest = 'sha256:b8e5a29bdbefb3ca9b8f15324d865e48a55d43fe5a1370831232549d2f78fa73'
+
+[[served]]
+name = 'add-language-generator'
+source = 'include:xberg-e2e-generator/skills/add-language-generator/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:af453ae8b748948f3c7622c3dcaa5a043f00aab2794851ecb1c92aaa8e890368'
+
+[[served]]
+name = 'agent-coordination'
+source = 'include:xberg-core/skills/agent-coordination/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:a4fe1a58e404decf8e6d90b8053e03c4300641544f31f01f28225dfc902657b7'
+
+[[served]]
+name = 'alef'
+source = 'https://github.com/xberg-io/alef.git'
+ref = '613e2b06975b1d3a0d776ca141dec7b540e9ed74'
+commit = ''
+digest = 'sha256:61c78d745a1b7c74b9752fb8a10bba27e023001c66a4260a57a3f033fbbb6273'
+
+[[served]]
+name = 'alef-generated-bindings'
+source = '.ai-rulez/skills/alef-generated-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:ffc9088f3983abb71dda84e236b62cca71bcf0616102778113a167b7b04ecb27'
+
+[[served]]
+name = 'alef-workflow'
+source = 'include:xberg-core/skills/alef-workflow/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:4cdae745139f7fc4f83b0b254385f54b814edad3c1d49431f9f5c16da3a27262'
+
+[[served]]
+name = 'api-server-mcp'
+source = '.ai-rulez/skills/api-server-mcp/SKILL.md'
+commit = ''
+digest = 'sha256:5717b29a2a503ac9553f4234eb6c1514ae6d4f57c34d7d553ad37ad68b24e979'
+
+[[served]]
+name = 'basemind-tools'
+source = 'include:xberg-core/skills/basemind-tools/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:b75400bf3b170ff59f9c9f979ccb3e8c4a460ff7b41f30a92d20e567d0815268'
+
+[[served]]
+name = 'benchmark-workflow'
+source = '.ai-rulez/skills/benchmark-workflow/SKILL.md'
+commit = ''
+digest = 'sha256:43eef3668102a60a6be7e7d526e0b902ff357fb9d2a16e6c67e8911abbcae51b'
+
+[[served]]
+name = 'binding-architecture'
+source = 'include:xberg-core/skills/binding-architecture/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:878a8638693df31052e4adf940039852299460525dd2395cf547d617b7de37ec'
+
+[[served]]
+name = 'cgo-bindings'
+source = 'builtin://bindings/cgo/skills/cgo-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:684cfdbe9590052ebfa21a289d3d0f083b4ecd965ce45bb4cbbd62c98a198ba2'
+
+[[served]]
+name = 'chunking-embeddings'
+source = '.ai-rulez/skills/chunking-embeddings/SKILL.md'
+commit = ''
+digest = 'sha256:bb3d3289d9452b5c7be01d6b360dd4dce07c41f1b46ee8f1aeb84732621cb18a'
+
+[[served]]
+name = 'cicd-pipeline-standards'
+source = 'include:xberg-cicd/skills/cicd-pipeline-standards/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:19ec99e9ed91962ed2ae78991ca76687b64d7072ff930419965743f443dae48a'
+
+[[served]]
+name = 'code-quality-standards'
+source = 'builtin://universal/code-quality/skills/code-quality-standards/SKILL.md'
+commit = ''
+digest = 'sha256:0126cc7c038b3e343ee56866949865dd799bde0de4884ba0bdfeb28655fa8134'
+
+[[served]]
+name = 'common-task-commands'
+source = 'include:xberg-core/skills/common-task-commands/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:383829527b247c8a2afdb87c0823428060a4515ec91f1f8706ecdee9f5b4cd4d'
+
+[[served]]
+name = 'config-loading-precedence'
+source = '.ai-rulez/skills/config-loading-precedence/SKILL.md'
+commit = ''
+digest = 'sha256:7a4d3d52f1f34b0670dfe94c315659d93b77fe57c8071c1f23a73f57af99f3bf'
+
+[[served]]
+name = 'consumer-release-gates'
+source = 'include:xberg-cicd/skills/consumer-release-gates/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:6d587e304dcf6af539d5d5d7b5a4b0063a2312b3864d12b807857eff0131e8bb'
+
+[[served]]
+name = 'containerization-docker'
+source = 'include:xberg-infrastructure/skills/containerization-docker/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:35c1328a68675b61cc8110ff308d90d95ded849112cbc4c8a795b695bc717e10'
+
+[[served]]
+name = 'crate-structure'
+source = '.ai-rulez/skills/crate-structure/SKILL.md'
+commit = ''
+digest = 'sha256:a5f5d8190215ff5ff253f074bdc766956173dfbe0636389500fb1ea76339f298'
+
+[[served]]
+name = 'create-e2e-fixture'
+source = 'include:xberg-e2e-generator/skills/create-e2e-fixture/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:4c0b4b699ae6875b102948091f503565a248c11b4b97fa63f08165898d0342cc'
+
+[[served]]
+name = 'csharp-conventions'
+source = 'builtin://languages/csharp/skills/csharp-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:f922d27afc2b6d04ee8396c581a8220ea0d775a45368c86692aefebcdd3b237c'
+
+[[served]]
+name = 'dependency-awareness'
+source = 'builtin://universal/security/skills/dependency-awareness/SKILL.md'
+commit = ''
+digest = 'sha256:e108ed344fe20948fcbda61b96266026bb9b2318df089964c088c0455294f8d3'
+
+[[served]]
+name = 'e2e-generator-conventions'
+source = 'include:xberg-e2e-generator/skills/e2e-generator-conventions/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:6d2ef23bd664721b39694de2a240676bff5b61545eb3f28b8770741e729f3e64'
+
+[[served]]
+name = 'elixir-conventions'
+source = 'builtin://languages/elixir/skills/elixir-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:961a318369ef64f420eb3b0ab668661b7559a4127ea9c4d722bc54994141ce38'
+
+[[served]]
+name = 'error-handling'
+source = 'builtin://universal/code-quality/skills/error-handling/SKILL.md'
+commit = ''
+digest = 'sha256:fddb5f980e8d98c91b459be578cdea7e0fc765d8219f66088892e936f0d1e349'
+
+[[served]]
+name = 'ext-php-rs-bindings'
+source = 'builtin://bindings/ext-php-rs/skills/ext-php-rs-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:0f4e3cb3fce5258148d242284de07ad05de1d6a254dfe29496e45d011ee7e18c'
+
+[[served]]
+name = 'extraction-pipeline-patterns'
+source = '.ai-rulez/skills/extraction-pipeline-patterns/SKILL.md'
+commit = ''
+digest = 'sha256:9090c7d5a9be05a786b4231b4a17435a2212b7865dbe9dccfd85cc47d6948f4e'
+
+[[served]]
+name = 'feature-flag-conventions'
+source = 'include:xberg-core/skills/feature-flag-conventions/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:46ce54cd7986b60f1ba8aeb44f9d30e73977818916df92939f39221a331c3044'
+
+[[served]]
+name = 'feature-flag-policy'
+source = '.ai-rulez/skills/feature-flag-policy/SKILL.md'
+commit = ''
+digest = 'sha256:34444e110f89b8f184ab167fc31d1ca1ffcfce0cb081bf769deffbf85d4a899d'
+
+[[served]]
+name = 'fixture-schema-design'
+source = 'include:xberg-e2e-generator/skills/fixture-schema-design/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:085c616635228dd904cc0fa40b8ba8aa2bd04642f8c457b53717cd41ff3c057c'
+
+[[served]]
+name = 'format-specific-extraction'
+source = '.ai-rulez/skills/format-specific-extraction/SKILL.md'
+commit = ''
+digest = 'sha256:77198c6f5b58896795ece917d003f68b575ab015ffe4ce18db3e7b8b8d1e16eb'
+
+[[served]]
+name = 'gcloud-conventions'
+source = 'include:xberg-infrastructure/skills/gcloud-conventions/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:d8dd7aa84a119548fe4dca4bc33c671a9817046ce80dd6fd2387bbbeff470f36'
+
+[[served]]
+name = 'gh-workflows'
+source = 'include:xberg-cicd/skills/gh-workflows/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:d2244ac91a402d6644b6fa31f2f4d2ca6429c9d7bc4808a655c4d2974851d6cd'
+
+[[served]]
+name = 'go-conventions'
+source = 'builtin://languages/go/skills/go-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:d4476ba547378d20d11369f89ae4348b2de3ee9fbbc0a59c6a882fffeda351ce'
+
+[[served]]
+name = 'incremental-approach'
+source = 'builtin://universal/token-efficiency/skills/incremental-approach/SKILL.md'
+commit = ''
+digest = 'sha256:ff56cbdc4813ee427a3b6f7d23f6b41b82b7c3cc8dc2b64ccd256a90e75e02f8'
+
+[[served]]
+name = 'iterate'
+source = ''
+commit = ''
+digest = 'sha256:5cb87728d1449fadda6d8557501fcc0823509c60a37058ce4d2dda123296f67c'
+
+[[served]]
+name = 'java-conventions'
+source = 'builtin://languages/java/skills/java-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:e1321c7af031b743c508d5831a2d0d501e7f0dc42121a73f6c9aa42dbc836c06'
+
+[[served]]
+name = 'jni-rs-bindings'
+source = 'builtin://bindings/jni-rs/skills/jni-rs-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:5cd6a4a75abe049a05f66467ec7d40bd220fdcc8351878c2177ecd92b9f9cf91'
+
+[[served]]
+name = 'magnus-bindings'
+source = 'builtin://bindings/magnus/skills/magnus-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:6d5a8aa4d68175eb821bec7af83658e1467f5e78c37fd0a790d435705957354f'
+
+[[served]]
+name = 'mime-detection-routing'
+source = '.ai-rulez/skills/mime-detection-routing/SKILL.md'
+commit = ''
+digest = 'sha256:e804011cf5ac8e810223c0851d632fb618dc7fadac80b10d6b983a9d3edbd434'
+
+[[served]]
+name = 'monitoring-observability'
+source = 'include:xberg-infrastructure/skills/monitoring-observability/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:c70eb4b73c08065f8afb3aad73f9dead4e52b21c319a6e7626d87d8abe59a50e'
+
+[[served]]
+name = 'napi-rs-bindings'
+source = 'builtin://bindings/napi-rs/skills/napi-rs-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:ff545e2ee6eb48147399436d288526ae793e7fb1b5e9ceaf53b4ea91ebad67b1'
+
+[[served]]
+name = 'ocr-pipeline-and-quality'
+source = '.ai-rulez/skills/ocr-pipeline-and-quality/SKILL.md'
+commit = ''
+digest = 'sha256:311e86681e98bdc4873bb2884ac8e9b8e985fe0ac5e6d596483c29b80554f387'
+
+[[served]]
+name = 'owasp-quick-reference'
+source = 'builtin://universal/security/skills/owasp-quick-reference/SKILL.md'
+commit = ''
+digest = 'sha256:de4f3b595b88e88d7bff0c342b5253637d08d79b3baebe888bd465f133ff512c'
+
+[[served]]
+name = 'parallelize'
+source = ''
+commit = ''
+digest = 'sha256:2700d984ba10baa2e16ed19b48cc8fd5f7351776f2ce03f6712394d3912f91cb'
+
+[[served]]
+name = 'pdf-backends'
+source = '.ai-rulez/skills/pdf-backends/SKILL.md'
+commit = ''
+digest = 'sha256:f0277b4f8cec32cf9b8f3ec005feab30461b3a369357795cf0e3801fda2dbe6c'
+
+[[served]]
+name = 'php-conventions'
+source = 'builtin://languages/php/skills/php-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:77fa4cb6a7f5f76e7e9f2fe380346cfc6be18f23e3ab367ddd0fed72c0395ab1'
+
+[[served]]
+name = 'plugin-architecture-patterns'
+source = '.ai-rulez/skills/plugin-architecture-patterns/SKILL.md'
+commit = ''
+digest = 'sha256:ec4c57328deb34aa262e8069ba8586419c3026c5a2a2a9d3fb25e471380862ed'
+
+[[served]]
+name = 'poly-lint-format'
+source = 'include:xberg-core/skills/poly-lint-format/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:0745bfb2faba77cbc8ac60ad2079f157c0d16fb17f9b30b9e167ca260502247c'
+
+[[served]]
+name = 'polyrepo-boundaries'
+source = '.ai-rulez/skills/polyrepo-boundaries/SKILL.md'
+commit = ''
+digest = 'sha256:dc9176aeff64a170da2cb5710302ab941e6b3b64020547a93e34da68b99fb431'
+
+[[served]]
+name = 'pyo3-bindings'
+source = 'builtin://bindings/pyo3/skills/pyo3-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:194c9f3449cdf25de95cbc01577a910627952ee507a68f48a255390ee741fced'
+
+[[served]]
+name = 'python-conventions'
+source = 'builtin://languages/python/skills/python-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:238ef2827bdd072cc4f0b820396bb57581f7e1667efdc46a628f0cb44a2532d8'
+
+[[served]]
+name = 'quick-start'
+source = 'include:xberg-core/skills/quick-start/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:32105dacbfd782273d5b9292b01bf888b673fccb491f87f8ff12b7061e715512'
+
+[[served]]
+name = 'release-readiness'
+source = '.ai-rulez/skills/release-readiness/SKILL.md'
+commit = ''
+digest = 'sha256:29d61f2c3f6eb8313c1b3ba2f03c74eb4a2d79d85e40171b56636ecc0177bb5e'
+
+[[served]]
+name = 'release-versioning'
+source = '.ai-rulez/skills/release-versioning/SKILL.md'
+commit = ''
+digest = 'sha256:7f5c4eda5f4309333f8f12dad78dfd52c1322de8600f2bbecef81fa591831eae'
+
+[[served]]
+name = 'release-workflow'
+source = 'include:xberg-core/skills/release-workflow/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:82dc67cca8839dab7d6e246c2471ef4fa7be8d9bd949760019d5d567ec47ea7e'
+
+[[served]]
+name = 'ruby-conventions'
+source = 'builtin://languages/ruby/skills/ruby-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:a2678ff39307d443deb2132e24c091324f0e0e44f4b20144911e912aadac8c69'
+
+[[served]]
+name = 'rust-conventions'
+source = 'builtin://languages/rust/skills/rust-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:0a7c23c09a7fc29a7237fc838ab1491504f51f8d90fc114b52c1d914bf52214d'
+
+[[served]]
+name = 'rustler-bindings'
+source = 'builtin://bindings/rustler/skills/rustler-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:357eb14ec47c2a2ef27760812dcfebb31d16ad5b4d68d679e7cf47b77941e69d'
+
+[[served]]
+name = 'scoop-distribution'
+source = 'include:xberg-cicd/skills/scoop-distribution/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:dbe8c54b7ec4653bde6ef3bee2c3f9ed068c69e79e7e22389215dd2646ad5d9e'
+
+[[served]]
+name = 'task-runner'
+source = 'builtin://universal/token-efficiency/skills/task-runner/SKILL.md'
+commit = ''
+digest = 'sha256:9f3cadda648798b049869c463d7a69f6f7b5953bcad2a43ea02e645d1ec3e19b'
+
+[[served]]
+name = 'taskfile-structure'
+source = 'include:xberg-core/skills/taskfile-structure/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:25034a5f6b849257184b1f9d1cf463acf6257c41a6935fdd473778578f3c2f1c'
+
+[[served]]
+name = 'tdd-workflow'
+source = 'builtin://universal/testing/skills/tdd-workflow/SKILL.md'
+commit = ''
+digest = 'sha256:90ddeb170606792596979de6444904f88b5fbcdc52ea2462109401865d17f6ec'
+
+[[served]]
+name = 'test-corpus'
+source = '.ai-rulez/skills/test-corpus/SKILL.md'
+commit = ''
+digest = 'sha256:8fce997b4b426c90dc4fbbc3424186c37d78f51adb9f520ee92bbde96e9692d7'
+
+[[served]]
+name = 'testing-conventions'
+source = 'builtin://universal/testing/skills/testing-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:562385aa3c563ffbf327d6776932b43175052b00ec4418695ed6c50c335f1686'
+
+[[served]]
+name = 'tracing-conventions'
+source = 'include:xberg-core/skills/tracing-conventions/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:a7b6cdef62f40a8f901d829d946a2e95b562788278b2635a8076eb01e9e70eff'
+
+[[served]]
+name = 'typescript-conventions'
+source = 'builtin://languages/typescript/skills/typescript-conventions/SKILL.md'
+commit = ''
+digest = 'sha256:e7f24f6d61273cf893cf528d1fa0453e4546449c0fe8b74ef07c060067390d25'
+
+[[served]]
+name = 'wasm-bindings'
+source = 'builtin://bindings/wasm/skills/wasm-bindings/SKILL.md'
+commit = ''
+digest = 'sha256:37b22af6cad8ed446e4cce4a96f9d7cfd937f2a78e05cb6d3df2aff8e333e921'
+
+[[served]]
+name = 'wasm-constraints'
+source = '.ai-rulez/skills/wasm-constraints/SKILL.md'
+commit = ''
+digest = 'sha256:a233b8f810e1c73af3f522abe38067546a2f50ffbc21339db306a6324d63a018'
+
+[[served]]
+name = 'xberg-brand-and-docs'
+source = 'include:xberg-core/skills/xberg-brand-and-docs/SKILL.md'
+commit = 'adb0caa92c4d8155fb1680618f72a321a832660b'
+digest = 'sha256:b217c516ea63b3f7a56987a0168050d25c0b05b70c4966a8899cd5a05d8acaa3'
+
+[[served]]
+name = 'xberg-typescript-toolchain'
+source = '.ai-rulez/skills/xberg-typescript-toolchain/SKILL.md'
+commit = ''
+digest = 'sha256:c58e11fe6ef14fc344bc73a5527a35f475745c6a9b4d3b425a35de6abaedce47'
+
+[[item]]
+kind = 'agent'
+id = 'xberg-developer'
+path = 'agents/xberg-developer.md'
+digest = 'sha256:69c39157f14c3bc868fb8e587d9e9ced96678bbc18a922452efe08d65447f95e'
+
+[[item]]
+kind = 'agent'
+id = 'extraction-engineer'
+domain = 'document-extraction'
+path = 'domains/document-extraction/agents/extraction-engineer.md'
+digest = 'sha256:49c7a836c0d2410f60df5991016c60c1fb5c2f28a7bb33651fe08d830062a346'
+
+[[item]]
+kind = 'agent'
+id = 'ocr-engineer'
+domain = 'ocr-integration'
+path = 'domains/ocr-integration/agents/ocr-engineer.md'
+digest = 'sha256:7e1dadc2e5d1bfb83c81bc6a5e9c9be0920dbd5da543cc33f88134dfdf02bd87'
+
+[[item]]
+kind = 'agent'
+id = 'plugin-engineer'
+domain = 'plugin-system'
+path = 'domains/plugin-system/agents/plugin-engineer.md'
+digest = 'sha256:44ea723f2add0aa84741fca2deb686d95bfb4376c59320eca7792e68c89cc23a'
+
+[[item]]
+kind = 'rule'
+id = 'changelog-policy'
+path = 'rules/changelog-policy.md'
+digest = 'sha256:78d68076577f30ed59f3590a28380aed42933148473d033cbd05597c61a788b8'
+
+[[item]]
+kind = 'rule'
+id = 'api-compatibility'
+domain = 'document-extraction'
+path = 'domains/document-extraction/rules/api-compatibility.md'
+digest = 'sha256:96574e056a2b260ef18b1d4ebc86f2eafb1d6338eaedc9cd0b75ed86644e162b'
+
+[[item]]
+kind = 'rule'
+id = 'async-and-concurrency'
+domain = 'document-extraction'
+path = 'domains/document-extraction/rules/async-and-concurrency.md'
+digest = 'sha256:c5495981de9ab82563ae8da4ffbda93e0b0d9f5c8168ba89ed0930f187da2760'
+
+[[item]]
+kind = 'rule'
+id = 'extraction-safety'
+domain = 'document-extraction'
+path = 'domains/document-extraction/rules/extraction-safety.md'
+digest = 'sha256:d89a199bb3cdc45c9960d55d5edd7ed7c06faf287ae350cb87b505462dfa5774'
+
+[[item]]
+kind = 'settings'
+id = 'mcp-servers'
+digest = 'sha256:0c3ec1142275bddbddcc03caadc03358528d1b6a97aca401bc75e4471ba346cb'
+
+[[item]]
+kind = 'skill'
+id = 'alef-generated-bindings'
+path = 'skills/alef-generated-bindings'
+digest = 'sha256:e8e40f508b5d02e6c4d29df6bad1d1819134ddedbe9a3705a0a5a1ae948bff50'
+
+[[item]]
+kind = 'skill'
+id = 'api-server-mcp'
+path = 'skills/api-server-mcp'
+digest = 'sha256:4174eb1d49852e7843f837e3d3935087bd97bd48cb21ebca87d16bb2174add8e'
+
+[[item]]
+kind = 'skill'
+id = 'benchmark-workflow'
+path = 'skills/benchmark-workflow'
+digest = 'sha256:77eb0dec80269172be51b8516963c6634ec77e70aaef81debc08bbf8788fd8c3'
+
+[[item]]
+kind = 'skill'
+id = 'chunking-embeddings'
+path = 'skills/chunking-embeddings'
+digest = 'sha256:951bd77edee5b49dcfd48445f648c2450292f7562dc76e3840f770c4c56b41f0'
+
+[[item]]
+kind = 'skill'
+id = 'config-loading-precedence'
+path = 'skills/config-loading-precedence'
+digest = 'sha256:30740cc3afaf0f0e94f1fd35b9aa2fec743f6e2ccb61ecb1777a1dbecd137bb1'
+
+[[item]]
+kind = 'skill'
+id = 'crate-structure'
+path = 'skills/crate-structure'
+digest = 'sha256:bffd9d4daf7064934580d0575ba728758ba13854dd59e4d3646ae9082fdbb8aa'
+
+[[item]]
+kind = 'skill'
+id = 'extraction-pipeline-patterns'
+path = 'skills/extraction-pipeline-patterns'
+digest = 'sha256:7655b022d07c4c8f32a3f9c0ff820327cb18484481e24217c5f87e8d2ed8a531'
+
+[[item]]
+kind = 'skill'
+id = 'feature-flag-policy'
+path = 'skills/feature-flag-policy'
+digest = 'sha256:43c58cfefe9afff3ff52861ff27067a3bf16aea7cc56861ad10e852c4a0695b9'
+
+[[item]]
+kind = 'skill'
+id = 'format-specific-extraction'
+path = 'skills/format-specific-extraction'
+digest = 'sha256:94b6454791553b8c87a241dcdd8759c190513c83a6d5cb18175f32a39b4d19da'
+
+[[item]]
+kind = 'skill'
+id = 'mime-detection-routing'
+path = 'skills/mime-detection-routing'
+digest = 'sha256:397198efa2345390c3f9680bf59c9fc5c6e0b60935254b654bd485f0ac10c205'
+
+[[item]]
+kind = 'skill'
+id = 'ocr-pipeline-and-quality'
+path = 'skills/ocr-pipeline-and-quality'
+digest = 'sha256:851385445fdd33356d438558e3d51b63a5c8035ae8181b5e06d846c5401bc448'
+
+[[item]]
+kind = 'skill'
+id = 'pdf-backends'
+path = 'skills/pdf-backends'
+digest = 'sha256:29f61ddf620563173bce7ed8576e1acd063843fa5488d8e88227e6587e9694c1'
+
+[[item]]
+kind = 'skill'
+id = 'plugin-architecture-patterns'
+path = 'skills/plugin-architecture-patterns'
+digest = 'sha256:7eef9f28e329b6f75452402240c9903d388d07b217efb06934df413f1841783d'
+
+[[item]]
+kind = 'skill'
+id = 'polyrepo-boundaries'
+path = 'skills/polyrepo-boundaries'
+digest = 'sha256:e0f874f22d308b70957d2b7b3a87f22577032993956a2f8baf77cff37cb2090d'
+
+[[item]]
+kind = 'skill'
+id = 'release-readiness'
+path = 'skills/release-readiness'
+digest = 'sha256:116b8d0237d0bd5e2329b53cefd0a96c91772276a094a86ff110cff3cc8bb0b1'
+
+[[item]]
+kind = 'skill'
+id = 'release-versioning'
+path = 'skills/release-versioning'
+digest = 'sha256:991b9dee425962810ff84ecd6329c36f1130bd406a9747055384e966d82eba70'
+
+[[item]]
+kind = 'skill'
+id = 'test-corpus'
+path = 'skills/test-corpus'
+digest = 'sha256:0a41c5a3b9f87a8ad739800fce6467d9b3ece5e6e6a1de5cd5960b202a1df7e0'
+
+[[item]]
+kind = 'skill'
+id = 'wasm-constraints'
+path = 'skills/wasm-constraints'
+digest = 'sha256:f0801f831a5bc2742f878d178a6d4b9d3ac13d6990af51c250ea656efd50c504'
+
+[[item]]
+kind = 'skill'
+id = 'xberg-typescript-toolchain'
+path = 'skills/xberg-typescript-toolchain'
+digest = 'sha256:ab58acb1996da6035ccf75f2f1d3c96ea177a03a414b07c75e6b787b7b3c796c'

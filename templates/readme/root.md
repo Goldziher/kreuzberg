@@ -269,6 +269,23 @@ See [MCP integration guide](https://docs.xberg.io/guides/mcp-integration/).
 
 Install the Xberg plugin from [`xberg-io/xberg`](https://github.com/xberg-io/xberg). Ships extraction APIs, OCR backends, configuration, and language conventions.
 
+The bundle targets Claude Code, Codex, Cursor, Gemini CLI, Kimi, OpenCode, Factory Droid,
+Hermes, Pi, Agent Plugins and GitHub Copilot CLI. Read [the plugin guide](https://github.com/xberg-io/xberg/blob/main/plugin/README.md)
+for runtime resources, CLI prerequisites and configuration. MCP-capable adapters expose the
+product's tools; Hermes uses a local stdio bridge and explicitly selected skills. Pi loads
+skills and prompt templates and requires the product CLI for executable operations.
+
+Install only the public [Agent Skills](https://github.com/xberg-io/xberg/tree/main/skills),
+without a plugin or MCP registration, using the [skills CLI](https://github.com/vercel-labs/skills):
+
+```sh
+npx skills add xberg-io/xberg --list
+npx skills add xberg-io/xberg
+```
+
+Choose the skills and target agents interactively. Installing instructions does not install the
+product CLI or configure provider credentials.
+
 <details open>
 <summary><strong>Claude Code</strong></summary>
 
@@ -300,9 +317,14 @@ Settings → Plugins → Add from URL → `https://github.com/xberg-io/xberg`, t
 <details>
 <summary><strong>Gemini CLI</strong></summary>
 
-```text
-gemini extensions install https://github.com/xberg-io/xberg
+From a checkout of this repository:
+
+```sh
+gemini extensions install ./plugin
 ```
+
+The manifest is inside `plugin/`. See the [Gemini extension reference](https://geminicli.com/docs/extensions/reference/)
+for local installation and updates.
 
 </details>
 

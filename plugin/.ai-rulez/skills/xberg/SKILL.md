@@ -1,16 +1,17 @@
 ---
-name: xberg
-description: >-
-  Extract text, tables, metadata, and images from 107 document formats
-  (PDF, Office, images, HTML, email, archives, academic) using Xberg.
-  Use when writing code that calls Xberg APIs in Python, Node.js/TypeScript,
-  Rust, or CLI. Covers installation, extraction (sync/async), configuration
-  (OCR, chunking, output format), batch processing, error handling, and plugins.
-license: Elastic-2.0
-metadata:
-  author: xberg-io
-  version: "0.1.0"
-  repository: https://github.com/xberg-io/xberg
+type: Playbook
+title: Xberg
+description: Extract text, tables, metadata, and images from 107 document formats (PDF, Office, images, HTML, email, archives, academic) using Xberg. Use when writing code that calls Xberg APIs in Python, Node.js/TypeScript, Rust, or CLI. Covers installation, extraction (sync/async), configuration (OCR, chunking, output format), batch processing, error handling, and plugins.
+x-ai-rulez:
+  kind: skill
+  id: xberg
+  metadata:
+    license: Elastic-2.0
+    metadata:
+      author: xberg-io
+      version: "0.1.0"
+      repository: https://github.com/xberg-io/xberg
+    name: xberg
 ---
 
 # Xberg Document Extraction
@@ -61,8 +62,8 @@ tokio = { version = "1", features = ["full"] }
 ```bash
 brew install xberg-io/tap/xberg
 # or run without a persistent install (the CLI proxy package self-installs the binary):
-npx @xberg-io/xberg-cli --help
-uvx --from xberg-cli xberg --help
+npx @xberg-io/xberg-cli@1.3.10 --help
+uvx --from xberg-cli==1.3.8 xberg --help
 # or download a prebuilt binary from the latest GitHub release:
 #   https://github.com/xberg-io/xberg/releases/latest
 # or build from source:
@@ -213,7 +214,7 @@ xberg extract doc.pdf --config-json '{"ocr":{"backend":"tesseract","language":"d
 
 ## Batch Processing
 
-`extract_batch` takes a list of `ExtractInput`s and returns one envelope whose `results` array holds a document per input (in input order); per-input failures are reported in `result.errors`.
+`extract_batch` takes a list of `ExtractInput`s and returns one envelope whose `results` array holds documents in discovery order; one input may yield multiple documents. Per-input failures are reported in `result.errors` with an input index.
 
 ### Python
 
@@ -274,7 +275,7 @@ Select with `OcrConfig.backend`:
 - **paddleocr** (`"paddleocr"` / `"paddle-ocr"`): ONNX-based PaddleOCR.
 - **vlm**: Vision-Language-Model OCR (configure via `OcrConfig.vlm_config`).
 
-Custom backends can be registered in Python/Node via `register_ocr_backend` (see [Advanced Features](references/advanced-features.md)).
+Custom backends can be registered in Python/Node via `register_ocr_backend` (see [Advanced Features](../../references/advanced-features.md)).
 
 ### Language Codes
 
@@ -390,31 +391,31 @@ match extract(ExtractInput::from_uri("file.pdf"), &config).await {
 
 CSL JSON is supported through an explicit MIME type but does not have a registered file extension.
 
-See [references/supported-formats.md](references/supported-formats.md) for the complete format reference with MIME types.
+See [../../references/supported-formats.md](../../references/supported-formats.md) for the complete format reference with MIME types.
 
 ## Additional Resources
 
 Detailed reference files for specific topics:
 
-- **[Python API Reference](references/python-api.md)** — All functions, config classes, plugin protocols, exact signatures
-- **[Node.js API Reference](references/nodejs-api.md)** — All functions, TypeScript interfaces, worker pool APIs
-- **[Rust API Reference](references/rust-api.md)** — All functions with feature gates, structs, Cargo.toml examples
-- **[CLI Reference](references/cli-reference.md)** — All commands, flags, config precedence, exit codes
-- **[Configuration Reference](references/configuration.md)** — TOML/YAML/JSON formats, auto-discovery, env vars, full schema
-- **[Supported Formats](references/supported-formats.md)** — Format families, extensions, capabilities, and authoritative discovery commands
-- **[Advanced Features](references/advanced-features.md)** — Plugins, embeddings, MCP server, API server, security limits
-- **[Other Language Bindings](references/other-bindings.md)** — Go, Ruby, Java, C#, PHP, Elixir, WASM, Dart, Kotlin Android, Swift, Zig, C, and Docker
+- **[Python API Reference](../../references/python-api.md)** — All functions, config classes, plugin protocols, exact signatures
+- **[Node.js API Reference](../../references/nodejs-api.md)** — All functions, TypeScript interfaces, worker pool APIs
+- **[Rust API Reference](../../references/rust-api.md)** — All functions with feature gates, structs, Cargo.toml examples
+- **[CLI Reference](../../references/cli-reference.md)** — All commands, flags, config precedence, exit codes
+- **[Configuration Reference](../../references/configuration.md)** — TOML/YAML/JSON formats, auto-discovery, env vars, full schema
+- **[Supported Formats](../../references/supported-formats.md)** — Format families, extensions, capabilities, and authoritative discovery commands
+- **[Advanced Features](../../references/advanced-features.md)** — Plugins, embeddings, MCP server, API server, security limits
+- **[Other Language Bindings](../../references/other-bindings.md)** — Go, Ruby, Java, C#, PHP, Elixir, WASM, Dart, Kotlin Android, Swift, Zig, C, and Docker
 
 ## Related skills
 
 Task-focused sibling skills go deeper than this overview:
 
-- **extracting-with-ocr** — OCR backends, language packs, force-OCR, tuning.
-- **extracting-tables** — layout-aware table detection and table models.
-- **chunking** — chunk size/overlap, markdown/yaml/semantic chunkers, the `chunk` command.
-- **extracting-keywords** — YAKE/RAKE keywords, language detection, the `embed` command.
-- **batch-extraction** — the `batch` command, `--file-configs`, parallelism, error recovery.
-- **picking-a-format** — choosing `--format` / `--content-format` per consumer.
+- **xberg-extracting-with-ocr** — OCR backends, language packs, force-OCR, tuning.
+- **xberg-extracting-tables** — layout-aware table detection and table models.
+- **xberg-chunking** — chunk size/overlap, markdown/yaml/semantic chunkers, the `chunk` command.
+- **xberg-extracting-keywords** — YAKE/RAKE keywords, language detection, the `embed` command.
+- **xberg-batch-extraction** — the `batch` command, `--file-configs`, parallelism, error recovery.
+- **xberg-picking-a-format** — choosing `--format` / `--content-format` per consumer.
 
 Full documentation: <https://docs.xberg.io>
 GitHub: <https://github.com/xberg-io/xberg>

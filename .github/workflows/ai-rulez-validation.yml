@@ -1,0 +1,50 @@
+name: AI-Rulez validation
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".ai-rulez/**"
+      - "modules/**"
+      - "plugin/**"
+      - "skills/**"
+      - ".agents/plugins/**"
+      - ".claude-plugin/**"
+      - ".codex/**"
+      - "scripts/sync*"
+      - "Cargo.toml"
+      - "pyproject.toml"
+      - "package.json"
+      - ".gitignore"
+      - ".github/workflows/ai-rulez-validation.yml"
+  pull_request:
+    paths:
+      - ".ai-rulez/**"
+      - "modules/**"
+      - "plugin/**"
+      - "skills/**"
+      - ".agents/plugins/**"
+      - ".claude-plugin/**"
+      - ".codex/**"
+      - "scripts/sync*"
+      - "Cargo.toml"
+      - "pyproject.toml"
+      - "package.json"
+      - ".gitignore"
+      - ".github/workflows/ai-rulez-validation.yml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        with:
+          ai-rulez-version: "5.3.0"
+          source-revision: "1dd46d774f156f3d170ecd1b702598b12d1eaf5b"
+      - uses: xberg-io/actions/validate-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        with:
+          expected-config-count: "2"
+          additional-config-directories: "plugin/.ai-rulez"
+          verify-plugin: "true"
+          version-sync-script: "scripts/sync_integration_versions.py"

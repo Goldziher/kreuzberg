@@ -1,11 +1,11 @@
 ---
-description: "Extract a document locally with Xberg"
+description: Extract a document locally with Xberg
 ---
 
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-Content-Hash: blake3:519efaa10fd8e92073089cdc9bdebf7151a312a3f280d8d70987603bf31d9113
-Source-Hash: blake3:3fca38eb564d0ed9c9194d070fd8dec96de727edc92e82954cb4b9af52cddbaf
+Content-Hash: blake3:3d695d0525269a1935328e6568418a562cac9ba7a64c6e8121d5136dc93b36e3
+Source-Hash: blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b
 Schema-Version: v1
 -->
 

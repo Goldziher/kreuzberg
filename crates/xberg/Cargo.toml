@@ -1350,7 +1350,7 @@ encoding_rs = { version = "0.8.42" }
 fast_image_resize = { version = "6.1.0", optional = true }
 flate2 = { version = "1.1", optional = true }
 hayro-jbig2 = { version = "0.3", default-features = false, features = ["std"], optional = true }
-hayro-jpeg2000 = { version = "0.4", default-features = false, features = ["std", "simd"], optional = true }
+hayro-jpeg2000 = { version = "0.4.1", default-features = false, features = ["std", "simd"], optional = true }
 hex = { workspace = true }
 html-escape = { version = "0.3.0", optional = true }
 html-to-markdown-rs = { workspace = true, features = ["inline-images", "metadata"], optional = true }

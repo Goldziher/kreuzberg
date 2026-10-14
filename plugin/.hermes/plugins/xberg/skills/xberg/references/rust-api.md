@@ -1,7 +1,7 @@
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
-Content-Hash: blake3:a6ececeeda3031d9d84eb780fcb5ecb41b3f4297fa1e6b86f492e0d755b084a9
-Source-Hash: blake3:3fca38eb564d0ed9c9194d070fd8dec96de727edc92e82954cb4b9af52cddbaf
+Content-Hash: blake3:a257c85add0ba02dd9ab63eecac13348152038919a09ba99964261256acf4ee4
+Source-Hash: blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b
 Schema-Version: v1
 -->
 
@@ -36,7 +36,7 @@ The `tokio-runtime` feature is on by default. Capabilities are gated behind feat
 | `full`               | `formats` + ocr + layout + embeddings + tree-sitter + LLM. |
 | `pdf`                | PDF extraction.                                           |
 | `ocr`                | Tesseract-based OCR.                                      |
-| `chunking`           | Text chunking for RAG pipelines.                         |
+| `xberg-chunking`           | Text chunking for RAG pipelines.                         |
 | `embeddings`         | ONNX embedding generation.                                |
 | `language-detection` | Detect document language(s).                              |
 | `keywords`           | YAKE + RAKE keyword extraction.                          |
@@ -79,7 +79,7 @@ async fn main() -> xberg::Result<()> {
 pub async fn extract_batch(inputs: Vec<ExtractInput>, config: &ExtractionConfig) -> Result<ExtractionResult>
 ```
 
-Extract multiple inputs in parallel. The returned envelope's `results` holds one `ExtractedDocument` per input (in input order), with non-fatal failures in `errors`.
+Extract multiple inputs in parallel. The returned envelope's `results` holds `ExtractedDocument` values in discovery order; one input may yield multiple documents. Non-fatal failures in `errors` carry the original input index.
 
 ```rust
 use xberg::{extract_batch, ExtractInput, ExtractionConfig};
@@ -261,7 +261,7 @@ let config = ExtractionConfig {
 
 ```rust
 pub struct ExtractionResult {
-    pub results: Vec<ExtractedDocument>,       // one per input, in order
+    pub results: Vec<ExtractedDocument>,       // documents in discovery order; multiple per input are possible
     pub errors: Vec<ExtractionErrorItem>,      // non-fatal per-input errors
     pub summary: ExtractionSummary,            // aggregate counts
     pub crawl_final_urls: Vec<String>,

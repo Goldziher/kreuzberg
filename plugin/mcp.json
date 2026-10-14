@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "xberg": {
+      "type": "stdio",
+      "command": "./scripts/mcp-launch.sh",
+      "args": [
+        "mcp",
+        "--transport",
+        "stdio"
+      ]
+    }
+  }
+}

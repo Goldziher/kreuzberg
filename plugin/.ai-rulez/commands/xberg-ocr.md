@@ -1,5 +1,10 @@
 ---
-description: "Extract scanned documents with OCR"
+type: Reference
+title: Xberg Ocr
+description: Extract scanned documents with OCR
+x-ai-rulez:
+  kind: command
+  id: xberg-ocr
 ---
 
 OCR this document: $ARGUMENTS

@@ -11,12 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): every JPEG 2000 image reports 8 bits per component.** A JPEG 2000 decode yields 8-bit samples, and the
+  image dictionary's `/BitsPerComponent` is ignored for `/JPXDecode` (ISO 32000-1 Table 89). Only palette images
+  reported 8; any other JPEG 2000 image with a stale `/BitsPerComponent` reported the dictionary's value. (GH#2112)
 - **(ppt): a table on a legacy `.ppt` slide is extracted as a table.** PowerPoint 97-2003 draws a table as a group of
   one text shape per cell, and the cells were read as loose lines in the order they are stored, which can be
   bottom-right first, so a table came out as a run of values cut off from their headers. The grid is now rebuilt
   from each cell's position and added after the slide's other text. A merged cell is written once at its top-left
   position, as for the other formats, and a row or column with no text, such as a narrow spacer column, is left out.
   A slide whose only line sits over a table keeps that line as its title.
+
+### Changed
+
+- **(deps): hayro-jpeg2000 0.4.1 is the minimum, and it resolves JPEG 2000 palettes itself.** 0.4.1 clamps a palette
+  index that lossy coding pushes outside the palette, so xberg no longer reads the palette of an image without an
+  `/Indexed` colour space and looks it up by hand. A project whose lockfile held 0.4.0 now gets the clamp for every
+  palette shape, not only the 8-bit grey, sRGB and CMYK palettes xberg resolved itself. A codestream palette whose
+  component count differs from an explicit `/ColorSpace` is still rejected. (GH#2112)
 
 ## [1.3.10] - 2026-10-13
 
