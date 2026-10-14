@@ -78,7 +78,7 @@ Xberg is written following strict AI engineering practices. That is, its vibe co
 
 ### Conventions
 
-Use the released `ai-rulez` 5.3.0 CLI (with the release version pinned in CI) to manage agent conventions. Edit authored content under
+Use the reviewed `ai-rulez` 5.3.0-based CLI (with the source revision pinned in CI) to manage agent conventions. Edit authored content under
 `.ai-rulez/`; `AGENTS.md`, `CLAUDE.md` and harness directories are generated outputs.
 The main `config.toml` selects the `plugins` layer through `default_layers`; marketplace and
 plugin settings live separately in `config.plugins.toml`.
