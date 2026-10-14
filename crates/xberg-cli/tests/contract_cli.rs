@@ -91,8 +91,7 @@ fn test_cli_complex_config_deserialization() {
         },
         "chunking": {
             "max_characters": 2000,
-            "overlap": 400,
-            "strategy": "sliding_window"
+            "overlap": 400
         }
     }"#;
 
