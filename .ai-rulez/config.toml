@@ -73,7 +73,7 @@ merge_strategy = 'local-override'
 name = 'alef'
 source = 'https://github.com/xberg-io/alef.git'
 
-ref = "f7195ed431bfd2e639edcabd611c70b62a3ed547"
+ref = "613e2b06975b1d3a0d776ca141dec7b540e9ed74"
 [[mcp_servers]]
 name = 'playwright'
 description = 'Playwright browser automation for E2E testing and docs verification'

@@ -4,7 +4,7 @@
 version = 1
 ai_rulez_version = '5.2.1'
 scope = 'all'
-tree = 'sha256:faf9fd102ac49ac468faa9745d72a910a74b1b0b2929ee42c8d1f7ffeb5abd9c'
+tree = 'sha256:5c6a222205ba3a2f3bf78a3fdfe88f01f4f4e7e7c8a095a4d0ce7ac29c0e5c82'
 
 [[include]]
 name = 'xberg-cicd'
@@ -50,8 +50,8 @@ digest = 'sha256:09710d8a5d1493bcb3dc9a54aab1dc5df7434ad4e810447d0c77cd5dcba16f5
 name = 'alef'
 source = 'https://github.com/xberg-io/alef.git'
 path = 'skills/alef'
-ref = 'f7195ed431bfd2e639edcabd611c70b62a3ed547'
-commit = 'f7195ed431bfd2e639edcabd611c70b62a3ed547'
+ref = '613e2b06975b1d3a0d776ca141dec7b540e9ed74'
+commit = '613e2b06975b1d3a0d776ca141dec7b540e9ed74'
 digest = 'sha256:b8e5a29bdbefb3ca9b8f15324d865e48a55d43fe5a1370831232549d2f78fa73'
 
 [[served]]
@@ -69,7 +69,7 @@ digest = 'sha256:a4fe1a58e404decf8e6d90b8053e03c4300641544f31f01f28225dfc902657b
 [[served]]
 name = 'alef'
 source = 'https://github.com/xberg-io/alef.git'
-ref = 'f7195ed431bfd2e639edcabd611c70b62a3ed547'
+ref = '613e2b06975b1d3a0d776ca141dec7b540e9ed74'
 commit = ''
 digest = 'sha256:61c78d745a1b7c74b9752fb8a10bba27e023001c66a4260a57a3f033fbbb6273'
 
