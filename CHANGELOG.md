@@ -20,6 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from each cell's position and added after the slide's other text. A merged cell is written once at its top-left
   position, as for the other formats, and a row or column with no text, such as a narrow spacer column, is left out.
   A slide whose only line sits over a table keeps that line as its title.
+- **(html): Markdown output no longer rewrites the contents of fenced code blocks.** Lines inside a ``` or ~~~ fence
+  were treated as prose, so a code line followed by `---` or `===` became a heading and the ruler was deleted, and a
+  blank line was inserted before every `#` line. Fenced code is now passed through unchanged. (GH#2118)
+- **(macos): the first extraction no longer hangs forever when the host ignores `SIGCHLD`.** Reading the machine's
+  physical memory spawned a `sysctl -n hw.memsize` child process, and a host that sets `SIGCHLD` to `SIG_IGN`, such
+  as the BEAM, has the kernel reap the child so the wait never returned. The value is now read in-process with
+  `sysctlbyname`. (GH#2117)
+- **(pdf): a `•` inside the text of a table row no longer turns the row into list items without word spaces.** A
+  bullet between two letters is not an item marker, and items split off a paragraph keep the spaces between their
+  words. (GH#2115)
+- **(pdf): two book pages printed side by side on one sheet are read left page, then right page again.** Since 1.3.9
+  the column cut was refused when a few short lines of one half sat within 1 pt of a body line of the other, which
+  happens by chance when the halves use different leading (6 pt slide bullets beside 9.9 pt body text). Those
+  coincidences were taken for a form's label/value rows, and the halves were read line by line. A cut is now refused
+  only when the paired rows cover at least half of the lines on its sparser side. (GH#2116)
 
 ### Changed
 
