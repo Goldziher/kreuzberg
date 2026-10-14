@@ -6,7 +6,7 @@
 # for. 0.83.0 additionally fixes the php/napi/pyo3 mirror defaults, the elixir bytes
 # hop and the typescript/wasm mock-url builder that this repo's e2e legs were red on.
 # ~keep
-alef_version = "0.110.6"
+alef_version = "0.110.11"
 languages = [
   "python",
   "node",
@@ -465,6 +465,7 @@ preserve-patterns = ["SAFETY", "SPDX", "Copyright", "License", "licensed under",
 # extractor walks to resolve a shape's `pib` to picture bytes. A spec identifier, not BASE. ~keep
 # flate2 crate + PDF FlateDecode filter (THE ORIGINAL BUG: flate -> flat)
 # German-language OCR plausibility test fixture (GH#1709) ~keep
+# Hex digits in a chunking golden-fixture hash, a French-language fixture phrase, and a test trie pattern. ~keep
 # libwpd upstream enum WPD_PASSWORD_MISSMATCH_ERROR (inc/libwpd/WPDocument.h) — upstream's own spelling, cannot rename. ~keep
 # OpenType table names, not truncated English: `loca` (index-to-location),
 # PDF text-extraction test fixture ~keep
@@ -476,9 +477,11 @@ preserve-patterns = ["SAFETY", "SPDX", "Copyright", "License", "licensed under",
 # word-split example "eigenv"+"alue" in a kerning comment ~keep
 acn = "acn"
 addresss = "addresss"
+afe = "afe"
 ake = "ake"
 algoritmos = "algoritmos"
 alikes = "alikes"
+alph = "alph"
 als = "als"
 alue = "alue"
 arange = "arange"
@@ -497,6 +500,7 @@ compre = "compre"
 controler = "controler"
 conversie = "conversie"
 cursos = "cursos"
+daa = "daa"
 delocate = "delocate"
 diffcult = "diffcult"
 docling = "docling"
@@ -546,6 +550,7 @@ missmatch = "missmatch"
 mmaped = "mmaped"
 multipl = "multipl"
 multline = "multline"
+musculaire = "musculaire"
 normale = "normale"
 odf = "odf"
 onnx = "onnx"

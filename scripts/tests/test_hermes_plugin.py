@@ -64,7 +64,7 @@ class HermesBridgeTests(unittest.IsolatedAsyncioTestCase):
         """Hermes accepts text or multimodal envelopes, not generic MCP dictionaries."""
         registered = {}
         context = SimpleNamespace(
-            register_skill=lambda *args, **kwargs: None,
+            register_skill=lambda *_args, **_kwargs: None,
             register_tool=lambda **kwargs: registered.update(kwargs),
         )
         self.adapter.register(context)

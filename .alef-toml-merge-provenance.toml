@@ -36,6 +36,14 @@ values = [
   "**/vendor/**",
   "**/Cargo.toml",
   "docs-site/src/snippets-generated/**",
+  "plugin/plugin.json",
+  "plugin/mcp.json",
+  "plugin/.pi/**",
+  "plugin/.github/**",
+  ".github/plugin/**",
+  ".cursor-plugin/marketplace.json",
+  ".ai-rulez/.generated-manifest.json",
+  "plugin/.ai-rulez/.generated-manifest.json",
   "docs-site/src/snippets/**",
   "**/_generated/**",
   "**/coverage/**",
@@ -69,6 +77,7 @@ values = [
   ".agents/plugins/marketplace.json",
   "/.ai-rulez-generated.json",
   "tools/benchmark-harness/cohorts/**",
+  "skills/**",
 ]
 
 [[entries]]
@@ -107,6 +116,14 @@ values = [
   "**/vendor/**",
   "**/Cargo.toml",
   "docs-site/src/snippets-generated/**",
+  "plugin/plugin.json",
+  "plugin/mcp.json",
+  "plugin/.pi/**",
+  "plugin/.github/**",
+  ".github/plugin/**",
+  ".cursor-plugin/marketplace.json",
+  ".ai-rulez/.generated-manifest.json",
+  "plugin/.ai-rulez/.generated-manifest.json",
   "docs-site/src/snippets/**",
   "**/_generated/**",
   "**/coverage/**",
@@ -140,6 +157,7 @@ values = [
   ".agents/plugins/marketplace.json",
   ".ai-rulez-generated.json",
   "tools/benchmark-harness/cohorts/**",
+  "skills/**",
   "packages/swift/Sources/RustBridge/xberg-swift.swift",
   "packages/zig/src/xberg.zig",
   "docs-site/src/content/docs/reference/api-*.md",
@@ -171,6 +189,14 @@ values = [
   "**/vendor/**",
   "**/Cargo.toml",
   "docs-site/src/snippets-generated/**",
+  "plugin/plugin.json",
+  "plugin/mcp.json",
+  "plugin/.pi/**",
+  "plugin/.github/**",
+  ".github/plugin/**",
+  ".cursor-plugin/marketplace.json",
+  ".ai-rulez/.generated-manifest.json",
+  "plugin/.ai-rulez/.generated-manifest.json",
   "docs-site/src/snippets/**",
   "**/_generated/**",
   "**/coverage/**",
@@ -204,6 +230,7 @@ values = [
   ".agents/plugins/marketplace.json",
   ".ai-rulez-generated.json",
   "tools/benchmark-harness/cohorts/**",
+  "skills/**",
 ]
 
 [[entries]]
@@ -232,6 +259,14 @@ values = [
   "**/vendor/**",
   "**/Cargo.toml",
   "docs-site/src/snippets-generated/**",
+  "plugin/plugin.json",
+  "plugin/mcp.json",
+  "plugin/.pi/**",
+  "plugin/.github/**",
+  ".github/plugin/**",
+  ".cursor-plugin/marketplace.json",
+  ".ai-rulez/.generated-manifest.json",
+  "plugin/.ai-rulez/.generated-manifest.json",
   "docs-site/src/snippets/**",
   "**/_generated/**",
   "**/coverage/**",
@@ -265,6 +300,7 @@ values = [
   ".agents/plugins/marketplace.json",
   ".ai-rulez-generated.json",
   "tools/benchmark-harness/cohorts/**",
+  "skills/**",
 ]
 
 [[entries]]
@@ -813,11 +849,6 @@ values = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nestin
 
 [[entries]]
 relative_path = "poly.toml"
-key_path = "per-file-ignores.crates/xberg-native-pdf/src/document/open.rs"
-values = ["file-too-long"]
-
-[[entries]]
-relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/document/pages.rs"
 values = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nesting-too-deep"]
 
@@ -895,16 +926,6 @@ values = ["cyclomatic-complexity", "function-too-long", "nesting-too-deep"]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/extractors/text/xobjects.rs"
 values = ["cyclomatic-complexity", "function-too-long", "nesting-too-deep"]
-
-[[entries]]
-relative_path = "poly.toml"
-key_path = "per-file-ignores.crates/xberg-native-pdf/src/fonts/cff_encoding.rs"
-values = ["file-too-long"]
-
-[[entries]]
-relative_path = "poly.toml"
-key_path = "per-file-ignores.crates/xberg-native-pdf/src/fonts/cmap.rs"
-values = ["file-too-long"]
 
 [[entries]]
 relative_path = "poly.toml"
@@ -1210,11 +1231,6 @@ values = ["file-too-long", "function-too-long", "too-many-parameters"]
 
 [[entries]]
 relative_path = "poly.toml"
-key_path = "per-file-ignores.crates/xberg/src/engine/extract_impl/tests.rs"
-values = ["file-too-long"]
-
-[[entries]]
-relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg/src/engine/structured/prompts.rs"
 values = ["nesting-too-deep", "too-many-parameters"]
 
@@ -1237,11 +1253,6 @@ values = ["file-too-long", "function-too-long"]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg/src/extractors/archive.rs"
 values = ["function-too-long", "too-many-parameters"]
-
-[[entries]]
-relative_path = "poly.toml"
-key_path = "per-file-ignores.crates/xberg/src/extractors/asciidoc.rs"
-values = ["file-too-long"]
 
 [[entries]]
 relative_path = "poly.toml"
@@ -1646,11 +1657,6 @@ values = ["file-too-long"]
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg/tests/pdf_markdown_regression.rs"
-values = ["file-too-long"]
-
-[[entries]]
-relative_path = "poly.toml"
-key_path = "per-file-ignores.crates/xberg/tests/pipeline_integration.rs"
 values = ["file-too-long"]
 
 [[entries]]
