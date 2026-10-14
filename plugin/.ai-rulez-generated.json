@@ -1,6 +1,6 @@
 {
   "schema_version": "v1",
-  "source_hash": "blake3:3f538d534d9f113516f8195a304b77abc30e5ed6e1fb0235a82e628b962a392b",
+  "source_hash": "blake3:97aca40a36f21a891e7378d88078d18c367ceefda501e395f7aa7420a054b50e",
   "outputs": {
     ".claude-plugin/plugin.json": {
       "content_hash": "blake3:aa7dbcde655c45ccf1701acdd562cc1aaf516a33c7cb8292660d12c2405fb46d",
@@ -323,7 +323,7 @@
       "mode": "0644"
     },
     ".hermes/package/src/xberg_hermes_plugin/hermes.py": {
-      "content_hash": "blake3:ac42ab0be8e86e80f4210d31e64eeed96762a5b8292fb1f6bc5e967b7049fd95",
+      "content_hash": "blake3:23b424112cf0f17bbb00141542574873bfeaaed52d0ca22cf0bb1f12eb457b5d",
       "mode": "0644"
     },
     ".hermes/package/src/xberg_hermes_plugin/plugin.yaml": {
@@ -623,7 +623,7 @@
       "mode": "0644"
     },
     ".hermes/plugins/xberg/hermes.py": {
-      "content_hash": "blake3:ac42ab0be8e86e80f4210d31e64eeed96762a5b8292fb1f6bc5e967b7049fd95",
+      "content_hash": "blake3:23b424112cf0f17bbb00141542574873bfeaaed52d0ca22cf0bb1f12eb457b5d",
       "mode": "0644"
     },
     ".hermes/plugins/xberg/plugin.yaml": {

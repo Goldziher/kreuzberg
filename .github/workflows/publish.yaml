@@ -5313,8 +5313,9 @@ jobs:
       - name: Verify public skill exports
         run: python3 scripts/sync_public_skills.py --check
       - name: Package all supported plugin runtimes
-        uses: xberg-io/actions/package-ai-rulez-plugin@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        uses: xberg-io/actions/package-ai-rulez-plugin@66e9a172c28ae7e57496fe92de1ab74f2a604194
         with:
+          cursor-marketplace: "true"
           tag: ${{ needs.prepare.outputs.tag }}
           config-directory: .ai-rulez
           version-sync-script: scripts/sync_integration_versions.py
