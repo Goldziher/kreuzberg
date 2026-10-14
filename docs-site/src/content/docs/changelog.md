@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **(pdf): every JPEG 2000 image reports 8 bits per component.** A JPEG 2000 decode yields 8-bit samples, and the
+  image dictionary's `/BitsPerComponent` is ignored for `/JPXDecode` (ISO 32000-1 Table 89). Only palette images
+  reported 8; any other JPEG 2000 image with a stale `/BitsPerComponent` reported the dictionary's value. (GH#2112)
+
+### Changed
+
+- **(deps): hayro-jpeg2000 0.4.1 is the minimum, and it resolves JPEG 2000 palettes itself.** 0.4.1 clamps a palette
+  index that lossy coding pushes outside the palette, so xberg no longer reads the palette of an image without an
+  `/Indexed` colour space and looks it up by hand. A project whose lockfile held 0.4.0 now gets the clamp for every
+  palette shape, not only the 8-bit grey, sRGB and CMYK palettes xberg resolved itself. A codestream palette whose
+  component count differs from an explicit `/ColorSpace` is still rejected. (GH#2112)
+
 ## [1.3.10] - 2026-10-13
 
 ### Fixed
