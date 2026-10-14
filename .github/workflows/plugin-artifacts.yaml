@@ -24,13 +24,13 @@ jobs:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
       - name: Install ai-rulez
-        uses: xberg-io/actions/setup-ai-rulez@6b88aedd553b798d084927cc8a0feeb88b3f6f1b
+        uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
         with:
           source-revision: 02a8bf25768d37648d4dac35f049c3671c9f7308
       - name: Verify public skill exports
         run: python3 scripts/sync_public_skills.py --check
       - name: Package all supported plugin runtimes
-        uses: xberg-io/actions/package-ai-rulez-plugin@6b88aedd553b798d084927cc8a0feeb88b3f6f1b
+        uses: xberg-io/actions/package-ai-rulez-plugin@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
         with:
           tag: ${{ inputs.tag }}
           config-directory: .ai-rulez
