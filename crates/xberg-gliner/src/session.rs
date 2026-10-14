@@ -27,8 +27,19 @@ pub(crate) const TENSOR_SPAN_IDX: &str = "span_idx";
 pub(crate) const TENSOR_SPAN_MASK: &str = "span_mask";
 pub(crate) const TENSOR_LOGITS: &str = "logits";
 
+/// ONNX Runtime must keep one environment alive for the life of every session (ort rc.14 takes
+/// it as an argument). ~keep
+fn environment() -> Result<&'static ort::environment::Environment> {
+    static ENVIRONMENT: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+    if let Some(environment) = ENVIRONMENT.get() {
+        return Ok(environment);
+    }
+    let environment = ort::init().build()?;
+    Ok(ENVIRONMENT.get_or_init(|| environment))
+}
+
 pub(crate) fn build_session<P: AsRef<Path>>(model_path: P, runtime: &RuntimeConfig) -> Result<Session> {
-    let session = Session::builder()?
+    let session = Session::builder(environment()?)?
         .with_optimization_level(GraphOptimizationLevel::All)
         .map_err(|error| GlinerError::Ort(ort::Error::from(error)))?
         .with_intra_threads(runtime.intra_threads)

@@ -1420,7 +1420,7 @@ org = { version = "0.3", optional = true }
 # `[features] cuda`/`tensorrt`) that callers must explicitly request together with a
 # matching CUDA/TensorRT-enabled ONNX Runtime build. `ort_discovery.rs` #[cfg]-gates the
 # corresponding EP construction code to match.
-ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "ndarray", "api-18"], optional = true }
+ort = { version = "=2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "api-18"], optional = true }
 outlook-pst = { version = "1.2.0", optional = true }
 parking_lot = { workspace = true }
 pastey = "0.2"
@@ -1510,7 +1510,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["s
 tract-onnx = { workspace = true, optional = true }
 # Typst's own parser, used to convert Typst math to LaTeX.
 typst-syntax = { version = "0.15.1", optional = true }
-unhwp = { version = "0.19.0", default-features = false, features = ["hwpx"], optional = true }
+unhwp = { version = "0.20.0", default-features = false, features = ["hwpx"], optional = true }
 unicode-normalization = { version = "0.1.25", optional = true }
 url = { workspace = true }
 urlencoding = "2"
@@ -1540,7 +1540,7 @@ xberg-native-pdf = { workspace = true, optional = true }
 xberg-tesseract = { path = "../xberg-tesseract", optional = true }
 yaml_serde = "0.10.7"
 zeroize = { version = "1", optional = true }
-zip = { version = "9.0.2", optional = true, default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.3", optional = true, default-features = false, features = ["deflate-flate2"] }
 
 # `tower` (GH#1381) unlocks the `cache`/`budget`/`rate_limit`/`cost_tracking`/`tracing`/
 # `cooldown_secs`/`health_check_secs` fields on liter-llm's `client::ClientConfigBuilder` —
@@ -1751,7 +1751,7 @@ ureq = { version = "3.4", default-features = false, features = ["rustls", "json"
 # feature set and resolve the CPU-only `download-binaries` prebuilt. See the comment on the
 # base `ort` dependency for why this must NOT be a blanket feature.
 [target.'cfg(target_os = "macos")'.dependencies.ort]
-version = "2.0.0-rc.13"
+version = "=2.0.0-rc.14"
 default-features = false
 features = ["coreml"]
 optional = true
@@ -1781,7 +1781,7 @@ tokio-test = "0.4"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = "1"
 wiremock = "0.6"
-zip = { version = "9.0.2", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2"] }
 
 [[test]]
 name = "captioning_smoke"

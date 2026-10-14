@@ -169,7 +169,7 @@ impl SlanetModel {
     /// Build a CPU-only ORT session (no CoreML/CUDA).
     fn build_cpu_session(path: &str, thread_budget: usize) -> Result<Session, LayoutError> {
         use ort::session::builder::GraphOptimizationLevel;
-        let mut builder = Session::builder()?
+        let mut builder = Session::builder(crate::ort_discovery::ort_environment().map_err(LayoutError::Ort)?)?
             .with_optimization_level(GraphOptimizationLevel::All)
             .map_err(|e| LayoutError::Ort(ort::Error::new(e.message())))?
             .with_intra_threads(thread_budget)

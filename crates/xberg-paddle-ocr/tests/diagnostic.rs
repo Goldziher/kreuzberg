@@ -162,7 +162,10 @@ fn diagnostic_raw_ort_inference() {
 
     use ort::session::Session;
 
-    let mut session = Session::builder().unwrap().commit_from_file(&det_model).unwrap();
+    let mut session = Session::builder(&ort::init().build().unwrap())
+        .unwrap()
+        .commit_from_file(&det_model)
+        .unwrap();
 
     eprintln!("Model loaded successfully");
     eprintln!("Inputs:");
@@ -229,7 +232,10 @@ fn diagnostic_crnn_model_output() {
 
     use ort::session::Session;
 
-    let mut session = Session::builder().unwrap().commit_from_file(&rec_model).unwrap();
+    let mut session = Session::builder(&ort::init().build().unwrap())
+        .unwrap()
+        .commit_from_file(&rec_model)
+        .unwrap();
 
     eprintln!("Model loaded successfully");
     eprintln!("Inputs:");

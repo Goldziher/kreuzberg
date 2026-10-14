@@ -577,7 +577,7 @@ fn build_session_with(
     let thread_budget = intra_thread_count(options);
 
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let mut builder = ort::session::Session::builder()?;
+        let mut builder = ort::session::Session::builder(crate::ort_discovery::ort_environment()?)?;
         builder = builder
             .with_optimization_level(ort::session::builder::GraphOptimizationLevel::All)
             .map_err(|e| ort::Error::new(e.message()))?;

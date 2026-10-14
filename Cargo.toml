@@ -99,7 +99,7 @@ nom-exif = { version = "3.8", default-features = false }
 num_cpus = "1.17.0"
 once_cell = "1.21.4"
 
-ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "api-18"] }
+ort = { version = "=2.0.0-rc.14", default-features = false, features = ["std", "api-18"] }
 parking_lot = "0.12.5"
 # Our fork of pdfium-render. `package =` keeps the extern crate name `pdfium_render`
 # (matches the `[lib] name = "pdfium_render"` in crates/xberg-pdfium-render/Cargo.toml),
@@ -113,7 +113,7 @@ reqwest = { version = "0.13.5", default-features = false }
 resvg = { version = "0.48", default-features = false }
 rusqlite = { version = "0.40", default-features = false, features = ["bundled", "hooks", "serialize"] }
 same-file = "1.0.6"
-sceptre = { version = "0.7.3", default-features = false }
+sceptre = { version = "0.8.0", default-features = false }
 
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154" }
@@ -130,7 +130,7 @@ thiserror = "2.0.21"
 # `net`/`os-poll`/`os-ext`, which fails to build on wasm32 regardless). These OS-dependent
 # features are re-added only on consuming crates' `[target.'cfg(not(target_arch =
 # "wasm32"))'.dependencies]` blocks (see crates/xberg/Cargo.toml and crates/xberg-cli/Cargo.toml).
-tokio = { version = "1.53.2", features = [
+tokio = { version = "1.53.3", features = [
     "rt",
     "macros",
     "sync",
@@ -144,7 +144,7 @@ tracing = "0.1"
 # and WASM-safe; the top-level `tract` facade instead defaults to CUDA and bundles
 # GPU backends, so it is unusable here. See issue #1275.
 tract-onnx = { version = "0.23.8", default-features = false }
-tree-sitter-language-pack = { version = "1.22.1", default-features = false, features = ["serde"] }
+tree-sitter-language-pack = { version = "1.22.2", default-features = false, features = ["serde"] }
 url = "2.5.8"
 # usvg (re-exported by resvg) with only the `writer` feature so `Tree::to_string`
 # / `WriteOptions` are available for SVG sanitize re-serialization. `writer` pulls
@@ -191,6 +191,11 @@ xberg-native-pdf = { path = "./crates/xberg-native-pdf", version = "1.3.10" }
 # declared as `path = ..., version = ...` deps -- so path resolution wins locally with or
 # without them. They only bite if some third-party crates.io dependency ever depends on
 # `xberg*`. Left in place deliberately; see task #751 before removing. ~keep
+# TEMPORARY (1.3.11): sceptre 0.8.0 and tree-sitter-language-pack 1.22.2 are tagged but not yet
+# on crates.io. Remove both entries once published; `cargo publish` ignores [patch], so a release
+# cut while they are present would resolve different crates than users get. ~keep
+sceptre = { path = "../sceptre/crates/sceptre" }
+tree-sitter-language-pack = { path = "../tree-sitter-language-pack/crates/ts-pack-core" }
 xberg = { path = "crates/xberg" }
 xberg-gliner = { path = "crates/xberg-gliner" }
 xberg-tesseract = { path = "crates/xberg-tesseract" }

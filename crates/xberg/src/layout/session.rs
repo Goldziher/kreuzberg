@@ -22,7 +22,7 @@ pub(crate) fn build_session(
     accel: Option<&AccelerationConfig>,
     thread_budget: usize,
 ) -> Result<Session, LayoutError> {
-    let builder = Session::builder()?
+    let builder = Session::builder(crate::ort_discovery::ort_environment().map_err(LayoutError::Ort)?)?
         .with_optimization_level(GraphOptimizationLevel::All)
         .map_err(|e| LayoutError::Ort(ort::Error::new(e.message())))?
         .with_intra_threads(thread_budget)

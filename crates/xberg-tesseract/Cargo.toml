@@ -64,7 +64,7 @@ pkg-config = { version = "0.3.34", optional = true }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
 vcpkg = { version = "0.2.15", optional = true }
-zip = { version = "9.0.2", optional = true, default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "9.0.3", optional = true, default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [target.'cfg(not(target_os = "windows"))'.build-dependencies]
 reqwest = { workspace = true, default-features = false, features = ["blocking", "rustls"], optional = true }
@@ -79,4 +79,4 @@ image = { workspace = true, features = ["png"] }
 libc = { workspace = true }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
-zip = { version = "9.0.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }

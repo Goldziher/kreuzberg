@@ -301,7 +301,7 @@ fn build_session(path: &std::path::Path) -> Result<Session, TranscriptionError> 
     crate::ort_discovery::ensure_ort_available();
     let thread_budget = crate::core::config::concurrency::resolve_thread_budget(None);
 
-    let mut builder = Session::builder()?;
+    let mut builder = Session::builder(crate::ort_discovery::ort_environment()?)?;
     builder = builder
         .with_optimization_level(GraphOptimizationLevel::All)
         .map_err(|e| ort::Error::new(e.message()))?;

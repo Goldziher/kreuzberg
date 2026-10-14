@@ -204,6 +204,26 @@ pub(crate) fn is_explicit_provider_request(
     resolve_execution_provider(accel) != crate::core::config::acceleration::ExecutionProviderType::Auto
 }
 
+/// The process-wide ONNX Runtime environment every session builder in this crate shares; ort
+/// rc.14 takes it as an argument and ONNX Runtime requires it to outlive every session. ~keep
+#[cfg(any(
+    feature = "layout-detection",
+    feature = "embeddings",
+    feature = "paddle-ocr-ort",
+    feature = "auto-rotate",
+    feature = "reranker",
+    feature = "onnx-runtime",
+    feature = "transcription"
+))]
+pub(crate) fn ort_environment() -> Result<&'static ort::environment::Environment, ort::Error> {
+    static ENVIRONMENT: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+    if let Some(environment) = ENVIRONMENT.get() {
+        return Ok(environment);
+    }
+    let environment = ort::init().build()?;
+    Ok(ENVIRONMENT.get_or_init(|| environment))
+}
+
 /// Apply execution providers to an ORT session builder based on [`AccelerationConfig`].
 ///
 /// Shared by all ORT consumers (layout detection, embeddings, PaddleOCR, doc orientation).
@@ -328,7 +348,10 @@ fn register_coreml_strict(
     use ort::ep::ExecutionProvider;
 
     let ep = build_coreml_ep();
-    match decide_gpu_ep_outcome(true, ep.is_available().unwrap_or(false)) {
+    match decide_gpu_ep_outcome(
+        true,
+        <ort::ep::CoreML as ExecutionProvider>::is_available().unwrap_or(false),
+    ) {
         GpuEpOutcome::RegisterStrict => {
             tracing::info!("ORT session: CoreML execution provider available, using GPU");
             builder
@@ -361,7 +384,10 @@ fn register_cuda_strict(
     use ort::ep::ExecutionProvider;
 
     let ep = ort::ep::CUDA::default().with_device_id(device_id as i32);
-    match decide_gpu_ep_outcome(true, ep.is_available().unwrap_or(false)) {
+    match decide_gpu_ep_outcome(
+        true,
+        <ort::ep::CUDA as ExecutionProvider>::is_available().unwrap_or(false),
+    ) {
         GpuEpOutcome::RegisterStrict => {
             tracing::info!(device_id, "ORT session: CUDA execution provider available, using GPU");
             builder
@@ -395,7 +421,10 @@ fn register_tensorrt_strict(
     use ort::ep::ExecutionProvider;
 
     let ep = ort::ep::TensorRT::default().with_device_id(device_id as i32);
-    match decide_gpu_ep_outcome(true, ep.is_available().unwrap_or(false)) {
+    match decide_gpu_ep_outcome(
+        true,
+        <ort::ep::TensorRT as ExecutionProvider>::is_available().unwrap_or(false),
+    ) {
         GpuEpOutcome::RegisterStrict => {
             tracing::info!(
                 device_id,
@@ -433,7 +462,10 @@ fn register_auto_providers(
     #[cfg(target_os = "macos")]
     let builder = {
         let ep = build_coreml_ep();
-        match decide_gpu_ep_outcome(false, ep.is_available().unwrap_or(false)) {
+        match decide_gpu_ep_outcome(
+            false,
+            <ort::ep::CoreML as ExecutionProvider>::is_available().unwrap_or(false),
+        ) {
             GpuEpOutcome::RegisterBestEffort => {
                 tracing::info!("ORT session: auto — CoreML available, using GPU");
                 builder
@@ -449,7 +481,10 @@ fn register_auto_providers(
     #[cfg(all(target_os = "linux", feature = "cuda"))]
     let builder = {
         let ep = ort::ep::CUDA::default();
-        match decide_gpu_ep_outcome(false, ep.is_available().unwrap_or(false)) {
+        match decide_gpu_ep_outcome(
+            false,
+            <ort::ep::CUDA as ExecutionProvider>::is_available().unwrap_or(false),
+        ) {
             GpuEpOutcome::RegisterBestEffort => {
                 tracing::info!("ORT session: auto — CUDA available, using GPU");
                 builder

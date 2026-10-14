@@ -48,11 +48,20 @@ impl OrtBackend {
         })
     }
 
+    fn environment() -> Result<&'static ort::environment::Environment, OcrError> {
+        static ENVIRONMENT: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+        if let Some(environment) = ENVIRONMENT.get() {
+            return Ok(environment);
+        }
+        let environment = ort::init().build()?;
+        Ok(ENVIRONMENT.get_or_init(|| environment))
+    }
+
     fn session_builder(
         num_thread: usize,
         builder_fn: Option<fn(SessionBuilder) -> Result<SessionBuilder, ort::Error>>,
     ) -> Result<SessionBuilder, OcrError> {
-        let builder = Session::builder()?;
+        let builder = Session::builder(Self::environment()?)?;
         let builder = match builder_fn {
             Some(custom) => custom(builder)?,
             None => builder

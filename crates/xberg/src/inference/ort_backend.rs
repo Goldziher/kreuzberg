@@ -45,7 +45,7 @@ impl OrtBackend {
         with_eps: bool,
     ) -> Result<Session, InferenceError> {
         (|| -> Result<Session, ort::Error> {
-            let mut builder = Session::builder()?
+            let mut builder = Session::builder(crate::ort_discovery::ort_environment()?)?
                 .with_optimization_level(GraphOptimizationLevel::All)
                 .map_err(|e| ort::Error::new(e.message()))?
                 .with_intra_threads(thread_budget)
