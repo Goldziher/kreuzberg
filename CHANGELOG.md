@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(mathml): Convert `mmultiscripts`.**
+  The element had no conversion, so its scripts ran into the base and a carbon-14 isotope read `C614`. Pre- and
+  post-scripts are now written as `{}_{6}^{14}C` and `R_{i}{}^{j}`.
 - **(mathml): Write limits on big operators and limit-taking names as `_{...}^{...}`.**
   `munder`, `mover` and `munderover` always stacked, so a sum read `\overset{n}{\underset{i=1}{\sum }}` and `lim` read
   `\underset{n}{lim}`. They now read `\sum_{i=1}^{n}` and `\lim_{n}`, integrals take `\limits`, and an operator with

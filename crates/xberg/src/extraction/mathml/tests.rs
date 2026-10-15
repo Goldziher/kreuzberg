@@ -688,6 +688,108 @@ fn test_combining_overline_folds_into_bar() {
     assert_eq!(mathml_to_latex("<mi>\u{03A3}</mi><mo>\u{0305}</mo>"), "\\bar{\\Sigma} ");
 }
 
+/// Tensor indices alternate between positions, each pair after the last.
+#[test]
+fn test_mmultiscripts_chains_postscript_pairs() {
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>R</mi><mi>i</mi><none/><none/><mi>j</mi></mmultiscripts>"),
+        "R_{i}{}^{j}"
+    );
+}
+
+#[test]
+fn test_mmultiscripts_keeps_prescript_order() {
+    assert_eq!(
+        mathml_to_latex(
+            "<mmultiscripts><mi>X</mi><mprescripts/><mi>a</mi><mi>b</mi><mi>c</mi><mi>d</mi></mmultiscripts>"
+        ),
+        "{}_{a}^{b}{}_{c}^{d}X"
+    );
+}
+
+#[test]
+fn test_mmultiscripts_with_prescripts_and_postscripts() {
+    assert_eq!(
+        mathml_to_latex(
+            "<mmultiscripts><mi>C</mi><mi>a</mi><mi>b</mi><mprescripts/><mn>6</mn><mn>14</mn></mmultiscripts>"
+        ),
+        "{}_{6}^{14}C_{a}^{b}"
+    );
+}
+
+#[test]
+fn test_mmultiscripts_none_in_prescripts() {
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>C</mi><mprescripts/><none/><mn>14</mn></mmultiscripts>"),
+        "{}^{14}C"
+    );
+}
+
+/// A trailing script with no partner is a subscript.
+#[test]
+fn test_mmultiscripts_odd_script_count() {
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>R</mi><mi>i</mi><mi>j</mi><mi>k</mi></mmultiscripts>"),
+        "R_{i}^{j}{}_{k}"
+    );
+}
+
+#[test]
+fn test_mmultiscripts_empty_base() {
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><none/><mi>i</mi><none/></mmultiscripts>"),
+        "{}_{i}"
+    );
+    assert_eq!(mathml_to_latex("<mmultiscripts></mmultiscripts>"), "");
+}
+
+#[test]
+fn test_mmultiscripts_blank_script_is_absent() {
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>R</mi><mi>i</mi><mrow/></mmultiscripts>"),
+        "R_{i}"
+    );
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>R</mi><mi></mi><mi>j</mi></mmultiscripts>"),
+        "R^{j}"
+    );
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>R</mi><mi> </mi><mi>j</mi></mmultiscripts>"),
+        "R^{j}"
+    );
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>R</mi><mi>i</mi><mrow><mrow/></mrow></mmultiscripts>"),
+        "R_{i}"
+    );
+    assert_eq!(
+        mathml_to_latex("<mmultiscripts><mi>R</mi><mi>i</mi><mtext></mtext></mmultiscripts>"),
+        "R_{i}"
+    );
+}
+
+/// `none` and `mprescripts` are never collected, so the loop itself must charge them.
+#[test]
+fn test_mmultiscripts_empty_slots_charge_iteration_budget() {
+    let limits = crate::extractors::security::SecurityLimits {
+        max_iterations: 10,
+        ..Default::default()
+    };
+    let mut budget = SecurityBudget::from_limits(&limits);
+    let xml = format!(
+        "<math><mmultiscripts><mi>R</mi>{}</mmultiscripts></math>",
+        "<none/>".repeat(20)
+    );
+    assert!(convert_mathml_str_to_latex(&xml, &mut budget).is_err());
+}
+
+#[test]
+fn test_mmultiscripts_as_msup_base() {
+    assert_eq!(
+        mathml_to_latex("<msup><mmultiscripts><mi>R</mi><mi>i</mi><none/></mmultiscripts><mn>2</mn></msup>"),
+        "{R_{i}}^{2}"
+    );
+}
+
 #[test]
 fn test_munderover() {
     assert_eq!(

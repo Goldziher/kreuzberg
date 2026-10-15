@@ -588,6 +588,7 @@ fn collect_node_inner(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode
         }),
         "mfrac" | "msup" | "msub" | "msubsup" | "msqrt" | "mroot" | "mfenced" | "munder" | "mover" | "munderover"
         | "mphantom" | "mtable" => collect_scripted_node(&tag_lower, node, budget),
+        "mmultiscripts" => collect_multiscripts(node, budget),
         _ => Ok(MmlNode::Group {
             children: collect_children(node, budget)?,
         }),
@@ -681,6 +682,79 @@ fn collect_scripted_node(tag: &str, node: Node, budget: &mut SecurityBudget) -> 
         _ => Ok(MmlNode::Group {
             children: collect_children(node, budget)?,
         }),
+    }
+}
+
+/// Collect an `mmultiscripts` element: a base, then sub/sup pairs after it and, past `mprescripts`, before
+/// it. Each pair becomes plain scripts, a prescript on an empty base (`{}_{6}^{14}C`), which is how LaTeX
+/// writes one. A `none` script is left out.
+fn collect_multiscripts(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, SecurityError> {
+    let mut elements = node.children().filter(|c| c.is_element());
+    let mut base = elements.next().map(|first| collect_node(first, budget)).transpose()?;
+    let (mut post, mut pre) = (Vec::new(), Vec::new());
+    let mut in_prescripts = false;
+    for child in elements {
+        budget.step()?;
+        let tag = child.tag_name().name();
+        if tag.eq_ignore_ascii_case("mprescripts") {
+            in_prescripts = true;
+            continue;
+        }
+        // A script that renders to nothing sets nothing either, and kept it would write `R_{i}^{}`.
+        let script = if tag.eq_ignore_ascii_case("none") {
+            None
+        } else {
+            Some(collect_node(child, budget)?).filter(|n| !is_blank_script(n))
+        };
+        if in_prescripts {
+            pre.push(script);
+        } else {
+            post.push(script);
+        }
+    }
+
+    let empty = || MmlNode::Group { children: Vec::new() };
+    let mut children = Vec::new();
+    let mut pre = pre.into_iter();
+    while let Some(sub) = pre.next() {
+        children.push(scripted(empty(), sub, pre.next().flatten()));
+    }
+    let mut post = post.into_iter();
+    while let Some(sub) = post.next() {
+        children.push(scripted(base.take().unwrap_or_else(empty), sub, post.next().flatten()));
+    }
+    children.extend(base);
+    Ok(MmlNode::Group { children })
+}
+
+/// Report whether an `mmultiscripts` script renders to nothing. A blank `mtext` is kept, since `\text{ }` shows.
+fn is_blank_script(node: &MmlNode) -> bool {
+    match node {
+        MmlNode::Run(text) => text.trim().is_empty(),
+        MmlNode::Text(text) => text.is_empty(),
+        MmlNode::Group { children } => children.iter().all(is_blank_script),
+        _ => false,
+    }
+}
+
+/// `base` with the sub and sup of one `mmultiscripts` pair attached, skipping an absent one.
+fn scripted(base: MmlNode, sub: Option<MmlNode>, sup: Option<MmlNode>) -> MmlNode {
+    let base = Box::new(base);
+    match (sub, sup) {
+        (Some(sub), Some(sup)) => MmlNode::SubSup {
+            base,
+            sub: Box::new(sub),
+            sup: Box::new(sup),
+        },
+        (Some(sub), None) => MmlNode::Sub {
+            base,
+            sub: Box::new(sub),
+        },
+        (None, Some(sup)) => MmlNode::Sup {
+            base,
+            sup: Box::new(sup),
+        },
+        (None, None) => *base,
     }
 }
 
