@@ -64,22 +64,31 @@ def attribute_value(node: ast.Attribute, context: dict[str, object]) -> object:
 
 def evaluate_condition(expression: str, context: dict[str, object]) -> bool:
     translated = expression.replace("||", "or").replace("&&", "and").replace("startsWith", "starts_with")
+    translated = re.sub(r"!(?!=)", "not ", translated).strip()
+    translated = re.sub(r"\.[a-zA-Z_][a-zA-Z0-9_-]*", lambda match: match[0].replace("-", "_"), translated)
 
     def evaluate(node: ast.expr) -> object:
         if isinstance(node, ast.BoolOp):
-            values = [bool(evaluate(value)) for value in node.values]
+            values = (bool(evaluate(value)) for value in node.values)
             if isinstance(node.op, ast.Or):
                 return any(values)
             if isinstance(node.op, ast.And):
                 return all(values)
+        elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            return not evaluate(node.operand)
         elif isinstance(node, ast.Compare) and len(node.ops) == len(node.comparators) == 1:
             left = evaluate(node.left)
             right = evaluate(node.comparators[0])
             if isinstance(node.ops[0], ast.NotEq):
                 return left != right
+            if isinstance(node.ops[0], ast.Eq):
+                return left == right
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "starts_with":
             assert len(node.args) == 2 and not node.keywords
             return str(evaluate(node.args[0])).startswith(str(evaluate(node.args[1])))
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "cancelled":
+            assert not node.args and not node.keywords
+            return context["cancelled"]
         elif isinstance(node, ast.Attribute):
             return attribute_value(node, context)
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -92,12 +101,13 @@ def evaluate_condition(expression: str, context: dict[str, object]) -> bool:
 
 def github_context(event_name: str, tag: str, actor: str, triggering_actor: str) -> dict[str, object]:
     return {
+        "inputs": {"plugins_only": False},
         "github": {
             "event_name": event_name,
             "actor": actor,
             "triggering_actor": triggering_actor,
             "event": {"release": {"tag_name": tag}},
-        }
+        },
     }
 
 
@@ -171,8 +181,8 @@ def test_release_event_guards_cover_initial_actor_and_tag_policy() -> None:
     publish_prepare = job_block(WORKFLOW.read_text(), "prepare")
     publish_expression = job_if_expression(publish_prepare)
     assert publish_expression == (
-        "github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') "
-        "&& github.actor != 'xberg-dev-publisher[bot]')"
+        "!inputs.plugins-only && (github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') "
+        "&& github.actor != 'xberg-dev-publisher[bot]'))"
     )
 
     cases = (
@@ -204,6 +214,39 @@ def test_release_event_guards_cover_initial_actor_and_tag_policy() -> None:
     dispatch = github_context("workflow_dispatch", "", PUBLISHER_BOT, PUBLISHER_BOT)
     assert not evaluate_condition(publish_expression.replace("||", "&&", 1), dispatch)
     assert not evaluate_condition(docker_expression.replace("||", "&&", 1), dispatch)
+
+
+def test_plugin_only_dispatch_skips_every_core_release_job() -> None:
+    workflow = WORKFLOW.read_text().split("\njobs:\n", 1)[1]
+    jobs = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):$", workflow)
+    core_jobs = [job for job in jobs if job not in ("dispatch-plugin-npm", "dispatch-plugin-hermes")]
+    assert len(core_jobs) == 84
+    for job in core_jobs:
+        expression = job_if_expression(job_block(workflow, job))
+        assert expression.startswith("!inputs.plugins-only && ("), job
+    prepare_expression = job_if_expression(job_block(workflow, "prepare"))
+    assert evaluate_condition(prepare_expression, {"inputs": {"plugins_only": True}}) is False
+
+
+def test_normal_php_retry_preserves_release_and_cancellation_guards() -> None:
+    expression = job_if_expression(job_block(WORKFLOW.read_text(), "php-extension"))
+    for plugins_only, cancelled, dry_run, crates_result, expected in (
+        (False, False, "false", "skipped", True),
+        (True, False, "false", "skipped", False),
+        (False, True, "false", "skipped", False),
+        (False, False, "true", "skipped", False),
+        (False, False, "false", "failure", False),
+    ):
+        context = {
+            "inputs": {"plugins_only": plugins_only},
+            "cancelled": cancelled,
+            "needs": {
+                "prepare": {"outputs": {"dry_run": dry_run, "release_php": "true", "force_republish": "true"}},
+                "publish_crates": {"result": crates_result},
+                "check_packagist": {"outputs": {"exists": "true"}},
+            },
+        }
+        assert evaluate_condition(expression, context) is expected
 
 
 def test_partial_release_retries_skip_plugin_distribution_and_announcements() -> None:
@@ -734,6 +777,8 @@ def test_publish_contracts_run_in_ci() -> None:
 
 if __name__ == "__main__":
     test_release_event_guards_cover_initial_actor_and_tag_policy()
+    test_plugin_only_dispatch_skips_every_core_release_job()
+    test_normal_php_retry_preserves_release_and_cancellation_guards()
     test_partial_release_retries_skip_plugin_distribution_and_announcements()
     test_php_partial_retry_publishes_packagist_only_after_successful_upload()
     test_release_finalization_requires_successful_asset_verification()
