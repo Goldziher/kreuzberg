@@ -874,7 +874,7 @@ wheels = [
 
 [[package]]
 name = "llama-index-node-parser-xberg"
-version = "1.3.10"
+version = "1.3.11"
 source = { editable = "." }
 dependencies = [
     { name = "llama-index-core" },

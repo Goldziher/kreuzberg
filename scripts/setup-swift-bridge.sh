@@ -28,11 +28,11 @@ cat "$OUT/SwiftBridgeCore.h" "$OUT/xberg-swift/xberg-swift.h" \
 
 {
   printf 'import RustBridgeC\n'
-  cat "$OUT/SwiftBridgeCore.swift" | fixVisibility
+  fixVisibility <"$OUT/SwiftBridgeCore.swift"
 } >packages/swift/Sources/RustBridge/SwiftBridgeCore.swift
 {
   printf 'import RustBridgeC\n'
-  cat "$OUT/xberg-swift/xberg-swift.swift" | fixVisibility
+  fixVisibility <"$OUT/xberg-swift/xberg-swift.swift"
 } >packages/swift/Sources/RustBridge/xberg-swift.swift
 
 echo "Swift-bridge files setup complete"

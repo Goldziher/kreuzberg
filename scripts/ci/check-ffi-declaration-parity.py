@@ -320,18 +320,12 @@ def compare(
     return problems
 
 
-def check_surface(
+def _check_surface_coverage(
     surface: str,
     declared: set[str],
     managed_functions: dict[str, tuple[str, list[str]]],
     header_functions: dict[str, tuple[str, list[str]]],
-    *,
-    pointer_is_64: bool,
-    typedefs: dict[str, str],
-) -> tuple[int, list[str], list[str]]:
-    """Compare one binding surface against the header. Returns (exit, failures, waived)."""
-    waivers = KNOWN_BROKEN.get(surface, {})
-
+) -> tuple[int, list[str]]:
     # Coverage is asserted, not assumed. An earlier hand-run of this comparison matched only
     # 210 of 282 C# entrypoints -- the header pattern required whitespace before the function
     # name and so skipped every `char *xberg_...` declaration -- and still reported the one
@@ -348,7 +342,7 @@ def check_surface(
         for name in unparsed[:20]:
             print(f"  {name}")
         print("This is a defect in this script's parser, not in the binding. Fix the parser.")
-        return 1, [], []
+        return 1, []
 
     comparable = sorted(declared & set(header_functions))
     unmatched = sorted(declared - set(header_functions))
@@ -359,13 +353,33 @@ def check_surface(
             print(f"  {name}")
         print("Either the symbol does not exist (a real defect) or this script's header")
         print("pattern missed it (a defect in this script). Both must be resolved, not skipped.")
-        return 1, [], []
+        return 1, []
     if not comparable:
         print(f"[{surface}] FATAL: nothing was compared", file=sys.stderr)
-        return 2, [], []
+        return 2, []
+
+    return 0, comparable
+
+
+def check_surface(
+    surface: str,
+    declared: set[str],
+    managed_functions: dict[str, tuple[str, list[str]]],
+    header_functions: dict[str, tuple[str, list[str]]],
+    *,
+    pointer_is_64: bool,
+    typedefs: dict[str, str],
+) -> tuple[int, list[str], list[str]]:
+    """Compare one binding surface against the header. Returns (exit, failures, waived)."""
+    waivers = KNOWN_BROKEN.get(surface, {})
+
+    code, comparable = _check_surface_coverage(surface, declared, managed_functions, header_functions)
+    if code:
+        return code, [], []
 
     failures: list[str] = []
     waived: list[str] = []
+    stale: list[str] = []
     for name in comparable:
         problems = compare(
             name,
@@ -376,25 +390,14 @@ def check_surface(
             surface=surface,
         )
         if not problems:
+            if name in waivers:
+                stale.append(name)
             continue
         if name in waivers:
             waived.extend(f"[{surface}] {problem}  [waived: {waivers[name]}]" for problem in problems)
         else:
             failures.extend(f"[{surface}] {problem}" for problem in problems)
 
-    stale = sorted(
-        name
-        for name in waivers
-        if name in comparable
-        and not compare(
-            name,
-            header_functions[name],
-            managed_functions[name],
-            pointer_is_64=pointer_is_64,
-            typedefs=typedefs,
-            surface=surface,
-        )
-    )
     if stale:
         print(f"[{surface}] FATAL: waivers no longer reproduce and must be removed:")
         for name in stale:

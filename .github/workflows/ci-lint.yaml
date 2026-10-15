@@ -174,8 +174,8 @@ jobs:
       # compiles clean and misbehaves only when the call runs. GH#1595 shipped that way in
       # BOTH: a six-parameter function declared with three, whose int32_t status was then
       # dereferenced as a pointer. Go is exempt -- cgo type-checks against the header. ~keep
-      - name: Compare C# and Java declarations against xberg.h
-        run: python3 scripts/ci/check-ffi-declaration-parity.py
+      - name: Verify FFI declaration checker and compare surfaces
+        run: task ffi:verify:declarations
 
   alef-readme-paths:
     if: github.event.pull_request.draft != true

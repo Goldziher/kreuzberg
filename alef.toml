@@ -630,12 +630,11 @@ traineddata = "traineddata"
 "tools/benchmark-harness/baselines/initial_baseline.json" = ["file-too-long"]
 "tools/benchmark-harness/guardrails.json" = ["file-too-long"]
 # --- quality-debt baseline (generated) ---
-# 465 size/complexity rule attachments across 169 files that predate these metrics, listed per file
+# 464 size/complexity rule attachments across 168 files that predate these metrics, listed per file
 # rather than switching the rules off, so the metrics still fire on every file NOT listed
 # here -- new code stays covered, and each path below is one discrete unit of work.
 #
-# These counts describe THIS BLOCK only. A fresh uncached lint run for #1567 reports 1,469
-# suppressed findings across these 176 files; one attachment can suppress many findings.
+# These counts describe THIS BLOCK only; one attachment can suppress many findings.
 # Prefer a fresh TOML parse and uncached lint run over historical issue counts. ~keep
 # TODO(xberg-io/xberg#1567): pay this down file by file and delete each entry as it goes green.
 # Do not add new paths here without a very good reason. ~keep
@@ -1088,7 +1087,6 @@ traineddata = "traineddata"
 "crates/xberg/tests/pdf_markdown_regression.rs" = ["file-too-long"]
 "docs-site/src/content/docs/cli/usage.mdx" = ["file-too-long"]
 "docs-site/src/content/docs/guides/ocr.mdx" = ["file-too-long"]
-"scripts/ci/check-ffi-declaration-parity.py" = ["function-too-long"]
 # --- end quality-debt baseline ---
 # Quality metrics do not apply to test code. A test function's length is its assertion
 # count and a table-driven test's arity mirrors its cases; splitting either to satisfy a

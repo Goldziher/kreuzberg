@@ -53,6 +53,12 @@ includes:
     flatten: true
 
 tasks:
+  ffi:verify:declarations:
+    desc: "Test the FFI parity checker and compare C# and Java against the C header"
+    cmds:
+      - python3 -m unittest scripts/ci/test_ffi_declaration_parity.py
+      - python3 scripts/ci/check-ffi-declaration-parity.py
+
   release:test:contracts:
     desc: "Verify release workflow and packaging contracts"
     cmds:
