@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::str::Chars;
 
-#[derive(Clone)]
+#[derive(Clone, Default, PartialEq, Eq)]
 struct FmtState {
     bold: bool,
     italic: bool,
@@ -22,53 +22,242 @@ struct FmtState {
     color_idx: u16,
 }
 
-fn push_span_if_open(spans: &mut Vec<RtfFormattingSpan>, span_start: &mut usize, text_offset: usize, fmt: &FmtState) {
-    if text_offset > *span_start {
-        spans.push(RtfFormattingSpan {
-            start: *span_start,
-            end: text_offset,
-            bold: fmt.bold,
-            italic: fmt.italic,
-            underline: fmt.underline,
-            strikethrough: fmt.strikethrough,
-            color_index: fmt.color_idx,
-        });
+#[derive(Default)]
+struct FormattingSpans {
+    spans: Vec<RtfFormattingSpan>,
+    span_start: usize,
+    text_offset: usize,
+    fmt: FmtState,
+    stack: Vec<FmtState>,
+}
+
+impl FormattingSpans {
+    fn close_span(&mut self) {
+        if self.text_offset > self.span_start {
+            self.spans.push(RtfFormattingSpan {
+                start: self.span_start,
+                end: self.text_offset,
+                bold: self.fmt.bold,
+                italic: self.fmt.italic,
+                underline: self.fmt.underline,
+                strikethrough: self.fmt.strikethrough,
+                color_index: self.fmt.color_idx,
+            });
+        }
+        self.span_start = self.text_offset;
     }
-    *span_start = text_offset;
+
+    fn restore(&mut self) {
+        if let Some(parent) = self.stack.pop()
+            && self.fmt != parent
+        {
+            self.close_span();
+            self.fmt = parent;
+        }
+    }
 }
 
-struct FormattingEscapeCtx<'a> {
-    spans: &'a mut Vec<RtfFormattingSpan>,
-    span_start: &'a mut usize,
-    text_offset: &'a mut usize,
-    fmt: &'a mut FmtState,
-    font_charsets: &'a HashMap<u16, u32>,
-    ansi_codepage_stack: &'a mut Vec<u32>,
-    font_id_stack: &'a mut Vec<Option<u16>>,
-    default_font_id: &'a mut Option<u16>,
-    group_has_text: &'a mut Vec<bool>,
-    pending_boundary_space: &'a mut bool,
-    expect_destination: &'a mut bool,
-    ignorable_pending: &'a mut bool,
+#[derive(Default)]
+struct FormattingScope {
+    font_charsets: HashMap<u16, u32>,
+    ansi_codepage_stack: Vec<u32>,
+    font_id_stack: Vec<Option<u16>>,
+    default_font_id: Option<u16>,
+    group_has_text: Vec<bool>,
+    pending_boundary_space: bool,
+    expect_destination: bool,
+    ignorable_pending: bool,
     group_depth: i32,
-    skip_depth: &'a mut i32,
-    skip_destinations: &'a [&'a str],
-    in_fldinst: &'a mut bool,
-    fldinst_depth: &'a mut i32,
-    fldinst_content: &'a mut String,
-    in_fldrslt: &'a mut bool,
-    fldrslt_depth: &'a mut i32,
-    fldrslt_start: &'a mut usize,
-    in_header: &'a mut bool,
-    header_depth: &'a mut i32,
-    header_buf: &'a mut String,
-    in_footer: &'a mut bool,
-    footer_depth: &'a mut i32,
-    footer_buf: &'a mut String,
+    skip_depth: i32,
 }
 
-impl FormattingEscapeCtx<'_> {
-    fn handle(&mut self, chars: &mut Peekable<Chars<'_>>) {
+#[derive(Default)]
+struct FieldCapture {
+    in_fldinst: bool,
+    fldinst_depth: i32,
+    fldinst_content: String,
+    in_fldrslt: bool,
+    fldrslt_depth: i32,
+    fldrslt_start: usize,
+    pending_hyperlink_url: Option<String>,
+    hyperlinks: Vec<(usize, usize, String)>,
+}
+
+impl FieldCapture {
+    fn close_group(&mut self, group_depth: i32, text_offset: usize) {
+        close_fldinst_group(
+            group_depth,
+            &mut self.in_fldinst,
+            self.fldinst_depth,
+            &mut self.fldinst_content,
+            &mut self.pending_hyperlink_url,
+        );
+        close_fldrslt_group(
+            group_depth,
+            text_offset,
+            FldrsltCloseState {
+                in_fldrslt: &mut self.in_fldrslt,
+                fldrslt_depth: self.fldrslt_depth,
+                fldrslt_start: self.fldrslt_start,
+                pending_hyperlink_url: &mut self.pending_hyperlink_url,
+                hyperlinks: &mut self.hyperlinks,
+            },
+        );
+    }
+}
+
+#[derive(Default)]
+struct TextCapture {
+    active: bool,
+    depth: i32,
+    text: String,
+}
+
+#[derive(Default)]
+struct FormattingParser {
+    formatting: FormattingSpans,
+    scope: FormattingScope,
+    fields: FieldCapture,
+    header: TextCapture,
+    footer: TextCapture,
+}
+
+const SKIP_DESTINATIONS: &[&str] = &[
+    "fonttbl",
+    "stylesheet",
+    "info",
+    "listtable",
+    "listoverridetable",
+    "generator",
+    "filetbl",
+    "revtbl",
+    "rsidtbl",
+    "xmlnstbl",
+    "mmathPr",
+    "themedata",
+    "colorschememapping",
+    "datastore",
+    "latentstyles",
+    "datafield",
+    "objdata",
+    "objclass",
+    "panose",
+    "bkmkstart",
+    "bkmkend",
+    "wgrffmtfilter",
+    "fcharset",
+    "pgdsctbl",
+    "colortbl",
+    "pict",
+];
+
+impl FormattingParser {
+    fn new(content: &str) -> Self {
+        Self {
+            scope: FormattingScope {
+                font_charsets: parse_font_charset_table(content),
+                ansi_codepage_stack: vec![1252],
+                font_id_stack: vec![None],
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
+    fn parse(&mut self, content: &str) {
+        let mut chars = content.chars().peekable();
+        while let Some(character) = chars.next() {
+            match character {
+                '{' => self.open_group(),
+                '}' => self.close_group(),
+                '\\' => self.handle_escape(&mut chars),
+                '\n' | '\r' => {}
+                ' ' | '\t' => self.handle_whitespace(),
+                _ => self.handle_text(character),
+            }
+        }
+        if self.formatting.fmt != FmtState::default() {
+            self.formatting.close_span();
+        }
+    }
+
+    fn open_group(&mut self) {
+        self.scope.group_depth += 1;
+        self.scope.expect_destination = true;
+        self.formatting.stack.push(self.formatting.fmt.clone());
+        self.scope.group_has_text.push(false);
+        self.scope.pending_boundary_space = false;
+        let codepage = self.scope.ansi_codepage_stack.last().copied().unwrap_or(1252);
+        self.scope.ansi_codepage_stack.push(codepage);
+        let font = self.scope.font_id_stack.last().copied().flatten();
+        self.scope.font_id_stack.push(font);
+    }
+
+    fn close_group(&mut self) {
+        self.scope.group_depth -= 1;
+        self.scope.expect_destination = false;
+        self.scope.ignorable_pending = false;
+        if self.scope.ansi_codepage_stack.len() > 1 {
+            self.scope.ansi_codepage_stack.pop();
+        }
+        if self.scope.font_id_stack.len() > 1 {
+            self.scope.font_id_stack.pop();
+        }
+        self.formatting.restore();
+        if self.scope.skip_depth > 0 && self.scope.group_depth < self.scope.skip_depth {
+            self.scope.skip_depth = 0;
+        }
+        if self.header.active && self.scope.group_depth < self.header.depth {
+            self.header.active = false;
+        }
+        if self.footer.active && self.scope.group_depth < self.footer.depth {
+            self.footer.active = false;
+        }
+        self.fields
+            .close_group(self.scope.group_depth, self.formatting.text_offset);
+        let produced_text = self.scope.group_has_text.pop().unwrap_or(false);
+        if produced_text && self.scope.skip_depth == 0 {
+            self.scope.pending_boundary_space = true;
+        }
+    }
+
+    fn handle_whitespace(&mut self) {
+        if self.fields.in_fldinst {
+            self.fields.fldinst_content.push(' ');
+        }
+        if self.scope.skip_depth > 0 {
+            return;
+        }
+        if self.formatting.text_offset > 0 {
+            self.formatting.text_offset += 1;
+            if let Some(flag) = self.scope.group_has_text.last_mut() {
+                *flag = true;
+            }
+        }
+    }
+
+    fn handle_text(&mut self, character: char) {
+        if self.fields.in_fldinst {
+            self.fields.fldinst_content.push(character);
+            return;
+        }
+        if self.scope.skip_depth > 0 {
+            return;
+        }
+        self.add_boundary_space();
+        self.formatting.text_offset += character.len_utf8();
+        if let Some(flag) = self.scope.group_has_text.last_mut() {
+            *flag = true;
+        }
+        if self.header.active {
+            self.header.text.push(character);
+        }
+        if self.footer.active {
+            self.footer.text.push(character);
+        }
+    }
+
+    fn handle_escape(&mut self, chars: &mut Peekable<Chars<'_>>) {
         let Some(&next_ch) = chars.peek() else {
             return;
         };
@@ -77,7 +266,7 @@ impl FormattingEscapeCtx<'_> {
             '\'' => self.handle_hex_escape(chars),
             '*' => {
                 chars.next();
-                *self.ignorable_pending = true;
+                self.scope.ignorable_pending = true;
             }
             _ => self.handle_control_word(chars),
         }
@@ -85,70 +274,70 @@ impl FormattingEscapeCtx<'_> {
 
     fn handle_literal(&mut self, next_ch: char, chars: &mut Peekable<Chars<'_>>) {
         chars.next();
-        *self.expect_destination = false;
-        if *self.in_fldinst {
-            self.fldinst_content.push(next_ch);
+        self.scope.expect_destination = false;
+        if self.fields.in_fldinst {
+            self.fields.fldinst_content.push(next_ch);
         }
-        if *self.skip_depth > 0 {
+        if self.scope.skip_depth > 0 {
             return;
         }
         self.add_boundary_space();
-        *self.text_offset += next_ch.len_utf8();
-        if let Some(flag) = self.group_has_text.last_mut() {
+        self.formatting.text_offset += next_ch.len_utf8();
+        if let Some(flag) = self.scope.group_has_text.last_mut() {
             *flag = true;
         }
-        if *self.in_header {
-            self.header_buf.push(next_ch);
+        if self.header.active {
+            self.header.text.push(next_ch);
         }
-        if *self.in_footer {
-            self.footer_buf.push(next_ch);
+        if self.footer.active {
+            self.footer.text.push(next_ch);
         }
     }
 
     fn handle_hex_escape(&mut self, chars: &mut Peekable<Chars<'_>>) {
         chars.next();
-        *self.expect_destination = false;
+        self.scope.expect_destination = false;
         let bytes = parse_hex_escape_bytes(chars);
-        if *self.skip_depth > 0 {
+        if self.scope.skip_depth > 0 {
             return;
         }
         let Some(bytes) = bytes.as_deref() else {
             return;
         };
         let codepage = resolve_decode_codepage(
-            self.font_id_stack,
-            *self.default_font_id,
-            self.font_charsets,
-            self.ansi_codepage_stack,
+            &self.scope.font_id_stack,
+            self.scope.default_font_id,
+            &self.scope.font_charsets,
+            &self.scope.ansi_codepage_stack,
         );
         let decoded = decode_ansi_bytes(bytes, codepage);
         self.add_boundary_space();
-        *self.text_offset += decoded.len();
-        if let Some(flag) = self.group_has_text.last_mut() {
+        self.formatting.text_offset += decoded.len();
+        if let Some(flag) = self.scope.group_has_text.last_mut() {
             *flag = true;
         }
     }
 
     fn add_boundary_space(&mut self) {
-        if *self.pending_boundary_space && *self.text_offset > 0 {
-            *self.text_offset += 1;
+        if self.scope.pending_boundary_space && self.formatting.text_offset > 0 {
+            self.formatting.text_offset += 1;
         }
-        *self.pending_boundary_space = false;
+        self.scope.pending_boundary_space = false;
     }
 
     fn handle_control_word(&mut self, chars: &mut Peekable<Chars<'_>>) {
         let (word, param) = parse_rtf_control_word(chars);
-        if *self.expect_destination || *self.ignorable_pending {
-            *self.expect_destination = false;
+        if self.scope.expect_destination || self.scope.ignorable_pending {
+            self.scope.expect_destination = false;
             if self.handle_destination(&word) {
                 return;
             }
         }
-        if *self.in_fldinst {
-            self.fldinst_content.push_str(&word);
+        if self.fields.in_fldinst {
+            self.fields.fldinst_content.push_str(&word);
         }
         self.update_scope(&word, param);
-        if *self.skip_depth > 0 {
+        if self.scope.skip_depth > 0 {
             return;
         }
         if self.update_format(&word, param) {
@@ -158,35 +347,35 @@ impl FormattingEscapeCtx<'_> {
     }
 
     fn handle_destination(&mut self, word: &str) -> bool {
-        if *self.ignorable_pending {
-            *self.ignorable_pending = false;
+        if self.scope.ignorable_pending {
+            self.scope.ignorable_pending = false;
             if word == "fldinst" {
-                *self.in_fldinst = true;
-                *self.fldinst_depth = self.group_depth;
+                self.fields.in_fldinst = true;
+                self.fields.fldinst_depth = self.scope.group_depth;
             }
             self.start_skip();
             return true;
         }
         match word {
             "fldinst" => {
-                *self.in_fldinst = true;
-                *self.fldinst_depth = self.group_depth;
+                self.fields.in_fldinst = true;
+                self.fields.fldinst_depth = self.scope.group_depth;
                 self.start_skip();
             }
             "fldrslt" => {
-                *self.in_fldrslt = true;
-                *self.fldrslt_depth = self.group_depth;
-                *self.fldrslt_start = *self.text_offset;
+                self.fields.in_fldrslt = true;
+                self.fields.fldrslt_depth = self.scope.group_depth;
+                self.fields.fldrslt_start = self.formatting.text_offset;
             }
-            destination if self.skip_destinations.contains(&destination) => self.start_skip(),
+            destination if SKIP_DESTINATIONS.contains(&destination) => self.start_skip(),
             _ => return false,
         }
         true
     }
 
     fn start_skip(&mut self) {
-        if *self.skip_depth == 0 {
-            *self.skip_depth = self.group_depth;
+        if self.scope.skip_depth == 0 {
+            self.scope.skip_depth = self.scope.group_depth;
         }
     }
 
@@ -195,21 +384,21 @@ impl FormattingEscapeCtx<'_> {
             "ansicpg" => {
                 if let Some(value) = param
                     && value > 0
-                    && let Some(codepage) = self.ansi_codepage_stack.last_mut()
+                    && let Some(codepage) = self.scope.ansi_codepage_stack.last_mut()
                 {
                     *codepage = value as u32;
                 }
             }
             "f" => {
                 if let Some(value) = param
-                    && let Some(font_id) = self.font_id_stack.last_mut()
+                    && let Some(font_id) = self.scope.font_id_stack.last_mut()
                 {
                     *font_id = Some(value.max(0) as u16);
                 }
             }
             "deff" => {
                 if let Some(value) = param {
-                    *self.default_font_id = Some(value.max(0) as u16);
+                    self.scope.default_font_id = Some(value.max(0) as u16);
                 }
             }
             _ => {}
@@ -217,40 +406,20 @@ impl FormattingEscapeCtx<'_> {
     }
 
     fn update_format(&mut self, word: &str, param: Option<i32>) -> bool {
-        let changed = match word {
-            "b" => self.fmt.bold != (param.unwrap_or(1) != 0),
-            "i" => self.fmt.italic != (param.unwrap_or(1) != 0),
-            "ul" => self.fmt.underline != (param.unwrap_or(1) != 0),
-            "ulnone" => self.fmt.underline,
-            "strike" => self.fmt.strikethrough != (param.unwrap_or(1) != 0),
-            "cf" => self.fmt.color_idx != param.unwrap_or(0) as u16,
-            "plain" => {
-                self.fmt.bold
-                    || self.fmt.italic
-                    || self.fmt.underline
-                    || self.fmt.strikethrough
-                    || self.fmt.color_idx != 0
-            }
-            _ => return false,
-        };
-        if changed {
-            push_span_if_open(self.spans, self.span_start, *self.text_offset, self.fmt);
-        }
+        let mut next = self.formatting.fmt.clone();
         match word {
-            "b" => self.fmt.bold = param.unwrap_or(1) != 0,
-            "i" => self.fmt.italic = param.unwrap_or(1) != 0,
-            "ul" => self.fmt.underline = param.unwrap_or(1) != 0,
-            "ulnone" => self.fmt.underline = false,
-            "strike" => self.fmt.strikethrough = param.unwrap_or(1) != 0,
-            "cf" => self.fmt.color_idx = param.unwrap_or(0) as u16,
-            "plain" => {
-                self.fmt.bold = false;
-                self.fmt.italic = false;
-                self.fmt.underline = false;
-                self.fmt.strikethrough = false;
-                self.fmt.color_idx = 0;
-            }
-            _ => unreachable!(),
+            "b" => next.bold = param.unwrap_or(1) != 0,
+            "i" => next.italic = param.unwrap_or(1) != 0,
+            "ul" => next.underline = param.unwrap_or(1) != 0,
+            "ulnone" => next.underline = false,
+            "strike" => next.strikethrough = param.unwrap_or(1) != 0,
+            "cf" => next.color_idx = param.unwrap_or(0) as u16,
+            "plain" => next = FmtState::default(),
+            _ => return false,
+        }
+        if self.formatting.fmt != next {
+            self.formatting.close_span();
+            self.formatting.fmt = next;
         }
         true
     }
@@ -258,30 +427,30 @@ impl FormattingEscapeCtx<'_> {
     fn emit_control_word(&mut self, word: &str, param: Option<i32>, chars: &mut Peekable<Chars<'_>>) {
         match word {
             "header" | "headerl" | "headerr" | "headerf" => {
-                *self.in_header = true;
-                *self.header_depth = self.group_depth;
+                self.header.active = true;
+                self.header.depth = self.scope.group_depth;
             }
             "footer" | "footerl" | "footerr" | "footerf" => {
-                *self.in_footer = true;
-                *self.footer_depth = self.group_depth;
+                self.footer.active = true;
+                self.footer.depth = self.scope.group_depth;
             }
             "par" | "line" => {
-                *self.text_offset += 1;
-                if *self.in_header {
-                    self.header_buf.push('\n');
+                self.formatting.text_offset += 1;
+                if self.header.active {
+                    self.header.text.push('\n');
                 }
-                if *self.in_footer {
-                    self.footer_buf.push('\n');
+                if self.footer.active {
+                    self.footer.text.push('\n');
                 }
             }
-            "tab" => *self.text_offset += 1,
-            "bullet" => *self.text_offset += '\u{2022}'.len_utf8(),
-            "lquote" => *self.text_offset += '\u{2018}'.len_utf8(),
-            "rquote" => *self.text_offset += '\u{2019}'.len_utf8(),
-            "ldblquote" => *self.text_offset += '\u{201C}'.len_utf8(),
-            "rdblquote" => *self.text_offset += '\u{201D}'.len_utf8(),
-            "endash" => *self.text_offset += '\u{2013}'.len_utf8(),
-            "emdash" => *self.text_offset += '\u{2014}'.len_utf8(),
+            "tab" => self.formatting.text_offset += 1,
+            "bullet" => self.formatting.text_offset += '\u{2022}'.len_utf8(),
+            "lquote" => self.formatting.text_offset += '\u{2018}'.len_utf8(),
+            "rquote" => self.formatting.text_offset += '\u{2019}'.len_utf8(),
+            "ldblquote" => self.formatting.text_offset += '\u{201C}'.len_utf8(),
+            "rdblquote" => self.formatting.text_offset += '\u{201D}'.len_utf8(),
+            "endash" => self.formatting.text_offset += '\u{2013}'.len_utf8(),
+            "emdash" => self.formatting.text_offset += '\u{2014}'.len_utf8(),
             "u" => self.emit_unicode(param, chars),
             _ => {}
         }
@@ -295,12 +464,12 @@ impl FormattingEscapeCtx<'_> {
                 code_num as u32
             };
             if let Some(character) = char::from_u32(code_u) {
-                *self.text_offset += character.len_utf8();
-                if *self.in_header {
-                    self.header_buf.push(character);
+                self.formatting.text_offset += character.len_utf8();
+                if self.header.active {
+                    self.header.text.push(character);
                 }
-                if *self.in_footer {
-                    self.footer_buf.push(character);
+                if self.footer.active {
+                    self.footer.text.push(character);
                 }
             }
         }
@@ -324,270 +493,25 @@ fn parse_hex_escape_bytes(chars: &mut Peekable<Chars<'_>>) -> Option<Vec<u8>> {
 
 /// Extract formatting metadata from RTF content.
 ///
-/// This performs a lightweight pass over the RTF to extract:
-/// - Bold/italic/underline formatting state changes
-/// - Color table and color references
-/// - Header/footer text
-/// - Hyperlink field instructions
+/// Counts UTF-8 bytes with the same scoped codepages as the text pass. ~keep
 pub(crate) fn extract_rtf_formatting(content: &str) -> RtfFormattingData {
-    let color_table = parse_rtf_color_table(content);
-    let font_charsets = parse_font_charset_table(content);
-    let mut spans = Vec::new();
-    let mut hyperlinks = Vec::new();
-    let mut text_offset: usize = 0;
-    let mut span_start: usize = 0;
-
-    let mut in_header = false;
-    let mut in_footer = false;
-    let mut header_depth: i32 = 0;
-    let mut footer_depth: i32 = 0;
-    let mut header_buf = String::new();
-    let mut footer_buf = String::new();
-
-    let mut in_fldinst = false;
-    let mut fldinst_depth: i32 = 0;
-    let mut fldinst_content = String::new();
-    let mut in_fldrslt = false;
-    let mut fldrslt_depth: i32 = 0;
-    let mut fldrslt_start: usize = 0;
-    let mut pending_hyperlink_url: Option<String> = None;
-
-    // Closes the current formatting span (if the output advanced since
-    // `span_start`) using `fmt`'s active formatting, then advances
-    // `span_start` to `text_offset` unconditionally. Used on `}`, on
-    // `\plain`, and by each `update_fmt_field!` invocation below -- all
-    // three previously duplicated this exact push-then-advance pattern. ~keep
-    let mut fmt = FmtState {
-        bold: false,
-        italic: false,
-        underline: false,
-        strikethrough: false,
-        color_idx: 0,
-    };
-    let mut fmt_stack: Vec<FmtState> = Vec::new();
-
-    let mut group_depth: i32 = 0;
-    let mut skip_depth: i32 = 0;
-    let mut chars = content.chars().peekable();
-    let mut expect_destination = false;
-    let mut ignorable_pending = false;
-
-    // Mirrors the extraction pass's codepage tracking so both passes count the
-    // same number of output bytes for `\'hh` escape runs.
-    let mut ansi_codepage_stack: Vec<u32> = vec![1252];
-    // Mirrors the extraction pass's active-font tracking (see `font_id_stack`
-    // in `extract_text_from_rtf`) so `\'hh` escapes decode identically in both.
-    let mut font_id_stack: Vec<Option<u16>> = vec![None];
-    let mut default_font_id: Option<u16> = None;
-
-    let skip_dests = [
-        "fonttbl",
-        "stylesheet",
-        "info",
-        "listtable",
-        "listoverridetable",
-        "generator",
-        "filetbl",
-        "revtbl",
-        "rsidtbl",
-        "xmlnstbl",
-        "mmathPr",
-        "themedata",
-        "colorschememapping",
-        "datastore",
-        "latentstyles",
-        "datafield",
-        "objdata",
-        "objclass",
-        "panose",
-        "bkmkstart",
-        "bkmkend",
-        "wgrffmtfilter",
-        "fcharset",
-        "pgdsctbl",
-        "colortbl",
-        "pict",
-    ];
-
-    let mut group_has_text: Vec<bool> = Vec::new();
-    let mut pending_boundary_space = false;
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '{' => {
-                group_depth += 1;
-                expect_destination = true;
-                fmt_stack.push(fmt.clone());
-                group_has_text.push(false);
-                pending_boundary_space = false;
-                let current_codepage = ansi_codepage_stack.last().copied().unwrap_or(1252);
-                ansi_codepage_stack.push(current_codepage);
-                let current_font = font_id_stack.last().copied().flatten();
-                font_id_stack.push(current_font);
-            }
-            '}' => {
-                group_depth -= 1;
-                expect_destination = false;
-                ignorable_pending = false;
-                if ansi_codepage_stack.len() > 1 {
-                    ansi_codepage_stack.pop();
-                }
-                if font_id_stack.len() > 1 {
-                    font_id_stack.pop();
-                }
-                if let Some(parent) = fmt_stack.pop() {
-                    let changed = fmt.bold != parent.bold
-                        || fmt.italic != parent.italic
-                        || fmt.underline != parent.underline
-                        || fmt.strikethrough != parent.strikethrough
-                        || fmt.color_idx != parent.color_idx;
-                    if changed {
-                        push_span_if_open(&mut spans, &mut span_start, text_offset, &fmt);
-                        fmt = parent;
-                    }
-                }
-                if skip_depth > 0 && group_depth < skip_depth {
-                    skip_depth = 0;
-                }
-                if in_header && group_depth < header_depth {
-                    in_header = false;
-                }
-                if in_footer && group_depth < footer_depth {
-                    in_footer = false;
-                }
-                close_fldinst_group(
-                    group_depth,
-                    &mut in_fldinst,
-                    fldinst_depth,
-                    &mut fldinst_content,
-                    &mut pending_hyperlink_url,
-                );
-                close_fldrslt_group(
-                    group_depth,
-                    text_offset,
-                    FldrsltCloseState {
-                        in_fldrslt: &mut in_fldrslt,
-                        fldrslt_depth,
-                        fldrslt_start,
-                        pending_hyperlink_url: &mut pending_hyperlink_url,
-                        hyperlinks: &mut hyperlinks,
-                    },
-                );
-                let produced_text = group_has_text.pop().unwrap_or(false);
-                if produced_text && skip_depth == 0 {
-                    pending_boundary_space = true;
-                }
-            }
-            '\\' => {
-                let mut escape_ctx = FormattingEscapeCtx {
-                    spans: &mut spans,
-                    span_start: &mut span_start,
-                    text_offset: &mut text_offset,
-                    fmt: &mut fmt,
-                    font_charsets: &font_charsets,
-                    ansi_codepage_stack: &mut ansi_codepage_stack,
-                    font_id_stack: &mut font_id_stack,
-                    default_font_id: &mut default_font_id,
-                    group_has_text: &mut group_has_text,
-                    pending_boundary_space: &mut pending_boundary_space,
-                    expect_destination: &mut expect_destination,
-                    ignorable_pending: &mut ignorable_pending,
-                    group_depth,
-                    skip_depth: &mut skip_depth,
-                    skip_destinations: &skip_dests,
-                    in_fldinst: &mut in_fldinst,
-                    fldinst_depth: &mut fldinst_depth,
-                    fldinst_content: &mut fldinst_content,
-                    in_fldrslt: &mut in_fldrslt,
-                    fldrslt_depth: &mut fldrslt_depth,
-                    fldrslt_start: &mut fldrslt_start,
-                    in_header: &mut in_header,
-                    header_depth: &mut header_depth,
-                    header_buf: &mut header_buf,
-                    in_footer: &mut in_footer,
-                    footer_depth: &mut footer_depth,
-                    footer_buf: &mut footer_buf,
-                };
-                escape_ctx.handle(&mut chars);
-            }
-            '\n' | '\r' => {}
-            ' ' | '\t' => {
-                if in_fldinst {
-                    fldinst_content.push(' ');
-                }
-                if skip_depth > 0 {
-                    continue;
-                }
-                if text_offset > 0 {
-                    text_offset += 1;
-                    if let Some(flag) = group_has_text.last_mut() {
-                        *flag = true;
-                    }
-                }
-            }
-            _ => {
-                if in_fldinst {
-                    fldinst_content.push(ch);
-                    continue;
-                }
-                if skip_depth > 0 {
-                    continue;
-                }
-                if pending_boundary_space && text_offset > 0 {
-                    text_offset += 1;
-                }
-                pending_boundary_space = false;
-                text_offset += ch.len_utf8();
-                if let Some(flag) = group_has_text.last_mut() {
-                    *flag = true;
-                }
-                if in_header {
-                    header_buf.push(ch);
-                }
-                if in_footer {
-                    footer_buf.push(ch);
-                }
-            }
-        }
-    }
-
-    if text_offset > span_start && (fmt.bold || fmt.italic || fmt.underline || fmt.strikethrough || fmt.color_idx != 0)
-    {
-        spans.push(RtfFormattingSpan {
-            start: span_start,
-            end: text_offset,
-            bold: fmt.bold,
-            italic: fmt.italic,
-            underline: fmt.underline,
-            strikethrough: fmt.strikethrough,
-            color_index: fmt.color_idx,
-        });
-    }
-
-    let header_trimmed = header_buf.trim().to_string();
-    let footer_trimmed = footer_buf.trim().to_string();
-
+    let mut parser = FormattingParser::new(content);
+    parser.parse(content);
     RtfFormattingData {
-        spans,
-        color_table,
-        header_text: if header_trimmed.is_empty() {
-            None
-        } else {
-            Some(header_trimmed)
-        },
-        footer_text: if footer_trimmed.is_empty() {
-            None
-        } else {
-            Some(footer_trimmed)
-        },
-        hyperlinks,
+        spans: parser.formatting.spans,
+        color_table: parse_rtf_color_table(content),
+        header_text: nonempty_text(&parser.header.text),
+        footer_text: nonempty_text(&parser.footer.text),
+        hyperlinks: parser.fields.hyperlinks,
     }
 }
 
-/// Convert RTF formatting spans into `TextAnnotation` vectors for a paragraph.
-///
-/// Given the byte range of a paragraph within the full extracted text,
-/// produces annotations from the formatting spans that overlap.
+fn nonempty_text(text: &str) -> Option<String> {
+    let text = text.trim().to_string();
+    (!text.is_empty()).then_some(text)
+}
+
+/// Convert formatting spans overlapping a paragraph into paragraph-relative annotations. ~keep
 pub(crate) fn spans_to_annotations(
     para_start: usize,
     para_end: usize,
@@ -598,64 +522,28 @@ pub(crate) fn spans_to_annotations(
         if span.end <= para_start || span.start >= para_end {
             continue;
         }
-        let ann_start = span.start.max(para_start) - para_start;
-        let ann_end = span.end.min(para_end) - para_start;
-        if ann_start >= ann_end {
-            continue;
-        }
-        let s = ann_start as u32;
-        let e = ann_end as u32;
-        if span.bold {
-            annotations.push(TextAnnotation {
-                start: s,
-                end: e,
-                kind: AnnotationKind::Bold,
-            });
-        }
-        if span.italic {
-            annotations.push(TextAnnotation {
-                start: s,
-                end: e,
-                kind: AnnotationKind::Italic,
-            });
-        }
-        if span.underline {
-            annotations.push(TextAnnotation {
-                start: s,
-                end: e,
-                kind: AnnotationKind::Underline,
-            });
-        }
-        if span.strikethrough {
-            annotations.push(TextAnnotation {
-                start: s,
-                end: e,
-                kind: AnnotationKind::Strikethrough,
-            });
-        }
-        if span.color_index > 0
-            && let Some(color) = formatting.color_table.get(span.color_index as usize)
-            && !color.is_empty()
-            && color != "#000000"
-        {
-            annotations.push(TextAnnotation {
-                start: s,
-                end: e,
-                kind: AnnotationKind::Color { value: color.clone() },
-            });
+        let start = span.start.max(para_start) - para_start;
+        let end = span.end.min(para_end) - para_start;
+        if start < end {
+            append_span_annotations(
+                &mut annotations,
+                span,
+                start as u32,
+                end as u32,
+                &formatting.color_table,
+            );
         }
     }
-
     for (link_start, link_end, url) in &formatting.hyperlinks {
         if *link_end <= para_start || *link_start >= para_end {
             continue;
         }
-        let s = (link_start.max(&para_start) - para_start) as u32;
-        let e = (link_end.min(&para_end) - para_start) as u32;
-        if s < e {
+        let start = (link_start.max(&para_start) - para_start) as u32;
+        let end = (link_end.min(&para_end) - para_start) as u32;
+        if start < end {
             annotations.push(TextAnnotation {
-                start: s,
-                end: e,
+                start,
+                end,
                 kind: AnnotationKind::Link {
                     url: url.clone(),
                     title: None,
@@ -663,6 +551,40 @@ pub(crate) fn spans_to_annotations(
             });
         }
     }
-
     annotations
 }
+
+fn append_span_annotations(
+    annotations: &mut Vec<TextAnnotation>,
+    span: &RtfFormattingSpan,
+    start: u32,
+    end: u32,
+    color_table: &[String],
+) {
+    let attributes = [
+        (span.bold, AnnotationKind::Bold),
+        (span.italic, AnnotationKind::Italic),
+        (span.underline, AnnotationKind::Underline),
+        (span.strikethrough, AnnotationKind::Strikethrough),
+    ];
+    for (active, kind) in attributes {
+        if active {
+            annotations.push(TextAnnotation { start, end, kind });
+        }
+    }
+    if span.color_index > 0
+        && let Some(color) = color_table.get(span.color_index as usize)
+        && !color.is_empty()
+        && color != "#000000"
+    {
+        annotations.push(TextAnnotation {
+            start,
+            end,
+            kind: AnnotationKind::Color { value: color.clone() },
+        });
+    }
+}
+
+#[cfg(test)]
+#[path = "formatting_extract_tests.rs"]
+mod tests;
