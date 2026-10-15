@@ -222,65 +222,60 @@ pub fn escalate_if_below_threshold(
 /// Substitute {{var}} placeholders from the provided context map.
 /// Missing vars leave the placeholder intact (do not error).
 fn substitute_vars(template: &str, context: Option<&serde_json::Map<String, serde_json::Value>>) -> String {
-    let Some(ctx) = context else {
+    let Some(context) = context else {
         return template.to_string();
     };
-
     let mut result = String::new();
     let mut chars = template.chars().peekable();
-
-    while let Some(ch) = chars.next() {
-        if ch == '{' && chars.peek() == Some(&'{') {
+    while let Some(character) = chars.next() {
+        if character == '{' && chars.peek() == Some(&'{') {
             chars.next();
-
-            let mut var_name = String::new();
-            let mut found_close = false;
-
-            while let Some(next_ch) = chars.next() {
-                if next_ch == '}' && chars.peek() == Some(&'}') {
-                    chars.next();
-                    found_close = true;
-                    break;
-                }
-                var_name.push(next_ch);
-            }
-
-            if found_close {
-                if let Some(value) = ctx.get(&var_name) {
-                    match value {
-                        serde_json::Value::Null => {
-                            result.push_str("{{");
-                            result.push_str(&var_name);
-                            result.push_str("}}");
-                        }
-                        serde_json::Value::Bool(b) => result.push_str(&b.to_string()),
-                        serde_json::Value::Number(n) => result.push_str(&n.to_string()),
-                        serde_json::Value::String(s) => result.push_str(s),
-                        _ => {
-                            if let Ok(s) = serde_json::to_string(value) {
-                                result.push_str(&s);
-                            } else {
-                                result.push_str("{{");
-                                result.push_str(&var_name);
-                                result.push_str("}}");
-                            }
-                        }
-                    }
-                } else {
-                    result.push_str("{{");
-                    result.push_str(&var_name);
-                    result.push_str("}}");
-                }
+            let (name, closed) = read_variable_name(&mut chars);
+            if closed {
+                append_variable_value(&name, context, &mut result);
             } else {
                 result.push_str("{{");
-                result.push_str(&var_name);
+                result.push_str(&name);
             }
         } else {
-            result.push(ch);
+            result.push(character);
         }
     }
-
     result
+}
+
+fn read_variable_name(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> (String, bool) {
+    let mut name = String::new();
+    while let Some(character) = chars.next() {
+        if character == '}' && chars.peek() == Some(&'}') {
+            chars.next();
+            return (name, true);
+        }
+        name.push(character);
+    }
+    (name, false)
+}
+
+fn append_variable_value(name: &str, context: &serde_json::Map<String, serde_json::Value>, result: &mut String) {
+    match context.get(name) {
+        None | Some(serde_json::Value::Null) => append_placeholder(name, result),
+        Some(serde_json::Value::Bool(value)) => result.push_str(&value.to_string()),
+        Some(serde_json::Value::Number(value)) => result.push_str(&value.to_string()),
+        Some(serde_json::Value::String(value)) => result.push_str(value),
+        Some(value) => {
+            if let Ok(value) = serde_json::to_string(value) {
+                result.push_str(&value);
+            } else {
+                append_placeholder(name, result);
+            }
+        }
+    }
+}
+
+fn append_placeholder(name: &str, result: &mut String) {
+    result.push_str("{{");
+    result.push_str(name);
+    result.push_str("}}");
 }
 
 #[cfg(test)]
@@ -671,3 +666,7 @@ mod tests {
         assert!(fallback.user_text.expect("fallback user text").contains('世'));
     }
 }
+
+#[cfg(test)]
+#[path = "prompts_lint_tests.rs"]
+mod lint_tests;
