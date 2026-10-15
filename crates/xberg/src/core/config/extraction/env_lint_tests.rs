@@ -22,12 +22,11 @@ fn qualified_test_name(name: &str) -> String {
 fn isolated_test_command(name: &str) -> std::process::Command {
     let mut command = std::process::Command::new(std::env::current_exe().expect("test executable"));
     command.args(["--exact", &qualified_test_name(name), "--nocapture"]);
-    // CI's system ORT needs inherited loader paths; clear only the configuration namespace. ~keep
-    for (key, _) in std::env::vars_os() {
-        if key.to_string_lossy().to_ascii_uppercase().starts_with("XBERG_") {
-            command.env_remove(key);
-        }
-    }
+    // CI's system ORT needs inherited loader paths; preserve every non-XBERG variable. ~keep
+    // Snapshot inheritance so parallel tests cannot add overrides before spawn. ~keep
+    command
+        .env_clear()
+        .envs(std::env::vars_os().filter(|(key, _)| !key.to_string_lossy().to_ascii_uppercase().starts_with("XBERG_")));
     command
 }
 
