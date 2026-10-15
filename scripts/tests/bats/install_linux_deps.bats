@@ -10,7 +10,7 @@ setup() {
 Name: libheif
 Description: cached libheif requiring an external development package
 Version: 1.19.8
-Requires: libsharpyuv
+Requires.private: libsharpyuv
 Libs: -lheif
 Cflags: -I/example/heif
 PC
@@ -39,12 +39,13 @@ Name: libsharpyuv
 Description: complete dependency fixture
 Version: 0.2.0
 Libs: -lsharpyuv
+Cflags: -I/example/sharpyuv
 PC
 	run pkg-config --cflags --libs libheif
 	xberg_assert_status 0
 	local flags
 	read -r -a flags <<<"$output"
-	[ "${flags[*]}" = "-I/example/heif -lheif -lsharpyuv" ]
+	[ "${flags[*]}" = "-I/example/heif -I/example/sharpyuv -lheif" ]
 
 	run bash -euo pipefail "$XBERG_WORK/validate-libheif.sh"
 	xberg_assert_status 0
