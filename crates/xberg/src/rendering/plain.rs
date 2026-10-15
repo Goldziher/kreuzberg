@@ -8,7 +8,7 @@
 
 use crate::types::annotations::PdfAnnotation;
 use crate::types::document_structure::ContentLayer;
-use crate::types::internal::{ElementKind, InternalDocument};
+use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
 
 use super::common::{
     annotation_display_text, annotation_type_label, get_admonition_kind, get_admonition_title, image_ocr_text,
@@ -18,238 +18,15 @@ use super::common::{
 /// Render an `InternalDocument` to plain text.
 pub(crate) fn render_plain(doc: &InternalDocument) -> String {
     let mut out = String::with_capacity(doc.elements.len() * 80);
-    let mut last_heading_depth: Option<u16> = None;
-
+    let mut last_heading_depth = None;
     for elem in &doc.elements {
-        if elem.layer != ContentLayer::Body {
+        if elem.layer != ContentLayer::Body || elem.kind.is_container_start() || elem.kind.is_container_end() {
             continue;
         }
-
-        if elem.kind.is_container_start() || elem.kind.is_container_end() {
-            continue;
-        }
-
-        match elem.kind {
-            ElementKind::Title | ElementKind::Heading { .. } | ElementKind::Paragraph => {
-                if !elem.text.is_empty() {
-                    if matches!(elem.kind, ElementKind::Heading { .. }) {
-                        if let Some(last_depth) = last_heading_depth
-                            && (last_depth == 0 || last_depth == 1)
-                            && last_depth == elem.depth
-                            && !out.is_empty()
-                            && !out.ends_with("\n\n")
-                        {
-                            out.push('\n');
-                        }
-                        last_heading_depth = Some(elem.depth);
-                    }
-
-                    if matches!(elem.kind, ElementKind::Paragraph)
-                        || (matches!(elem.kind, ElementKind::Heading { .. }) && elem.depth > 0)
-                    {
-                        let indent = "  ".repeat(elem.depth as usize);
-                        out.push_str(&indent);
-                    }
-
-                    if let (true, Some(attrs)) = (
-                        matches!(elem.kind, ElementKind::Heading { .. }),
-                        elem.public_attributes(),
-                    ) {
-                        out.push_str(&elem.text);
-                        let mut filtered_attrs: Vec<_> = attrs
-                            .iter()
-                            .filter(|(k, v)| !k.starts_with("xmlns") && !v.is_empty())
-                            .collect();
-                        filtered_attrs.sort_by_key(|(k, _)| k.as_str());
-                        let formatted_attrs: Vec<String> =
-                            filtered_attrs.iter().map(|(k, v)| format!("{}: {}", k, v)).collect();
-                        if !formatted_attrs.is_empty() {
-                            out.push_str(" (");
-                            out.push_str(&formatted_attrs.join(", "));
-                            out.push(')');
-                        }
-                    } else {
-                        out.push_str(&elem.text);
-                    }
-
-                    if matches!(elem.kind, ElementKind::Heading { .. }) {
-                        out.push('\n');
-                    } else {
-                        out.push_str("\n\n");
-                    }
-                }
-            }
-            ElementKind::ListItem { .. } => {
-                // Plain text renders no marker glyph at all (no "1."/"-" prefix, by
-                // design -- this format is markers-off across the board). A literal
-                // source label (e.g. "B.", "(a)") is the one piece of list-item
-                // structure this format can still carry, so it is kept as visible text.
-                if let Some(label) = elem.list_item_source_label().filter(|label| !label.is_empty()) {
-                    out.push_str(label);
-                    out.push(' ');
-                }
-                out.push_str(&elem.text);
-                out.push('\n');
-            }
-            ElementKind::Code => {
-                out.push_str(&elem.text);
-                if !elem.text.ends_with('\n') {
-                    out.push('\n');
-                }
-                out.push('\n');
-            }
-            ElementKind::Formula => {
-                out.push_str(&elem.text);
-                out.push_str("\n\n");
-            }
-            ElementKind::Table { table_index } => {
-                if let Some(table) = doc.tables.get(table_index as usize) {
-                    let table_str = if !elem.text.is_empty() {
-                        elem.text.clone()
-                    } else if !table.cells.is_empty() {
-                        render_table_plain(&table.cells)
-                    } else {
-                        table.markdown.clone()
-                    };
-                    if !table_str.trim().is_empty() {
-                        out.push_str(&table_str);
-                        out.push('\n');
-                    }
-                }
-            }
-            ElementKind::Image { image_index } => {
-                if let Some(img) = doc.images.get(image_index as usize) {
-                    if let Some(ref desc) = img.description
-                        && !desc.is_empty()
-                    {
-                        out.push_str("[Image: ");
-                        out.push_str(desc);
-                        out.push_str("]\n\n");
-                    }
-
-                    if let Some(ocr_text) = image_ocr_text(doc, elem, image_index) {
-                        out.push_str(ocr_text);
-                        out.push_str("\n\n");
-                    }
-                } else if !elem.text.trim().is_empty() {
-                    // An image the extractor could not resolve (a missing archive
-                    // member) still carries its alt text or caption.
-                    out.push_str("[Image: ");
-                    out.push_str(elem.text.trim());
-                    out.push_str("]\n\n");
-                }
-            }
-            ElementKind::FootnoteRef => {}
-            ElementKind::FootnoteDefinition => {}
-            ElementKind::CommentRef => {}
-            ElementKind::CommentDefinition => {}
-            ElementKind::Citation => {
-                if !elem.text.is_empty() {
-                    out.push_str(&elem.text);
-                    out.push_str("\n\n");
-                }
-            }
-            ElementKind::PageBreak => {
-                out.push('\n');
-            }
-            ElementKind::Slide { .. } => {
-                if !elem.text.is_empty() {
-                    out.push_str(&elem.text);
-                    out.push_str("\n\n");
-                }
-            }
-            ElementKind::DefinitionTerm => {
-                out.push_str(&elem.text);
-                out.push_str(": ");
-            }
-            ElementKind::DefinitionDescription => {
-                out.push_str(&elem.text);
-                out.push_str("\n\n");
-            }
-            ElementKind::Admonition => {
-                let title = get_admonition_title(elem);
-                if let Some(t) = title {
-                    out.push_str(t);
-                } else {
-                    out.push_str(get_admonition_kind(elem));
-                }
-                out.push_str("\n\n");
-                if !elem.text.is_empty() {
-                    out.push_str(&elem.text);
-                    out.push_str("\n\n");
-                }
-            }
-            ElementKind::RawBlock => {
-                out.push_str(&elem.text);
-                if !elem.text.ends_with('\n') {
-                    out.push('\n');
-                }
-                out.push('\n');
-            }
-            ElementKind::MetadataBlock => {
-                let entries = parse_metadata_entries(&elem.text);
-                if !entries.is_empty() {
-                    for (key, value) in &entries {
-                        out.push_str(key);
-                        out.push_str(": ");
-                        out.push_str(value);
-                        out.push('\n');
-                    }
-                    out.push('\n');
-                } else if !elem.text.is_empty() {
-                    out.push_str(&elem.text);
-                    if !elem.text.ends_with('\n') {
-                        out.push('\n');
-                    }
-                    out.push('\n');
-                }
-            }
-            ElementKind::OcrText { .. } => {
-                if !elem.text.is_empty() {
-                    out.push_str(&elem.text);
-                    out.push_str("\n\n");
-                }
-            }
-            ElementKind::ListStart { .. }
-            | ElementKind::ListEnd
-            | ElementKind::QuoteStart
-            | ElementKind::QuoteEnd
-            | ElementKind::GroupStart
-            | ElementKind::GroupEnd => {}
-        }
+        render_element_plain(doc, elem, &mut out, &mut last_heading_depth);
     }
-
-    let has_footnotes = doc
-        .elements
-        .iter()
-        .any(|e| e.kind == ElementKind::FootnoteDefinition && e.layer == ContentLayer::Footnote);
-    if has_footnotes {
-        out.push('\n');
-        for elem in &doc.elements {
-            if elem.kind == ElementKind::FootnoteDefinition && elem.layer == ContentLayer::Footnote {
-                out.push_str(&elem.text);
-                out.push_str("\n\n");
-            }
-        }
-    }
-
-    // Comment definitions (#300) are furniture, not body flow, just like footnote
-    // definitions — surface them the same way so the comment body is not silently
-    // dropped now that it no longer shares `ElementKind::FootnoteDefinition`.
-    let has_comments = doc
-        .elements
-        .iter()
-        .any(|e| e.kind == ElementKind::CommentDefinition && e.layer == ContentLayer::Footnote);
-    if has_comments {
-        out.push('\n');
-        for elem in &doc.elements {
-            if elem.kind == ElementKind::CommentDefinition && elem.layer == ContentLayer::Footnote {
-                out.push_str(&elem.text);
-                out.push_str("\n\n");
-            }
-        }
-    }
-
+    append_definitions_plain(doc, ElementKind::FootnoteDefinition, &mut out);
+    append_definitions_plain(doc, ElementKind::CommentDefinition, &mut out);
     if let Some(annotations) = doc.annotations.as_deref() {
         let block = render_annotations_plain(annotations);
         if !block.is_empty() {
@@ -259,9 +36,192 @@ pub(crate) fn render_plain(doc: &InternalDocument) -> String {
             out.push_str(&block);
         }
     }
-
     out.truncate(out.trim_end().len());
     out
+}
+
+fn render_element_plain(
+    doc: &InternalDocument,
+    elem: &InternalElement,
+    out: &mut String,
+    heading_depth: &mut Option<u16>,
+) {
+    match elem.kind {
+        ElementKind::Title | ElementKind::Heading { .. } | ElementKind::Paragraph => {
+            render_text_plain(elem, out, heading_depth)
+        }
+        ElementKind::ListItem { .. } => render_list_item_plain(elem, out),
+        ElementKind::Code | ElementKind::RawBlock => append_verbatim_plain(&elem.text, out),
+        ElementKind::Formula | ElementKind::DefinitionDescription => append_block_plain(&elem.text, out),
+        ElementKind::Table { table_index } => render_plain_table(doc, elem, table_index, out),
+        ElementKind::Image { image_index } => render_image_plain(doc, elem, image_index, out),
+        ElementKind::Citation | ElementKind::Slide { .. } | ElementKind::OcrText { .. } => {
+            if !elem.text.is_empty() {
+                append_block_plain(&elem.text, out);
+            }
+        }
+        ElementKind::DefinitionTerm => {
+            out.push_str(&elem.text);
+            out.push_str(": ");
+        }
+        ElementKind::Admonition => render_admonition_plain(elem, out),
+        ElementKind::MetadataBlock => render_metadata_plain(&elem.text, out),
+        ElementKind::PageBreak => out.push('\n'),
+        ElementKind::FootnoteRef
+        | ElementKind::FootnoteDefinition
+        | ElementKind::CommentRef
+        | ElementKind::CommentDefinition
+        | ElementKind::ListStart { .. }
+        | ElementKind::ListEnd
+        | ElementKind::QuoteStart
+        | ElementKind::QuoteEnd
+        | ElementKind::GroupStart
+        | ElementKind::GroupEnd => {}
+    }
+}
+
+fn render_text_plain(elem: &InternalElement, out: &mut String, last_heading_depth: &mut Option<u16>) {
+    if elem.text.is_empty() {
+        return;
+    }
+    let is_heading = matches!(elem.kind, ElementKind::Heading { .. });
+    if is_heading {
+        if let Some(last_depth) = *last_heading_depth
+            && (last_depth == 0 || last_depth == 1)
+            && last_depth == elem.depth
+            && !out.is_empty()
+            && !out.ends_with("\n\n")
+        {
+            out.push('\n');
+        }
+        *last_heading_depth = Some(elem.depth);
+    }
+    if matches!(elem.kind, ElementKind::Paragraph) || (is_heading && elem.depth > 0) {
+        out.push_str(&"  ".repeat(elem.depth as usize));
+    }
+    out.push_str(&elem.text);
+    if is_heading {
+        append_heading_attributes_plain(elem, out);
+        out.push('\n');
+    } else {
+        out.push_str("\n\n");
+    }
+}
+
+fn append_heading_attributes_plain(elem: &InternalElement, out: &mut String) {
+    let Some(attrs) = elem.public_attributes() else { return };
+    let mut filtered: Vec<_> = attrs
+        .iter()
+        .filter(|(key, value)| !key.starts_with("xmlns") && !value.is_empty())
+        .collect();
+    filtered.sort_by_key(|(key, _)| key.as_str());
+    let formatted: Vec<String> = filtered
+        .iter()
+        .map(|(key, value)| format!("{}: {}", key, value))
+        .collect();
+    if !formatted.is_empty() {
+        out.push_str(" (");
+        out.push_str(&formatted.join(", "));
+        out.push(')');
+    }
+}
+
+fn render_list_item_plain(elem: &InternalElement, out: &mut String) {
+    // Plain text omits generated list markers but retains literal source labels. ~keep
+    if let Some(label) = elem.list_item_source_label().filter(|label| !label.is_empty()) {
+        out.push_str(label);
+        out.push(' ');
+    }
+    out.push_str(&elem.text);
+    out.push('\n');
+}
+
+fn append_verbatim_plain(text: &str, out: &mut String) {
+    out.push_str(text);
+    if !text.ends_with('\n') {
+        out.push('\n');
+    }
+    out.push('\n');
+}
+
+fn append_block_plain(text: &str, out: &mut String) {
+    out.push_str(text);
+    out.push_str("\n\n");
+}
+
+fn render_plain_table(doc: &InternalDocument, elem: &InternalElement, index: u32, out: &mut String) {
+    let Some(table) = doc.tables.get(index as usize) else {
+        return;
+    };
+    let text = if !elem.text.is_empty() {
+        elem.text.clone()
+    } else if !table.cells.is_empty() {
+        render_table_plain(&table.cells)
+    } else {
+        table.markdown.clone()
+    };
+    if !text.trim().is_empty() {
+        out.push_str(&text);
+        out.push('\n');
+    }
+}
+
+fn render_image_plain(doc: &InternalDocument, elem: &InternalElement, index: u32, out: &mut String) {
+    if let Some(image) = doc.images.get(index as usize) {
+        if let Some(description) = image.description.as_deref()
+            && !description.is_empty()
+        {
+            out.push_str("[Image: ");
+            out.push_str(description);
+            out.push_str("]\n\n");
+        }
+        if let Some(text) = image_ocr_text(doc, elem, index) {
+            append_block_plain(text, out);
+        }
+    } else if !elem.text.trim().is_empty() {
+        // Unresolved archive image references still retain the source caption. ~keep
+        out.push_str("[Image: ");
+        out.push_str(elem.text.trim());
+        out.push_str("]\n\n");
+    }
+}
+
+fn render_admonition_plain(elem: &InternalElement, out: &mut String) {
+    out.push_str(get_admonition_title(elem).unwrap_or_else(|| get_admonition_kind(elem)));
+    out.push_str("\n\n");
+    if !elem.text.is_empty() {
+        append_block_plain(&elem.text, out);
+    }
+}
+
+fn render_metadata_plain(text: &str, out: &mut String) {
+    let entries = parse_metadata_entries(text);
+    if !entries.is_empty() {
+        for (key, value) in &entries {
+            out.push_str(key);
+            out.push_str(": ");
+            out.push_str(value);
+            out.push('\n');
+        }
+        out.push('\n');
+    } else if !text.is_empty() {
+        append_verbatim_plain(text, out);
+    }
+}
+
+fn append_definitions_plain(doc: &InternalDocument, kind: ElementKind, out: &mut String) {
+    let mut definitions = doc
+        .elements
+        .iter()
+        .filter(|elem| elem.kind == kind && elem.layer == ContentLayer::Footnote)
+        .peekable();
+    if definitions.peek().is_none() {
+        return;
+    }
+    out.push('\n');
+    for elem in definitions {
+        append_block_plain(&elem.text, out);
+    }
 }
 
 /// Render the document-level PDF annotations (issue #63) as a plain-text
@@ -626,3 +586,7 @@ mod tests {
         assert!(out.contains("Smith 2024"), "got: {}", out);
     }
 }
+
+#[cfg(test)]
+#[path = "plain_lint_tests.rs"]
+mod lint_tests;
