@@ -4,24 +4,43 @@ fn run_in_isolated_environment(name: &str, variables: &[(&str, &str)]) -> bool {
     if std::env::var("XBERG_ENV_OVERRIDE_CHILD").as_deref() == Ok(name) {
         return true;
     }
-    let module = module_path!().strip_prefix("xberg::").expect("crate module prefix");
-    let output = std::process::Command::new(std::env::current_exe().expect("test executable"))
-        .args(["--exact", &format!("{module}::{name}"), "--nocapture"])
-        .env_clear()
+    let output = isolated_test_command(name)
         .env("XBERG_ENV_OVERRIDE_CHILD", name)
         .env("RUST_MIN_STACK", "16777216")
         .envs(variables.iter().copied())
         .output()
         .expect("isolated environment override test");
-    assert_child_succeeded(&output);
+    assert_child_succeeded(&output, name);
     false
 }
 
-fn assert_child_succeeded(output: &std::process::Output) {
+fn qualified_test_name(name: &str) -> String {
+    let module = module_path!().strip_prefix("xberg::").expect("crate module prefix");
+    format!("{module}::{name}")
+}
+
+fn isolated_test_command(name: &str) -> std::process::Command {
+    let mut command = std::process::Command::new(std::env::current_exe().expect("test executable"));
+    command.args(["--exact", &qualified_test_name(name), "--nocapture"]);
+    // CI's system ORT needs inherited loader paths; clear only the configuration namespace. ~keep
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().to_ascii_uppercase().starts_with("XBERG_") {
+            command.env_remove(key);
+        }
+    }
+    command
+}
+
+fn assert_child_succeeded(output: &std::process::Output, name: &str) {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("running 1 test"),
         "child did not run exactly one test: {stdout}"
+    );
+    let expected = format!("test {} ... ok", qualified_test_name(name));
+    assert!(
+        stdout.lines().any(|line| line == expected),
+        "expected named test was not successful: {stdout}"
     );
     assert!(
         output.status.success(),
@@ -32,14 +51,53 @@ fn assert_child_succeeded(output: &std::process::Output) {
 
 #[test]
 fn should_reject_child_filter_that_runs_no_tests() {
-    let output = std::process::Command::new(std::env::current_exe().expect("test executable"))
-        .args(["--exact", "nonexistent_environment_override_negative_control"])
-        .env_clear()
+    let name = "nonexistent_environment_override_negative_control";
+    let output = isolated_test_command(name)
         .output()
         .expect("zero-test negative control");
     assert!(output.status.success());
     assert!(String::from_utf8_lossy(&output.stdout).contains("running 0 tests"));
-    assert!(std::panic::catch_unwind(|| assert_child_succeeded(&output)).is_err());
+    assert!(std::panic::catch_unwind(|| assert_child_succeeded(&output, name)).is_err());
+}
+
+#[test]
+fn should_inherit_runtime_environment_without_inheriting_xberg_overrides() {
+    const NAME: &str = "should_inherit_runtime_environment_without_inheriting_xberg_overrides";
+    if std::env::var("XBERG_ENV_OVERRIDE_CHILD").as_deref() == Ok(NAME) {
+        assert_eq!(
+            std::env::var("ENV_OVERRIDE_RUNTIME_SENTINEL").as_deref(),
+            Ok("runtime-inherited")
+        );
+        assert!(std::env::var_os("XBERG_CACHE_ENABLED").is_none());
+        assert!(std::env::var_os("xberg_runtime_test_override").is_none());
+        assert!(std::env::var_os("XBERG_ENV_INHERITANCE_STAGE").is_none());
+        let mut config = ExtractionConfig::default();
+        config
+            .apply_env_overrides()
+            .expect("only the explicit case override applies");
+        assert_eq!((config.use_cache, config.disable_ocr), (true, true));
+        return;
+    }
+    if std::env::var("XBERG_ENV_INHERITANCE_STAGE").as_deref() == Ok("seeded") {
+        assert_eq!(
+            std::env::var("ENV_OVERRIDE_RUNTIME_SENTINEL").as_deref(),
+            Ok("runtime-inherited")
+        );
+        assert_eq!(
+            std::env::var("XBERG_CACHE_ENABLED").as_deref(),
+            Ok("accidental-override")
+        );
+        assert!(!run_in_isolated_environment(NAME, &[("XBERG_DISABLE_OCR", "1")]));
+        return;
+    }
+    let output = isolated_test_command(NAME)
+        .env("XBERG_ENV_INHERITANCE_STAGE", "seeded")
+        .env("ENV_OVERRIDE_RUNTIME_SENTINEL", "runtime-inherited")
+        .env("XBERG_CACHE_ENABLED", "accidental-override")
+        .env("xberg_runtime_test_override", "lowercase-override")
+        .output()
+        .expect("seeded intermediate process");
+    assert_child_succeeded(&output, NAME);
 }
 
 fn validation_message(error: XbergError) -> String {
