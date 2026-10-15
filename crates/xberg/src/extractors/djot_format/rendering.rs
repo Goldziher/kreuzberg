@@ -9,205 +9,170 @@ use crate::types::{BlockType, FormattedBlock, InlineElement, InlineType};
 pub(crate) fn render_block_to_djot(block: &FormattedBlock, indent_level: usize) -> String {
     let mut output = String::new();
     let indent = "  ".repeat(indent_level);
-
-    let attrs_str = block.attributes.as_ref().map(render_attributes).unwrap_or_default();
-
+    let attrs = block.attributes.as_ref().map(render_attributes).unwrap_or_default();
     match block.block_type {
-        BlockType::Heading => {
-            let level = block.level.unwrap_or(1);
-            let hashes = "#".repeat(level);
-            output.push_str(&indent);
-            output.push_str(&hashes);
-            output.push(' ');
-            output.push_str(&render_inline_content(&block.inline_content));
-            if !attrs_str.is_empty() {
-                output.push(' ');
-                output.push_str(&attrs_str);
-            }
-            output.push('\n');
-            output.push('\n');
-        }
-        BlockType::Paragraph => {
-            output.push_str(&indent);
-            output.push_str(&render_inline_content(&block.inline_content));
-            if !attrs_str.is_empty() {
-                output.push(' ');
-                output.push_str(&attrs_str);
-            }
-            output.push('\n');
-            output.push('\n');
-        }
-        BlockType::CodeBlock => {
-            if !attrs_str.is_empty() {
-                output.push_str(&indent);
-                output.push_str(&attrs_str);
-                output.push('\n');
-            }
-            output.push_str(&indent);
-            output.push_str("```");
-            if let Some(ref lang) = block.language {
-                output.push(' ');
-                output.push_str(lang);
-            }
-            output.push('\n');
-            if let Some(ref code) = block.code {
-                for line in code.lines() {
-                    output.push_str(&indent);
-                    output.push_str(line);
-                    output.push('\n');
-                }
-            } else {
-                for elem in &block.inline_content {
-                    output.push_str(&indent);
-                    output.push_str(&elem.content);
-                    output.push('\n');
-                }
-            }
-            output.push_str(&indent);
-            output.push_str("```\n\n");
-        }
-        BlockType::Blockquote => {
-            if !attrs_str.is_empty() {
-                output.push_str(&indent);
-                output.push_str(&attrs_str);
-                output.push('\n');
-            }
-            output.push_str(&indent);
-            output.push_str("> ");
-            output.push_str(&render_inline_content(&block.inline_content));
-            output.push('\n');
-            for child in &block.children {
-                let child_output = render_block_to_djot(child, 0);
-                for line in child_output.lines() {
-                    output.push_str(&indent);
-                    output.push_str("> ");
-                    output.push_str(line);
-                    output.push('\n');
-                }
-            }
-            output.push('\n');
-        }
-        BlockType::BulletList => {
-            if !attrs_str.is_empty() {
-                output.push_str(&indent);
-                output.push_str(&attrs_str);
-                output.push('\n');
-            }
-            for child in &block.children {
-                output.push_str(&render_list_item(child, &indent, "- "));
-            }
-            output.push('\n');
-        }
-        BlockType::OrderedList => {
-            if !attrs_str.is_empty() {
-                output.push_str(&indent);
-                output.push_str(&attrs_str);
-                output.push('\n');
-            }
-            for (i, child) in block.children.iter().enumerate() {
-                let marker = format!("{}. ", i + 1);
-                output.push_str(&render_list_item(child, &indent, &marker));
-            }
-            output.push('\n');
-        }
-        BlockType::TaskList => {
-            if !attrs_str.is_empty() {
-                output.push_str(&indent);
-                output.push_str(&attrs_str);
-                output.push('\n');
-            }
-            for child in &block.children {
-                output.push_str(&render_list_item(child, &indent, "- [ ] "));
-            }
-            output.push('\n');
+        BlockType::Heading | BlockType::Paragraph => render_text_block(block, &indent, &attrs, &mut output),
+        BlockType::CodeBlock => render_code_block(block, &indent, &attrs, &mut output),
+        BlockType::Blockquote => render_quote_block(block, &indent, &attrs, &mut output),
+        BlockType::BulletList | BlockType::OrderedList | BlockType::TaskList => {
+            render_list_block(block, &indent, &attrs, &mut output)
         }
         BlockType::ListItem => {
             output.push_str(&indent);
             output.push_str(&render_inline_content(&block.inline_content));
             output.push('\n');
-            for child in &block.children {
-                output.push_str(&render_block_to_djot(child, indent_level + 1));
-            }
+            render_children(block, indent_level + 1, &mut output);
         }
-        BlockType::DefinitionList => {
-            if !attrs_str.is_empty() {
-                output.push_str(&indent);
-                output.push_str(&attrs_str);
+        BlockType::DefinitionList | BlockType::Section => {
+            append_block_attributes(&indent, &attrs, &mut output);
+            render_children(block, indent_level, &mut output);
+            if block.block_type == BlockType::DefinitionList {
                 output.push('\n');
             }
-            for child in &block.children {
-                output.push_str(&render_block_to_djot(child, indent_level));
-            }
-            output.push('\n');
         }
-        BlockType::DefinitionTerm => {
+        BlockType::DefinitionTerm | BlockType::DefinitionDescription => {
             output.push_str(&indent);
+            if block.block_type == BlockType::DefinitionDescription {
+                output.push_str(": ");
+            }
             output.push_str(&render_inline_content(&block.inline_content));
             output.push('\n');
         }
-        BlockType::DefinitionDescription => {
-            output.push_str(&indent);
-            output.push_str(": ");
-            output.push_str(&render_inline_content(&block.inline_content));
-            output.push('\n');
-        }
-        BlockType::Div => {
-            output.push_str(&indent);
-            output.push_str(":::");
-            if !attrs_str.is_empty() {
-                output.push(' ');
-                output.push_str(&attrs_str);
-            }
-            output.push('\n');
-            for child in &block.children {
-                output.push_str(&render_block_to_djot(child, indent_level));
-            }
-            output.push_str(&indent);
-            output.push_str(":::\n\n");
-        }
-        BlockType::Section => {
-            if !attrs_str.is_empty() {
-                output.push_str(&indent);
-                output.push_str(&attrs_str);
-                output.push('\n');
-            }
-            for child in &block.children {
-                output.push_str(&render_block_to_djot(child, indent_level));
-            }
-        }
+        BlockType::Div => render_div_block(block, indent_level, &indent, &attrs, &mut output),
         BlockType::ThematicBreak => {
             output.push_str(&indent);
             output.push_str("---\n\n");
         }
-        BlockType::RawBlock => {
-            output.push_str(&indent);
-            output.push_str("```");
-            if let Some(ref lang) = block.language {
-                output.push('=');
-                output.push_str(lang);
-            }
-            output.push('\n');
-            for elem in &block.inline_content {
-                output.push_str(&indent);
-                output.push_str(&elem.content);
-                output.push('\n');
-            }
-            output.push_str(&indent);
-            output.push_str("```\n\n");
-        }
-        BlockType::MathDisplay => {
-            output.push_str(&indent);
-            output.push_str("$$\n");
-            for elem in &block.inline_content {
-                output.push_str(&indent);
-                output.push_str(&elem.content);
-                output.push('\n');
-            }
-            output.push_str(&indent);
-            output.push_str("$$\n\n");
-        }
+        BlockType::RawBlock | BlockType::MathDisplay => render_raw_block(block, &indent, &mut output),
     }
     output
+}
+
+fn append_block_attributes(indent: &str, attrs: &str, output: &mut String) {
+    if !attrs.is_empty() {
+        output.push_str(indent);
+        output.push_str(attrs);
+        output.push('\n');
+    }
+}
+
+fn render_children(block: &FormattedBlock, indent_level: usize, output: &mut String) {
+    for child in &block.children {
+        output.push_str(&render_block_to_djot(child, indent_level));
+    }
+}
+
+fn render_text_block(block: &FormattedBlock, indent: &str, attrs: &str, output: &mut String) {
+    output.push_str(indent);
+    if block.block_type == BlockType::Heading {
+        output.push_str(&"#".repeat(block.level.unwrap_or(1)));
+        output.push(' ');
+    }
+    output.push_str(&render_inline_content(&block.inline_content));
+    if !attrs.is_empty() {
+        output.push(' ');
+        output.push_str(attrs);
+    }
+    output.push_str("\n\n");
+}
+
+fn render_code_block(block: &FormattedBlock, indent: &str, attrs: &str, output: &mut String) {
+    append_block_attributes(indent, attrs, output);
+    output.push_str(indent);
+    output.push_str("```");
+    if let Some(language) = block.language.as_deref() {
+        output.push(' ');
+        output.push_str(language);
+    }
+    output.push('\n');
+    if let Some(code) = block.code.as_deref() {
+        for line in code.lines() {
+            output.push_str(indent);
+            output.push_str(line);
+            output.push('\n');
+        }
+    } else {
+        append_inline_source(block, indent, output);
+    }
+    output.push_str(indent);
+    output.push_str("```\n\n");
+}
+
+fn append_inline_source(block: &FormattedBlock, indent: &str, output: &mut String) {
+    for element in &block.inline_content {
+        output.push_str(indent);
+        output.push_str(&element.content);
+        output.push('\n');
+    }
+}
+
+fn render_quote_block(block: &FormattedBlock, indent: &str, attrs: &str, output: &mut String) {
+    append_block_attributes(indent, attrs, output);
+    output.push_str(indent);
+    output.push_str("> ");
+    output.push_str(&render_inline_content(&block.inline_content));
+    output.push('\n');
+    for child in &block.children {
+        for line in render_block_to_djot(child, 0).lines() {
+            output.push_str(indent);
+            output.push_str("> ");
+            output.push_str(line);
+            output.push('\n');
+        }
+    }
+    output.push('\n');
+}
+
+fn render_list_block(block: &FormattedBlock, indent: &str, attrs: &str, output: &mut String) {
+    append_block_attributes(indent, attrs, output);
+    for (index, child) in block.children.iter().enumerate() {
+        if block.block_type == BlockType::OrderedList {
+            let marker = format!("{}. ", index + 1);
+            output.push_str(&render_list_item(child, indent, &marker));
+        } else {
+            let marker = if block.block_type == BlockType::BulletList {
+                "- "
+            } else {
+                "- [ ] "
+            };
+            output.push_str(&render_list_item(child, indent, marker));
+        }
+    }
+    output.push('\n');
+}
+
+fn render_div_block(block: &FormattedBlock, indent_level: usize, indent: &str, attrs: &str, output: &mut String) {
+    output.push_str(indent);
+    output.push_str(":::");
+    if !attrs.is_empty() {
+        output.push(' ');
+        output.push_str(attrs);
+    }
+    output.push('\n');
+    render_children(block, indent_level, output);
+    output.push_str(indent);
+    output.push_str(":::\n\n");
+}
+
+fn render_raw_block(block: &FormattedBlock, indent: &str, output: &mut String) {
+    output.push_str(indent);
+    if block.block_type == BlockType::RawBlock {
+        output.push_str("```");
+        if let Some(language) = block.language.as_deref() {
+            output.push('=');
+            output.push_str(language);
+        }
+    } else {
+        output.push_str("$$");
+    }
+    output.push('\n');
+    append_inline_source(block, indent, output);
+    output.push_str(indent);
+    output.push_str(if block.block_type == BlockType::RawBlock {
+        "```\n\n"
+    } else {
+        "$$\n\n"
+    });
 }
 
 /// Render a list item with the given marker.
@@ -226,148 +191,80 @@ pub(crate) fn render_list_item(item: &FormattedBlock, indent: &str, marker: &str
 /// Render inline content to djot markup.
 pub(crate) fn render_inline_content(elements: &[InlineElement]) -> String {
     let mut output = String::new();
-    for elem in elements {
-        let attrs_str = elem.attributes.as_ref().map(render_attributes).unwrap_or_default();
-
-        match elem.element_type {
-            InlineType::Text => {
-                output.push_str(&elem.content);
-            }
-            InlineType::Strong => {
-                output.push('*');
-                output.push_str(&elem.content);
-                output.push('*');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Emphasis => {
-                output.push('_');
-                output.push_str(&elem.content);
-                output.push('_');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Highlight => {
-                output.push_str("{=");
-                output.push_str(&elem.content);
-                output.push_str("=}");
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Subscript => {
-                output.push('~');
-                output.push_str(&elem.content);
-                output.push('~');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Superscript => {
-                output.push('^');
-                output.push_str(&elem.content);
-                output.push('^');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Insert => {
-                output.push_str("{+");
-                output.push_str(&elem.content);
-                output.push_str("+}");
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Delete => {
-                output.push_str("{-");
-                output.push_str(&elem.content);
-                output.push_str("-}");
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Code => {
-                output.push('`');
-                output.push_str(&elem.content);
-                output.push('`');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Link => {
-                let href = elem
-                    .metadata
-                    .as_ref()
-                    .and_then(|m| m.get("href"))
-                    .map(|s| s.as_str())
-                    .unwrap_or("");
-                output.push('[');
-                output.push_str(&elem.content);
-                output.push_str("](");
-                output.push_str(href);
-                output.push(')');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Image => {
-                let src = elem
-                    .metadata
-                    .as_ref()
-                    .and_then(|m| m.get("src"))
-                    .map(|s| s.as_str())
-                    .unwrap_or("");
-                output.push_str("![");
-                output.push_str(&elem.content);
-                output.push_str("](");
-                output.push_str(src);
-                output.push(')');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Span => {
-                output.push('[');
-                output.push_str(&elem.content);
-                output.push(']');
-                if !attrs_str.is_empty() {
-                    output.push_str(&attrs_str);
-                }
-            }
-            InlineType::Math => {
-                output.push('$');
-                output.push_str(&elem.content);
-                output.push('$');
-            }
-            InlineType::RawInline => {
-                let format = elem
-                    .metadata
-                    .as_ref()
-                    .and_then(|m| m.get("format"))
-                    .map(|s| s.as_str())
-                    .unwrap_or("html");
-                output.push('`');
-                output.push_str(&elem.content);
-                output.push_str("`{=");
-                output.push_str(format);
-                output.push('}');
-            }
-            InlineType::FootnoteRef => {
-                output.push_str("[^");
-                output.push_str(&elem.content);
-                output.push(']');
-            }
-            InlineType::Symbol => {
-                output.push(':');
-                output.push_str(&elem.content);
-                output.push(':');
-            }
-        }
+    for element in elements {
+        render_inline_element(element, &mut output);
     }
     output
+}
+
+fn render_inline_element(element: &InlineElement, output: &mut String) {
+    let attrs = element.attributes.as_ref().map(render_attributes).unwrap_or_default();
+    let (opening, closing) = match element.element_type {
+        InlineType::Text => {
+            output.push_str(&element.content);
+            return;
+        }
+        InlineType::Link | InlineType::Image => {
+            render_inline_link(element, &attrs, output);
+            return;
+        }
+        InlineType::RawInline => {
+            render_raw_inline(element, output);
+            return;
+        }
+        InlineType::Strong => ("*", "*"),
+        InlineType::Emphasis => ("_", "_"),
+        InlineType::Highlight => ("{=", "=}"),
+        InlineType::Subscript => ("~", "~"),
+        InlineType::Superscript => ("^", "^"),
+        InlineType::Insert => ("{+", "+}"),
+        InlineType::Delete => ("{-", "-}"),
+        InlineType::Code => ("`", "`"),
+        InlineType::Span => ("[", "]"),
+        InlineType::Math => ("$", "$"),
+        InlineType::FootnoteRef => ("[^", "]"),
+        InlineType::Symbol => (":", ":"),
+    };
+    output.push_str(opening);
+    output.push_str(&element.content);
+    output.push_str(closing);
+    if !matches!(
+        element.element_type,
+        InlineType::Math | InlineType::FootnoteRef | InlineType::Symbol
+    ) {
+        output.push_str(&attrs);
+    }
+}
+
+fn render_inline_link(element: &InlineElement, attrs: &str, output: &mut String) {
+    let is_image = element.element_type == InlineType::Image;
+    let key = if is_image { "src" } else { "href" };
+    let target = element
+        .metadata
+        .as_ref()
+        .and_then(|metadata| metadata.get(key))
+        .map(String::as_str)
+        .unwrap_or("");
+    output.push_str(if is_image { "![" } else { "[" });
+    output.push_str(&element.content);
+    output.push_str("](");
+    output.push_str(target);
+    output.push(')');
+    output.push_str(attrs);
+}
+
+fn render_raw_inline(element: &InlineElement, output: &mut String) {
+    let format = element
+        .metadata
+        .as_ref()
+        .and_then(|metadata| metadata.get("format"))
+        .map(String::as_str)
+        .unwrap_or("html");
+    output.push('`');
+    output.push_str(&element.content);
+    output.push_str("`{=");
+    output.push_str(format);
+    output.push('}');
 }
 
 #[cfg(test)]
@@ -443,3 +340,7 @@ mod tests {
         assert!(output.contains("Test paragraph"));
     }
 }
+
+#[cfg(test)]
+#[path = "rendering_lint_tests.rs"]
+mod lint_tests;
