@@ -791,6 +791,100 @@ fn test_mmultiscripts_as_msup_base() {
 }
 
 #[test]
+fn test_invisible_operators_become_spaces() {
+    assert_eq!(
+        mathml_to_latex("<mn>2</mn><mo>\u{2062}</mo><msup><mi>sin</mi><mn>2</mn></msup><mo>\u{2061}</mo><mi>x</mi>"),
+        "2 {sin}^{2} x"
+    );
+}
+
+/// Removed rather than spaced, function application would merge `sin` and `x` into `sinx`.
+#[test]
+fn test_function_application_keeps_tokens_apart() {
+    assert_eq!(mathml_to_latex("<mi>sin</mi><mo>\u{2061}</mo><mi>x</mi>"), "sin x");
+}
+
+#[test]
+fn test_invisible_separator_keeps_digits_apart() {
+    assert_eq!(
+        mathml_to_latex("<msub><mi>a</mi><mrow><mn>1</mn><mo>\u{2063}</mo><mn>2</mn></mrow></msub>"),
+        "a_{1 2}"
+    );
+}
+
+#[test]
+fn test_invisible_separator_inside_element_text() {
+    assert_eq!(mathml_to_latex("<msub><mi>a</mi><mn>1\u{2063}2</mn></msub>"), "a_{1 2}");
+}
+
+#[test]
+fn test_invisible_plus_becomes_space() {
+    assert_eq!(
+        mathml_to_latex("<mn>2</mn><mo>\u{2064}</mo><mfrac><mn>1</mn><mn>2</mn></mfrac>"),
+        "2 \\frac{1}{2}"
+    );
+}
+
+#[test]
+fn test_invisible_operator_in_direct_text() {
+    assert_eq!(mathml_to_latex("<mrow>sin\u{2061}x</mrow>"), "sin x");
+}
+
+/// Matches `separators="\u{2063}"` below: an invisible separator shows no comma.
+#[test]
+fn test_mfenced_invisible_separator_element_is_grouping() {
+    assert_eq!(
+        mathml_to_latex("<mfenced><mi>a</mi><mo>\u{2063}</mo><mi>b</mi></mfenced>"),
+        "\\left(a b\\right)"
+    );
+}
+
+/// A child that cleans to nothing is still an argument, so its separators stay.
+#[test]
+fn test_mfenced_blank_child_keeps_separators() {
+    assert_eq!(
+        mathml_to_latex("<mfenced><mi>a</mi><mi>\u{E001}</mi><mi>b</mi></mfenced>"),
+        "\\left(a,,b\\right)"
+    );
+    assert_eq!(
+        mathml_to_latex("<mfenced><mi>a</mi><mi></mi><mi>b</mi></mfenced>"),
+        "\\left(a,,b\\right)"
+    );
+}
+
+/// A space inside `\text{...}` shows, so text content drops an invisible operator.
+#[test]
+fn test_text_content_drops_invisible_operators() {
+    assert_eq!(mathml_to_latex("<mtext>a\u{2062}b</mtext>"), "\\text{ab}");
+    assert_eq!(mathml_to_latex("<ms>a\u{2061}b</ms>"), "ab");
+}
+
+/// Invisible times inside `mfenced` is a product, not the pair `(2, x)`.
+#[test]
+fn test_mfenced_invisible_times_is_grouping() {
+    assert_eq!(
+        mathml_to_latex("<mfenced><mn>2</mn><mo>\u{2062}</mo><mi>x</mi></mfenced>"),
+        "\\left(2 x\\right)"
+    );
+}
+
+#[test]
+fn test_mfenced_function_application_is_grouping() {
+    assert_eq!(
+        mathml_to_latex("<mfenced><mi>f</mi><mo>\u{2061}</mo><mi>x</mi></mfenced>"),
+        "\\left(f x\\right)"
+    );
+}
+
+#[test]
+fn test_mfenced_invisible_separators_attribute() {
+    assert_eq!(
+        mathml_to_latex("<mfenced separators=\"\u{2063}\"><mi>a</mi><mi>b</mi></mfenced>"),
+        "\\left(a b\\right)"
+    );
+}
+
+#[test]
 fn test_munderover() {
     assert_eq!(
         mathml_to_latex("<munderover><mo>\u{2211}</mo><mi>i</mi><mi>n</mi></munderover>"),

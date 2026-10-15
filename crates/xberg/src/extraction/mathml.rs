@@ -158,7 +158,7 @@ fn collect_children(parent: Node, budget: &mut SecurityBudget) -> Result<Vec<Mml
             if !text.trim().is_empty() {
                 budget.check_entity(text)?;
                 budget.account_text(text.len())?;
-                nodes.push(MmlNode::Run(text.to_string()));
+                nodes.push(MmlNode::Run(clean_text(text, false)));
             }
         }
     }
@@ -269,7 +269,7 @@ fn tex_annotation(node: Node, budget: &mut SecurityBudget) -> Result<Option<Stri
         {
             continue;
         }
-        let text = collect_text(child, budget)?;
+        let text = collect_text(child, budget, false)?;
         let latex = strip_style_wrapper(crate::extraction::derive::strip_math_delimiters(text.trim()));
         if !latex.is_empty() {
             return Ok(Some(latex.to_string()));
@@ -495,7 +495,7 @@ fn convert_content_node(node: Node, budget: &mut SecurityBudget) -> Result<Strin
     match node.tag_name().name().to_ascii_lowercase().as_str() {
         "apply" => convert_apply(node, budget),
         "ci" | "cn" | "csymbol" => {
-            let text = collect_text(node, budget)?;
+            let text = collect_text(node, budget, false)?;
             let mut out = String::new();
             crate::extraction::math_symbols::render_run_text(text.trim(), &mut out);
             Ok(out)
@@ -559,7 +559,7 @@ fn convert_content_node(node: Node, budget: &mut SecurityBudget) -> Result<Strin
             "false" => Ok("\\text{false}".to_string()),
             "emptyset" => Ok("\\emptyset".to_string()),
             _ => {
-                let text = collect_text(node, budget)?;
+                let text = collect_text(node, budget, false)?;
                 Ok(text.trim().to_string())
             }
         },
@@ -573,8 +573,9 @@ fn collect_node_inner(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode
 
     let tag_lower = node.tag_name().name().to_ascii_lowercase();
     match tag_lower.as_str() {
-        "mi" | "mn" | "ms" | "mo" => Ok(MmlNode::Run(collect_text(node, budget)?)),
-        "mtext" => Ok(MmlNode::Text(collect_text(node, budget)?)),
+        "mi" | "mn" | "mo" => Ok(MmlNode::Run(collect_text(node, budget, false)?)),
+        "ms" => Ok(MmlNode::Run(collect_text(node, budget, true)?)),
+        "mtext" => Ok(MmlNode::Text(collect_text(node, budget, true)?)),
         "mspace" => Ok(MmlNode::Space),
         // Content MathML states meaning rather than layout, so it converts by
         // operator. It appears as a `math` child in content documents and inside
@@ -759,7 +760,9 @@ fn scripted(base: MmlNode, sub: Option<MmlNode>, sup: Option<MmlNode>) -> MmlNod
 }
 
 /// Collect the direct text content of a leaf element (`mi`/`mn`/`mo`/`ms`/`mtext`).
-fn collect_text(node: Node, budget: &mut SecurityBudget) -> Result<String, SecurityError> {
+///
+/// `text_mode` is set for the string content of `ms` and `mtext`; see [`clean_text`].
+fn collect_text(node: Node, budget: &mut SecurityBudget, text_mode: bool) -> Result<String, SecurityError> {
     let mut text = String::new();
     // Only real text nodes — `Node::text()` also returns content for comment
     // nodes, and MathML fixtures commonly annotate entities with a comment
@@ -768,10 +771,29 @@ fn collect_text(node: Node, budget: &mut SecurityBudget) -> Result<String, Secur
         if let Some(t) = child.text() {
             budget.check_entity(t)?;
             budget.account_text(t.len())?;
-            text.extend(t.chars().filter(|c| !is_private_use(*c)));
+            text.push_str(&clean_text(t, text_mode));
         }
     }
     Ok(text)
+}
+
+/// Element text with private use characters removed and invisible operators turned into spaces.
+///
+/// In `text_mode` an invisible operator is dropped instead, since a space inside `\text{...}` shows.
+fn clean_text(text: &str, text_mode: bool) -> String {
+    text.chars()
+        .filter(|c| !is_private_use(*c) && !(text_mode && is_invisible_operator(*c)))
+        .map(|c| if is_invisible_operator(c) { ' ' } else { c })
+        .collect()
+}
+
+/// Report whether `c` is an invisible operator (function application, times, separator, plus).
+///
+/// Sources write `<mo>&#x2061;</mo>` between a function name and its argument so a screen reader can say
+/// "of". It sets nothing, and copied into the LaTeX it is a stray character between `sin` and `x`; removed,
+/// it merges the two into `sinx`. A space keeps the tokens apart and renders as nothing in math mode.
+fn is_invisible_operator(c: char) -> bool {
+    matches!(c, '\u{2061}'..='\u{2064}')
 }
 
 /// Report whether `c` sits in a Unicode private use area.
@@ -789,16 +811,24 @@ fn is_private_use(c: char) -> bool {
 fn collect_fenced(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, SecurityError> {
     // A fence may be a private use codepoint, which OpenOffice writes for the
     // bracket shapes of its own font. It has no meaning to a renderer, so it is
-    // dropped the way it is in element text.
-    let strip = |value: &str| -> String { value.chars().filter(|c| !is_private_use(*c)).collect() };
+    // dropped the way it is in element text. An invisible separator becomes a
+    // space, as it does in element text; an invisible fence is no fence.
+    let strip = |value: &str| -> String { clean_text(value, false).trim().to_string() };
     let open = node.attribute("open").map(strip).unwrap_or_else(|| "(".to_string());
     let close = node.attribute("close").map(strip).unwrap_or_else(|| ")".to_string());
-    let sep = node
-        .attribute("separators")
-        .map(strip)
-        .and_then(|s| s.chars().next())
-        .unwrap_or(',')
-        .to_string();
+    // An invisible operator child means the author wrote the operators, so the
+    // `mfenced` is grouping and takes no separators, as with a visible one. It is
+    // decided on the raw text: collected, it is a blank run like any child whose
+    // text cleans away, and those still take separators.
+    let sep = if node.children().any(is_invisible_operator_element) {
+        String::new()
+    } else {
+        node.attribute("separators")
+            .map(|value| clean_text(value, false))
+            .and_then(|s| s.chars().next())
+            .unwrap_or(',')
+            .to_string()
+    };
 
     let elements = node
         .children()
@@ -812,6 +842,18 @@ fn collect_fenced(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, Se
         sep,
         elements,
     })
+}
+
+/// Report whether `node` is an `mo` whose text is only invisible operators and whitespace.
+fn is_invisible_operator_element(node: Node) -> bool {
+    let mut chars = node
+        .children()
+        .filter(|c| c.is_text())
+        .filter_map(|c| c.text())
+        .flat_map(str::chars)
+        .filter(|c| !c.is_whitespace())
+        .peekable();
+    node.tag_name().name().eq_ignore_ascii_case("mo") && chars.peek().is_some() && chars.all(is_invisible_operator)
 }
 
 /// Collect an `mtable` element into rows of cells (`mtr` > `mtd`).
