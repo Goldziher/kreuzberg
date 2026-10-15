@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Recognise formulas on scanned pages that Tesseract OCRs page by page.**
+  In builds with PaddleOCR, a default Tesseract config with `layout.formula_model` set took the per-page pipeline
+  branch, which returned before formula recognition, so scanned pages produced no LaTeX.
 - **(layout): Run markdown layout detection on the page's CropBox only.**
   Pages went to the layout model at their full MediaBox, so bleed, trim and registration marks outside a smaller
   CropBox shrank the page the model saw. Inference now runs on the CropBox and the detections are shifted back into

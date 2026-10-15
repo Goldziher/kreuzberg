@@ -1264,9 +1264,18 @@ async fn run_ocr_with_layout(
                     path,
                     page_ocr_hints,
                     #[cfg(feature = "layout-detection")]
-                    prepared_layout_inputs,
+                    prepared_layout_inputs.as_ref(),
                 ))
                 .await?;
+            #[cfg(feature = "formula-recognition")]
+            let (mut document, mut formulas) = (document, formulas);
+            #[cfg(feature = "formula-recognition")]
+            if let (Some((images, detections)), Some(layout)) =
+                (prepared_layout_inputs.as_ref(), config.layout.as_ref())
+            {
+                recognize_pdf_formula_regions(document.as_mut(), &mut formulas, images, detections, layout, content)
+                    .await;
+            }
             return Ok((
                 text,
                 tables,

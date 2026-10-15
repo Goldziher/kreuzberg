@@ -504,9 +504,9 @@ enum AllPagesFailedPolicy {
 // variant is dead on a `layout-detection + ocr-pipeline` leg without `paddle_ocr`; a
 // union-of-consumers `cfg` here is what drifted and failed the 1.3.0 publish (GH#1951).
 #[allow(dead_code)]
-enum MixedLayoutInputs {
+enum MixedLayoutInputs<'a> {
     Resolve,
-    Prepared(Option<PreparedLayoutInputs>),
+    Prepared(Option<&'a PreparedLayoutInputs>),
 }
 
 #[cfg(all(
@@ -596,7 +596,7 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
     content: &[u8],
     config: &ExtractionConfig,
     all_pages_failed_policy: AllPagesFailedPolicy,
-    #[cfg(feature = "layout-detection")] layout_inputs: MixedLayoutInputs,
+    #[cfg(feature = "layout-detection")] layout_inputs: MixedLayoutInputs<'_>,
 ) -> OcrRunResult<MixedOcrOutput> {
     let ocr_set: std::collections::HashSet<u32> = pages
         .ocr
@@ -668,9 +668,9 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
     // duplicate layout work while keeping selected-page layout classification. `page_idx` is the
     // document-wide 0-based index the layout pass uses. ~keep
     #[cfg(feature = "layout-detection")]
-    let (layout_inputs_for_mixed, layout_pass_warning, layout_pass_glyph_drop_warnings): MixedLayoutOutcome =
-        if let MixedLayoutInputs::Prepared(inputs) = layout_inputs {
-            (inputs, None, Vec::new())
+    let (resolved_layout_inputs, layout_pass_warning, layout_pass_glyph_drop_warnings): MixedLayoutOutcome =
+        if let MixedLayoutInputs::Prepared(_) = layout_inputs {
+            (None, None, Vec::new())
         } else if let Some(layout_config) = config.resolved_layout_config() {
             let layout_thread_budget =
                 crate::core::config::concurrency::resolve_thread_budget(config.concurrency.as_ref());
@@ -730,11 +730,14 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
             (None, None, Vec::new())
         };
     #[cfg(feature = "layout-detection")]
-    let layout_detections_for_mixed = layout_inputs_for_mixed
-        .as_ref()
-        .map(|(_, detections)| detections.as_slice());
+    let layout_inputs_for_mixed = match layout_inputs {
+        MixedLayoutInputs::Prepared(inputs) => inputs,
+        MixedLayoutInputs::Resolve => resolved_layout_inputs.as_ref(),
+    };
     #[cfg(feature = "layout-detection")]
-    let layout_images_for_mixed = layout_inputs_for_mixed.as_ref().map(|(images, _)| images.as_slice());
+    let layout_detections_for_mixed = layout_inputs_for_mixed.map(|(_, detections)| detections.as_slice());
+    #[cfg(feature = "layout-detection")]
+    let layout_images_for_mixed = layout_inputs_for_mixed.map(|(images, _)| images.as_slice());
     #[cfg(feature = "layout-detection")]
     let mixed_route_layout_active = layout_inputs_for_mixed.is_some();
     #[cfg(not(feature = "layout-detection"))]
@@ -1993,10 +1996,7 @@ pub(crate) async fn extract_full_document_ocr_pipeline_per_page(
     config: &ExtractionConfig,
     _path: Option<&std::path::Path>,
     page_ocr_hints: Option<PageOcrHints>,
-    #[cfg(feature = "layout-detection")] prepared_layout_inputs: Option<(
-        Vec<image::DynamicImage>,
-        Vec<crate::layout::DetectionResult>,
-    )>,
+    #[cfg(feature = "layout-detection")] prepared_layout_inputs: Option<&PreparedLayoutInputs>,
 ) -> OcrRunResult<(
     String,
     Vec<crate::types::Table>,
