@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(layout): Run markdown layout detection on the page's CropBox only.**
+  Pages went to the layout model at their full MediaBox, so bleed, trim and registration marks outside a smaller
+  CropBox shrank the page the model saw. Inference now runs on the CropBox and the detections are shifted back into
+  the page raster. Rotated pages and the OCR layout pass are unchanged.
 - **(pdf): Formula and VLM region recognition keep their rasters when the layout gate skips a page.**
   With the auto layout strategy, a page the gate skipped made the markdown layout rasters unusable for OCR, and they
   were dropped for the whole document, so formula recognition and VLM regions did nothing on the pages that did run
