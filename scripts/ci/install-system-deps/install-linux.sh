@@ -57,6 +57,12 @@ packages=(
   libbz2-dev
 )
 
+# Cached libheif can require SharpYUV's pkg-config metadata. Older distributions bundle
+# WebP without a separate SharpYUV package, so keep their apt batch installable. ~keep
+if apt-cache show libsharpyuv-dev >/dev/null 2>&1; then
+  packages+=(libsharpyuv-dev)
+fi
+
 echo "Installing dependencies..."
 if retry_with_backoff_timeout 900 sudo apt-get install -y "${packages[@]}"; then
   echo "✓ All packages installed successfully"
@@ -168,6 +174,11 @@ if [ "$resolved_libheif_version" != "$LIBHEIF_VERSION" ]; then
   echo "::error::pkg-config resolves libheif ${resolved_libheif_version:-<not found>}, expected ${LIBHEIF_VERSION}."
   echo "::error::The highest v1_* feature on xberg-libheif sets libheif-sys's pkg-config floor;"
   echo "::error::keep LIBHEIF_VERSION here in step with crates/xberg-libheif/Cargo.toml."
+  exit 1
+fi
+if ! PKG_CONFIG_PATH="$LIBHEIF_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}" \
+  pkg-config --cflags --libs libheif; then
+  echo "::error::pkg-config cannot resolve libheif's compiler and linker dependencies."
   exit 1
 fi
 echo "✓ pkg-config resolves libheif ${resolved_libheif_version}"
