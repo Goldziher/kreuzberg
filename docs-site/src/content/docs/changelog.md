@@ -45,6 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   destructors that outlived PHP's `dlclose` of the extension, so `exit()` jumped into unmapped memory (SIGSEGV).
   The library is now linked `-z nodelete`, and the release gate checks for it. The linux-arm64 build uses thin
   LTO to stay within the runner's memory. (GH#2113)
+- **(pdf): recognized formulas no longer swap places when two sit on one line.** When a page had as many detected
+  formula regions as extracted formulas, they were paired in reading order, and a formula that sat slightly higher
+  than its left neighbour took that neighbour's LaTeX. Regions now pair with formulas by bounding-box overlap, and
+  fall back to reading order when overlap cannot pair every region. Pages with mismatched counts also pair best
+  overlap first, so an earlier region no longer takes a formula a later one overlaps better.
 
 ### Changed
 
