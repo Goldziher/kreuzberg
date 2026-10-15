@@ -2089,14 +2089,18 @@ impl PdfExtractor {
         let bookmark_uris = native_output.bookmark_uris;
         let pdf_revisions = native_output.pdf_revisions;
         let diagrams = native_output.diagrams;
-        #[cfg(feature = "layout-detection")]
+        #[cfg(all(feature = "layout-detection", any(feature = "ocr", feature = "ocr-pipeline")))]
         let mut markdown_layout_images = native_output.layout_images;
+        #[cfg(all(feature = "layout-detection", not(any(feature = "ocr", feature = "ocr-pipeline"))))]
+        let _markdown_layout_images = native_output.layout_images;
         #[cfg(all(feature = "layout-detection", feature = "liter-llm"))]
         let markdown_layout_hints = native_output.layout_hints;
         #[cfg(all(feature = "layout-detection", not(feature = "liter-llm")))]
         let _markdown_layout_hints = native_output.layout_hints;
-        #[cfg(feature = "layout-detection")]
+        #[cfg(all(feature = "layout-detection", any(feature = "ocr", feature = "ocr-pipeline")))]
         let mut markdown_layout_acceleration_override = native_output.layout_acceleration_override;
+        #[cfg(all(feature = "layout-detection", not(any(feature = "ocr", feature = "ocr-pipeline"))))]
+        let _markdown_layout_acceleration_override = native_output.layout_acceleration_override;
 
         #[allow(unused_variables, unused_mut)]
         let (
