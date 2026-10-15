@@ -1418,6 +1418,19 @@ jobs:
           }
           bash scripts/ci/stage-php-linux-ort.sh "${archives[0]}" "${ORT_LIB_LOCATION:?}"
 
+      # Tagged source retries must use the verification fixes from this workflow revision. ~keep
+      - name: Checkout release verification tools
+        if: contains(matrix.platform.target, '-linux-gnu')
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .release-tools
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/ci/verify-php-linux-abi.sh
+            scripts/ci/smoke-test-php-debian12.sh
+
       - name: Verify PHP Linux ABI is compatible with Debian 12
         if: contains(matrix.platform.target, '-linux-gnu')
         shell: bash
@@ -1430,7 +1443,7 @@ jobs:
             echo "::error::expected exactly one PHP Linux archive, found ${#archives[@]}"
             exit 1
           }
-          bash scripts/ci/verify-php-linux-abi.sh "${archives[0]}" 2.36 3.4.30 1.3.13
+          bash "$GITHUB_WORKSPACE/.release-tools/scripts/ci/verify-php-linux-abi.sh" "${archives[0]}" 2.36 3.4.30 1.3.13
 
       - name: Load PHP extension on Debian 12
         if: contains(matrix.platform.target, '-linux-gnu')
@@ -1444,7 +1457,7 @@ jobs:
             echo "::error::expected exactly one PHP Linux archive, found ${#archives[@]}"
             exit 1
           }
-          bash scripts/ci/smoke-test-php-debian12.sh "${archives[0]}" "$PHP_VERSION"
+          bash "$GITHUB_WORKSPACE/.release-tools/scripts/ci/smoke-test-php-debian12.sh" "${archives[0]}" "$PHP_VERSION"
 
       # package-php-pie@v1 is an external action (xberg-io/actions); its
       # internal file selection was not auditable from this repo, so vendor
@@ -3568,10 +3581,18 @@ jobs:
             # Elixir NIF
             libxberg_nif-*.tar.gz
             # PHP PIE (a missing Linux leg shipped silently from 1.3.7 to 1.3.10, #2113)
-            php_xberg-*-x86_64-linux-glibc-nts.tgz
-            php_xberg-*-arm64-linux-glibc-nts.tgz
-            php_xberg-*-arm64-darwin-bsdlibc-nts.tgz
-            php_xberg-*-nts-vs17-x86_64.zip
+            php_xberg-*_php8.3-x86_64-linux-glibc-nts.tgz
+            php_xberg-*_php8.3-arm64-linux-glibc-nts.tgz
+            php_xberg-*_php8.3-arm64-darwin-bsdlibc-nts.tgz
+            php_xberg-*-8.3-nts-vs17-x86_64.zip
+            php_xberg-*_php8.4-x86_64-linux-glibc-nts.tgz
+            php_xberg-*_php8.4-arm64-linux-glibc-nts.tgz
+            php_xberg-*_php8.4-arm64-darwin-bsdlibc-nts.tgz
+            php_xberg-*-8.4-nts-vs17-x86_64.zip
+            php_xberg-*_php8.5-x86_64-linux-glibc-nts.tgz
+            php_xberg-*_php8.5-arm64-linux-glibc-nts.tgz
+            php_xberg-*_php8.5-arm64-darwin-bsdlibc-nts.tgz
+            php_xberg-*-8.5-nts-vs17-x86_64.zip
 
       - uses: actions/download-artifact@v8
         if: ${{ needs.prepare.outputs.dry_run == 'true' }}
@@ -4053,7 +4074,7 @@ jobs:
   publish-packagist:
     name: Trigger Packagist update
     needs: [prepare, upload-php-pie-release, check-packagist, publish-crates]
-    if: ${{ needs.publish-crates.result != 'failure' && needs.prepare.outputs.release_php == 'true' && needs.prepare.outputs.is_tag == 'true' && (needs.check-packagist.outputs.exists != 'true' || needs.prepare.outputs.force_republish == 'true') }}
+    if: ${{ !cancelled() && needs.upload-php-pie-release.result == 'success' && needs.publish-crates.result != 'failure' && needs.prepare.outputs.release_php == 'true' && needs.prepare.outputs.is_tag == 'true' && (needs.check-packagist.outputs.exists != 'true' || needs.prepare.outputs.force_republish == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - uses: xberg-io/actions/publish-packagist@v1
@@ -4246,19 +4267,17 @@ jobs:
       - upload-elixir-release
       - upload-php-pie-release
       - upload-swift-bundle
-    # Decoupled gating: un-draft the release unless a required upload genuinely
-    # FAILED. `!= 'failure'` (not `== 'success'`) tolerates idempotently-SKIPPED
-    # uploads on same-tag retries — a skipped upload means the asset is already on
-    # the release, so finalize must still run. `== 'success'` here previously
-    # stuck every retry in draft, cascading into skipped hex/zig/homebrew. ~keep
+    # Verification checks the live release, including assets retained on same-tag retries.
+    # A skipped verifier provides no evidence: PHP upload failure used to skip it while
+    # this finalizer accepted the skipped result and still published the release. ~keep
     # Excluded from dry runs on purpose: finalize-release un-drafts (publishes) the real
     # GitHub Release, an outward-facing, irreversible action with no dry-run mode of its own,
     # and there is no such release to finalize on a dry run in the first place. ~keep
     if: >-
-      ${{ always()
+      ${{ !cancelled()
       && needs.prepare.outputs.is_tag == 'true'
       && needs.prepare.outputs.dry_run != 'true'
-      && needs.verify-assets.result != 'failure'
+      && needs.verify-assets.result == 'success'
       && needs.upload-cli-release.result != 'failure'
       && needs.upload-go-release.result != 'failure'
       && needs.upload-c-ffi-release.result != 'failure'
@@ -4915,7 +4934,7 @@ jobs:
       !cancelled() &&
       needs.prepare.outputs.is_tag == 'true' &&
       needs.prepare.outputs.dry_run != 'true' &&
-      needs.finalize-github-release-after-uploads.result != 'failure' &&
+      needs.finalize-github-release-after-uploads.result == 'success' &&
       needs.publish-crates.result != 'failure' &&
       needs.publish-pypi.result != 'failure' &&
       needs.publish-rubygems.result != 'failure' &&
@@ -4940,7 +4959,7 @@ jobs:
         with:
           tag: ${{ needs.prepare.outputs.tag }}
           is-prerelease: ${{ needs.prepare.outputs.is_prerelease == 'true' && 'true' || 'false' }}
-          go-module-path: packages/go
+          go-module-path: ${{ needs.prepare.outputs.release_go == 'true' && 'packages/go' || '' }}
           go-strip-major-version: "false"
           token: ${{ steps.app-token.outputs.token }}
 
@@ -4979,6 +4998,7 @@ jobs:
       needs.prepare.outputs.is_tag == 'true' &&
       needs.prepare.outputs.dry_run != 'true' &&
       needs.prepare.outputs.is_prerelease != 'true' &&
+      needs.prepare.outputs.release_targets == 'all' &&
       !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:
@@ -5208,7 +5228,7 @@ jobs:
   # --- Coding-agent plugin (lives in plugin/, generated by ai-rulez; see plugin/README.md) ---
   # Additive best-effort like the integrations above: intentionally NOT part of
   # release-finalize / announce-discord `needs`, so a plugin hiccup never blocks the core
-  # release. Both publish the same content every tagged release (version tracks core), so
+  # release. Both publish the same content on full releases (version tracks core), so
   # each guards against an already-published version. `needs: [prepare]` only — the plugin
   # has no build- or runtime-dependency on the core packages (mcp-launch.sh resolves the CLI
   # at runtime), so it publishes in parallel with the core jobs. ~keep
@@ -5217,7 +5237,7 @@ jobs:
     name: Publish OpenCode and Pi plugin to npm
     needs: [prepare]
     if: >-
-      ${{ !cancelled() && needs.prepare.outputs.release_any == 'true'
+      ${{ !cancelled() && needs.prepare.outputs.release_targets == 'all'
       && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -5270,7 +5290,7 @@ jobs:
     name: Publish Hermes plugin to PyPI
     needs: [prepare]
     if: >-
-      ${{ !cancelled() && needs.prepare.outputs.release_any == 'true'
+      ${{ !cancelled() && needs.prepare.outputs.release_targets == 'all'
       && needs.prepare.outputs.is_tag == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
@@ -5308,7 +5328,7 @@ jobs:
     permissions:
       contents: write
     needs: [prepare, release-finalize]
-    if: ${{ !cancelled() && needs.prepare.outputs.dry_run != 'true' && needs.release-finalize.result == 'success' }}
+    if: ${{ !cancelled() && needs.prepare.outputs.release_targets == 'all' && needs.prepare.outputs.dry_run != 'true' && needs.release-finalize.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -5352,7 +5372,7 @@ jobs:
   plugin-release-report:
     name: Verify all plugin distribution jobs succeeded
     needs: [prepare, publish-plugin-artifacts, publish-plugin-opencode, publish-plugin-hermes]
-    if: always() && needs.prepare.outputs.dry_run != 'true' && startsWith(needs.prepare.outputs.tag, 'v')
+    if: always() && needs.prepare.outputs.release_targets == 'all' && needs.prepare.outputs.dry_run != 'true' && startsWith(needs.prepare.outputs.tag, 'v')
     runs-on: ubuntu-latest
     permissions:
       contents: read

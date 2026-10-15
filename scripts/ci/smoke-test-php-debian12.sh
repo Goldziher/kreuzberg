@@ -39,7 +39,7 @@ docker run --rm --cap-add SYS_PTRACE \
       exit 1
       ;;
     esac
-    if ! php -n -d "extension=$extension" --ri xberg; then
+    php -n -d "extension=$extension" --ri xberg || {
       status=$?
       # ~keep The extension loads and --ri prints, then PHP segfaults at process exit (v1.3.10,
       # exit 139). Print the faulting stack and loaded C++ runtimes so the next failure names the frame.
@@ -47,5 +47,5 @@ docker run --rm --cap-add SYS_PTRACE \
       gdb -batch -ex run -ex bt -ex "info sharedlibrary" \
         --args php -n -d "extension=$extension" --ri xberg >&2 || true
       exit "$status"
-    fi
+    }
   '

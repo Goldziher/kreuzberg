@@ -68,7 +68,7 @@ jobs:
       - name: Validate benchmark scripts
         run: task benchmark:validate:scripts
       - name: Validate Publish workflow contracts
-        run: python3 scripts/ci/test_publish_workflow_contracts.py
+        run: task release:test:contracts
 
   plugin-freshness:
     if: github.event.pull_request.draft != true

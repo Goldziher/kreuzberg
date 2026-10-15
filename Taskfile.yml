@@ -53,6 +53,11 @@ includes:
     flatten: true
 
 tasks:
+  release:test:contracts:
+    desc: "Verify release workflow and packaging contracts"
+    cmds:
+      - python3 scripts/ci/test_publish_workflow_contracts.py
+
   default:
     desc: "List available tasks"
     cmds:

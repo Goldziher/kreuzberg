@@ -206,6 +206,47 @@ def test_release_event_guards_cover_initial_actor_and_tag_policy() -> None:
     assert not evaluate_condition(docker_expression.replace("||", "&&", 1), dispatch)
 
 
+def test_partial_release_retries_skip_plugin_distribution_and_announcements() -> None:
+    workflow = WORKFLOW.read_text()
+    full_release_guard = "needs.prepare.outputs.release_targets == 'all'"
+    for job in (
+        "announce-discord",
+        "publish-plugin-opencode",
+        "publish-plugin-hermes",
+        "publish-plugin-artifacts",
+        "plugin-release-report",
+    ):
+        block = job_block(workflow, job)
+        condition = block[: block.index("    runs-on:")]
+        assert full_release_guard in condition, f"{job} runs during partial release retries"
+
+    php = job_block(workflow, "php-extension")
+    assert "needs.prepare.outputs.release_php == 'true'" in php
+    assert full_release_guard not in php
+    finalize = job_block(workflow, "release-finalize")
+    assert "go-module-path: ${{ needs.prepare.outputs.release_go == 'true' && 'packages/go' || '' }}" in finalize
+
+
+def test_php_partial_retry_publishes_packagist_only_after_successful_upload() -> None:
+    block = job_block(WORKFLOW.read_text(), "publish-packagist")
+    condition = block[: block.index("    runs-on:")]
+    assert "!cancelled()" in condition
+    assert "needs.upload-php-pie-release.result == 'success'" in condition
+    assert "needs.prepare.outputs.release_php == 'true'" in condition
+
+
+def test_release_finalization_requires_successful_asset_verification() -> None:
+    block = job_block(WORKFLOW.read_text(), "finalize-github-release-after-uploads")
+    condition = job_if_expression(block)
+    assert "needs.verify-assets.result == 'success'" in condition
+    assert "needs.verify-assets.result != 'failure'" not in condition
+    assert "!cancelled()" in condition
+    second = job_block(WORKFLOW.read_text(), "release-finalize")
+    second_condition = second[: second.index("    runs-on:")]
+    assert "needs.finalize-github-release-after-uploads.result == 'success'" in second_condition
+    assert "needs.finalize-github-release-after-uploads.result != 'failure'" not in second_condition
+
+
 def test_pubdev_publish_action_is_pinned_to_problem_matcher_fix() -> None:
     workflow = PUBDEV_WORKFLOW.read_text()
     assert f"xberg-io/actions/publish-pub@{PUBLISH_PUB_SHA} # v1.8.146" in workflow
@@ -417,6 +458,27 @@ def test_php_linux_artifacts_are_floor_built_and_verified() -> None:
     assert "contains(matrix.platform.target, '-linux-gnu')" in block
     assert "EXPECTED_XBERG_SHA256: ${{ steps.php_floor_build.outputs.sha256 }}" in block
     assert "cargo-features:" not in block
+    assert "ref: ${{ github.workflow_sha }}" in block
+    assert "path: .release-tools" in block
+    assert 'bash "$GITHUB_WORKSPACE/.release-tools/scripts/ci/verify-php-linux-abi.sh"' in block
+    assert 'bash "$GITHUB_WORKSPACE/.release-tools/scripts/ci/smoke-test-php-debian12.sh"' in block
+
+
+def test_php_release_requires_every_supported_php_version_on_every_platform() -> None:
+    block = job_block(WORKFLOW.read_text(), "verify-assets")
+    expected = {
+        f"php_xberg-*{php_suffix}-{platform}"
+        for version in ("8.3", "8.4", "8.5")
+        for php_suffix, platform in (
+            (f"_php{version}", "x86_64-linux-glibc-nts.tgz"),
+            (f"_php{version}", "arm64-linux-glibc-nts.tgz"),
+            (f"_php{version}", "arm64-darwin-bsdlibc-nts.tgz"),
+            (f"-{version}", "nts-vs17-x86_64.zip"),
+        )
+    }
+    actual = set(re.findall(r"(?m)^            (php_xberg-\S+)$", block))
+    assert len(expected) == 12
+    assert actual == expected, f"missing PHP release requirements: {sorted(expected - actual)}"
 
 
 FAKE_PHP_OBJDUMP = (
@@ -424,6 +486,7 @@ FAKE_PHP_OBJDUMP = (
     'if [ "$1" = "-p" ]; then\n'
     '  case "${PHP_ABI_FIXTURE:?}" in\n'
     "    static) printf '%s\\n' '  NEEDED       libc.so.6' ;;\n"
+    "    nodelete) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN' ;;\n"
     "    norpath) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' ;;\n"
     "    *) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN' '  FLAGS_1      Flags: NOW NODELETE' ;;\n"
     "  esac\n"
@@ -531,6 +594,33 @@ def test_php_linux_abi_gate_requires_dynamic_onnxruntime_shipped_beside_the_exte
     assert "has no $ORIGIN rpath" in no_rpath.stderr
 
 
+def test_php_linux_abi_gate_rejects_extensions_unmapped_before_atexit() -> None:
+    result = run_php_abi_fixture("nodelete")
+    assert result.returncode != 0
+    assert "xberg.so is not NODELETE" in result.stderr
+    assert "SIGSEGV" in result.stderr
+
+
+def test_php_smoke_gate_preserves_load_and_teardown_failure_status() -> None:
+    source = (WORKFLOW.parents[2] / "scripts/ci/smoke-test-php-debian12.sh").read_text()
+    start = re.search(r"(?m)^    (?:if ! )?php ", source)
+    assert start is not None
+    fragment = source[start.start() : source.rindex("\n  '")]
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        for name, command in (("apt-get", ":"), ("gdb", "echo diagnostic >&2")):
+            stub = root / name
+            stub.write_text(f"#!/bin/sh\n{command}\n")
+            stub.chmod(0o755)
+        env = os.environ.copy()
+        env["PATH"] = f"{root}{os.pathsep}{env['PATH']}"
+        for status in (0, 1, 139):
+            functions = f"php() {{ return {status}; }}\nextension=fixture.so\n"
+            result = run(["sh", "-euc", functions + fragment], root, env)
+            assert result.returncode == status, (status, result.returncode, result.stderr)
+            assert ("diagnostic" in result.stderr) == (status != 0)
+
+
 def run_php_stage_fixture(
     profile: str, ort_files: tuple[str, ...]
 ) -> tuple[subprocess.CompletedProcess[str], list[str], str]:
@@ -626,11 +716,14 @@ def test_helm_publish_does_not_depend_on_the_cli_image_manifest() -> None:
 
 
 def test_publish_contracts_run_in_ci() -> None:
-    assert "python3 scripts/ci/test_publish_workflow_contracts.py" in CI_WORKFLOW.read_text()
+    assert "task release:test:contracts" in CI_WORKFLOW.read_text()
 
 
 if __name__ == "__main__":
     test_release_event_guards_cover_initial_actor_and_tag_policy()
+    test_partial_release_retries_skip_plugin_distribution_and_announcements()
+    test_php_partial_retry_publishes_packagist_only_after_successful_upload()
+    test_release_finalization_requires_successful_asset_verification()
     test_pubdev_publish_action_is_pinned_to_problem_matcher_fix()
     test_homebrew_push_rebases_after_concurrent_non_conflicting_push()
     test_homebrew_push_stops_after_five_rejections()
@@ -642,12 +735,15 @@ if __name__ == "__main__":
     test_go_release_packaging_matches_static_and_musl_setup_contracts()
     test_glibc_native_closures_are_strictly_verified()
     test_php_linux_artifacts_are_floor_built_and_verified()
+    test_php_release_requires_every_supported_php_version_on_every_platform()
     test_php_linux_abi_gate_accepts_debian_12_compatible_symbols()
     test_php_linux_abi_gate_rejects_both_symbol_floor_regressions()
     test_php_linux_abi_gate_rejects_unversioned_undefined_cxx_symbols()
     test_php_linux_abi_gate_reports_no_unresolved_cxx_symbols_when_clean()
     test_php_linux_abi_gate_rejects_a_different_packaged_binary()
     test_php_linux_abi_gate_requires_dynamic_onnxruntime_shipped_beside_the_extension()
+    test_php_linux_abi_gate_rejects_extensions_unmapped_before_atexit()
+    test_php_smoke_gate_preserves_load_and_teardown_failure_status()
     test_php_stage_script_adds_the_needed_onnxruntime_beside_the_extension()
     test_php_stage_script_refuses_a_statically_linked_extension()
     test_php_stage_script_fails_when_the_runtime_is_missing()
