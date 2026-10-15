@@ -322,6 +322,17 @@ fn test_group_chr_underbrace() {
 }
 
 #[test]
+fn test_group_chr_character_reference() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="&#x23DF;"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\underbrace{x}");
+}
+
+#[test]
 fn test_group_chr_overbrace() {
     let latex = omml_to_latex(
         r#"<m:groupChr>
@@ -383,6 +394,19 @@ fn test_nary_sum() {
     let latex = omml_to_latex(
         r#"<m:nary>
                 <m:naryPr><m:chr m:val="∑"/></m:naryPr>
+                <m:sub><m:r><m:t>i=1</m:t></m:r></m:sub>
+                <m:sup><m:r><m:t>n</m:t></m:r></m:sup>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:nary>"#,
+    );
+    assert_eq!(latex, "\\sum_{i=1}^{n}{x}");
+}
+
+#[test]
+fn test_nary_character_reference() {
+    let latex = omml_to_latex(
+        r#"<m:nary>
+                <m:naryPr><m:chr m:val="&#x2211;"/></m:naryPr>
                 <m:sub><m:r><m:t>i=1</m:t></m:r></m:sub>
                 <m:sup><m:r><m:t>n</m:t></m:r></m:sup>
                 <m:e><m:r><m:t>x</m:t></m:r></m:e>

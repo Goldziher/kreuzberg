@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(docx, pptx): an equation character written as a character reference is converted.** OMML attribute values
+  were read without unescaping, so `m:chr m:val="&#x23DF;"` kept the reference text and printed it in place of the
+  brace. Character and entity references in these values now resolve to their characters.
 - **(docx, pptx): an underbrace or overbrace in an equation is no longer dropped.** `m:groupChr` was skipped, so
   the brace and the text inside it were missing from the output. A brace now renders as `\underbrace` or
   `\overbrace` by its position, and any other character is set under or over its body.

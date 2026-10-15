@@ -873,7 +873,8 @@ fn get_m_val(e: &quick_xml::events::BytesStart) -> Option<String> {
     for attr in e.attributes().flatten() {
         let key = attr.key.as_ref();
         if key == "m:val" || key == "val" {
-            return Some(attr.value.to_string());
+            let raw = attr.value.as_ref();
+            return Some(quick_xml::escape::unescape(raw).map_or_else(|_| raw.to_string(), |s| s.into_owned()));
         }
     }
     None
