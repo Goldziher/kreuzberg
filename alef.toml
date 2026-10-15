@@ -630,7 +630,7 @@ traineddata = "traineddata"
 "tools/benchmark-harness/baselines/initial_baseline.json" = ["file-too-long"]
 "tools/benchmark-harness/guardrails.json" = ["file-too-long"]
 # --- quality-debt baseline (generated) ---
-# 454 size/complexity rule attachments across 164 files that predate these metrics, listed per file
+# 452 size/complexity rule attachments across 163 files that predate these metrics, listed per file
 # rather than switching the rules off, so the metrics still fire on every file NOT listed
 # here -- new code stays covered, and each path below is one discrete unit of work.
 #
@@ -870,7 +870,6 @@ traineddata = "traineddata"
   "function-too-long",
   "nesting-too-deep",
 ]
-"crates/xberg/src/extractors/djot_format/rendering.rs" = ["cyclomatic-complexity", "function-too-long"]
 "crates/xberg/src/extractors/docbook.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
