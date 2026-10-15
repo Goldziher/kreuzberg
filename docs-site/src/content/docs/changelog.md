@@ -53,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Formula and VLM region recognition keep their rasters when the layout gate skips a page.**
+  With the auto layout strategy, a page the gate skipped made the markdown layout rasters unusable for OCR, and they
+  were dropped for the whole document, so formula recognition and VLM regions did nothing on the pages that did run
+  layout. The native path now keeps them when a formula model or VLM regions are configured; a document with any
+  rotated page still drops them.
 - **(pdf): A missing table structure model no longer drops the document's structure.**
   When layout detection found a table and the configured table model (TATR or SLANeXT) could not be loaded, the
   extraction fell back to plain text, without its layout-detected tables, headings or layout regions, and with no
