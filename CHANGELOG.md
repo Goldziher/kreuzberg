@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.0 and `tree-sitter-language-pack` 1.22.2.**
+- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.0 and `tree-sitter-language-pack` 1.22.1.**
   `ort` rc.14 builds sessions from a shared process environment, so every session in xberg, `xberg-gliner` and
   `xberg-paddle-ocr` now takes it. `unhwp` 0.20, `zip` 9.0.3 and `tokio` 1.53.3 are also current.
 - **(deps): hayro-jpeg2000 0.4.1 is the minimum, and it resolves JPEG 2000 palettes itself.** 0.4.1 clamps a palette

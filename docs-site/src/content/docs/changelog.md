@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Markdown output honors header, footer, and watermark opt-ins for tagged pagination artifacts.**
+  Tagged page numbers follow either the header or footer opt-in. (#2120)
+- **(pdf): table numbers split across touching text runs retain their thousands separators without inserted spaces.**
+  Adjacent financial columns keep their original boundaries. (#2122)
 - **(pdf): every JPEG 2000 image reports 8 bits per component.** A JPEG 2000 decode yields 8-bit samples, and the
   image dictionary's `/BitsPerComponent` is ignored for `/JPXDecode` (ISO 32000-1 Table 89). Only palette images
   reported 8; any other JPEG 2000 image with a stale `/BitsPerComponent` reported the dictionary's value. (GH#2112)
@@ -44,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.0 and `tree-sitter-language-pack` 1.22.2.**
+- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.0 and `tree-sitter-language-pack` 1.22.1.**
   `ort` rc.14 builds sessions from a shared process environment, so every session in xberg, `xberg-gliner` and
   `xberg-paddle-ocr` now takes it. `unhwp` 0.20, `zip` 9.0.3 and `tokio` 1.53.3 are also current.
 - **(deps): hayro-jpeg2000 0.4.1 is the minimum, and it resolves JPEG 2000 palettes itself.** 0.4.1 clamps a palette
