@@ -75,7 +75,8 @@ fn collect_frac_pr(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> R
 pub(super) fn collect_rad(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Result<MathNode, SecurityError> {
     let mut deg = Vec::new();
     let mut body = Vec::new();
-    let mut deg_hide = true;
+    // An absent m:radPr or m:degHide is off, so the degree shows.
+    let mut deg_hide = false;
     let mut buf = Vec::new();
 
     loop {
@@ -112,14 +113,14 @@ pub(super) fn collect_rad(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudge
 
 /// Read radical properties (degHide).
 fn collect_rad_pr(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Result<bool, SecurityError> {
-    let mut deg_hide = true;
+    let mut deg_hide = false;
     let mut buf = Vec::new();
 
     loop {
         budget.step()?;
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e) | Event::Empty(ref e)) if e.name().as_ref() == "m:degHide" => {
-                deg_hide = get_m_val(e).as_deref() != Some("0");
+                deg_hide = is_toggle_on(e);
             }
             Ok(Event::End(ref e)) if e.name().as_ref() == "m:radPr" => {
                 break;
@@ -798,6 +799,11 @@ fn get_m_val(e: &quick_xml::events::BytesStart) -> Option<String> {
         }
     }
     None
+}
+
+/// Check an ST_OnOff `m:val`: absent, `1`, `true` and `on` are on.
+fn is_toggle_on(e: &quick_xml::events::BytesStart) -> bool {
+    !matches!(get_m_val(e).as_deref(), Some("0" | "false" | "off"))
 }
 
 /// Skip forward until the matching end tag is consumed.

@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(docx, pptx): an n-th root in an equation keeps its degree.** A radical without `m:degHide` was read as a
+  square root, so a cube root came out as `\sqrt{x}`. The degree is now dropped only when `m:degHide` is on; `off`
+  and `false` read as off.
 - **(pdf): Markdown output honors header, footer, and watermark opt-ins for tagged pagination artifacts.**
   Tagged page numbers follow either the header or footer opt-in. (#2120)
 - **(pdf): table numbers split across touching text runs retain their thousands separators without inserted spaces.**

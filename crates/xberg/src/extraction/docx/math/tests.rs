@@ -246,6 +246,53 @@ fn test_rad_with_degree() {
 }
 
 #[test]
+fn test_rad_degree_without_deg_hide() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:radPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math"/></w:rPr></m:ctrlPr></m:radPr>
+                <m:deg><m:r><m:t>3</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt[3]{x}");
+}
+
+#[test]
+fn test_rad_degree_without_rad_pr() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:deg><m:r><m:t>n</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>y</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt[n]{y}");
+}
+
+#[test]
+fn test_rad_deg_hide_without_val() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:radPr><m:degHide/></m:radPr>
+                <m:deg><m:r><m:t>2</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt{x}");
+}
+
+#[test]
+fn test_rad_deg_hide_off() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:radPr><m:degHide m:val="off"/></m:radPr>
+                <m:deg><m:r><m:t>3</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt[3]{x}");
+}
+
+#[test]
 fn test_nary_sum() {
     let latex = omml_to_latex(
         r#"<m:nary>
