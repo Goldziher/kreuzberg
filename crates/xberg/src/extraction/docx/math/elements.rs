@@ -601,6 +601,84 @@ fn collect_bar_pr(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Re
     Ok(top)
 }
 
+/// Collect an m:groupChr element.
+pub(super) fn collect_group_chr(
+    reader: &mut Reader<&[u8]>,
+    budget: &mut SecurityBudget,
+) -> Result<MathNode, SecurityError> {
+    let mut chr = "\u{23DF}".to_string();
+    let mut top = false;
+    let mut body = Vec::new();
+    let mut buf = Vec::new();
+
+    loop {
+        budget.step()?;
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                budget.enter()?;
+                match e.name().as_ref() {
+                    "m:groupChrPr" => {
+                        // `collect_group_chr_pr` reads through its own `</m:groupChrPr>`
+                        // without calling `budget.leave()`; refund the enter above.
+                        collect_group_chr_pr(reader, &mut chr, &mut top, budget)?;
+                        budget.leave();
+                    }
+                    "m:e" => body = collect_children(reader, "m:e", budget)?,
+                    _ => {}
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                budget.leave();
+                if e.name().as_ref() == "m:groupChr" {
+                    break;
+                }
+            }
+            Ok(Event::Eof) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    Ok(MathNode::GroupChr { chr, top, body })
+}
+
+/// Read group character properties (chr, pos).
+fn collect_group_chr_pr(
+    reader: &mut Reader<&[u8]>,
+    chr: &mut String,
+    top: &mut bool,
+    budget: &mut SecurityBudget,
+) -> Result<(), SecurityError> {
+    let mut buf = Vec::new();
+
+    loop {
+        budget.step()?;
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e) | Event::Empty(ref e)) => match e.name().as_ref() {
+                "m:chr" => {
+                    if let Some(val) = get_m_val(e) {
+                        *chr = val;
+                    }
+                }
+                "m:pos" => {
+                    if let Some(val) = get_m_val(e) {
+                        *top = val == "top";
+                    }
+                }
+                _ => {}
+            },
+            Ok(Event::End(ref e)) if e.name().as_ref() == "m:groupChrPr" => {
+                break;
+            }
+            Ok(Event::Eof) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    Ok(())
+}
+
 /// Collect an m:borderBox element.
 pub(super) fn collect_borderbox(
     reader: &mut Reader<&[u8]>,

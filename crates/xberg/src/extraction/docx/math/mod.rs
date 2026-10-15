@@ -73,6 +73,12 @@ enum MathNode {
     LimUpp { body: Vec<MathNode>, lim: Vec<MathNode> },
     /// Bar (overline/underline)
     Bar { body: Vec<MathNode>, top: bool },
+    /// Group character: \underbrace{body}/\overbrace{body} for a brace, else \underset{chr}{body}/\overset{chr}{body}
+    GroupChr {
+        chr: String,
+        top: bool,
+        body: Vec<MathNode>,
+    },
     /// Border box: \boxed{body}
     BorderBox { body: Vec<MathNode> },
     /// Matrix: \begin{matrix}...\end{matrix}

@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(docx, pptx): an underbrace or overbrace in an equation is no longer dropped.** `m:groupChr` was skipped, so
+  the brace and the text inside it were missing from the output. A brace now renders as `\underbrace` or
+  `\overbrace` by its position, and any other character is set under or over its body.
 - **(docx, pptx): an n-th root in an equation keeps its degree.** A radical without `m:degHide` was read as a
   square root, so a cube root came out as `\sqrt{x}`. The degree is now dropped only when `m:degHide` is on; `off`
   and `false` read as off.

@@ -124,19 +124,38 @@ fn should_reset_depth_counter_to_zero_after_parsing_frac_with_fpr() {
     );
 }
 
-/// GH#1395: an unrecognized OMML tag falls into `collect_children`'s `_` arm,
+/// GH#1395: an unrecognized OMML tag falls into `dispatch_omml_tag`'s `_` arm,
 /// which also delegates to `skip_to_end` and must refund the same way.
 #[test]
 fn should_reset_depth_counter_to_zero_after_parsing_unrecognized_tag() {
     let mut budget = budget_with_max_depth(64);
     omml_with_budget(
-        r#"<m:groupChr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:groupChr>"#,
+        r#"<m:unknownObj><m:e><m:r><m:t>x</m:t></m:r></m:e></m:unknownObj>"#,
         &mut budget,
     );
     assert_eq!(
         probe_remaining_depth(&mut budget, 64),
         64,
         "an unrecognized OMML tag (skip_to_end fallback) must not leak a depth level"
+    );
+}
+
+/// GH#1395: `collect_group_chr_pr` reads through its own `</m:groupChrPr>`
+/// without calling `budget.leave()`.
+#[test]
+fn should_reset_depth_counter_to_zero_after_parsing_group_chr_with_group_chr_pr() {
+    let mut budget = budget_with_max_depth(64);
+    omml_with_budget(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:ctrlPr><w:rPr/></m:ctrlPr></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+        &mut budget,
+    );
+    assert_eq!(
+        probe_remaining_depth(&mut budget, 64),
+        64,
+        "m:groupChrPr must not leak a depth level"
     );
 }
 
@@ -290,6 +309,73 @@ fn test_rad_deg_hide_off() {
             </m:rad>"#,
     );
     assert_eq!(latex, "\\sqrt[3]{x}");
+}
+
+#[test]
+fn test_group_chr_underbrace() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\underbrace{x}");
+}
+
+#[test]
+fn test_group_chr_overbrace() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="⏞"/><m:pos m:val="top"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\overbrace{x}");
+}
+
+#[test]
+fn test_group_chr_default_brace_on_top() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:pos m:val="top"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\overbrace{x}");
+}
+
+#[test]
+fn test_group_chr_arrow_over() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="→"/><m:pos m:val="top"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\overset{\\rightarrow }{x}");
+}
+
+#[test]
+fn test_group_chr_arrow_under() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="→"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\underset{\\rightarrow }{x}");
+}
+
+#[test]
+fn test_group_chr_in_lim_low() {
+    let latex = omml_to_latex(
+        r#"<m:limLow>
+                <m:e><m:groupChr><m:groupChrPr><m:ctrlPr/></m:groupChrPr>
+                    <m:e><m:r><m:t>a+b</m:t></m:r></m:e>
+                </m:groupChr></m:e>
+                <m:lim><m:r><m:t>n</m:t></m:r></m:lim>
+            </m:limLow>"#,
+    );
+    assert_eq!(latex, "\\underset{n}{\\underbrace{a+b}}");
 }
 
 #[test]
