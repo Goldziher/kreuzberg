@@ -53,6 +53,9 @@ impl HocrWord {
     }
 }
 
+const NUMERIC_CONTINUATION_GAP_HEIGHT_RATIO: f64 = 0.15;
+const NUMERIC_CONTINUATION_ROUNDING_TOLERANCE: u32 = 1;
+
 /// The symbols a table cell prints on their own: a nil dash, a bracket, a currency sign, a percent
 /// sign, a footnote asterisk. Alone, each is cell content rather than a stray mark. ~keep
 const CELL_SYMBOLS: &[char] = &[
@@ -1244,15 +1247,59 @@ fn finish_cell_assignment(table: Vec<Vec<Vec<&HocrWord>>>) -> Vec<Vec<String>> {
                     // trailing space (`split_segment_to_words_lifted` returns it unsplit), which
                     // then stacks on the separator below and renders `Q_HE GJ` as `Q  HE GJ`.
                     // Collapse each word's own whitespace so the join alone owns the spacing. ~keep
-                    order_cell_words_in_reading_order(cell_words)
-                        .into_iter()
-                        .flat_map(|word| word.text.split_whitespace())
-                        .collect::<Vec<_>>()
-                        .join(" ")
+                    join_cell_words(&order_cell_words_in_reading_order(cell_words))
                 })
                 .collect()
         })
         .collect()
+}
+
+// ~keep Joining numeric fragments only after column assignment preserves the detector's
+// token counts: joining earlier changes dense-table classification and merges real columns (GH#2122).
+fn join_cell_words(words: &[&HocrWord]) -> String {
+    let mut text = String::new();
+    let mut previous = None;
+    for word in words {
+        let normalized = word.text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if normalized.is_empty() {
+            previous = None;
+            continue;
+        }
+        if !text.is_empty() && !previous.is_some_and(|prev| is_touching_numeric_continuation(prev, word)) {
+            text.push(' ');
+        }
+        text.push_str(&normalized);
+        previous = Some(*word);
+    }
+    text
+}
+
+fn is_touching_numeric_continuation(previous: &HocrWord, next: &HocrWord) -> bool {
+    let prefix = previous.text.as_str();
+    let suffix = next.text.trim_end().trim_end_matches([')', ']', '%']);
+    if !prefix.ends_with(|character: char| character.is_ascii_digit())
+        || !prefix
+            .chars()
+            .all(|character| character.is_ascii_digit() || matches!(character, '.' | ',' | '(' | '[' | '+' | '-' | '−'))
+        || !suffix.starts_with(['.', ','])
+        || !suffix
+            .chars()
+            .nth(1)
+            .is_some_and(|character| character.is_ascii_digit())
+        || !suffix
+            .chars()
+            .all(|character| character.is_ascii_digit() || matches!(character, '.' | ','))
+    {
+        return false;
+    }
+
+    // ~keep HocrWord rounds PDF coordinates to pixels; allow one rounding pixel at either edge.
+    let tolerance = (previous.height.max(next.height) as f64 * NUMERIC_CONTINUATION_GAP_HEIGHT_RATIO)
+        .max(NUMERIC_CONTINUATION_ROUNDING_TOLERANCE as f64);
+    let gap = next.left as f64 - previous.left as f64 - previous.width as f64;
+    previous.top.abs_diff(next.top) <= NUMERIC_CONTINUATION_ROUNDING_TOLERANCE
+        && previous.height.abs_diff(next.height) <= NUMERIC_CONTINUATION_ROUNDING_TOLERANCE
+        && gap.abs() <= tolerance
 }
 
 /// Convert a table grid to markdown format.
@@ -2599,6 +2646,55 @@ mod tests {
             "X and Y touch with a 0px gap and must merge into one cell"
         );
         assert_eq!(table[0], vec!["X Y".to_string(), "Z".to_string()]);
+    }
+
+    #[test]
+    fn issue_2122_should_join_overlapping_numeric_runs_after_column_detection() {
+        for (prefix, suffix, expected) in [
+            ("59", ".804", "59.804"),
+            ("59", ".804 ", "59.804"),
+            ("59", ",804", "59,804"),
+            ("(7", ".812)", "(7.812)"),
+            ("1.234", ".567", "1.234.567"),
+        ] {
+            let words = vec![word(prefix, 100, 100, 10, 8), word(suffix, 109, 100, 20, 8)];
+            let table = assign_words_to_cells(&words, &[100], &[100]);
+            assert_eq!(table, vec![vec![expected.to_string()]]);
+        }
+    }
+
+    #[test]
+    fn issue_2122_should_preserve_adjacent_financial_columns_when_joining_numbers() {
+        let mut words = Vec::new();
+        for row in 0..7 {
+            for column in 0..9 {
+                let left = 100 + column * 40;
+                let top = 100 + row * 12;
+                words.push(word("59", left, top, 10, 8));
+                words.push(word(".804", left + 9, top, 20, 8));
+            }
+        }
+        assert_eq!(words.len(), 126);
+        let (table, positions) = reconstruct_table_with_columns(&words, 20, 0.5);
+        assert_eq!(positions, (0..9).map(|column| 100 + column * 40).collect::<Vec<_>>());
+        assert_eq!(table, vec![vec!["59.804".to_string(); 9]; 7]);
+    }
+
+    #[test]
+    fn issue_2122_should_preserve_real_spaces_and_non_numeric_boundaries() {
+        for (prefix, suffix, left, top, expected) in [
+            ("59 ", ".804", 109, 100, "59 .804"),
+            ("59", " .804", 109, 100, "59 .804"),
+            ("59", ".804", 114, 100, "59 .804"),
+            ("59", ".804", 109, 108, "59 .804"),
+            ("Item", ".804", 109, 100, "Item .804"),
+            ("59", ".note", 109, 100, "59 .note"),
+            ("59", "804", 109, 100, "59 804"),
+        ] {
+            let words = [word(prefix, 100, 100, 10, 8), word(suffix, left, top, 20, 8)];
+            let table = finish_cell_assignment(vec![vec![words.iter().collect()]]);
+            assert_eq!(table, vec![vec![expected.to_string()]]);
+        }
     }
 
     /// GH#1628: a cell's words must read left-to-right, not in the order they happened to
