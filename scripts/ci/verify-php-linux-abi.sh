@@ -97,7 +97,11 @@ else
   log "xberg.so has no \$ORIGIN rpath, so $ort_soname would not resolve beside it"
   failed=1
 fi
-if printf '%s\n' "$dynamic" | grep -Eq 'FLAGS_1.*NODELETE'; then
+flags_1="$(printf '%s\n' "$dynamic" | awk '$1 == "FLAGS_1" { print $2; exit }')"
+# GNU objdump prints DF_1_NODELETE (0x8) numerically; validate before shell arithmetic. ~keep
+if printf '%s\n' "$dynamic" | grep -Eq 'FLAGS_1.*NODELETE' || {
+  [[ "$flags_1" =~ ^0[xX][0-9a-fA-F]{1,16}$ ]] && (((flags_1 & 8) != 0))
+}; then
   log "xberg.so is NODELETE (dlclose keeps its atexit handlers mapped)"
 else
   log "xberg.so is not NODELETE: PHP's dlclose unmaps it and exit() jumps into freed text (SIGSEGV)"

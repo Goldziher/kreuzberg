@@ -488,6 +488,8 @@ FAKE_PHP_OBJDUMP = (
     "    static) printf '%s\\n' '  NEEDED       libc.so.6' ;;\n"
     "    nodelete) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN' ;;\n"
     "    norpath) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' ;;\n"
+    "    numeric:*) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN'"
+    '      "  FLAGS_1              ${PHP_ABI_FIXTURE#numeric:}" ;;\n'
     "    *) printf '%s\\n' '  NEEDED       libonnxruntime.so.1' '  RUNPATH      $ORIGIN' '  FLAGS_1      Flags: NOW NODELETE' ;;\n"
     "  esac\n"
     "  exit 0\n"
@@ -599,6 +601,17 @@ def test_php_linux_abi_gate_rejects_extensions_unmapped_before_atexit() -> None:
     assert result.returncode != 0
     assert "xberg.so is not NODELETE" in result.stderr
     assert "SIGSEGV" in result.stderr
+
+
+def test_php_linux_abi_gate_reads_gnu_objdump_numeric_nodelete_flags() -> None:
+    for flags in ("0x0000000000000008", "0x9", "0x8000009"):
+        result = run_php_abi_fixture(f"numeric:{flags}")
+        assert result.returncode == 0, (flags, result.stderr)
+        assert "xberg.so is NODELETE" in result.stderr
+    for flags in ("0x1", "0x0", "", "0x9$(touch injected)", "0x10000000000000008"):
+        result = run_php_abi_fixture(f"numeric:{flags}")
+        assert result.returncode != 0, (flags, result.stderr)
+        assert "xberg.so is not NODELETE" in result.stderr
 
 
 def test_php_smoke_gate_preserves_load_and_teardown_failure_status() -> None:
@@ -743,6 +756,7 @@ if __name__ == "__main__":
     test_php_linux_abi_gate_rejects_a_different_packaged_binary()
     test_php_linux_abi_gate_requires_dynamic_onnxruntime_shipped_beside_the_extension()
     test_php_linux_abi_gate_rejects_extensions_unmapped_before_atexit()
+    test_php_linux_abi_gate_reads_gnu_objdump_numeric_nodelete_flags()
     test_php_smoke_gate_preserves_load_and_teardown_failure_status()
     test_php_stage_script_adds_the_needed_onnxruntime_beside_the_extension()
     test_php_stage_script_refuses_a_statically_linked_extension()
