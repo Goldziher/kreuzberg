@@ -2290,27 +2290,9 @@ model_tier = "server"
         );
     }
 
-    /// `OnLowQuality` synthesises a two-stage pipeline equivalent to what a caller
-    /// would write by hand with an explicit `OcrPipelineConfig`.
     #[cfg(all(feature = "ocr", feature = "pdf"))]
-    #[test]
-    fn test_vlm_fallback_on_low_quality_synthesises_two_stage_pipeline() {
-        use super::super::llm::LlmConfig;
-
-        let vlm_cfg = LlmConfig {
-            model: "openai/gpt-4o-mini".to_string(),
-            base_url: Some("http://localhost:9999".to_string()),
-            ..Default::default()
-        };
-
-        let config = OcrConfig {
-            backend: "tesseract".to_string(),
-            vlm_fallback: VlmFallbackPolicy::OnLowQuality { quality_threshold: 0.6 },
-            vlm_config: Some(vlm_cfg.clone()),
-            ..Default::default()
-        };
-
-        let explicit = OcrConfig {
+    fn explicit_low_quality_vlm_config(vlm_cfg: super::super::llm::LlmConfig) -> OcrConfig {
+        OcrConfig {
             pipeline: Some(OcrPipelineConfig {
                 stages: vec![
                     OcrPipelineStage {
@@ -2340,13 +2322,11 @@ model_tier = "server"
                 },
             }),
             ..Default::default()
-        };
+        }
+    }
 
-        let synthesised = config.effective_pipeline().expect("must synthesise a pipeline");
-        let hand_written = explicit
-            .effective_pipeline()
-            .expect("explicit pipeline must be returned");
-
+    #[cfg(all(feature = "ocr", feature = "pdf"))]
+    fn assert_vlm_pipeline_stages_match(synthesised: &OcrPipelineConfig, hand_written: &OcrPipelineConfig) {
         assert_eq!(
             synthesised.stages.len(),
             hand_written.stages.len(),
@@ -2367,6 +2347,36 @@ model_tier = "server"
             .as_ref()
             .expect("hand-written stage 1 must have vlm_config");
         assert_eq!(s_vlm.model, h_vlm.model);
+    }
+
+    /// `OnLowQuality` synthesises a two-stage pipeline equivalent to what a caller
+    /// would write by hand with an explicit `OcrPipelineConfig`.
+    #[cfg(all(feature = "ocr", feature = "pdf"))]
+    #[test]
+    fn test_vlm_fallback_on_low_quality_synthesises_two_stage_pipeline() {
+        use super::super::llm::LlmConfig;
+
+        let vlm_cfg = LlmConfig {
+            model: "openai/gpt-4o-mini".to_string(),
+            base_url: Some("http://localhost:9999".to_string()),
+            ..Default::default()
+        };
+
+        let config = OcrConfig {
+            backend: "tesseract".to_string(),
+            vlm_fallback: VlmFallbackPolicy::OnLowQuality { quality_threshold: 0.6 },
+            vlm_config: Some(vlm_cfg.clone()),
+            ..Default::default()
+        };
+
+        let explicit = explicit_low_quality_vlm_config(vlm_cfg);
+
+        let synthesised = config.effective_pipeline().expect("must synthesise a pipeline");
+        let hand_written = explicit
+            .effective_pipeline()
+            .expect("explicit pipeline must be returned");
+
+        assert_vlm_pipeline_stages_match(&synthesised, &hand_written);
 
         assert!(
             (synthesised.quality_thresholds.pipeline_min_quality - 0.6).abs() < f64::EPSILON,
