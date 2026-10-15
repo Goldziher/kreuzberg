@@ -14,6 +14,8 @@ on:
       - "rust-toolchain.toml"
       - ".github/workflows/ci-rust.yaml"
       - "scripts/ci/rust/**"
+      - "scripts/ci/install-system-deps/**"
+      - ".github/actions/install-system-deps/**"
       # The gitlink selects which corpus fixtures the include_bytes! tests compile against, so a
       # pin bump changes what this workflow actually verifies. ~keep
       - "test_documents"

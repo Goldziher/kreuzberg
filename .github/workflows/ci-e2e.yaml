@@ -14,6 +14,8 @@ on:
       - "Taskfile.yml"
       - "pnpm-workspace.yaml"
       - "scripts/ci/wasm/**"
+      - "scripts/ci/install-system-deps/**"
+      - ".github/actions/install-system-deps/**"
       - ".github/workflows/ci-e2e.yaml"
   workflow_dispatch:
 

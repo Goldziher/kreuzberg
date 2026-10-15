@@ -775,6 +775,22 @@ def test_publish_contracts_run_in_ci() -> None:
     assert "task release:test:contracts" in CI_WORKFLOW.read_text()
 
 
+def test_system_dependency_changes_trigger_rust_and_e2e_ci() -> None:
+    workflows = ("ci-rust.yaml", "ci-e2e.yaml")
+    required_paths = {"scripts/ci/install-system-deps/**", ".github/actions/install-system-deps/**"}
+    checked = 0
+    for name in workflows:
+        workflow = (WORKFLOW.parent / name).read_text()
+        push = re.search(r"(?ms)^on:\n  push:\n(.*?)(?=^  \S|^\S|\Z)", workflow)
+        assert push is not None, f"{name} has no on.push block"
+        paths = re.search(r"(?ms)^    paths:\n(.*?)(?=^    \S|\Z)", push.group(1))
+        assert paths is not None, f"{name} has no on.push.paths block"
+        patterns = set(re.findall(r'^      - "([^"\n]+)"$', paths.group(1), re.MULTILINE))
+        assert required_paths <= patterns, f"{name} does not trigger for {sorted(required_paths - patterns)}"
+        checked += 1
+    assert checked == 2
+
+
 if __name__ == "__main__":
     test_release_event_guards_cover_initial_actor_and_tag_policy()
     test_plugin_only_dispatch_skips_every_core_release_job()
@@ -812,3 +828,4 @@ if __name__ == "__main__":
     test_xberg_unit_artifacts_are_reclaimed_before_workspace_tests()
     test_helm_publish_does_not_depend_on_the_cli_image_manifest()
     test_publish_contracts_run_in_ci()
+    test_system_dependency_changes_trigger_rust_and_e2e_ci()
