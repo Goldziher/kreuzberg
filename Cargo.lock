@@ -8031,6 +8031,7 @@ dependencies = [
 [[package]]
 name = "sceptre"
 version = "0.8.0"
+source = "git+https://github.com/xberg-io/sceptre?rev=a7a809265379d3a6470fbc0338bc16acfec05dff#a7a809265379d3a6470fbc0338bc16acfec05dff"
 dependencies = [
  "candle-core",
  "candle-nn",
@@ -10217,7 +10218,9 @@ checksum = "d0af592be68c579aa78a16846bd19422978c3c52e438523d45ff5d1bff1f9d4a"
 
 [[package]]
 name = "tree-sitter-language-pack"
-version = "1.22.2"
+version = "1.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "314d9dc87f0acb02d48c7454f5452ca369f0d01499ebeace18277d991aa14ba7"
 dependencies = [
  "ahash",
  "cc",

@@ -113,7 +113,7 @@ reqwest = { version = "0.13.5", default-features = false }
 resvg = { version = "0.48", default-features = false }
 rusqlite = { version = "0.40", default-features = false, features = ["bundled", "hooks", "serialize"] }
 same-file = "1.0.6"
-sceptre = { version = "0.8.0", default-features = false }
+sceptre = { git = "https://github.com/xberg-io/sceptre", rev = "a7a809265379d3a6470fbc0338bc16acfec05dff", version = "0.8.0", default-features = false }
 
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154" }
@@ -144,7 +144,7 @@ tracing = "0.1"
 # and WASM-safe; the top-level `tract` facade instead defaults to CUDA and bundles
 # GPU backends, so it is unusable here. See issue #1275.
 tract-onnx = { version = "0.23.8", default-features = false }
-tree-sitter-language-pack = { version = "1.22.2", default-features = false, features = ["serde"] }
+tree-sitter-language-pack = { version = "1.22.1", default-features = false, features = ["serde"] }
 url = "2.5.8"
 # usvg (re-exported by resvg) with only the `writer` feature so `Tree::to_string`
 # / `WriteOptions` are available for SVG sanitize re-serialization. `writer` pulls
@@ -175,9 +175,8 @@ xberg-gliner = { path = "./crates/xberg-gliner", version = "1.3.11", default-fea
 xberg-native-pdf = { path = "./crates/xberg-native-pdf", version = "1.3.11" }
 
 [patch.crates-io]
-# No out-of-tree sibling override is active, so the standing "do not release while a patch
-# entry is present" rule is disarmed. `cargo publish` IGNORES [patch], so any future entry
-# pointing outside the workspace must be removed before a release cut.
+# Out-of-tree overrides are forbidden here: CI and standalone documentation snippets
+# must resolve the same source as local builds. ~keep
 #
 # The liter-llm entry that lived here is gone: the in-flight provider-request limiter
 # (GH#1465) shipped in liter-llm 1.18.0, which is now on crates.io, and the requirement above
@@ -191,11 +190,6 @@ xberg-native-pdf = { path = "./crates/xberg-native-pdf", version = "1.3.11" }
 # declared as `path = ..., version = ...` deps -- so path resolution wins locally with or
 # without them. They only bite if some third-party crates.io dependency ever depends on
 # `xberg*`. Left in place deliberately; see task #751 before removing. ~keep
-# TEMPORARY (1.3.11): sceptre 0.8.0 and tree-sitter-language-pack 1.22.2 are tagged but not yet
-# on crates.io. Remove both entries once published; `cargo publish` ignores [patch], so a release
-# cut while they are present would resolve different crates than users get. ~keep
-sceptre = { path = "../sceptre/crates/sceptre" }
-tree-sitter-language-pack = { path = "../tree-sitter-language-pack/crates/ts-pack-core" }
 xberg = { path = "crates/xberg" }
 xberg-gliner = { path = "crates/xberg-gliner" }
 xberg-tesseract = { path = "crates/xberg-tesseract" }
