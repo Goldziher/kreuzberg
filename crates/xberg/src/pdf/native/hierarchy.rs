@@ -39,6 +39,40 @@ const INLINE_SCRIPT_MAX_CHARS: usize = 4;
 const INLINE_SCRIPT_MIN_WIDTH_COVERAGE: f32 = 0.7;
 const INLINE_SCRIPT_MAX_WIDTH_COVERAGE: f32 = 1.3;
 
+/// ~keep Pagination artifacts must honor content-filter opt-ins before hierarchy extraction drops them.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct ArtifactRetention {
+    headers: bool,
+    footers: bool,
+    watermarks: bool,
+}
+
+impl ArtifactRetention {
+    pub(crate) fn from_content_filter(filter: Option<&crate::core::config::ContentFilterConfig>) -> Self {
+        filter.map_or_else(Self::default, |filter| Self {
+            headers: filter.include_headers,
+            footers: filter.include_footers,
+            watermarks: filter.include_watermarks,
+        })
+    }
+
+    fn keeps(self, artifact: &xberg_native_pdf::extractors::text::ArtifactType) -> bool {
+        use xberg_native_pdf::extractors::text::{ArtifactType, PaginationSubtype};
+
+        match artifact {
+            ArtifactType::Pagination(PaginationSubtype::Header) => self.headers,
+            ArtifactType::Pagination(PaginationSubtype::Footer) => self.footers,
+            // ~keep Page numbers sit in either running region; the spec does not say which.
+            ArtifactType::Pagination(PaginationSubtype::PageNumber) => self.headers || self.footers,
+            ArtifactType::Pagination(PaginationSubtype::Watermark) => self.watermarks,
+            ArtifactType::Pagination(PaginationSubtype::Other)
+            | ArtifactType::Layout
+            | ArtifactType::Page
+            | ArtifactType::Background => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct SideSupport {
     prose_line_ys: Vec<f32>,
@@ -643,12 +677,17 @@ fn normalize_script_span(
 ///
 /// * `doc` - Mutable reference to the native document
 /// * `page_index` - Zero-based page index
+/// * `artifacts` - Which tagged `/Artifact` spans to keep
 ///
 /// # Returns
 ///
 /// Vector of `SegmentData` objects with font metrics for hierarchy detection.
-pub(crate) fn extract_segments_from_page(doc: &mut NativeDocument, page_index: usize) -> Result<Vec<SegmentData>> {
-    extract_segments_from_page_inner(doc, page_index, &HashMap::new())
+pub(crate) fn extract_segments_from_page(
+    doc: &mut NativeDocument,
+    page_index: usize,
+    artifacts: ArtifactRetention,
+) -> Result<Vec<SegmentData>> {
+    extract_segments_from_page_inner(doc, page_index, &HashMap::new(), artifacts)
 }
 
 /// Inner implementation of per-page segment extraction.
@@ -659,6 +698,7 @@ fn extract_segments_from_page_inner(
     doc: &mut NativeDocument,
     page_index: usize,
     mcid_roles: &HashMap<u32, Option<u8>>,
+    artifacts: ArtifactRetention,
 ) -> Result<Vec<SegmentData>> {
     let mut page_text_data = match doc
         .doc
@@ -688,7 +728,11 @@ fn extract_segments_from_page_inner(
     let segments: Vec<SegmentData> = spans
         .into_iter()
         .filter(|span| {
-            if span.artifact_type.is_some() {
+            if span
+                .artifact_type
+                .as_ref()
+                .is_some_and(|artifact| !artifacts.keeps(artifact))
+            {
                 return false;
             }
             !span.text.trim().is_empty()
@@ -849,7 +893,10 @@ fn dedupe_redrawn_segments(segments: Vec<SegmentData>) -> Vec<SegmentData> {
 ///
 /// Returns `(segments, used_structure_tree)`. When `used_structure_tree` is true,
 /// the caller should skip font-size clustering and use the pre-assigned roles.
-fn extract_segments_with_structure_tree(doc: &mut NativeDocument) -> Result<(Vec<Vec<SegmentData>>, bool)> {
+fn extract_segments_with_structure_tree(
+    doc: &mut NativeDocument,
+    artifacts: ArtifactRetention,
+) -> Result<(Vec<Vec<SegmentData>>, bool)> {
     let mark_info = match doc.doc.mark_info() {
         Ok(mi) => mi,
         Err(e) => {
@@ -913,7 +960,7 @@ fn extract_segments_with_structure_tree(doc: &mut NativeDocument) -> Result<(Vec
             })
             .unwrap_or_default();
 
-        let segments = extract_segments_from_page_inner(doc, page_idx, &mcid_roles)?;
+        let segments = extract_segments_from_page_inner(doc, page_idx, &mcid_roles, artifacts)?;
         total_role_assigned += segments.iter().filter(|s| s.assigned_role.is_some()).count();
         all_pages.push(segments);
     }
@@ -939,12 +986,16 @@ fn extract_segments_with_structure_tree(doc: &mut NativeDocument) -> Result<(Vec
 /// # Arguments
 ///
 /// * `doc` - Mutable reference to the native document
+/// * `artifacts` - Which tagged `/Artifact` spans to keep
 ///
 /// # Returns
 ///
 /// Tuple of (per-page segment vectors, structure-tree-used flag).
-pub(crate) fn extract_all_segments(doc: &mut NativeDocument) -> Result<(Vec<Vec<SegmentData>>, bool)> {
-    let (tree_segments, used_tree) = extract_segments_with_structure_tree(doc)?;
+pub(crate) fn extract_all_segments(
+    doc: &mut NativeDocument,
+    artifacts: ArtifactRetention,
+) -> Result<(Vec<Vec<SegmentData>>, bool)> {
+    let (tree_segments, used_tree) = extract_segments_with_structure_tree(doc, artifacts)?;
     if used_tree && !tree_segments.is_empty() {
         return Ok((tree_segments, true));
     }
@@ -956,7 +1007,7 @@ pub(crate) fn extract_all_segments(doc: &mut NativeDocument) -> Result<(Vec<Vec<
     let mut all_pages: Vec<Vec<SegmentData>> = Vec::with_capacity(page_count);
 
     for page_idx in 0..page_count {
-        let segments = extract_segments_from_page(doc, page_idx)?;
+        let segments = extract_segments_from_page(doc, page_idx, artifacts)?;
         all_pages.push(segments);
     }
 
@@ -1180,7 +1231,54 @@ mod tests {
     use xberg_native_pdf::geometry::Rect;
     use xberg_native_pdf::layout::TextSpan;
 
-    use super::{NativeDocument, SegmentData};
+    use super::{ArtifactRetention, NativeDocument, SegmentData};
+
+    #[test]
+    fn artifact_retention_maps_pagination_subtypes_to_content_filter_flags() {
+        use xberg_native_pdf::extractors::text::{ArtifactType, PaginationSubtype};
+
+        let header = ArtifactType::Pagination(PaginationSubtype::Header);
+        let footer = ArtifactType::Pagination(PaginationSubtype::Footer);
+        let page_number = ArtifactType::Pagination(PaginationSubtype::PageNumber);
+        let watermark = ArtifactType::Pagination(PaginationSubtype::Watermark);
+        let always_dropped = [
+            ArtifactType::Pagination(PaginationSubtype::Other),
+            ArtifactType::Layout,
+            ArtifactType::Page,
+            ArtifactType::Background,
+        ];
+
+        let none = ArtifactRetention::default();
+        let all = ArtifactRetention {
+            headers: true,
+            footers: true,
+            watermarks: true,
+        };
+        for artifact in [&header, &footer, &page_number, &watermark] {
+            assert!(!none.keeps(artifact), "{artifact:?} must be dropped by default");
+            assert!(all.keeps(artifact), "{artifact:?} must be kept when opted in");
+        }
+        for artifact in &always_dropped {
+            assert!(!all.keeps(artifact), "{artifact:?} is never body text");
+        }
+
+        let headers_only = ArtifactRetention {
+            headers: true,
+            ..ArtifactRetention::default()
+        };
+        assert!(headers_only.keeps(&header));
+        assert!(headers_only.keeps(&page_number));
+        assert!(!headers_only.keeps(&footer));
+        assert!(!headers_only.keeps(&watermark));
+
+        let footers_only = ArtifactRetention {
+            footers: true,
+            ..ArtifactRetention::default()
+        };
+        assert!(footers_only.keeps(&footer));
+        assert!(footers_only.keeps(&page_number));
+        assert!(!footers_only.keeps(&header));
+    }
 
     #[test]
     fn tagged_rtl_hierarchy_segments_follow_logical_structure_order() {
@@ -1207,7 +1305,8 @@ mod tests {
                 return;
             };
             let mut document = NativeDocument::open_bytes(&bytes).expect("RTL PDF fixture must parse");
-            let segments = super::extract_segments_from_page(&mut document, 0).expect("RTL PDF fixture must extract");
+            let segments = super::extract_segments_from_page(&mut document, 0, super::ArtifactRetention::default())
+                .expect("RTL PDF fixture must extract");
             for fragment in spaced_fragments {
                 let segment = segments
                     .iter()

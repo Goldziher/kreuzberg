@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Markdown output honors header, footer, and watermark opt-ins for tagged pagination artifacts.**
+  Tagged page numbers follow either the header or footer opt-in. (#2120)
 - **(pdf): table numbers split across touching text runs retain their thousands separators without inserted spaces.**
   Adjacent financial columns keep their original boundaries. (#2122)
 - **(pdf): every JPEG 2000 image reports 8 bits per component.** A JPEG 2000 decode yields 8-bit samples, and the

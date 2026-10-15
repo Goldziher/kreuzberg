@@ -494,6 +494,8 @@ pub(crate) fn extract_all_from_native_document(
 ) -> Result<PdfExtractionPhaseResult> {
     let _span = tracing::debug_span!("extract_xberg_native_pdf").entered();
     let margins = crate::pdf::native::text::PageMarginFractions::from_extraction_config(Some(config));
+    let artifacts =
+        crate::pdf::native::hierarchy::ArtifactRetention::from_content_filter(config.content_filter.as_ref());
     let annotation_fallback_requested = !config
         .pdf_options
         .as_ref()
@@ -611,6 +613,7 @@ pub(crate) fn extract_all_from_native_document(
                     &mut doc,
                     allow_single_column,
                     &covered_pages,
+                    artifacts,
                 ) {
                     Ok(extraction) => {
                         native_grids.resize_with(combined.len() + extraction.tables.len(), || None);
@@ -746,7 +749,7 @@ pub(crate) fn extract_all_from_native_document(
 
         let (mut all_page_segments, used_structure_tree) = match extracted_hierarchy_segments.take() {
             Some(segments) => (segments.pages, segments.used_structure_tree),
-            None => crate::pdf::native::hierarchy::extract_all_segments(&mut doc).map_err(|e| {
+            None => crate::pdf::native::hierarchy::extract_all_segments(&mut doc, artifacts).map_err(|e| {
                 crate::error::XbergError::Parsing {
                     message: format!("xberg_native_pdf hierarchy extraction failed: {e}"),
                     source: None,
