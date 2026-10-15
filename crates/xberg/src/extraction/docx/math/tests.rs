@@ -34,6 +34,8 @@ fn omml_with_budget(xml: &str, budget: &mut SecurityBudget) {
         }
         buf.clear();
     }
+    // The DOCX parser's outer loop enters for the `<m:oMath>` start tag.
+    budget.enter().expect("depth for <m:oMath>");
     collect_and_convert_omath(&mut reader, budget).expect("conversion ok");
 }
 
