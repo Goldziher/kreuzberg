@@ -5,7 +5,7 @@
 //! module; everything else here is a private helper of the rendering phase.
 
 use super::MmlNode;
-use crate::extraction::math_symbols::render_run_text;
+use crate::extraction::math_symbols::{big_operator_to_latex, operator_name_to_latex, render_run_text};
 
 /// Render a slice of `MmlNode`s to LaTeX, concatenated with no separators.
 pub(super) fn render_nodes(nodes: &[MmlNode]) -> String {
@@ -68,9 +68,26 @@ pub(super) fn render_node(node: &MmlNode, out: &mut String) {
             sep,
             elements,
         } => render_fenced(open, close, sep, elements, out),
-        MmlNode::Under { base, under } => render_under(base, under, out),
-        MmlNode::Over { base, over } => render_over(base, over, out),
-        MmlNode::UnderOver { base, under, over } => render_under_over(base, under, over, out),
+        MmlNode::Under {
+            base,
+            under,
+            stacked,
+            no_accentunder,
+        } => render_under(base, under, *stacked, *no_accentunder, out),
+        MmlNode::Over {
+            base,
+            over,
+            stacked,
+            no_accent,
+        } => render_over(base, over, *stacked, *no_accent, out),
+        MmlNode::UnderOver {
+            base,
+            under,
+            over,
+            stacked,
+            no_accent,
+            no_accentunder,
+        } => render_under_over(base, (under, over), *stacked, *no_accent, *no_accentunder, out),
         MmlNode::Phantom { body } => {
             out.push_str("\\phantom{");
             render_node(body, out);
@@ -81,49 +98,122 @@ pub(super) fn render_node(node: &MmlNode, out: &mut String) {
     }
 }
 
-/// Render an underscript: a recognized under-script command (e.g. `\underline`) applied
-/// directly, or `\underset{under}{base}` when `under` has no such command.
-fn render_under(base: &MmlNode, under: &MmlNode, out: &mut String) {
-    if let Some(cmd) = under_script_command(under) {
+/// Render an underscript: a recognized under-script command (e.g. `\underline`) applied directly unless
+/// `no_accentunder`, a limit under a big operator or `lim`, or `\underset{under}{base}` otherwise.
+fn render_under(base: &MmlNode, under: &MmlNode, stacked: bool, no_accentunder: bool, out: &mut String) {
+    if let Some(cmd) = under_script_command(under).filter(|_| !no_accentunder) {
         out.push_str(cmd);
         out.push('{');
         render_node(base, out);
         out.push('}');
-    } else {
-        out.push_str("\\underset{");
-        render_node(under, out);
-        out.push_str("}{");
-        render_node(base, out);
-        out.push('}');
+        return;
     }
-}
-
-/// Render an overscript: a recognized over-script command (e.g. `\vec`, `\hat`) applied
-/// directly, or `\overset{over}{base}` when `over` has no such command.
-fn render_over(base: &MmlNode, over: &MmlNode, out: &mut String) {
-    if let Some(cmd) = over_script_command(over, base) {
-        out.push_str(cmd);
-        out.push('{');
-        render_node(base, out);
-        out.push('}');
-    } else {
-        out.push_str("\\overset{");
-        render_node(over, out);
-        out.push_str("}{");
-        render_node(base, out);
-        out.push('}');
+    if let Some(op) = limits_base(base) {
+        push_limits(op, stacked, Some(under), None, out);
+        return;
     }
-}
-
-/// Render a combined under+overscript as `\overset{over}{\underset{under}{base}}`.
-fn render_under_over(base: &MmlNode, under: &MmlNode, over: &MmlNode, out: &mut String) {
-    out.push_str("\\overset{");
-    render_node(over, out);
-    out.push_str("}{\\underset{");
-    render_node(under, out);
+    out.push_str("\\underset{");
+    push_script(under, out);
     out.push_str("}{");
     render_node(base, out);
+    out.push('}');
+}
+
+/// Render an overscript: a recognized over-script command (e.g. `\vec`, `\hat`) applied directly unless
+/// `no_accent`, a limit over a big operator or `lim`, or `\overset{over}{base}` otherwise.
+fn render_over(base: &MmlNode, over: &MmlNode, stacked: bool, no_accent: bool, out: &mut String) {
+    // Rendered once and reused: the accent choice reads it, and rendering it again there made nested
+    // accents cost 2^depth.
+    let base_latex = rendered(base);
+    if let Some(cmd) = over_script_command(over, !is_single_glyph(&base_latex)).filter(|_| !no_accent) {
+        out.push_str(cmd);
+        out.push('{');
+        out.push_str(&base_latex);
+        out.push('}');
+        return;
+    }
+    if let Some(op) = limits_base(base) {
+        push_limits(op, stacked, None, Some(over), out);
+        return;
+    }
+    out.push_str("\\overset{");
+    push_script(over, out);
+    out.push_str("}{");
+    out.push_str(&base_latex);
+    out.push('}');
+}
+
+/// Render a combined under+overscript as limits on a big operator or `lim`, or as
+/// `\overset{over}{\underset{under}{base}}` with an accent script applied as its command instead. An accent
+/// in either script rules out limits, since it is decoration.
+fn render_under_over(
+    base: &MmlNode,
+    (under, over): (&MmlNode, &MmlNode),
+    stacked: bool,
+    no_accent: bool,
+    no_accentunder: bool,
+    out: &mut String,
+) {
+    let base_latex = rendered(base);
+    let under_cmd = under_script_command(under).filter(|_| !no_accentunder);
+    // Over an `\underset` stack the accent spans more than one glyph, so it takes the wide form.
+    let wide = under_cmd.is_none() || !is_single_glyph(&base_latex);
+    let over_cmd = over_script_command(over, wide).filter(|_| !no_accent);
+    if under_cmd.is_none()
+        && over_cmd.is_none()
+        && let Some(op) = limits_base(base)
+    {
+        push_limits(op, stacked, Some(under), Some(over), out);
+        return;
+    }
+    match over_cmd {
+        Some(cmd) => out.push_str(cmd),
+        None => {
+            out.push_str("\\overset{");
+            push_script(over, out);
+            out.push('}');
+        }
+    }
+    out.push('{');
+    match under_cmd {
+        Some(cmd) => out.push_str(cmd),
+        None => {
+            out.push_str("\\underset{");
+            push_script(under, out);
+            out.push('}');
+        }
+    }
+    out.push('{');
+    out.push_str(&base_latex);
     out.push_str("}}");
+}
+
+/// Write `op_{under}^{over}`, leaving out an absent script. A `stacked` operator (`movablelimits="false"`)
+/// keeps its limits stacked inline too, which TeX needs `\limits` for.
+fn push_limits(op: &str, stacked: bool, under: Option<&MmlNode>, over: Option<&MmlNode>, out: &mut String) {
+    out.push_str(op);
+    if stacked && !op.ends_with("\\limits") {
+        out.push_str("\\limits");
+    }
+    if let Some(under) = under {
+        out.push_str("_{");
+        push_script(under, out);
+        out.push('}');
+    }
+    if let Some(over) = over {
+        out.push_str("^{");
+        push_script(over, out);
+        out.push('}');
+    }
+}
+
+/// Render an under or over script that is not applied as an accent, writing an accent-like character as its
+/// visible mark.
+fn push_script(script: &MmlNode, out: &mut String) {
+    match script_mark(script).and_then(|mark| mark.standalone) {
+        Some(standalone) => out.push_str(standalone),
+        None => render_node(script, out),
+    }
 }
 
 /// Render an `mfenced` node's open/close delimiters and separator-joined elements.
@@ -252,8 +342,33 @@ fn render_text_content(text: &str, out: &mut String) {
     }
 }
 
-/// The raw script text of an accent-like script node (`mo`/`mi` leaf, possibly
-/// inside grouping), or `None` when the script is real content.
+/// The LaTeX of a base whose under and over scripts are its limits: a big operator (a sum, an integral) or a
+/// function name that takes limits (`lim`, `max`, `det`).
+///
+/// MathML's operator dictionary gives integrals no `movablelimits`, so their limits stack in every style,
+/// while TeX sets `\int_{a}^{b}` to the side; the integral family therefore carries `\limits`. An `mi`
+/// `lim` also stacks in every style, but is left as `\lim_{n}`, which matches it in display style.
+fn limits_base(base: &MmlNode) -> Option<&'static str> {
+    let text = script_leaf_text(base)?;
+    if let Some((latex, true)) = operator_name_to_latex(text) {
+        return Some(latex);
+    }
+    let mut chars = text.chars();
+    let first = chars.next()?;
+    if chars.next().is_some() {
+        return None;
+    }
+    match first {
+        '\u{222B}' => Some("\\int\\limits"),
+        '\u{222C}' => Some("\\iint\\limits"),
+        '\u{222D}' => Some("\\iiint\\limits"),
+        '\u{222E}' => Some("\\oint\\limits"),
+        _ => big_operator_to_latex(first).map(str::trim_end),
+    }
+}
+
+/// The trimmed text of a node that is a single `mo`/`mi` leaf, possibly inside grouping, or `None` when the
+/// node is anything larger. Used for both script characters (accents) and operator bases.
 fn script_leaf_text(node: &MmlNode) -> Option<&str> {
     match node {
         MmlNode::Run(text) => Some(text.trim()),
@@ -262,52 +377,76 @@ fn script_leaf_text(node: &MmlNode) -> Option<&str> {
     }
 }
 
-/// True when the base renders to a single glyph (possibly one LaTeX command),
+/// `node` rendered to its own string.
+fn rendered(node: &MmlNode) -> String {
+    let mut latex = String::new();
+    render_node(node, &mut latex);
+    latex
+}
+
+/// True when a rendered base is a single glyph (possibly one LaTeX command),
 /// used to pick `\bar`/`\vec` over `\overline`/`\overrightarrow`.
-fn base_is_single_glyph(base: &MmlNode) -> bool {
-    let mut rendered = String::new();
-    render_node(base, &mut rendered);
-    let t = rendered.trim();
+fn is_single_glyph(base_latex: &str) -> bool {
+    let t = base_latex.trim();
     t.chars().count() == 1 || (t.starts_with('\\') && t[1..].chars().all(|c| c.is_ascii_alphabetic()))
 }
 
-/// Map an `mover` script char to a LaTeX accent command. MathML sources write
-/// accents as literal combining/spacing characters (`<mover><mi>x</mi>
-/// <mo>^</mo></mover>`); `\overset{^}{x}` is not valid LaTeX (bare `^` needs a
-/// group), so these must become accent macros.
-fn over_script_command(over: &MmlNode, base: &MmlNode) -> Option<&'static str> {
-    match script_leaf_text(over)? {
-        "^" | "\u{02C6}" | "\u{0302}" => Some("\\hat"),
-        "~" | "\u{02DC}" | "\u{0303}" | "\u{223C}" => Some("\\tilde"),
-        "\u{02D9}" | "\u{0307}" => Some("\\dot"),
-        "\u{00A8}" | "\u{0308}" => Some("\\ddot"),
-        "\u{00AF}" | "\u{203E}" | "\u{0304}" | "\u{0305}" => Some(if base_is_single_glyph(base) {
-            "\\bar"
-        } else {
-            "\\overline"
-        }),
-        "\u{2192}" | "\u{20D7}" => Some(if base_is_single_glyph(base) {
-            "\\vec"
-        } else {
-            "\\overrightarrow"
-        }),
-        "\u{02C7}" | "\u{030C}" => Some("\\check"),
-        "\u{02D8}" | "\u{0306}" => Some("\\breve"),
-        "\u{00B4}" | "\u{0301}" => Some("\\acute"),
-        "`" | "\u{0300}" => Some("\\grave"),
-        "\u{02DA}" | "\u{030A}" => Some("\\mathring"),
-        "\u{23DE}" => Some("\\overbrace"),
-        _ => None,
-    }
+/// An accent-like script character: the accent it applies over and under a base, and the mark written for it
+/// when it is a plain script, where a combining mark has nothing to attach to and vanishes. `standalone` is
+/// `None` where the run renderer already writes the character visibly.
+struct ScriptMark {
+    over: Option<&'static str>,
+    under: Option<&'static str>,
+    standalone: Option<&'static str>,
 }
 
-/// Map an `munder` script char to a LaTeX command, like [`over_script_command`].
+/// The [`ScriptMark`] of a script that is a single accent-like character. MathML sources write accents as
+/// literal spacing or combining characters (`<mover><mi>x</mi><mo>^</mo></mover>`).
+fn script_mark(script: &MmlNode) -> Option<ScriptMark> {
+    let (over, under, standalone) = match script_leaf_text(script)? {
+        "^" => (Some("\\hat"), None, Some("\\hat{}")),
+        "\u{02C6}" | "\u{0302}" => (Some("\\hat"), None, Some("\\hat{}")),
+        "~" => (Some("\\tilde"), None, Some("\\sim ")),
+        "\u{02DC}" | "\u{0303}" => (Some("\\tilde"), None, Some("\\tilde{}")),
+        "\u{223C}" => (Some("\\tilde"), None, Some("\\sim ")),
+        "\u{02D9}" | "\u{0307}" => (Some("\\dot"), None, Some("\\dot{}")),
+        "\u{00A8}" | "\u{0308}" => (Some("\\ddot"), None, Some("\\ddot{}")),
+        "\u{00AF}" | "\u{203E}" => (Some("\\bar"), Some("\\underline"), Some("\\bar{}")),
+        "\u{0304}" | "\u{0305}" => (Some("\\bar"), None, Some("\\bar{}")),
+        "\u{2192}" => (Some("\\vec"), None, None),
+        "\u{20D7}" => (Some("\\vec"), None, Some("\\vec{}")),
+        "\u{02C7}" | "\u{030C}" => (Some("\\check"), None, Some("\\check{}")),
+        "\u{02D8}" | "\u{0306}" => (Some("\\breve"), None, Some("\\breve{}")),
+        "\u{00B4}" | "\u{0301}" => (Some("\\acute"), None, Some("\\acute{}")),
+        "`" | "\u{0300}" => (Some("\\grave"), None, Some("\\grave{}")),
+        "\u{02DA}" | "\u{030A}" => (Some("\\mathring"), None, Some("\\mathring{}")),
+        // A brace over nothing has no width, so it spans a quad to show.
+        "\u{23DE}" => (Some("\\overbrace"), None, Some("\\overbrace{\\qquad}")),
+        "_" => (None, Some("\\underline"), None),
+        "\u{0332}" | "\u{02CD}" => (None, Some("\\underline"), Some("\\_")),
+        "\u{23DF}" => (None, Some("\\underbrace"), Some("\\underbrace{\\qquad}")),
+        _ => return None,
+    };
+    Some(ScriptMark {
+        over,
+        under,
+        standalone,
+    })
+}
+
+/// The accent an `mover` script applies, in its wide form (`\overline`, `\overrightarrow`) over more than one
+/// glyph.
+fn over_script_command(over: &MmlNode, wide: bool) -> Option<&'static str> {
+    script_mark(over)?.over.map(|cmd| match (cmd, wide) {
+        ("\\bar", true) => "\\overline",
+        ("\\vec", true) => "\\overrightarrow",
+        (cmd, _) => cmd,
+    })
+}
+
+/// The accent an `munder` script applies, like [`over_script_command`].
 fn under_script_command(under: &MmlNode) -> Option<&'static str> {
-    match script_leaf_text(under)? {
-        "_" | "\u{0332}" | "\u{02CD}" | "\u{00AF}" | "\u{203E}" => Some("\\underline"),
-        "\u{23DF}" => Some("\\underbrace"),
-        _ => None,
-    }
+    script_mark(under)?.under
 }
 
 /// Render an argument (sup/sub base), wrapping in braces unless it is a single

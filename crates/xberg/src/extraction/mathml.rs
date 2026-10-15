@@ -65,15 +65,31 @@ enum MmlNode {
         sep: String,
         elements: Vec<MmlNode>,
     },
-    /// Underscript: `\underset{under}{base}`.
-    Under { base: Box<MmlNode>, under: Box<MmlNode> },
-    /// Overscript: `\overset{over}{base}`.
-    Over { base: Box<MmlNode>, over: Box<MmlNode> },
-    /// Under+overscript: `\overset{over}{\underset{under}{base}}`.
+    /// Underscript: an under-accent (`\underline{base}`), a limit (`\lim_{under}`), or
+    /// `\underset{under}{base}`. `stacked` is set when the base operator has `movablelimits="false"`, and
+    /// `no_accentunder` when `accentunder` resolves to false, which keeps an accent-like script a script.
+    Under {
+        base: Box<MmlNode>,
+        under: Box<MmlNode>,
+        stacked: bool,
+        no_accentunder: bool,
+    },
+    /// Overscript: an accent (`\hat{base}`), a limit (`\sum^{over}`), or `\overset{over}{base}`.
+    /// `no_accent` is set when `accent` resolves to false.
+    Over {
+        base: Box<MmlNode>,
+        over: Box<MmlNode>,
+        stacked: bool,
+        no_accent: bool,
+    },
+    /// Under+overscript: limits (`\sum_{under}^{over}`) or `\overset{over}{\underset{under}{base}}`.
     UnderOver {
         base: Box<MmlNode>,
         under: Box<MmlNode>,
         over: Box<MmlNode>,
+        stacked: bool,
+        no_accent: bool,
+        no_accentunder: bool,
     },
     /// Phantom (invisible but space-occupying): `\phantom{body}`.
     Phantom { body: Box<MmlNode> },
@@ -157,6 +173,68 @@ fn collect_nth_child(parent: Node, index: usize, budget: &mut SecurityBudget) ->
         Some(child) => collect_node(child, budget),
         None => Ok(MmlNode::Group { children: Vec::new() }),
     }
+}
+
+/// The value of a boolean attribute, or `None` when it is absent or neither `true` nor `false`.
+fn boolean_attribute(node: Node, name: &str) -> Option<bool> {
+    let value = node.attribute(name)?.trim();
+    if value.eq_ignore_ascii_case("true") {
+        Some(true)
+    } else if value.eq_ignore_ascii_case("false") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// Report whether an under/over element turns off the accent of its script at `script_index`. Its own `attr`
+/// (`accent` or `accentunder`) decides when given, else the `accent` of the script's core `mo` (MathML 3
+/// sections 3.4.4.2, 3.4.5.2, 3.4.6.2). Left to neither, the script-character heuristic stands in for the operator
+/// dictionary, so an explicit `true` changes nothing.
+fn accent_disabled(node: Node, attr: &str, script_index: usize) -> bool {
+    let resolved = boolean_attribute(node, attr).or_else(|| {
+        let script = node.children().filter(|c| c.is_element()).nth(script_index)?;
+        boolean_attribute(core_mo(script)?, "accent")
+    });
+    resolved == Some(false)
+}
+
+/// Report whether the base of an under/over element is an `mo` with `movablelimits="false"`.
+fn base_limits_unmovable(node: Node) -> bool {
+    let base = node.children().find(|c| c.is_element());
+    base.and_then(core_mo)
+        .and_then(|mo| boolean_attribute(mo, "movablelimits"))
+        == Some(false)
+}
+
+/// The `mo` at the core of `element`, looking through single-child grouping and a `semantics` with one
+/// presentation child, as the collector and renderer do.
+fn core_mo<'a, 'input>(element: Node<'a, 'input>) -> Option<Node<'a, 'input>> {
+    let mut current = element;
+    loop {
+        let tag = current.tag_name().name();
+        if tag.eq_ignore_ascii_case("mo") {
+            return Some(current);
+        }
+        let semantics = tag.eq_ignore_ascii_case("semantics");
+        if !semantics && !TRANSPARENT_ELEMENTS.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
+            return None;
+        }
+        let mut children = current
+            .children()
+            .filter(|c| c.is_element() && !(semantics && is_annotation(*c)));
+        current = match (children.next(), children.next()) {
+            (Some(only), None) => only,
+            _ => return None,
+        };
+    }
+}
+
+/// Report whether `node` is an `annotation` or `annotation-xml` element.
+fn is_annotation(node: Node) -> bool {
+    ANNOTATION_ELEMENTS
+        .iter()
+        .any(|&s| s.eq_ignore_ascii_case(node.tag_name().name()))
 }
 
 /// Collect a single MathML element into an `MmlNode`, dispatching on tag name.
@@ -278,29 +356,6 @@ const INFIX_OPERATORS: &[(&str, &str)] = &[
     ("compose", " \\circ "),
 ];
 
-/// Content MathML operators that render as a named LaTeX function.
-const FUNCTION_OPERATORS: &[(&str, &str)] = &[
-    ("sin", "\\sin"),
-    ("cos", "\\cos"),
-    ("tan", "\\tan"),
-    ("sec", "\\sec"),
-    ("csc", "\\csc"),
-    ("cot", "\\cot"),
-    ("arcsin", "\\arcsin"),
-    ("arccos", "\\arccos"),
-    ("arctan", "\\arctan"),
-    ("sinh", "\\sinh"),
-    ("cosh", "\\cosh"),
-    ("tanh", "\\tanh"),
-    ("exp", "\\exp"),
-    ("ln", "\\ln"),
-    ("log", "\\log"),
-    ("det", "\\det"),
-    ("gcd", "\\gcd"),
-    ("max", "\\max"),
-    ("min", "\\min"),
-];
-
 /// Convert a content-MathML `apply` subtree to LaTeX.
 ///
 /// Content MathML states what a formula *means* (`<apply><plus/><ci>a</ci>…`)
@@ -341,7 +396,7 @@ fn convert_apply(node: Node, budget: &mut SecurityBudget) -> Result<String, Secu
         }
         return Ok(rendered.join(latex));
     }
-    if let Some((_, latex)) = FUNCTION_OPERATORS.iter().find(|(op, _)| *op == name) {
+    if let Some((latex, _)) = crate::extraction::math_symbols::operator_name_to_latex(&name) {
         return Ok(format!("{latex}\\left({}\\right)", rendered.join(", ")));
     }
 
@@ -512,13 +567,11 @@ fn convert_content_node(node: Node, budget: &mut SecurityBudget) -> Result<Strin
 }
 
 fn collect_node_inner(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, SecurityError> {
-    let tag = node.tag_name().name();
-
-    if ANNOTATION_ELEMENTS.iter().any(|&s| s.eq_ignore_ascii_case(tag)) {
+    if is_annotation(node) {
         return Ok(MmlNode::Group { children: Vec::new() });
     }
 
-    let tag_lower = tag.to_ascii_lowercase();
+    let tag_lower = node.tag_name().name().to_ascii_lowercase();
     match tag_lower.as_str() {
         "mi" | "mn" | "ms" | "mo" => Ok(MmlNode::Run(collect_text(node, budget)?)),
         "mtext" => Ok(MmlNode::Text(collect_text(node, budget)?)),
@@ -551,12 +604,7 @@ fn collect_semantics_node(node: Node, budget: &mut SecurityBudget) -> Result<Mml
     }
     let children = node
         .children()
-        .filter(|c| {
-            c.is_element()
-                && !ANNOTATION_ELEMENTS
-                    .iter()
-                    .any(|&s| s.eq_ignore_ascii_case(c.tag_name().name()))
-        })
+        .filter(|c| c.is_element() && !is_annotation(*c))
         .map(|c| collect_node(c, budget))
         .collect::<Result<Vec<_>, _>>()?;
     // A document may carry only the content branch, in which case the
@@ -605,15 +653,22 @@ fn collect_scripted_node(tag: &str, node: Node, budget: &mut SecurityBudget) -> 
         "munder" => Ok(MmlNode::Under {
             base: Box::new(collect_nth_child(node, 0, budget)?),
             under: Box::new(collect_nth_child(node, 1, budget)?),
+            stacked: base_limits_unmovable(node),
+            no_accentunder: accent_disabled(node, "accentunder", 1),
         }),
         "mover" => Ok(MmlNode::Over {
             base: Box::new(collect_nth_child(node, 0, budget)?),
             over: Box::new(collect_nth_child(node, 1, budget)?),
+            stacked: base_limits_unmovable(node),
+            no_accent: accent_disabled(node, "accent", 1),
         }),
         "munderover" => Ok(MmlNode::UnderOver {
             base: Box::new(collect_nth_child(node, 0, budget)?),
             under: Box::new(collect_nth_child(node, 1, budget)?),
             over: Box::new(collect_nth_child(node, 2, budget)?),
+            stacked: base_limits_unmovable(node),
+            no_accent: accent_disabled(node, "accent", 2),
+            no_accentunder: accent_disabled(node, "accentunder", 1),
         }),
         "mphantom" => Ok(MmlNode::Phantom {
             body: Box::new(MmlNode::Group {

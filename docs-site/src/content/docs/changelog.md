@@ -53,6 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(mathml): Write limits on big operators and limit-taking names as `_{...}^{...}`.**
+  `munder`, `mover` and `munderover` always stacked, so a sum read `\overset{n}{\underset{i=1}{\sum }}` and `lim` read
+  `\underset{n}{lim}`. They now read `\sum_{i=1}^{n}` and `\lim_{n}`, integrals take `\limits`, and an operator with
+  `movablelimits="false"` keeps its limits stacked. `munderover` now applies accent scripts as `munder` and `mover`
+  already did, an `accent` or `accentunder` of `false` (on the element or its script's `mo`) keeps a script a visible
+  script, a `semantics` wrapper no longer hides `movablelimits="false"`, and content MathML names such as `arg` and
+  `coth` read `\arg` and `\coth`. An overbar or arrow accent no longer renders its base twice, which made nested
+  accents cost 2^depth.
 - **(pdf): A missing table structure model no longer drops the document's structure.**
   When layout detection found a table and the configured table model (TATR or SLANeXT) could not be loaded, the
   extraction fell back to plain text, without its layout-detected tables, headings or layout regions, and with no
