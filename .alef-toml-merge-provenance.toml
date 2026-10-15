@@ -1586,11 +1586,6 @@ values = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 
 [[entries]]
 relative_path = "poly.toml"
-key_path = "per-file-ignores.crates/xberg/src/rendering/plain.rs"
-values = ["cyclomatic-complexity", "function-too-long", "nesting-too-deep"]
-
-[[entries]]
-relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg/src/reranking/mod.rs"
 values = ["file-too-long", "function-too-long", "too-many-parameters"]
 
