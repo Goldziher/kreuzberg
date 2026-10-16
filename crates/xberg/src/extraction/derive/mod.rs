@@ -23,7 +23,9 @@ mod formulas;
 mod pages;
 use formulas::derive_formulas;
 pub(crate) use formulas::strip_math_delimiters;
-use pages::{apply_page_content_format, build_ocr_elements, build_pages};
+#[cfg(test)]
+use pages::build_pages;
+use pages::{build_ocr_elements, derive_pages};
 
 /// Cap on how many unresolvable keys a single warning names before it summarises
 /// the rest as a count, so a badly broken document cannot produce an unbounded
@@ -855,11 +857,7 @@ fn derive(
     // gets this document and `formatted_content` is `None`: plain output, or a custom format
     // name with no renderer. The document for a registered renderer is not the caller's. ~keep
     let content_is_plain = is_result && formatted_content.is_none();
-    let raw_pages = doc
-        .prebuilt_pages
-        .take()
-        .or_else(|| build_pages(&doc, content_is_plain));
-    let pages = apply_page_content_format(raw_pages, &doc, &output_format);
+    let pages = derive_pages(&mut doc, &content, &output_format, content_is_plain);
     let ocr_elements = doc.prebuilt_ocr_elements.take().or_else(|| build_ocr_elements(&doc));
 
     let formulas = derive_formulas(&mut doc);

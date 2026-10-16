@@ -7,6 +7,58 @@ use crate::types::ocr_elements::{OcrConfidence, OcrElement};
 use crate::types::page::PageContent;
 use crate::types::tables::Table;
 
+pub(super) fn derive_pages(
+    doc: &mut InternalDocument,
+    content: &str,
+    output_format: &crate::core::config::OutputFormat,
+    content_is_plain: bool,
+) -> Option<Vec<PageContent>> {
+    let raw_pages = doc.prebuilt_pages.take().or_else(|| build_pages(doc, content_is_plain));
+    let pages = apply_page_content_format(raw_pages, doc, output_format);
+    if content_is_plain {
+        reconcile_page_boundaries(&mut doc.metadata, content, pages.as_deref());
+    }
+    pages
+}
+
+pub(super) fn reconcile_page_boundaries(
+    metadata: &mut crate::types::Metadata,
+    content: &str,
+    pages: Option<&[PageContent]>,
+) {
+    let Some(boundaries) = metadata
+        .pages
+        .as_mut()
+        .and_then(|structure| structure.boundaries.as_mut())
+    else {
+        return;
+    };
+    let Some(pages) = pages.filter(|pages| pages.len() == boundaries.len()) else {
+        return;
+    };
+    let mut reconciled = Vec::with_capacity(boundaries.len());
+    let mut search_offset = 0;
+    for (boundary, page) in boundaries.iter().zip(pages) {
+        if boundary.page_number != page.page_number || page.content.is_empty() {
+            return;
+        }
+        let Some(relative_start) = content[search_offset..].find(&page.content) else {
+            return;
+        };
+        let byte_start = search_offset + relative_start;
+        let byte_end = byte_start + page.content.len();
+        reconciled.push(crate::types::PageBoundary {
+            byte_start,
+            byte_end,
+            page_number: page.page_number,
+        });
+        search_offset = byte_end;
+    }
+    // ~keep OCR boundaries can describe an intermediate rendering with different separators (#2128).
+    // Replace only a complete exact match; unmatched pages retain their original extraction metadata.
+    *boundaries = reconciled;
+}
+
 /// Build per-page `PageContent` from page-grouped elements.
 ///
 /// `content_is_plain` says that `result.content` is the plain rendering of the document:

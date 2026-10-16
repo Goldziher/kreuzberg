@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **(wordperfect): Plain output retains footnote and endnote bodies.** (#2129)
+- **(pdf, ocr): Page boundaries match complete page text in final Plain output, including UTF-8 and page separators.** (#2128)
 - **(wasm): OCR-enabled WebAssembly builds link successfully with Rust 1.99.**
 - **(wasm, url): URL extraction no longer decompresses a response twice after Fetch has decoded gzip, deflate, or Brotli.**
 - **(docx): inline equations stay in their original sentences and remain in the extracted formula inventory.** (#2123)

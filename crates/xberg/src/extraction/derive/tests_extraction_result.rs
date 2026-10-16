@@ -16,6 +16,181 @@ fn test_derive_extraction_result_basic() {
 }
 
 #[test]
+fn issue_2128_should_locate_all_ten_ocr_pages_in_final_plain_content() {
+    assert_final_ocr_page_boundaries("");
+}
+
+#[test]
+fn issue_2128_should_locate_utf8_ocr_pages_using_byte_offsets() {
+    assert_final_ocr_page_boundaries(" — café 東京 🦀");
+}
+
+#[test]
+fn issue_2128_should_preserve_boundaries_when_page_text_cannot_locate_them() {
+    for page_text in [None, Some(""), Some("unmatched page text")] {
+        let mut doc = make_doc("pdf");
+        doc.push_element(InternalElement::text(ElementKind::Paragraph, "actual rendered text", 0));
+        if let Some(page_text) = page_text {
+            let mut page_doc = make_doc("pdf");
+            page_doc.push_element(InternalElement::text(ElementKind::Paragraph, page_text, 0).with_page(1));
+            doc.prebuilt_pages = build_pages(&page_doc, true);
+        }
+        doc.metadata.pages = Some(crate::types::PageStructure {
+            total_count: 1,
+            unit_type: crate::types::PageUnitType::Page,
+            boundaries: Some(vec![crate::types::PageBoundary {
+                byte_start: 0,
+                byte_end: 20,
+                page_number: 1,
+            }]),
+            pages: None,
+        });
+        let before = serde_json::to_value(&doc.metadata.pages).unwrap();
+        let result = derive_extraction_result(doc, false, crate::core::config::OutputFormat::Plain);
+        assert_eq!(result.content, "actual rendered text");
+        assert_eq!(serde_json::to_value(&result.metadata.pages).unwrap(), before);
+    }
+}
+
+#[test]
+fn issue_2128_should_match_identical_pages_in_sequence() {
+    let mut doc = make_doc("pdf");
+    for page in 1..=3 {
+        doc.push_element(InternalElement::text(ElementKind::Paragraph, "Repeated café", 0).with_page(page));
+        doc.push_element(InternalElement::text(ElementKind::PageBreak, "", 0));
+    }
+    doc.metadata.pages = Some(crate::types::PageStructure {
+        total_count: 3,
+        unit_type: crate::types::PageUnitType::Page,
+        boundaries: Some(
+            (1..=3)
+                .map(|page_number| crate::types::PageBoundary {
+                    byte_start: 0,
+                    byte_end: 14,
+                    page_number,
+                })
+                .collect(),
+        ),
+        pages: None,
+    });
+    let result = derive_extraction_result(doc, false, crate::core::config::OutputFormat::Plain);
+    assert_eq!(result.content, "Repeated café\n\n\nRepeated café\n\n\nRepeated café");
+    let boundaries = result.metadata.pages.unwrap().boundaries.unwrap();
+    assert_eq!(boundaries.len(), 3);
+    for (index, boundary) in boundaries.iter().enumerate() {
+        assert_eq!(boundary.page_number, index as u32 + 1);
+        assert_eq!(boundary.byte_start, index * 17);
+        assert_eq!(boundary.byte_end, index * 17 + 14);
+        assert_eq!(&result.content[boundary.byte_start..boundary.byte_end], "Repeated café");
+    }
+}
+
+#[test]
+fn issue_2128_should_preserve_nonplain_and_renderer_input_metadata() {
+    let mut doc = make_doc("pdf");
+    doc.push_element(InternalElement::text(ElementKind::Paragraph, "Page one", 0).with_page(1));
+    doc.push_element(InternalElement::text(ElementKind::PageBreak, "", 0));
+    doc.push_element(InternalElement::text(ElementKind::Paragraph, "Page two", 0).with_page(2));
+    doc.metadata.pages = Some(crate::types::PageStructure {
+        total_count: 2,
+        unit_type: crate::types::PageUnitType::Page,
+        boundaries: Some(vec![
+            crate::types::PageBoundary {
+                byte_start: 0,
+                byte_end: 8,
+                page_number: 1,
+            },
+            crate::types::PageBoundary {
+                byte_start: 10,
+                byte_end: 18,
+                page_number: 2,
+            },
+        ]),
+        pages: None,
+    });
+    let before = serde_json::to_value(&doc.metadata.pages).unwrap();
+    let formatted = derive_extraction_result(doc.clone(), false, crate::core::config::OutputFormat::Markdown);
+    assert!(formatted.formatted_content.is_some());
+    assert_eq!(serde_json::to_value(&formatted.metadata.pages).unwrap(), before);
+    let renderer_input = derive_renderer_input(doc.clone());
+    assert_eq!(serde_json::to_value(&renderer_input.metadata.pages).unwrap(), before);
+    doc.metadata.pages = None;
+    let plain = derive_extraction_result(doc, false, crate::core::config::OutputFormat::Plain);
+    assert_eq!(
+        serde_json::to_value(&plain.metadata.pages).unwrap(),
+        serde_json::Value::Null
+    );
+}
+
+fn assert_final_ocr_page_boundaries(suffix: &str) {
+    let mut doc = make_doc("pdf");
+    let page_texts: Vec<String> = (1..=10)
+        .map(|page| {
+            format!(
+                "Scanned page {page:02}\nInvoice code 202610{page:02}\nQuantity {} widgets\nTotal {}.50 USD{suffix}",
+                page + 20,
+                100 + page
+            )
+        })
+        .collect();
+    let mut intermediate_offset = 0;
+    let boundaries = page_texts
+        .iter()
+        .enumerate()
+        .map(|(index, text)| {
+            let page_number = index as u32 + 1;
+            doc.push_element(InternalElement::text(ElementKind::Paragraph, text, 0).with_page(page_number));
+            doc.push_element(InternalElement::text(ElementKind::PageBreak, "", 0));
+            let boundary = crate::types::PageBoundary {
+                byte_start: intermediate_offset,
+                byte_end: intermediate_offset + text.len(),
+                page_number,
+            };
+            intermediate_offset += text.len() + 2;
+            boundary
+        })
+        .collect();
+    doc.metadata.pages = Some(crate::types::PageStructure {
+        total_count: 10,
+        unit_type: crate::types::PageUnitType::Page,
+        boundaries: Some(boundaries),
+        pages: None,
+    });
+    doc.metadata.title = Some("Synthetic OCR invoice batch".to_string());
+    doc.prebuilt_pages = build_pages(&doc, true);
+    let result = derive_extraction_result(doc, true, crate::core::config::OutputFormat::Plain);
+    assert_eq!(result.content, page_texts.join("\n\n\n"));
+    assert_eq!(result.metadata.title.as_deref(), Some("Synthetic OCR invoice batch"));
+    assert_final_page_slices(&result, &page_texts);
+}
+
+fn assert_final_page_slices(result: &ExtractedDocument, expected: &[String]) {
+    let structure = result.metadata.pages.as_ref().expect("page metadata");
+    assert_eq!(structure.total_count, 10);
+    assert_eq!(structure.unit_type, crate::types::PageUnitType::Page);
+    let boundaries = structure.boundaries.as_ref().expect("page boundaries");
+    let pages = result.pages.as_ref().expect("per-page OCR content");
+    assert_eq!(boundaries.len(), expected.len());
+    assert_eq!(pages.len(), expected.len());
+    let mut final_offset = 0;
+    for (index, ((boundary, page), text)) in boundaries.iter().zip(pages).zip(expected).enumerate() {
+        assert_eq!(page.page_number, index as u32 + 1);
+        assert_eq!(page.content, *text);
+        assert_eq!(boundary.page_number, page.page_number);
+        assert_eq!(
+            result.content.get(boundary.byte_start..boundary.byte_end),
+            Some(text.as_str()),
+            "page {} boundary must slice its complete final rendered text",
+            page.page_number
+        );
+        assert_eq!(boundary.byte_start, final_offset);
+        assert_eq!(boundary.byte_end, final_offset + text.len());
+        final_offset += text.len() + 3;
+    }
+    assert_eq!(boundaries.last().unwrap().byte_end, result.content.len());
+}
+
+#[test]
 fn should_publish_no_ocr_page_failures_as_none_and_never_serialize_an_empty_list() {
     let result = derive_extraction_result(make_doc("pdf"), false, crate::core::config::OutputFormat::Plain);
 
