@@ -1347,7 +1347,7 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
                 let idx = *page_idx;
                 let cancel_token = config.cancel_token.clone();
                 let original_config = ocr_config_resolved.clone();
-                join_set.spawn(async move {
+                join_set.spawn(crate::engine::seams::inherit_progress(async move {
                     if cancel_token.as_ref().is_some_and(|t| t.is_cancelled()) {
                         return (
                             idx,
@@ -1370,7 +1370,7 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
                     )
                     .await;
                     (idx, correction_degrees, upright_width, upright_height, result)
-                });
+                }));
             }
             while let Some(join_result) = join_set.join_next().await {
                 let (page_idx, correction_degrees, upright_width, upright_height, result) =
@@ -2637,7 +2637,9 @@ pub(super) async fn extract_with_ocr_for_page(
     let mut tatr_model = if layout_detections.is_some() && pdf_ocr_table_recognition_enabled(config) {
         let tatr_acceleration = config.resolved_layout_acceleration().cloned();
         let tatr_thread_budget = crate::core::config::concurrency::resolve_thread_budget(config.concurrency.as_ref());
+        let span = tracing::Span::current();
         tokio::task::spawn_blocking(move || {
+            let _entered = span.entered();
             crate::layout::take_or_create_tatr(tatr_acceleration.as_ref(), tatr_thread_budget)
         })
         .await
@@ -2761,7 +2763,9 @@ pub(super) async fn extract_with_ocr_for_page(
                 // invariant), so a cancelled page still needs an entry -- it just skips the
                 // real OCR work to get it. ~keep
                 if cancel_token.as_ref().is_some_and(|t| t.is_cancelled()) {
-                    join_set.spawn(async move { (idx, 0, 0, 0, Err(crate::XbergError::Cancelled)) });
+                    join_set.spawn(crate::engine::seams::inherit_progress(async move {
+                        (idx, 0, 0, 0, Err(crate::XbergError::Cancelled))
+                    }));
                     continue;
                 }
                 let backend_clone = std::sync::Arc::clone(&backend);
@@ -2849,7 +2853,7 @@ pub(super) async fn extract_with_ocr_for_page(
                 #[cfg(not(feature = "pdf"))]
                 let (upright_data, upright_width, upright_height, correction_degrees) =
                     (Arc::clone(image_data), *width, *height, 0u32);
-                join_set.spawn(async move {
+                join_set.spawn(crate::engine::seams::inherit_progress(async move {
                     if cancel_token.as_ref().is_some_and(|t| t.is_cancelled()) {
                         return (
                             idx,
@@ -2872,7 +2876,7 @@ pub(super) async fn extract_with_ocr_for_page(
                     )
                     .await;
                     (idx, correction_degrees, upright_width, upright_height, result)
-                });
+                }));
             }
             while let Some(join_result) = join_set.join_next().await {
                 let (page_idx, correction_degrees, upright_width, upright_height, ocr_result) =
@@ -3369,7 +3373,9 @@ pub(super) async fn extract_with_ocr_for_page(
                     // call's full duration on every table-bearing page. Route through
                     // `spawn_blocking` and hand the lease back through the join so the next
                     // page reuses it instead of it sitting checked out on a parked task. ~keep
+                    let span = tracing::Span::current();
                     let (model, outcome) = tokio::task::spawn_blocking(move || {
+                        let _entered = span.entered();
                         let outcome = crate::ocr::layout_assembly::recognize_page_tables_with_fallback(
                             &rgb,
                             &scaled_det,
@@ -5554,3 +5560,13 @@ pub(super) fn inject_layout_config_to_backend(
     }
     config
 }
+
+#[cfg(all(
+    test,
+    feature = "pdf",
+    feature = "ocr",
+    feature = "tokio-runtime",
+    not(target_arch = "wasm32")
+))]
+#[path = "tracing_tests.rs"]
+mod tracing_tests;

@@ -111,13 +111,18 @@ pub(crate) fn inherit_progress<F>(future: F) -> impl std::future::Future<Output 
 where
     F: std::future::Future,
 {
+    use tracing::Instrument as _;
+
     let context = CURRENT_PROGRESS.try_with(Clone::clone).ok();
+    // ~keep OCR page futures are large; bound stack use when task-local scope takes ownership (#2131).
+    let future = Box::pin(future);
     async move {
         match context {
             Some(context) => CURRENT_PROGRESS.scope(context, future).await,
             None => future.await,
         }
     }
+    .in_current_span()
 }
 
 #[cfg(feature = "tokio-runtime")]
