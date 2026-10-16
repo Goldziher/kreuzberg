@@ -128,7 +128,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ (inputs.republish == true && (inputs.ref || github.event.repository.default_branch)) || inputs.ref || inputs.tag || github.ref }}
+          ref: ${{ (inputs.republish == true && (inputs.ref || github.event.repository.default_branch)) || inputs.ref || inputs.tag || ((inputs.dry_run == true || inputs.dry_run == 'true' || github.event.client_payload.dry_run == true || github.event.client_payload.dry_run == 'true') && github.sha) || github.ref }}
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true
@@ -139,7 +139,10 @@ jobs:
           git config user.email "291994444+xberg-dev-publisher[bot]@users.noreply.github.com"
 
       - name: Retag for republish
-        if: ${{ inputs.republish == true || github.event.client_payload.republish == true }}
+        if: >-
+          ${{ (inputs.republish == true || github.event.client_payload.republish == true) &&
+              inputs.dry_run != true && inputs.dry_run != 'true' &&
+              github.event.client_payload.dry_run != true && github.event.client_payload.dry_run != 'true' }}
         uses: xberg-io/actions/retag-for-republish@v1
         with:
           tag: ${{ inputs.tag || github.event.client_payload.tag }}

@@ -1,5 +1,6 @@
 import ast
 import hashlib
+import itertools
 import os
 import re
 import shutil
@@ -62,41 +63,47 @@ def attribute_value(node: ast.Attribute, context: dict[str, object]) -> object:
     return value
 
 
-def evaluate_condition(expression: str, context: dict[str, object]) -> bool:
+def evaluate_expression(expression: str, context: dict[str, object]) -> object:
     translated = expression.replace("||", "or").replace("&&", "and").replace("startsWith", "starts_with")
     translated = re.sub(r"!(?!=)", "not ", translated).strip()
     translated = re.sub(r"\.[a-zA-Z_][a-zA-Z0-9_-]*", lambda match: match[0].replace("-", "_"), translated)
 
     def evaluate(node: ast.expr) -> object:
         if isinstance(node, ast.BoolOp):
-            values = (bool(evaluate(value)) for value in node.values)
-            if isinstance(node.op, ast.Or):
-                return any(values)
-            if isinstance(node.op, ast.And):
-                return all(values)
-        elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            result = evaluate(node.values[0])
+            for value in node.values[1:]:
+                if (isinstance(node.op, ast.Or) and not result) or (isinstance(node.op, ast.And) and result):
+                    result = evaluate(value)
+            return result
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
             return not evaluate(node.operand)
-        elif isinstance(node, ast.Compare) and len(node.ops) == len(node.comparators) == 1:
+        if isinstance(node, ast.Compare) and len(node.ops) == len(node.comparators) == 1:
             left = evaluate(node.left)
             right = evaluate(node.comparators[0])
             if isinstance(node.ops[0], ast.NotEq):
                 return left != right
             if isinstance(node.ops[0], ast.Eq):
                 return left == right
-        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "starts_with":
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "starts_with":
             assert len(node.args) == 2 and not node.keywords
             return str(evaluate(node.args[0])).startswith(str(evaluate(node.args[1])))
-        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "cancelled":
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "cancelled":
             assert not node.args and not node.keywords
             return context["cancelled"]
-        elif isinstance(node, ast.Attribute):
+        if isinstance(node, ast.Attribute):
             return attribute_value(node, context)
-        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+        if isinstance(node, ast.Constant) and isinstance(node.value, (str, bool)):
             return node.value
+        if isinstance(node, ast.Name) and node.id in ("true", "false"):
+            return node.id == "true"
         raise AssertionError(f"unsupported condition syntax: {ast.dump(node)}")
 
     parsed = ast.parse(translated, mode="eval")
-    return bool(evaluate(parsed.body))
+    return evaluate(parsed.body)
+
+
+def evaluate_condition(expression: str, context: dict[str, object]) -> bool:
+    return bool(evaluate_expression(expression, context))
 
 
 def github_context(event_name: str, tag: str, actor: str, triggering_actor: str) -> dict[str, object]:
@@ -798,6 +805,79 @@ def test_rust_ci_enables_bundled_oem_regressions_on_every_platform() -> None:
     assert checked == 6
 
 
+def prepare_step(name: str) -> str:
+    prepare = job_block(WORKFLOW.read_text(), "prepare")
+    step = re.search(rf"(?ms)^      - name: {re.escape(name)}\n(.*?)(?=^      - |\Z)", prepare)
+    assert step is not None, name
+    return step[1]
+
+
+def test_initial_release_checkout_pins_omitted_ref_dry_runs() -> None:
+    checkout = prepare_step("Checkout")
+    ref = re.search(r"(?m)^          ref: \$\{\{ (.+) \}\}$", checkout)
+    assert ref is not None
+    expression = ref[1]
+    mismatches = []
+    checked = 0
+    for dry, payload_dry in itertools.product((False, True, "false", "true", None), repeat=2):
+        for republish, explicit_ref, tag in (
+            (False, "", ""),
+            (False, "chosen", ""),
+            (False, "", "v1"),
+            (True, "", ""),
+            (True, "chosen", "v1"),
+        ):
+            context = {
+                "inputs": {"republish": republish, "ref": explicit_ref, "tag": tag, "dry_run": dry},
+                "github": {
+                    "event": {"repository": {"default_branch": "main"}, "client_payload": {"dry_run": payload_dry}},
+                    "sha": "frozen-dispatch-sha",
+                    "ref": "refs/heads/main",
+                },
+            }
+            expected = (
+                (explicit_ref or "main")
+                if republish
+                else explicit_ref
+                or tag
+                or (
+                    "frozen-dispatch-sha"
+                    if any(value is True or value == "true" for value in (dry, payload_dry))
+                    else "refs/heads/main"
+                )
+            )
+            actual = evaluate_expression(expression, context)
+            if actual != expected:
+                mismatches.append((dry, payload_dry, republish, explicit_ref, tag, actual, expected))
+            checked += 1
+    assert checked == 125
+    assert not mismatches, mismatches
+
+
+def test_release_retag_skips_boolean_and_string_dry_runs_in_both_channels() -> None:
+    step = prepare_step("Retag for republish")
+    raw = step.partition("        if:")[2].partition("        uses:")[0].strip().removeprefix(">-").strip()
+    expression = " ".join(raw.removeprefix("${{").removesuffix("}}").split())
+    mismatches = []
+    checked = 0
+    for republish in ((False, False), (True, False), (False, True), (True, True), ("true", False), (False, "true")):
+        for dry_input in (False, True, "false", "true", None):
+            for dry_payload in (False, True, "false", "true", None):
+                context = {
+                    "inputs": {"republish": republish[0], "dry_run": dry_input},
+                    "github": {"event": {"client_payload": {"republish": republish[1], "dry_run": dry_payload}}},
+                }
+                expected = any(value is True for value in republish) and not any(
+                    value is True or value == "true" for value in (dry_input, dry_payload)
+                )
+                actual = evaluate_condition(expression, context)
+                if actual != expected:
+                    mismatches.append((republish, dry_input, dry_payload, actual, expected))
+                checked += 1
+    assert checked == 150
+    assert not mismatches, mismatches
+
+
 def test_helm_publish_does_not_depend_on_the_cli_image_manifest() -> None:
     # The chart only references xberg:<version> and xberg:<version>-core. merge-docker is one
     # matrix job, so a cli leg that fails (cli/amd64 timing out leaves a single-arch digest,
@@ -880,6 +960,8 @@ if __name__ == "__main__":
     test_macos_unit_tests_reclaim_artifacts_before_libheif()
     test_xberg_unit_artifacts_are_reclaimed_before_workspace_tests()
     test_rust_ci_enables_bundled_oem_regressions_on_every_platform()
+    test_initial_release_checkout_pins_omitted_ref_dry_runs()
+    test_release_retag_skips_boolean_and_string_dry_runs_in_both_channels()
     test_helm_publish_does_not_depend_on_the_cli_image_manifest()
     test_swift_static_library_builds_disable_host_extension_symbol_lookup()
     test_publish_contracts_run_in_ci()
