@@ -47,7 +47,7 @@ impl TokenScores {
 fn tokenize_text(text: &str) -> HashMap<String, usize> {
     let normalized = text
         .to_lowercase()
-        .replace(['\u{2013}', '\u{2014}'], "-")
+        .replace(['\u{2013}', '\u{2014}', '\u{2212}'], "-")
         .chars()
         .map(|ch| {
             if ch >= ' ' || ch == '\n' || ch == '\r' || ch == '\t' {
@@ -126,6 +126,69 @@ fn calculate_token_scores(
     };
 
     TokenScores::new(precision, recall)
+}
+
+fn numeric_token_diagnostics(
+    truth_tokens: &HashMap<String, usize>,
+    candidate_tokens: &HashMap<String, usize>,
+) -> String {
+    let deficits = |expected: &HashMap<String, usize>, actual: &HashMap<String, usize>| {
+        let mut differences = expected
+            .iter()
+            .filter_map(|(token, count)| {
+                let missing = count.saturating_sub(*actual.get(token).unwrap_or(&0));
+                if missing > 0 {
+                    Some((token.clone(), missing))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        differences.sort_unstable();
+        differences
+    };
+    let truth_total: usize = truth_tokens.values().sum();
+    let candidate_total: usize = candidate_tokens.values().sum();
+    let missing = deficits(truth_tokens, candidate_tokens);
+    let excess = deficits(candidate_tokens, truth_tokens);
+    let missing_total: usize = missing.iter().map(|(_, count)| count).sum();
+    let overlap = truth_total - missing_total;
+    format!(
+        "Numeric multiset: overlap={overlap}, truth_total={truth_total}, \
+         ocr_total={candidate_total}; missing={missing:?}; excess={excess:?}"
+    )
+}
+
+#[test]
+fn should_report_sorted_numeric_differences_with_repeated_token_counts() {
+    let truth = HashMap::from([("9".to_string(), 3), ("1".to_string(), 2)]);
+    let candidate = HashMap::from([("9".to_string(), 1), ("3".to_string(), 4)]);
+
+    assert_eq!(
+        numeric_token_diagnostics(&truth, &candidate),
+        "Numeric multiset: overlap=1, truth_total=5, ocr_total=5; \
+         missing=[(\"1\", 2), (\"9\", 2)]; excess=[(\"3\", 4)]"
+    );
+    assert_eq!(
+        numeric_token_diagnostics(&HashMap::new(), &HashMap::new()),
+        "Numeric multiset: overlap=0, truth_total=0, ocr_total=0; missing=[]; excess=[]"
+    );
+}
+
+#[test]
+fn should_normalize_minus_glyphs_without_losing_numeric_signs() {
+    let expected = HashMap::from([("-12".to_string(), 1), ("5".to_string(), 1)]);
+    for value in ["-12.5", "−12.5", "–12.5", "—12.5"] {
+        assert_eq!(extract_numeric_tokens(&tokenize_text(value)), expected, "{value}");
+    }
+    assert_ne!(
+        extract_numeric_tokens(&tokenize_text("12.5")),
+        extract_numeric_tokens(&tokenize_text("-12.5"))
+    );
+    assert_ne!(
+        extract_numeric_tokens(&tokenize_text("- 12.5")),
+        extract_numeric_tokens(&tokenize_text("-12.5"))
+    );
 }
 
 /// Count non-empty lines in text (layout fidelity metric).
@@ -273,6 +336,11 @@ fn test_ocr_quality_numeric_accuracy() {
         println!("  F1: {:.3}", numeric_scores.f1);
         println!("  Numeric tokens in truth: {}", truth_numeric.len());
         println!("  Numeric tokens in OCR: {}", ocr_numeric.len());
+
+        if numeric_scores.recall < 0.90 || numeric_scores.f1 < 0.65 {
+            println!("{}", numeric_token_diagnostics(&truth_numeric, &ocr_numeric));
+            println!("Native Tesseract version: {}", xberg_tesseract::TesseractAPI::version());
+        }
 
         // `embedded_images_tables.pdf` carries numbers in embedded image tables/charts
         // that the native text layer (our `truth`) does not contain. force_ocr correctly
