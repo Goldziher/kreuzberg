@@ -10,6 +10,8 @@ import tempfile
 import textwrap
 from pathlib import Path
 
+from zigbuild_release_contracts import assert_zigbuild_negative_controls, validate_zigbuild_workflow
+
 WORKFLOW = Path(__file__).parents[2] / ".github" / "workflows" / "publish.yaml"
 GO_SETUP = Path(__file__).parents[2] / "packages" / "go" / "cmd" / "setup" / "main.go"
 GO_RELEASE_SCRIPT = Path(__file__).parent / "package-go-release.sh"
@@ -486,7 +488,7 @@ def test_glibc_native_closures_are_strictly_verified() -> None:
 def test_php_linux_artifacts_are_floor_built_and_verified() -> None:
     block = job_block(WORKFLOW.read_text(), "php-extension")
     setup_zig = block.index("Setup Zig for PHP glibc floor")
-    install_zigbuild = block.index("Install cargo-zigbuild for PHP glibc floor")
+    install_zigbuild = block.index("Install verified cargo-zigbuild for GNU targets")
     setup_ort = block.index("Setup ONNX Runtime (Linux)")
     first_build = block.index("xberg-io/actions/build-php-extension@v1")
     rebuild = block.index("Rebuild PHP extension at the glibc floor")
@@ -497,7 +499,7 @@ def test_php_linux_artifacts_are_floor_built_and_verified() -> None:
     upload = block.index("actions/upload-artifact@v7", verify)
 
     assert (
-        setup_zig < install_zigbuild < setup_ort < first_build < rebuild < package < stage_ort < verify < smoke < upload
+        setup_zig < setup_ort < first_build < install_zigbuild < rebuild < package < stage_ort < verify < smoke < upload
     )
     ort_step = block[setup_ort : block.index("xberg-io/actions/build-php-extension@v1")]
     assert "if: contains(matrix.platform.target, '-linux-gnu')" in ort_step
@@ -878,6 +880,14 @@ def test_release_retag_skips_boolean_and_string_dry_runs_in_both_channels() -> N
     assert not mismatches, mismatches
 
 
+def test_every_release_zigbuild_consumer_uses_the_verified_tool() -> None:
+    validate_zigbuild_workflow(WORKFLOW.read_text())
+
+
+def test_zigbuild_wiring_gate_rejects_missing_wrong_and_early_installers() -> None:
+    assert_zigbuild_negative_controls(WORKFLOW.read_text())
+
+
 def test_helm_publish_does_not_depend_on_the_cli_image_manifest() -> None:
     # The chart only references xberg:<version> and xberg:<version>-core. merge-docker is one
     # matrix job, so a cli leg that fails (cli/amd64 timing out leaves a single-arch digest,
@@ -962,6 +972,8 @@ if __name__ == "__main__":
     test_rust_ci_enables_bundled_oem_regressions_on_every_platform()
     test_initial_release_checkout_pins_omitted_ref_dry_runs()
     test_release_retag_skips_boolean_and_string_dry_runs_in_both_channels()
+    test_every_release_zigbuild_consumer_uses_the_verified_tool()
+    test_zigbuild_wiring_gate_rejects_missing_wrong_and_early_installers()
     test_helm_publish_does_not_depend_on_the_cli_image_manifest()
     test_swift_static_library_builds_disable_host_extension_symbol_lookup()
     test_publish_contracts_run_in_ci()

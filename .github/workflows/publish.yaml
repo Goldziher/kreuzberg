@@ -1335,11 +1335,6 @@ jobs:
         with:
           version: "0.13.0"
 
-      - name: Install cargo-zigbuild for PHP glibc floor
-        if: contains(matrix.platform.target, '-linux-gnu')
-        shell: bash
-        run: command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
-
       - name: Build liblzma statically for PHP glibc floor
         if: contains(matrix.platform.target, '-linux-gnu')
         shell: bash
@@ -1392,6 +1387,15 @@ jobs:
       # GitHub's Ubuntu image sets the artifact ABI floor. Rebuild only the shipped Linux
       # binary through Zig after restoring the workspace: v1.3.6 proved that adding
       # `-static-libstdc++` alone still emitted GLIBC_2.39 and GLIBCXX_3.4.31. ~keep
+      - name: Install verified cargo-zigbuild for GNU targets
+        if: contains(matrix.platform.target, '-linux-gnu')
+        uses: xberg-io/actions/setup-rust@0b670903ab1fe160a17492d5de61ec16f28a7264
+        with:
+          target: ${{ matrix.platform.target }}
+          disable-cache: "true"
+          install-llvm-cov: "false"
+          cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
+
       - name: Rebuild PHP extension at the glibc floor
         id: php_floor_build
         if: contains(matrix.platform.target, '-linux-gnu')
@@ -1887,11 +1891,6 @@ jobs:
         if: contains(matrix.target, '-linux-gnu')
         uses: xberg-io/actions/setup-zig@v1
 
-      - name: Install cargo-zigbuild for glibc 2.28 floor
-        if: contains(matrix.target, '-linux-gnu')
-        shell: bash
-        run: command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
-
       - name: Build liblzma statically for glibc floor
         if: contains(matrix.target, '-linux-gnu')
         shell: bash
@@ -1900,6 +1899,15 @@ jobs:
       - name: Install alef CLI
         if: ${{ !matrix.musl }}
         uses: xberg-io/actions/install-alef@9ed0576675002330bb3d5446ac603b70a6f096ee
+
+      - name: Install verified cargo-zigbuild for GNU targets
+        if: contains(matrix.target, '-linux-gnu')
+        uses: xberg-io/actions/setup-rust@0b670903ab1fe160a17492d5de61ec16f28a7264
+        with:
+          target: ${{ matrix.target }}
+          disable-cache: "true"
+          install-llvm-cov: "false"
+          cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
 
       - name: Package versioned Go archive with static-link metadata
         if: ${{ !matrix.musl }}
@@ -1970,15 +1978,19 @@ jobs:
         if: contains(matrix.target, '-linux-gnu')
         uses: xberg-io/actions/setup-zig@v1
 
-      - name: Install cargo-zigbuild for glibc 2.28 floor
-        if: contains(matrix.target, '-linux-gnu')
-        shell: bash
-        run: command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
-
       - name: Build liblzma statically for glibc floor
         if: contains(matrix.target, '-linux-gnu')
         shell: bash
         run: echo "LZMA_API_STATIC=1" >> "$GITHUB_ENV"
+
+      - name: Install verified cargo-zigbuild for GNU targets
+        if: contains(matrix.target, '-linux-gnu')
+        uses: xberg-io/actions/setup-rust@0b670903ab1fe160a17492d5de61ec16f28a7264
+        with:
+          target: ${{ matrix.target }}
+          disable-cache: "true"
+          install-llvm-cov: "false"
+          cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
 
       - id: build_ffi
         uses: xberg-io/actions/build-rust-ffi@v1
@@ -2104,15 +2116,19 @@ jobs:
         if: contains(matrix.target, '-linux-gnu')
         uses: xberg-io/actions/setup-zig@v1
 
-      - name: Install cargo-zigbuild for glibc 2.28 floor
-        if: contains(matrix.target, '-linux-gnu')
-        shell: bash
-        run: command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
-
       - name: Build liblzma statically for glibc floor
         if: contains(matrix.target, '-linux-gnu')
         shell: bash
         run: echo "LZMA_API_STATIC=1" >> "$GITHUB_ENV"
+
+      - name: Install verified cargo-zigbuild for GNU targets
+        if: contains(matrix.target, '-linux-gnu')
+        uses: xberg-io/actions/setup-rust@0b670903ab1fe160a17492d5de61ec16f28a7264
+        with:
+          target: ${{ matrix.target }}
+          disable-cache: "true"
+          install-llvm-cov: "false"
+          cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
 
       - uses: xberg-io/actions/build-java-natives@v1
         with:
@@ -2294,15 +2310,19 @@ jobs:
         if: contains(matrix.target, '-linux-gnu')
         uses: xberg-io/actions/setup-zig@v1
 
-      - name: Install cargo-zigbuild for glibc 2.28 floor
-        if: contains(matrix.target, '-linux-gnu')
-        shell: bash
-        run: command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
-
       - name: Build liblzma statically for glibc floor
         if: contains(matrix.target, '-linux-gnu')
         shell: bash
         run: echo "LZMA_API_STATIC=1" >> "$GITHUB_ENV"
+
+      - name: Install verified cargo-zigbuild for GNU targets
+        if: contains(matrix.target, '-linux-gnu')
+        uses: xberg-io/actions/setup-rust@0b670903ab1fe160a17492d5de61ec16f28a7264
+        with:
+          target: ${{ matrix.target }}
+          disable-cache: "true"
+          install-llvm-cov: "false"
+          cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
 
       - uses: xberg-io/actions/build-csharp-natives@v1
         with:
@@ -2750,10 +2770,6 @@ jobs:
       - name: Setup Zig for glibc 2.28 floor
         if: contains(matrix.target, '-linux-gnu')
         uses: xberg-io/actions/setup-zig@v1
-      - name: Install cargo-zigbuild for glibc 2.28 floor
-        if: contains(matrix.target, '-linux-gnu')
-        shell: bash
-        run: command -v cargo-zigbuild || cargo install --locked cargo-zigbuild
       - name: Build liblzma statically for glibc floor
         if: contains(matrix.target, '-linux-gnu')
         shell: bash
@@ -2762,6 +2778,15 @@ jobs:
         if: contains(matrix.target, 'windows')
         shell: bash
         run: echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
+
+      - name: Install verified cargo-zigbuild for GNU targets
+        if: contains(matrix.target, '-linux-gnu')
+        uses: xberg-io/actions/setup-rust@0b670903ab1fe160a17492d5de61ec16f28a7264
+        with:
+          target: ${{ matrix.target }}
+          disable-cache: "true"
+          install-llvm-cov: "false"
+          cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
 
       - name: Build Dart server native
         shell: bash
@@ -2927,6 +2952,16 @@ jobs:
           macos-dynamic-lookup: "false"
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
+
+      - name: Install verified cargo-zigbuild for GNU targets
+        if: contains(matrix.target, '-linux-gnu')
+        uses: xberg-io/actions/setup-rust@0b670903ab1fe160a17492d5de61ec16f28a7264
+        with:
+          target: ${{ matrix.target }}
+          disable-cache: "true"
+          install-llvm-cov: "false"
+          cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
+          macos-dynamic-lookup: "false"
 
       - uses: xberg-io/actions/build-swift-artifactbundle@v1
         id: libs

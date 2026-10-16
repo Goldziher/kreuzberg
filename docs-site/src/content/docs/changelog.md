@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(packaging): GNU cross-builds use a pinned linker wrapper compatible with Rust 1.99 warnings.**
 - **(swift): iOS simulator release builds omit macOS extension-linker flags.**
 - **(llm): Strict structured extraction validates provider output against the original JSON schema.**
   Invalid output leaves extracted text intact and reports a safe warning; schema references resolve offline. (#2136)
