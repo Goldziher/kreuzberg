@@ -75,7 +75,7 @@ fn collect_frac_pr(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> R
 pub(super) fn collect_rad(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Result<MathNode, SecurityError> {
     let mut deg = Vec::new();
     let mut body = Vec::new();
-    // An absent m:radPr or m:degHide is off, so the degree shows.
+    // An absent m:radPr or m:degHide is off, so the degree shows. ~keep
     let mut deg_hide = false;
     let mut buf = Vec::new();
 
@@ -618,10 +618,7 @@ pub(super) fn collect_group_chr(
                 budget.enter()?;
                 match e.name().as_ref() {
                     "m:groupChrPr" => {
-                        // `collect_group_chr_pr` reads through its own `</m:groupChrPr>`
-                        // without calling `budget.leave()`; refund the enter above.
                         collect_group_chr_pr(reader, &mut chr, &mut top, budget)?;
-                        budget.leave();
                     }
                     "m:e" => body = collect_children(reader, "m:e", budget)?,
                     _ => {}
@@ -639,6 +636,8 @@ pub(super) fn collect_group_chr(
         buf.clear();
     }
 
+    budget.check_entity(&chr)?;
+    budget.account_text(chr.len())?;
     Ok(MathNode::GroupChr { chr, top, body })
 }
 
@@ -653,22 +652,31 @@ fn collect_group_chr_pr(
 
     loop {
         budget.step()?;
-        match reader.read_event_into(&mut buf) {
+        let event = reader.read_event_into(&mut buf);
+        if matches!(event, Ok(Event::Start(_))) {
+            budget.enter()?;
+        }
+        match event {
             Ok(Event::Start(ref e) | Event::Empty(ref e)) => match e.name().as_ref() {
                 "m:chr" => {
                     if let Some(val) = get_m_val(e) {
+                        budget.check_attr("m:val", &val)?;
                         *chr = val;
                     }
                 }
                 "m:pos" => {
                     if let Some(val) = get_m_val(e) {
+                        budget.check_attr("m:val", &val)?;
                         *top = val == "top";
                     }
                 }
                 _ => {}
             },
-            Ok(Event::End(ref e)) if e.name().as_ref() == "m:groupChrPr" => {
-                break;
+            Ok(Event::End(ref e)) => {
+                budget.leave();
+                if e.name().as_ref() == "m:groupChrPr" {
+                    break;
+                }
             }
             Ok(Event::Eof) => break,
             _ => {}

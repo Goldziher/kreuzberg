@@ -34,7 +34,7 @@ fn omml_with_budget(xml: &str, budget: &mut SecurityBudget) {
         }
         buf.clear();
     }
-    // The DOCX parser's outer loop enters for the `<m:oMath>` start tag.
+    // The DOCX parser's outer loop enters for the `<m:oMath>` start tag. ~keep
     budget.enter().expect("depth for <m:oMath>");
     collect_and_convert_omath(&mut reader, budget).expect("conversion ok");
 }
@@ -140,8 +140,6 @@ fn should_reset_depth_counter_to_zero_after_parsing_unrecognized_tag() {
     );
 }
 
-/// GH#1395: `collect_group_chr_pr` reads through its own `</m:groupChrPr>`
-/// without calling `budget.leave()`.
 #[test]
 fn should_reset_depth_counter_to_zero_after_parsing_group_chr_with_group_chr_pr() {
     let mut budget = budget_with_max_depth(64);
@@ -616,4 +614,76 @@ fn test_delim_multiple_elements() {
             </m:d>"#,
     );
     assert_eq!(latex, "\\left(a \\mid b\\right)");
+}
+
+#[test]
+fn should_reject_group_chr_properties_exceeding_xml_depth() {
+    let mut budget = budget_with_max_depth(4);
+    budget.enter().unwrap();
+    let mut reader = Reader::from_str(
+        "<m:groupChr><m:groupChrPr><m:ctrlPr><w:rPr><w:b></w:b></w:rPr></m:ctrlPr></m:groupChrPr></m:groupChr>",
+    );
+    assert!(matches!(
+        collect_and_convert_omath(&mut reader, &mut budget),
+        Err(SecurityError::NestingTooDeep { max: 4, .. })
+    ));
+}
+
+#[test]
+fn should_reject_group_character_exceeding_entity_limit() {
+    let limits = crate::extractors::security::SecurityLimits {
+        max_entity_length: 3,
+        ..Default::default()
+    };
+    let mut budget = SecurityBudget::from_limits(&limits);
+    budget.enter().unwrap();
+    let mut reader = Reader::from_str(r#"<m:groupChr><m:groupChrPr><m:chr m:val="abcd"/></m:groupChrPr></m:groupChr>"#);
+    assert!(matches!(
+        collect_and_convert_omath(&mut reader, &mut budget),
+        Err(SecurityError::EntityTooLong { max: 3, .. })
+    ));
+}
+
+#[test]
+fn should_account_group_character_in_content_limit() {
+    let limits = crate::extractors::security::SecurityLimits {
+        max_content_size: 3,
+        ..Default::default()
+    };
+    let mut budget = SecurityBudget::from_limits(&limits);
+    budget.enter().unwrap();
+    let mut reader = Reader::from_str(r#"<m:groupChr><m:groupChrPr><m:chr m:val="abcd"/></m:groupChrPr></m:groupChr>"#);
+    assert!(matches!(
+        collect_and_convert_omath(&mut reader, &mut budget),
+        Err(SecurityError::ContentTooLarge { max: 3, .. })
+    ));
+}
+
+#[test]
+fn should_parse_all_radical_toggle_spellings() {
+    for (value, expected) in [
+        ("0", "\\sqrt[3]{x}"),
+        ("false", "\\sqrt[3]{x}"),
+        ("off", "\\sqrt[3]{x}"),
+        ("1", "\\sqrt{x}"),
+        ("true", "\\sqrt{x}"),
+        ("on", "\\sqrt{x}"),
+    ] {
+        let xml = format!(
+            r#"<m:rad><m:radPr><m:degHide m:val="{value}"/></m:radPr><m:deg><m:r><m:t>3</m:t></m:r></m:deg><m:e><m:r><m:t>x</m:t></m:r></m:e></m:rad>"#
+        );
+        assert_eq!(omml_to_latex(&xml), expected, "toggle {value}");
+    }
+}
+
+#[test]
+fn should_keep_group_character_position_independent_of_vertical_justification() {
+    for (position, expected) in [("top", "\\overbrace{x}"), ("bot", "\\underbrace{x}")] {
+        for justification in ["top", "bot"] {
+            let xml = format!(
+                r#"<m:groupChr><m:groupChrPr><m:pos m:val="{position}"/><m:vertJc m:val="{justification}"/></m:groupChrPr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:groupChr>"#
+            );
+            assert_eq!(omml_to_latex(&xml), expected);
+        }
+    }
 }
