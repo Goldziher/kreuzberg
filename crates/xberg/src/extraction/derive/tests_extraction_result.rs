@@ -361,6 +361,10 @@ fn test_derive_extraction_result_registered_custom_format_emits_no_warning() {
 /// verify this test fails without the fix.
 #[test]
 fn should_reseed_builtin_renderers_after_global_registry_cleared() {
+    #[cfg(not(target_arch = "wasm32"))]
+    if !renderer_reseed_runs_in_child() {
+        return;
+    }
     let _guard = crate::plugins::registry::test_support::RendererRegistryGuard::acquire();
     crate::plugins::clear_renderers().unwrap();
     assert!(
@@ -388,6 +392,32 @@ fn should_reseed_builtin_renderers_after_global_registry_cleared() {
         "a healed built-in render must not warn: {:?}",
         result.processing_warnings
     );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn renderer_reseed_runs_in_child() -> bool {
+    const CHILD_VARIABLE: &str = "XBERG_RENDERER_RESEED_CHILD";
+    const TEST_NAME: &str =
+        "extraction::derive::tests_extraction_result::should_reseed_builtin_renderers_after_global_registry_cleared";
+    if std::env::var(CHILD_VARIABLE).as_deref() == Ok(TEST_NAME) {
+        return true;
+    }
+    // ~keep Other parallel tests initialize renderers without acquiring RendererRegistryGuard.
+    let output = std::process::Command::new(std::env::current_exe().expect("test executable"))
+        .args(["--exact", TEST_NAME, "--nocapture"])
+        .env(CHILD_VARIABLE, TEST_NAME)
+        .output()
+        .expect("isolated renderer registry test");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let expected_test = format!("test {TEST_NAME} ... ok");
+    assert!(
+        output.status.success()
+            && stdout.lines().any(|line| line == expected_test)
+            && stdout.contains("test result: ok. 1 passed; 0 failed;"),
+        "renderer child must execute exactly one successful test:\n{stdout}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    false
 }
 
 /// #259: `code_intelligence` must surface the tree-sitter-derived
