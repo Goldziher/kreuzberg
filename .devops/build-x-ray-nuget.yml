@@ -1,22 +1,13 @@
-# Publishes the X-Ray family to nuget.org: X-Ray.Content (the native C# extraction engine under
-# dotnet/, whose API lives in the XRay.Content namespace) and X-Ray (the umbrella metapackage
-# that installs the family). Modelled on curiosity-ai/hnsw-sharp's .devops/build-nuget.yml:
-# CalVer versioning off the build id, pack, then push through the shared service connection.
+# Publishes X-Ray.Content to nuget.org: the native C# extraction engine under dotnet/, whose API
+# lives in the XRay.Content namespace. Modelled on curiosity-ai/hnsw-sharp's
+# .devops/build-nuget.yml: CalVer versioning off the build id, pack, then push through the shared
+# service connection.
 #
-# The whole family ships in one run, from one version. That is what keeps the umbrella honest:
-# its dependency on X-Ray.Content is written by `dotnet pack` from the version the referenced
-# project was packed with, so publishing together pins it to this run with nothing to bump by
-# hand. Publishing a member on its own would leave the umbrella pointing at the older version.
+# The family's umbrella package, `X-Ray`, no longer lives here: it moved to
+# https://github.com/curiosity-ai/x-ray, which references every member by PackageReference and
+# publishes on its own schedule. Nothing in this pipeline has to be kept in step with it.
 variables:
-  # Every packable project, in dependency order. The two tasks that take a list do not take it
-  # the same way: `projects` (restore/build) is a multi-line input, one path per line, while
-  # `packagesToPack` is a *pattern* input that is split on semicolons only — a newline-separated
-  # value there is one pattern containing a newline, which matches no file, and the pack step
-  # fails with "No files matched the search pattern". Hence `packList` below.
   library: './dotnet/src/XRay.Content/XRay.Content.csproj'
-  umbrella: './dotnet/src/XRay/XRay.csproj'
-  # The same two projects as one semicolon-separated pattern, for `packagesToPack`.
-  packList: '$(library);$(umbrella)'
   buildConfiguration: 'Release'
   targetVersion: yy.M.$(build.buildId)
 
@@ -63,17 +54,13 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
-    projects: |
-      $(library)
-      $(umbrella)
+    projects: '$(library)'
   displayName: 'restore nuget'
 
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
-    projects: |
-      $(library)
-      $(umbrella)
+    projects: '$(library)'
     arguments: '-c $(buildConfiguration) /p:Version=$(targetVersion) /p:LangVersion=latest'
   displayName: 'build'
 
@@ -85,17 +72,13 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'pack'
-    packagesToPack: '$(packList)'
+    packagesToPack: '$(library)'
     packDirectory: '$(Build.ArtifactStagingDirectory)'
     versioningScheme: 'off'
     configuration: '$(buildConfiguration)'
     buildProperties: 'Version="$(targetVersion)";LangVersion="latest"'
     nobuild: true
   displayName: 'pack nuget'
-
-# The push below picks up every .nupkg in the staging directory, so both packages go out in one
-# step. NuGet accepts them in any order — a package may be published before a dependency it
-# names, and the dependency only has to exist by the time a consumer restores.
 
 - task: NuGetCommand@2
   inputs:
