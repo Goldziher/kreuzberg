@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **(pdf): Consecutive-paragraph cleanup preserves repeated body text at distinct or unknown positions.**
+  Headings, lists, code, formulas, captions, and differences in capitalization are preserved; rendering duplicates
+  are removed only when their text and valid bounding boxes coincide.
+
 ## [1.3.11] - 2026-10-16
 
 ### Added

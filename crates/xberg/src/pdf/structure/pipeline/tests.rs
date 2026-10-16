@@ -4717,6 +4717,183 @@ fn table_coverage_with_text(page_index: usize, text: &str) -> ahash::AHashMap<us
     map
 }
 
+fn dedup_paragraph_at(text: &str, bottom: f32) -> PdfParagraph {
+    let mut segment = seg(text, 72.0, 328.0);
+    segment.y = bottom;
+    segment.baseline_y = bottom;
+    let mut paragraph = para(vec![line(vec![segment])]);
+    paragraph.block_bbox = Some((72.0, bottom, 400.0, bottom + 12.0));
+    paragraph
+}
+
+#[test]
+fn should_preserve_consecutive_body_paragraphs_at_distinct_positions() {
+    let text = "A legitimate repeated body paragraph appears at this page position.";
+    let paragraphs = (0..8)
+        .map(|index| dedup_paragraph_at(text, 600.0 - index as f32 * 40.0))
+        .collect::<Vec<_>>();
+    let expected_bounds = paragraphs
+        .iter()
+        .map(|paragraph| paragraph.block_bbox)
+        .collect::<Vec<_>>();
+    let mut pages = vec![paragraphs];
+
+    deduplicate_paragraphs(&mut pages, &ahash::AHashMap::new());
+
+    assert_eq!(
+        pages[0].iter().map(paragraph_text_raw).collect::<Vec<_>>(),
+        vec![text; 8]
+    );
+    assert_eq!(
+        pages[0]
+            .iter()
+            .map(|paragraph| paragraph.block_bbox)
+            .collect::<Vec<_>>(),
+        expected_bounds
+    );
+}
+
+#[test]
+fn should_preserve_eight_distinct_body_paragraphs_through_native_structure() {
+    let text = "The same body paragraph must remain visible at each separate location.";
+    let segments = (0..8)
+        .map(|index| {
+            let mut segment = seg(text, 72.0, 328.0);
+            segment.y = 600.0 - index as f32 * 40.0;
+            segment.baseline_y = segment.y;
+            segment
+        })
+        .collect();
+    let document = extract_document_structure_from_segments(
+        vec![segments],
+        SegmentStructureConfig {
+            k_clusters: 4,
+            tables: &[],
+            outline_entries: &[],
+            strip_repeating_text: true,
+            include_headers: true,
+            include_footers: true,
+            include_footnotes: true,
+            include_watermarks: true,
+            used_structure_tree: false,
+            image_positions: &[],
+            images: None,
+            inject_placeholders: false,
+            layout_hints: None,
+            allow_single_column: true,
+            cancel_token: None,
+            #[cfg(feature = "layout-detection")]
+            layout_images: None,
+            #[cfg(feature = "layout-detection")]
+            layout_results: None,
+            #[cfg(feature = "layout-detection")]
+            table_model: crate::core::config::layout::TableModel::Disabled,
+            #[cfg(feature = "layout-detection")]
+            table_overlap_preference: crate::core::config::layout::TableOverlapPreference::Content,
+            #[cfg(feature = "layout-detection")]
+            acceleration: None,
+            #[cfg(feature = "layout-detection")]
+            session_thread_budget: 0,
+        },
+    )
+    .expect("native structure extraction succeeds");
+    assert_eq!(
+        document.elements.iter().filter(|element| element.text == text).count(),
+        8
+    );
+}
+
+#[test]
+fn should_preserve_protected_consecutive_paragraphs_at_coincident_positions() {
+    let text = "Identical visible words must retain their semantic roles.";
+    for role in 0..6 {
+        let mut protected = dedup_paragraph_at(text, 600.0);
+        match role {
+            0 => protected.heading_level = Some(2),
+            1 => protected.is_list_item = true,
+            2 => protected.is_code_block = true,
+            3 => protected.is_formula = true,
+            4 => protected.caption_for = Some(0),
+            _ => protected.is_page_furniture = true,
+        }
+        let body = dedup_paragraph_at(text, 600.0);
+        for pair in [
+            vec![body.clone(), protected.clone()],
+            vec![protected.clone(), body.clone()],
+        ] {
+            let mut pages = vec![pair];
+            deduplicate_paragraphs(&mut pages, &ahash::AHashMap::new());
+            assert_eq!(
+                pages[0].iter().map(paragraph_text_raw).collect::<Vec<_>>(),
+                [text, text]
+            );
+        }
+    }
+}
+
+#[test]
+fn should_preserve_consecutive_paragraphs_without_valid_geometry() {
+    let text = "Repeated words without positions are not rendering artifacts.";
+    let bounds = [
+        None,
+        Some((72.0, 600.0, 72.0, 612.0)),
+        Some((72.0, 600.0, 400.0, 600.0)),
+        Some((400.0, 600.0, 72.0, 612.0)),
+        Some((72.0, f32::NAN, 400.0, 612.0)),
+        Some((72.0, 600.0, f32::INFINITY, 612.0)),
+    ];
+    for bbox in bounds {
+        let mut paragraph = dedup_paragraph_at(text, 600.0);
+        paragraph.text = text.to_string();
+        paragraph.lines.clear();
+        paragraph.block_bbox = bbox;
+        let mut pages = vec![vec![paragraph.clone(), paragraph]];
+        deduplicate_paragraphs(&mut pages, &ahash::AHashMap::new());
+        assert_eq!(
+            pages[0].iter().map(paragraph_text_raw).collect::<Vec<_>>(),
+            [text, text]
+        );
+    }
+}
+
+#[test]
+fn should_preserve_consecutive_paragraphs_with_unreliable_segment_geometry() {
+    let text = "Partly unknown positions cannot prove coincident rendering.";
+    for invalid_field in 0..8 {
+        let valid = seg(text, 72.0, 328.0);
+        let mut invalid = valid.clone();
+        match invalid_field {
+            0 => invalid.x = f32::NAN,
+            1 => invalid.y = f32::NAN,
+            2 => invalid.baseline_y = f32::NAN,
+            3 => invalid.width = f32::INFINITY,
+            4 => invalid.height = f32::NAN,
+            5 => invalid.width = 0.0,
+            6 => invalid.height = 0.0,
+            _ => invalid.width = -1.0,
+        }
+        let mut paragraph = para(vec![line(vec![valid, invalid])]);
+        paragraph.text = text.to_string();
+        let mut pages = vec![vec![paragraph.clone(), paragraph]];
+        deduplicate_paragraphs(&mut pages, &ahash::AHashMap::new());
+        assert_eq!(
+            pages[0].iter().map(paragraph_text_raw).collect::<Vec<_>>(),
+            [text, text]
+        );
+    }
+}
+
+#[test]
+fn should_preserve_consecutive_paragraphs_that_differ_in_case() {
+    let texts = [
+        "The Same Words Have Different Case",
+        "the same words have different case",
+    ];
+    let mut pages = vec![texts.iter().map(|text| dedup_paragraph_at(text, 600.0)).collect()];
+    deduplicate_paragraphs(&mut pages, &ahash::AHashMap::new());
+    assert_eq!(pages[0].iter().map(paragraph_text_raw).collect::<Vec<_>>(), texts);
+}
+
 #[test]
 fn test_deduplicate_paragraphs_removes_consecutive_duplicates() {
     let p1 = para(vec![line(vec![full_line_seg("Brand loses market share")])]);

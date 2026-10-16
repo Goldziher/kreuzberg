@@ -5647,10 +5647,9 @@ fn document_content_width(all_pages: &[Vec<PdfParagraph>]) -> f32 {
 /// Apply the structure pipeline's cross-page repeating-text policy to pages that
 /// were already classified by another source, such as OCR layout detection.
 ///
-/// This path has no table data available, so the same-page dedup pass below
-/// never has a table to match against and is a no-op here -- consistent with
-/// GH#1623's fix, which restricts that pass to paragraphs a detected table
-/// actually carries. ~keep
+/// No table data is available here, so same-page table-backed duplicates are
+/// preserved. Consecutive rendering artifacts still require coincident valid
+/// geometry; unpositioned OCR text is never collapsed by that pass. ~keep
 #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
 pub(crate) fn strip_repeating_text_from_pages(pages: &mut [Vec<PdfParagraph>], page_heights: &[f32]) {
     mark_cross_page_repeating_text(pages, page_heights);
@@ -6067,8 +6066,8 @@ fn has_font_size_variation(paragraphs: &[PdfParagraph]) -> bool {
 /// Deduplicate paragraphs with identical text within each page.
 ///
 /// Two-pass approach:
-/// 1. Consecutive duplicates: remove back-to-back identical paragraphs
-///    (catches bold/shadow rendering artifacts).
+/// 1. Consecutive duplicates: remove identical body paragraphs at known,
+///    coincident positions (catches repeated rendering artifacts).
 /// 2. Non-consecutive duplicates: remove a body-text paragraph whose text is
 ///    also carried by a table detected on the same page (catches table
 ///    content rendered as both table and body text). A paragraph that no
@@ -6091,9 +6090,16 @@ fn deduplicate_paragraphs(
 
         let mut i = 0;
         while i + 1 < page.len() {
-            let a_text = paragraph_text_normalized(&page[i]);
-            let b_text = paragraph_text_normalized(&page[i + 1]);
-            if page[i].layout_region_path == page[i + 1].layout_region_path && a_text.len() >= 5 && a_text == b_text {
+            let a_text = paragraph_text_whitespace_collapsed(&page[i]);
+            let b_text = paragraph_text_whitespace_collapsed(&page[i + 1]);
+            if is_dedup_candidate(&page[i])
+                && is_dedup_candidate(&page[i + 1])
+                && page[i].layout_region_path == page[i + 1].layout_region_path
+                && a_text.len() >= 5
+                && a_text == b_text
+                && rendering_artifact_bbox(&page[i])
+                    .is_some_and(|bbox| Some(bbox) == rendering_artifact_bbox(&page[i + 1]))
+            {
                 page.remove(i + 1);
             } else {
                 i += 1;
@@ -6309,23 +6315,7 @@ fn paragraph_text_raw(para: &PdfParagraph) -> String {
     }
 }
 
-/// Normalize paragraph text for deduplication comparison.
-///
-/// Uses `para.text` when populated (heuristic path), otherwise assembles text
-/// from segment data (structure tree path, used in tests).
-fn paragraph_text_normalized(para: &PdfParagraph) -> String {
-    paragraph_text_raw(para)
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .to_lowercase()
-}
-
-/// Case-preserving counterpart to [`paragraph_text_normalized`].
-///
-/// Used by the same-page table-duplicate check so a title-cased heading
-/// cannot match a body sentence fragment that differs only in case
-/// (GH#1623). ~keep
+/// Preserve case when comparing rendering artifacts or table duplicates (GH#1623). ~keep
 fn paragraph_text_whitespace_collapsed(para: &PdfParagraph) -> String {
     paragraph_text_raw(para)
         .split_whitespace()
@@ -6333,7 +6323,25 @@ fn paragraph_text_whitespace_collapsed(para: &PdfParagraph) -> String {
         .join(" ")
 }
 
-/// Check if a paragraph is a candidate for non-consecutive deduplication.
+fn rendering_artifact_bbox(paragraph: &PdfParagraph) -> Option<(f32, f32, f32, f32)> {
+    // The geometry union's f32 min/max can hide NaN, so validate each used segment first. ~keep
+    if paragraph.block_bbox.is_none()
+        && paragraph.lines.iter().flat_map(|line| &line.segments).any(|segment| {
+            !segment.x.is_finite()
+                || !segment.y.is_finite()
+                || !segment.baseline_y.is_finite()
+                || !segment.width.is_finite()
+                || !segment.height.is_finite()
+                || segment.width <= 0.0
+                || segment.height <= 0.0
+        })
+    {
+        return None;
+    }
+    paragraph_geometry_bbox(paragraph)
+        .filter(|&bbox| bbox_coordinates_are_finite(bbox) && bbox.0 < bbox.2 && bbox.1 < bbox.3)
+}
+
 fn is_dedup_candidate(p: &PdfParagraph) -> bool {
     p.heading_level.is_none()
         && !p.is_list_item
