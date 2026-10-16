@@ -487,6 +487,10 @@ public static class Mime
         if (b.Length >= 4 && ((b[0] == 0x49 && b[1] == 0x49 && b[2] == 0x2A && b[3] == 0x00) ||
                               (b[0] == 0x4D && b[1] == 0x4D && b[2] == 0x00 && b[3] == 0x2A))) return "image/tiff";
         if (b.Length >= 4 && b[0] == 0x25 && b[1] == 0x50 && b[2] == 0x44 && b[3] == 0x46) return "application/pdf";
+        // Photoshop `8BPS`, PSD and PSB alike, as `infer` reports it. Upstream sniffs it too but has
+        // no extractor for it; here it routes to PsdExtractor, an X-Ray addition.
+        if (b.Length >= 4 && b[0] == 0x38 && b[1] == 0x42 && b[2] == 0x50 && b[3] == 0x53)
+            return "image/vnd.adobe.photoshop";
         // OLE2 / CFB compound file (doc/xls/ppt/msg/hwp). The container magic names only the
         // container, so `DetectMimeTypeFromBytes` follows up with the root storage's CLSID;
         // `application/msword` is what a caller sees when that read cannot settle it.
@@ -636,6 +640,10 @@ public static class Mime
         Add("image/x-portable-bitmap", "pbm");
         Add("image/x-portable-graymap", "pgm");
         Add("image/x-portable-pixmap", "ppm");
+        // Not in upstream's table (its `mime_guess` fallback maps `.psd` to the same type, and
+        // nothing extracts it); added for PsdExtractor, an X-Ray addition. `.psb` is the large
+        // document variant of the same format.
+        Add("image/vnd.adobe.photoshop", "psd", "psb");
         Add("text/csv", "csv");
         Add("text/tab-separated-values", "tsv");
         Add("application/json", "json");

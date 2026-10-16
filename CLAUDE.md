@@ -43,6 +43,9 @@ port of it — off by default, opt-in, and a different engine. See
 renders a spreadsheet's cells the way the spreadsheet shows them — see
 [Deviation: formatted Excel cells](#deviation-formatted-excel-cells).
 
+**Photoshop documents are an addition beyond upstream**, not a port: xberg has no PSD
+extractor. See [Addition: Photoshop documents](#addition-photoshop-documents-psdpsb).
+
 ---
 
 ## Architecture (mirrors the Rust crate)
@@ -358,6 +361,51 @@ The loop that works:
   The optional OCR pass is the single documented exception — it pulls native code in
   transitively, which is why it is off by default. See
   [Deviation: optional OCR](#deviation-optional-ocr).
+
+---
+
+## Addition: Photoshop documents (PSD/PSB)
+
+**What upstream does.** Nothing useful: `infer` sniffs `8BPS` as `image/vnd.adobe.photoshop` and
+`mime_guess` maps `.psd` to it, but no extractor claims that type, so a PSD is an unsupported
+format. A Rust golden for a `psd/` fixture therefore records a failure, and the TestRunner counts
+the port's output for it as *extra*, not as a mismatch.
+
+**What the port does.** `Extractors/PsdExtractor.cs` reads `.psd`/`.psb` through the
+**`X-Ray.Psd`** NuGet package (namespace `XRay.Psd`, from curiosity-ai/x-ray-others, ported from
+the Patchy image editor). Its core has no dependencies and no native code, so extraction stays
+pure managed. Only its structural API is used — `PsdDocument.Load`, the layer tree, `PsdLayer.Text`,
+`ExtractText` for the `Txt2` text objects and XMP/IPTC, `Resources`, `LinkedFiles`. **Never render
+or decode pixels here**: pixel data stays compressed until rendering asks for it, which is what
+keeps a multi-gigabyte PSB cheap. `PsdFormatException` becomes `InvalidDataException`, the port's
+usual parse failure. Detection: `8BPS` in `Mime.SniffMagic`, and `psd`/`psb` in the extension table
+(neither is upstream's).
+
+**How the document is organised** — the layer tree as the Layers panel shows it, top to bottom:
+
+- The `Title` is the XMP/IPTC title, else the file name without its extension. Top-level layers
+  are `h2`; each group's children are one level deeper. Past `h6` a heading stays at `h6` (the
+  heading-driven JSON tree keeps every layer a section). With no title at all, layers start at `h1`.
+- **Every** layer gets a heading, pixel and adjustment layers included, and hidden layers are kept:
+  the structure is the point, and extraction reports what the file holds, not what a render shows.
+- A type layer's text follows its heading, one paragraph per Photoshop paragraph, at depth = the
+  heading's level, so the document structure nests it in that layer's section and the plain renderer
+  indents it under the heading. Where `Txt2` disagrees with the layer's own record, the `Txt2`
+  version (the one Photoshop displays) is written; a `Txt2` object no layer owns goes directly under
+  the title.
+- An embedded PSD/PSB smart object's layer tree nests under the smart object layer's heading, four
+  levels deep at most; a damaged one becomes a `psd` processing warning.
+- Document facts are metadata, not body: `ImageMetadata` (width, height, `PSD`/`PSB`, EXIF from
+  resource 1058), XMP/IPTC onto title/subject/authors/keywords, and `Additional` for colour mode, bit
+  depth, channel count, resolution, ICC profile, channel and path names, layer comps, slices (whose
+  URLs also become `Uris`), fonts, linked file names and the outer document's layer counts.
+
+**The version lives in one place**: `XRayPsdVersion` in `XRay.Content.csproj`. Until X-Ray.Psd is
+on nuget.org it is a placeholder that only a local feed satisfies — pack the library and pass
+`-p:RestoreAdditionalProjectSources=<feed>` (the csproj comment has the commands). Set it to the
+first published version once there is one. Tests: `PsdExtractorTests` (fixtures from
+`test_documents/psd/`, skipped when absent) and `SyntheticPsd`, a trimmed writer from Patchy's test
+`PsdBuilder` for corpus-free cases.
 
 ---
 

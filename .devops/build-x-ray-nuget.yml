@@ -6,6 +6,10 @@
 # The family's umbrella package, `X-Ray`, no longer lives here: it moved to
 # https://github.com/curiosity-ai/x-ray, which references every member by PackageReference and
 # publishes on its own schedule. Nothing in this pipeline has to be kept in step with it.
+#
+# Restore pulls X-Ray.Psd (the PSD/PSB reader, published from curiosity-ai/x-ray-others) from
+# nuget.org at the version `XRayPsdVersion` names in XRay.Content.csproj, so that version has to be
+# published before this pipeline can run.
 variables:
   library: './dotnet/src/XRay.Content/XRay.Content.csproj'
   buildConfiguration: 'Release'

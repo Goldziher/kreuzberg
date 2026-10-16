@@ -894,6 +894,29 @@ current upstream. Its two remaining spellings are the stale golden traced above,
 `vendored/unstructured/msg/fake-email-multiple-attachments.msg` (both traced and closed on every
 hard dimension — see "Every failing fixture, categorized" above).
 
+## X-Ray additions beyond upstream
+
+Formats this port reads that upstream xberg does not. No golden can measure them — the Rust
+reference fails on every fixture — so their unit tests are the whole signal, and the TestRunner
+counts their output as "rust failed, C# produced output".
+
+- [x] **Photoshop PSD/PSB** (`Extractors/PsdExtractor.cs`), read through the **X-Ray.Psd** package
+      (pure managed, no dependencies). Layer tree as headings, type-layer text as paragraphs under
+      its layer, embedded PSD/PSB smart objects nested, document facts (dimensions, colour mode,
+      depth, EXIF, XMP/IPTC, channel/path names, slices, fonts, layer comps) as metadata. Never
+      decodes pixels. `8BPS` sniffing and the `psd`/`psb` extensions route to it. See
+      "Addition: Photoshop documents" in `../CLAUDE.md`.
+- [ ] **Set `XRayPsdVersion`** (`src/XRay.Content/XRay.Content.csproj`) to the first X-Ray.Psd
+      version published on nuget.org. Until then it is `0.1.0-local`, which restores only from a
+      local feed, and the publishing pipeline cannot restore.
+- [ ] **Bump the `test_documents` pin** to the curiosity-ai/test_documents commit that carries
+      `psd/`. Until then the fixture-backed `PsdExtractorTests` return early (the synthetic ones
+      run regardless); `XRAY_TEST_DOCUMENTS=<corpus checkout>` runs them against a checkout
+      elsewhere.
+- [ ] Possible follow-ups, none needed for text: style runs (faux bold/italic, underline) as
+      annotations, Photoshop list paragraphs as list items. The composite image is deliberately
+      not offered to the OCR pass — producing it means rendering, which this extractor never does.
+
 ## Upstream sync, 2026-09-09
 
 Upstream `xberg-io/xberg` was merged at `5717407b` — 391 commits since the last common ancestor,

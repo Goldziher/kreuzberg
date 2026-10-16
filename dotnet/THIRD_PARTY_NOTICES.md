@@ -89,3 +89,11 @@ for the same reason.
 Model weights are **not** redistributed: nothing in this repository or its
 package downloads or ships a checkpoint. `OcrOptions.ModelDirectory` names where
 one already is, so whoever stages it accepts its own license.
+
+## X-Ray.Psd — not a derivative work
+
+`PsdExtractor` reads Photoshop files through the `X-Ray.Psd` package (MIT; ported from the Patchy
+image editor, © Seth A. Robinson and contributors). It is a dependency, not translated code, and
+it carries no dependencies or native binaries of its own, so the package's licence expression is
+unchanged by it. The test-only `tests/XRay.Content.Tests/SyntheticPsd.cs` is a trimmed adaptation
+of Patchy's MIT-licensed test writer `PsdBuilder.cs`; it is not part of the package.

@@ -24,6 +24,20 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- The X-Ray.Psd version PsdExtractor builds against (the family's PSD/PSB reader, published
+         from curiosity-ai/x-ray-others). THIS MUST BE SET TO THE FIRST PUBLISHED VERSION: until
+         X-Ray.Psd is on nuget.org, the placeholder below resolves only from a local feed, so a
+         restore anywhere else fails loudly rather than picking up something unintended. Change
+         this one line; nothing else names the version. For a local build against an unpublished
+         package, pack it and pass the feed and version on the command line:
+           dotnet pack <x-ray-psd>/src/XRay.Psd -c Release -p:PackageId=X-Ray.Psd -p:Version=0.1.0-local -o <feed>
+           dotnet build dotnet/XRay.Content.sln -p:RestoreAdditionalProjectSources=<feed>
+         (or export RestoreAdditionalProjectSources=<feed>). Its core takes no dependencies, so
+         this keeps extraction pure managed. -->
+    <XRayPsdVersion Condition="'$(XRayPsdVersion)' == ''">0.1.0-local</XRayPsdVersion>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="/" />
     <!-- The file PackageIcon above names; it has to be in the package for the icon to show.
@@ -46,6 +60,8 @@
     <PackageReference Include="SixLabors.Fonts" Version="2.0.9" />
     <PackageReference Include="System.Numerics.Tensors" Version="10.0.11" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.0" />
+    <!-- PSD/PSB structure and text; see XRayPsdVersion above. -->
+    <PackageReference Include="X-Ray.Psd" Version="$(XRayPsdVersion)" />
     <!-- The optional OCR pass; see the OCR section of CLAUDE.md. `PaddleOCR` is a managed
          recognizer whose only native dependency is SkiaSharp; `PaddleOCR.Pdf` adds PDFium, which
          is what rasterises a scanned page so ScanOnly has pixels to read. Both load lazily and

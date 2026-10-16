@@ -77,7 +77,8 @@ Set `IncludeDocumentStructure = true` to also get the `Document` heading tree, a
 
 Word, Excel, PowerPoint (modern and legacy binary), OpenDocument, RTF, WordPerfect, PDF,
 HTML/XML, Markdown/Djot/AsciiDoc/reStructuredText/Org/Typst/LaTeX, EPUB and FictionBook,
-email (EML, MSG, PST), iWork, HWP/HWPX, images (metadata and EXIF), CSV/TSV/DBF, JSON/YAML/TOML,
+email (EML, MSG, PST), iWork, HWP/HWPX, images (metadata and EXIF), Photoshop PSD/PSB (layer tree
+and type-layer text), CSV/TSV/DBF, JSON/YAML/TOML,
 BibTeX and citation formats, Jupyter notebooks, source code, and ZIP/TAR/7z/GZip archives
 (extracted recursively as child documents).
 

@@ -75,7 +75,7 @@ Set `IncludeDocumentStructure = true` to also get the `Document` heading tree, a
 
 ## Formats it reads
 
-48 extractors, covering 97 MIME types across 128 file extensions:
+49 extractors, covering 103 MIME types across 130 file extensions:
 
 - **Office** — Word, Excel, PowerPoint (modern and legacy binary), OpenDocument, RTF,
   WordPerfect, HWP/HWPX, iWork
@@ -88,6 +88,10 @@ Set `IncludeDocumentStructure = true` to also get the `Document` heading tree, a
 - **Academic** — BibTeX and citation formats
 - **Subtitles** — WebVTT
 - **Images** — metadata and EXIF (pixels are read only by the opt-in OCR pass)
+- **Photoshop** — PSD and PSB: the layer tree as headings, type-layer text beneath its layer,
+  embedded smart objects, and document facts as metadata, read through
+  [`X-Ray.Psd`](https://github.com/curiosity-ai/x-ray-others) without decoding a pixel. An X-Ray
+  addition: upstream Xberg does not extract Photoshop files
 - **Archives** — ZIP, TAR, 7z, GZip, extracted recursively as child documents
 - **Source code** — resolved by extension or shebang
 
@@ -132,6 +136,11 @@ cd dotnet
 dotnet build XRay.Content.sln -c Release
 dotnet test  tests/XRay.Content.Tests/XRay.Content.Tests.csproj -c Release
 ```
+
+The PSD/PSB extractor builds against [`X-Ray.Psd`](https://github.com/curiosity-ai/x-ray-others),
+whose version is the `XRayPsdVersion` property in `src/XRay.Content/XRay.Content.csproj`. Until
+that version is on nuget.org, pack the library into a local feed and point restore at it with
+`-p:RestoreAdditionalProjectSources=<feed>`; the csproj comment has the commands.
 
 A handful of tests read binary fixtures from the `test_documents` corpus, which is not in git:
 
