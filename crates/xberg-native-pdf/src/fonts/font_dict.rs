@@ -18,6 +18,12 @@ use skrifa::{FontRef, GlyphId, MetadataProvider};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[path = "unmapped_minus.rs"]
+mod unmapped_minus;
+#[cfg(test)]
+#[path = "unmapped_minus_tests.rs"]
+mod unmapped_minus_tests;
+
 /// Name-derived Standard-14 classification of a font, resolved once and
 /// memoized (see [`FontInfo::std14_memo`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -5036,7 +5042,7 @@ impl FontInfo {
             return Some(s.to_string());
         }
 
-        None
+        unmapped_minus::recover(self, char_code).map(|minus| minus.to_string())
     }
 
     /// Determine the font weight using a comprehensive cascade of PDF spec methods.

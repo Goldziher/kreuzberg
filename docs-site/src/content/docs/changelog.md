@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Native extraction preserves minus signs from unmapped math-axis bar glyphs in explicitly symbolic
+  Type1 fonts.** (#2130)
 - **(tracing, ocr): Parallel PDF OCR keeps its caller span context across task boundaries.** (#2131)
 - **(wordperfect): Plain output retains footnote and endnote bodies.** (#2129)
 - **(pdf, ocr): Page boundaries match complete page text in final Plain output, including UTF-8 and page separators.** (#2128)
