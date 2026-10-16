@@ -73,7 +73,7 @@ serde_ignored = "0.1"
 serde_json = { workspace = true }
 shellexpand = "3"
 
-sysinfo = "0.38"
+sysinfo = "0.39"
 tempfile = { workspace = true }
 thiserror = { workspace = true }
 tikv-jemalloc-ctl = { version = "0.7", features = ["stats"], optional = true }

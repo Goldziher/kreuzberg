@@ -27,7 +27,7 @@ resolver = "2"
 [workspace.package]
 version = "1.3.11"
 edition = "2024"
-rust-version = "1.92"
+rust-version = "1.95"
 authors = [
   "Na'aman Hirschfeld <naaman@xberg.io>",
   "Tobias Perlstein <tobias@xberg.io>",
@@ -65,7 +65,7 @@ chrono = "0.4"
 clap = { version = "4.6", features = ["derive", "color", "suggestions"] }
 comrak = { version = "0.56", default-features = false }
 console_error_panic_hook = "0.1"
-crawlberg = { version = "1.10.3", default-features = false }
+crawlberg = { version = "1.11.1", default-features = false }
 criterion = { version = "0.8", features = ["html_reports"] }
 dbase = "0.8"
 flate2 = "1.1"
@@ -73,19 +73,20 @@ fs2 = "0.4.3"
 futures = "0.3"
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
 hex = "0.4.3"
-html-to-markdown-rs = { version = "3.17.2", default-features = false }
+html-to-markdown-rs = { version = "3.18.1", default-features = false }
 image = { version = "0.25.10", default-features = false }
 itertools = "0.15"
 js-sys = "0.3"
 
 lazy_static = "1.5.1"
+# Crawlberg pins 0.2.189 until sysinfo releases its iOS Mach fix (GuillaumeGomez/sysinfo#1758). ~keep
 libc = "0.2.189"
 # Builds a bundled zlib from source (`static`) for the target, so the vendored
 # librevenge RVNGZipStream.cpp can `#include <zlib.h>` and link zlib even under
 # cross-compilation (zigbuild aarch64/musl) where no host libz is usable.
 # Only consumed by crates/xberg-libwpd. ~keep
 libz-sys = { version = "1.1", features = ["static"] }
-liter-llm = { version = "2.2.3", default-features = false }
+liter-llm = { version = "2.2.4", default-features = false }
 # `std` is NOT a default feature of `log`. `pdf::render`'s glyph-drop warning capture
 # calls `log::set_boxed_logger`, which only exists behind it, so a feature set that
 # happens not to pull `log/std` in transitively fails to compile (`pdf` without `ocr`
@@ -113,7 +114,7 @@ reqwest = { version = "0.13.5", default-features = false }
 resvg = { version = "0.48", default-features = false }
 rusqlite = { version = "0.40", default-features = false, features = ["bundled", "hooks", "serialize"] }
 same-file = "1.0.6"
-sceptre = { git = "https://github.com/xberg-io/sceptre", rev = "a7a809265379d3a6470fbc0338bc16acfec05dff", version = "0.8.0", default-features = false }
+sceptre = { version = "0.8.1", default-features = false }
 
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154" }
@@ -143,7 +144,7 @@ tracing = "0.1"
 # no-ORT targets (wasm32, x86_64-linux-android). The ONNX frontend crate is CPU-only
 # and WASM-safe; the top-level `tract` facade instead defaults to CUDA and bundles
 # GPU backends, so it is unusable here. See issue #1275.
-tract-onnx = { version = "0.23.8", default-features = false }
+tract-onnx = { version = "0.23.9", default-features = false }
 tree-sitter-language-pack = { version = "1.22.1", default-features = false, features = ["serde"] }
 url = "2.5.8"
 # usvg (re-exported by resvg) with only the `writer` feature so `Tree::to_string`

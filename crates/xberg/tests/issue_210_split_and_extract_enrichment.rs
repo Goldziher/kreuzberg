@@ -304,7 +304,7 @@ async fn should_preserve_enrichment_when_document_splits_into_one_segment() {
     let whole = whole_document(&bytes).await;
 
     let config = SplitConfig {
-        strategy: SplitStrategy::PageRanges(vec![1..=5]),
+        strategy: SplitStrategy::PageRanges(std::iter::once(1..=5).collect()),
         extraction: enriching_config(),
     };
     let segments = split_and_extract(&bytes, &config)

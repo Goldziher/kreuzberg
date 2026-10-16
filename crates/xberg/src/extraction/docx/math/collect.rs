@@ -58,6 +58,7 @@ fn dispatch_omml_tag(
         "m:limLow" => collect_limlow(reader, budget)?,
         "m:limUpp" => collect_limupp(reader, budget)?,
         "m:bar" => collect_bar(reader, budget)?,
+        "m:groupChr" => collect_group_chr(reader, budget)?,
         "m:borderBox" => collect_borderbox(reader, budget)?,
         "m:m" => collect_matrix(reader, budget)?,
         "m:box" | "m:phant" => {

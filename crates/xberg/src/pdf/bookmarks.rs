@@ -345,7 +345,7 @@ fn collect_name_pairs(
         return;
     };
 
-    for pair in names.chunks_exact(2) {
+    for pair in names.as_chunks::<2>().0 {
         if budget.attempted_pairs >= MAX_NAMED_DESTINATIONS || destinations.len() >= MAX_NAMED_DESTINATIONS {
             return;
         }

@@ -632,3 +632,33 @@ fn test_node_id_present_in_full_document_json() {
         "all node ids in one document must be unique, got: {ids:?}"
     );
 }
+
+#[test]
+fn should_roundtrip_issue_2123_math_without_changing_annotation_enum_shape() {
+    for (display, value) in [(false, "inline"), (true, "display")] {
+        let kind = AnnotationKind::math(display);
+        assert_eq!(kind.math_display(), Some(display));
+        let json = serde_json::to_value(&kind).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({"annotation_type":"custom", "name":"xberg.math", "value":value})
+        );
+        assert_eq!(serde_json::from_value::<AnnotationKind>(json).unwrap(), kind);
+    }
+    for (name, value) in [
+        ("math", Some("inline")),
+        ("xberg.math", None),
+        ("xberg.math", Some("false")),
+        ("xberg.Math", Some("display")),
+    ] {
+        assert_eq!(
+            AnnotationKind::Custom {
+                name: name.into(),
+                value: value.map(str::to_string)
+            }
+            .math_display(),
+            None
+        );
+    }
+    assert_eq!(AnnotationKind::Bold.math_display(), None);
+}

@@ -111,7 +111,7 @@ fn raw_pixels_to_png(
         }
         xberg_native_pdf::extractors::PixelFormat::CMYK => {
             let mut rgb = Vec::with_capacity((pixels.len() / 4) * 3);
-            for chunk in pixels.chunks_exact(4) {
+            for chunk in pixels.as_chunks::<4>().0 {
                 let c = chunk[0] as f32 / 255.0;
                 let m = chunk[1] as f32 / 255.0;
                 let y = chunk[2] as f32 / 255.0;
@@ -423,10 +423,8 @@ fn image_outcome_from_decoded(
             (data_bytes, Cow::Borrowed(actual_format))
         }
         xberg_native_pdf::extractors::ImageData::Raw { pixels, format } => {
-            match raw_pixels_to_png(native_img.width(), native_img.height(), format, pixels) {
-                Ok(bytes) => (bytes, Cow::Borrowed("png")),
-                Err(e) => return Err(e),
-            }
+            let bytes = raw_pixels_to_png(native_img.width(), native_img.height(), format, pixels)?;
+            (bytes, Cow::Borrowed("png"))
         }
     };
 

@@ -7,14 +7,13 @@ import json
 import os
 import shutil
 from builtins import ExceptionGroup
-from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.shared.exceptions import McpError
+from mcp.shared.exceptions import MCPError
 
 if TYPE_CHECKING:
     from hermes_cli.plugins import PluginContext
@@ -61,17 +60,17 @@ async def call_tool(arguments: dict[str, object], **_kwargs: object) -> dict[str
         async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
             async with (
                 stdio_client(server) as (read, write),
-                ClientSession(read, write, read_timeout_seconds=timedelta(seconds=REQUEST_TIMEOUT_SECONDS)) as session,
+                ClientSession(read, write, read_timeout_seconds=REQUEST_TIMEOUT_SECONDS) as session,
             ):
                 await session.initialize()
                 if tool == DISCOVERY_TOOL:
                     result = await session.list_tools()
                 else:
                     result = await session.call_tool(tool, parameters)
-                return result.model_dump(mode="json", exclude_none=True)
+                return result.model_dump(mode="json", by_alias=True, exclude_none=True)
     except TimeoutError:
         return {"error": f"{CLI_COMMAND} MCP request timed out; prepare models or reduce the workload."}
-    except (McpError, OSError, ExceptionGroup, ValueError) as error:
+    except (MCPError, OSError, ExceptionGroup, ValueError) as error:
         return {"error": f"{CLI_COMMAND} MCP request failed: {error_details(error)}"}
 
 

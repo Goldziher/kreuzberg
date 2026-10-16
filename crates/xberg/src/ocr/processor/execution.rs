@@ -1057,7 +1057,7 @@ fn should_apply_default_preprocessing(rgb_data: &[u8], width: u32, height: u32) 
     let mut foreground_pixels = 0usize;
     let mut foreground_histogram = [0usize; 256];
 
-    for pixel in rgb_data.chunks_exact(RGB_CHANNEL_COUNT) {
+    for pixel in rgb_data.as_chunks::<RGB_CHANNEL_COUNT>().0 {
         let pixel_channel_sum = u16::from(pixel[0]) + u16::from(pixel[1]) + u16::from(pixel[2]);
         channel_sum += u128::from(pixel_channel_sum);
         if pixel_channel_sum >= CLEAN_PAGE_LIGHT_CHANNEL_SUM_THRESHOLD {
@@ -1152,7 +1152,9 @@ fn lower_mode_has_text_structure(
         return false;
     };
     let lower_mode_mask: Vec<bool> = rgb_data
-        .chunks_exact(RGB_CHANNEL_COUNT)
+        .as_chunks::<RGB_CHANNEL_COUNT>()
+        .0
+        .iter()
         .map(|pixel| {
             let channel_sum = u16::from(pixel[0]) + u16::from(pixel[1]) + u16::from(pixel[2]);
             (channel_sum + 1) / RGB_CHANNEL_COUNT as u16 <= u16::from(lower_mode_max)
@@ -4975,7 +4977,7 @@ mod tests {
         let mut background_count = 0usize;
         let mut foreground_sum = 0.0;
         let mut foreground_count = 0usize;
-        for pixel in rgb_data.chunks_exact(RGB_CHANNEL_COUNT) {
+        for pixel in rgb_data.as_chunks::<RGB_CHANNEL_COUNT>().0 {
             let luminance = pixel.iter().map(|channel| f64::from(*channel)).sum::<f64>()
                 / (RGB_CHANNEL_MAX * RGB_CHANNEL_COUNT as f64);
             if luminance >= CLEAN_PAGE_LIGHT_PIXEL_THRESHOLD {

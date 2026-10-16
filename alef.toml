@@ -6,7 +6,7 @@
 # for. 0.83.0 additionally fixes the php/napi/pyo3 mirror defaults, the elixir bytes
 # hop and the typescript/wasm mock-url builder that this repo's e2e legs were red on.
 # ~keep
-alef_version = "0.110.11"
+alef_version = "0.110.16"
 languages = [
   "python",
   "node",
@@ -630,7 +630,7 @@ traineddata = "traineddata"
 "tools/benchmark-harness/baselines/initial_baseline.json" = ["file-too-long"]
 "tools/benchmark-harness/guardrails.json" = ["file-too-long"]
 # --- quality-debt baseline (generated) ---
-# 451 size/complexity rule attachments across 163 files that predate these metrics, listed per file
+# 450 size/complexity rule attachments across 163 files that predate these metrics, listed per file
 # rather than switching the rules off, so the metrics still fire on every file NOT listed
 # here -- new code stays covered, and each path below is one discrete unit of work.
 #
@@ -832,7 +832,7 @@ traineddata = "traineddata"
 "crates/xberg-tesseract/src/api.rs" = ["file-too-long"]
 "crates/xberg/src/api/handlers.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/candle_ocr/glm_ocr_backend.rs" = ["function-too-long"]
-"crates/xberg/src/chunking/core.rs" = ["file-too-long", "function-too-long"]
+"crates/xberg/src/chunking/core.rs" = ["file-too-long"]
 "crates/xberg/src/core/config/concurrency.rs" = ["file-too-long", "nesting-too-deep"]
 "crates/xberg/src/core/config/extraction/core.rs" = [
   "cyclomatic-complexity",
@@ -1537,20 +1537,14 @@ name = "crawlberg"
 from_registry = true
 sources = [
   "src/types/config.rs",
-  # crawlberg 1.7.2 split `types/config.rs` and `net/ssrf.rs` into sibling module
-  # directories, so a `sources` list naming only the two flat files no longer reaches the
-  # definitions: all eight of CrawlConfig's typed fields sanitize to `String`, and
-  # `SsrfPolicy.allowlist` degrades one level further to `Vec<String>` because `HostMatcher`
-  # lives in `matcher.rs`. Measured on alef 0.97.1, 0.98.0 and 0.99.0 alike -- this is not a
-  # generator regression. It surfaced only when the lock moved 1.7.1 -> 1.8.0, because
-  # `alef all` did not fail on `lossy_sanitized_surface` before 0.99.0 and would have shipped
-  # the degraded surface silently. ~keep
+  # Follow config submodules explicitly so typed fields do not degrade to strings.
+  # Read SSRF DTOs directly: its facade also includes SsrfError, whose CrawlError
+  # exception parent is outside this configuration-only source surface. ~keep
   "src/types/config/primitives.rs",
   "src/types/config/sections.rs",
   "src/types/config/credentials.rs",
   "src/types/discovery.rs",
   "src/types/results.rs",
-  "src/net/ssrf.rs",
   "src/net/ssrf/policy.rs",
   "src/net/ssrf/matcher.rs",
 ]
@@ -1598,6 +1592,12 @@ exclude_functions = [
   "embed_multi_vector_async",
 ]
 reexported_types = ["ExtractionResult", "ExtractedDocument", "ExtractionDiff"]
+
+[crates.python.dependency_versions]
+"cargo:pyo3" = "0.30"
+"cargo:pyo3-async-runtimes" = "0.30"
+"pypi:maturin" = "maturin>=1.15.0,<2.0"
+"pypi:pyrefly" = ">=1.4.0"
 
 [crates.python.stubs]
 output = "packages/python/xberg/"
@@ -3236,10 +3236,11 @@ before = "bash scripts/e2e/build-mock-server.sh && cd packages/elixir && XBERG_B
 # top-level dir outside it. ~keep
 e2e = "cd e2e/elixir && for dir in docx html json pdf text xlsx images; do test -L $dir || ln -sf ../../test_documents/$dir $dir; done && XBERG_BUILD=1 mix test"
 
+# The isolated WASM workspace must use the repository root's explicit pnpm release-age policy. ~keep
 [crates.test.wasm]
 precondition = "command -v wasm-pack >/dev/null 2>&1"
-before = "bash scripts/e2e/build-mock-server.sh && wasm-pack build crates/xberg-wasm --release --target nodejs --out-dir pkg/nodejs && node crates/xberg-wasm/scripts/fix-wasi-imports.mjs && cd e2e/wasm && pnpm install --ignore-workspace"
-e2e = "cd e2e/wasm && pnpm test"
+before = "bash scripts/e2e/build-mock-server.sh && wasm-pack build crates/xberg-wasm --release --target nodejs --out-dir pkg/nodejs && node crates/xberg-wasm/scripts/fix-wasi-imports.mjs && cd e2e/wasm && pnpm --config.minimumReleaseAge=0 install --ignore-workspace"
+e2e = "cd e2e/wasm && pnpm --config.minimumReleaseAge=0 test"
 
 [crates.test.rust]
 precondition = "command -v cargo >/dev/null 2>&1"

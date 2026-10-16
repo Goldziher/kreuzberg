@@ -10,7 +10,7 @@ part 'lib.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `try_convert_annotation_kind_from_core`, `try_convert_asset_category_from_core`, `try_convert_auth_config_from_core`, `try_convert_block_type_from_core`, `try_convert_boundary_reason_from_core`, `try_convert_browser_backend_from_core`, `try_convert_browser_mode_from_core`, `try_convert_browser_wait_from_core`, `try_convert_call_mode_from_core`, `try_convert_candle_deepseek_ocr_dtype_from_core`, `try_convert_candle_device_preference_from_core`, `try_convert_candle_trocr_variant_from_core`, `try_convert_caption_alt_text_mode_from_core`, `try_convert_chunk_sizing_from_core`, `try_convert_chunk_type_from_core`, `try_convert_chunker_type_from_core`, `try_convert_chunking_reason_from_core`, `try_convert_code_content_mode_from_core`, `try_convert_code_data_node_kind_from_core`, `try_convert_confidence_semantics_from_core`, `try_convert_content_filter_kind_from_core`, `try_convert_content_layer_from_core`, `try_convert_crawl_strategy_kind_from_core`, `try_convert_credential_provider_config_from_core`, `try_convert_diff_line_from_core`, `try_convert_document_content_encoding_from_core`, `try_convert_element_type_from_core`, `try_convert_embedding_model_type_from_core`, `try_convert_embeddings_embedding_backend_from_core`, `try_convert_entity_category_from_core`, `try_convert_execution_provider_type_from_core`, `try_convert_extract_input_kind_from_core`, `try_convert_extraction_method_from_core`, `try_convert_form_field_type_from_core`, `try_convert_format_metadata_from_core`, `try_convert_formula_model_from_core`, `try_convert_glm_ocr_layout_mode_from_core`, `try_convert_glm_ocr_task_kind_from_core`, `try_convert_host_matcher_from_core`, `try_convert_html_theme_from_core`, `try_convert_image_kind_from_core`, `try_convert_image_output_format_from_core`, `try_convert_image_type_from_core`, `try_convert_inline_type_from_core`, `try_convert_jupyter_cell_rendering_from_core`, `try_convert_keyword_algorithm_from_core`, `try_convert_late_interaction_model_type_from_core`, `try_convert_layout_class_from_core`, `try_convert_layout_strategy_from_core`, `try_convert_link_type_from_core`, `try_convert_merge_mode_from_core`, `try_convert_mime_detection_policy_from_core`, `try_convert_ner_backend_kind_from_core`, `try_convert_no_chunking_reason_from_core`, `try_convert_node_content_from_core`, `try_convert_ocr_backend_type_from_core`, `try_convert_ocr_bounding_geometry_from_core`, `try_convert_ocr_element_level_from_core`, `try_convert_ocr_strategy_from_core`, `try_convert_output_format_from_core`, `try_convert_paddle_inference_backend_from_core`, `try_convert_paddle_language_from_core`, `try_convert_paddle_ocr_vl_task_kind_from_core`, `try_convert_page_orientation_handling_from_core`, `try_convert_page_unit_type_from_core`, `try_convert_pdf_annotation_type_from_core`, `try_convert_pdf_backend_from_core`, `try_convert_pii_category_from_core`, `try_convert_preset_category_from_core`, `try_convert_probe_status_from_core`, `try_convert_processing_stage_from_core`, `try_convert_psm_mode_from_core`, `try_convert_redaction_offset_encoding_from_core`, `try_convert_redaction_strategy_from_core`, `try_convert_reduction_level_from_core`, `try_convert_region_kind_from_core`, `try_convert_relationship_kind_from_core`, `try_convert_reranker_head_from_core`, `try_convert_reranker_model_type_from_core`, `try_convert_result_format_from_core`, `try_convert_revision_anchor_from_core`, `try_convert_revision_kind_from_core`, `try_convert_schema_compliance_from_core`, `try_convert_sparse_embedding_model_type_from_core`, `try_convert_structured_data_type_from_core`, `try_convert_summary_strategy_from_core`, `try_convert_table_chunking_mode_from_core`, `try_convert_table_model_from_core`, `try_convert_table_overlap_preference_from_core`, `try_convert_text_direction_from_core`, `try_convert_tier_strategy_from_core`, `try_convert_uri_kind_from_core`, `try_convert_url_extraction_mode_from_core`, `try_convert_vlm_fallback_policy_from_core`, `try_convert_whisper_model_from_core`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ChunkClassificationEnrichmentConfig`, `DocumentExtractorDartCallbacks`, `EmbeddingBackendDartCallbacks`, `OcrBackendDartCallbacks`, `PostProcessorDartCallbacks`, `RendererDartCallbacks`, `RerankerBackendDartCallbacks`, `TokenizerBackendDartCallbacks`, `ValidatorDartCallbacks`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `backend_type`, `can_handle`, `confidence_semantics`, `count_tokens`, `dimensions`, `embed`, `emits_structured_markdown`, `estimated_duration_ms`, `extract`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `name`, `name`, `name`, `name`, `name`, `name`, `name`, `name`, `page_orientation_handling`, `priority`, `priority`, `priority`, `process_document`, `process_image_file`, `process_image`, `process`, `processing_stage`, `render_result`, `rerank`, `should_process`, `should_validate`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `supported_languages_for`, `supported_languages`, `supported_mime_types`, `supports_document_processing`, `supports_language_for`, `supports_language`, `supports_table_detection`, `validate`, `version`, `version`, `version`, `version`, `version`, `version`, `version`, `version`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `backend_type`, `can_handle`, `confidence_semantics`, `count_tokens`, `dimensions`, `embed`, `emits_structured_markdown`, `estimated_duration_ms`, `extract`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `initialize`, `name`, `name`, `name`, `name`, `name`, `name`, `name`, `name`, `page_orientation_handling`, `priority`, `priority`, `priority`, `process_document`, `process_image_file`, `process_image`, `process`, `processing_stage`, `render_result`, `rerank`, `should_process`, `should_validate`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `shutdown`, `supported_languages_for`, `supported_languages`, `supported_mime_types`, `supports_document_processing`, `supports_language_for`, `supports_language`, `supports_table_detection`, `validate`, `version`, `version`, `version`, `version`, `version`, `version`, `version`, `version`
 
 /// Extract content from a single bytes or URI input.
 Future<ExtractionResult> extract({
@@ -2569,9 +2569,13 @@ class BrowserConfig {
 
   /// Overall deadline for a single browser fetch, covering browser launch (or
   /// page acquisition from a shared pool), page setup, navigation, rendering,
-  /// and screenshot capture. Must exceed `timeout` to leave room for launch
-  /// and setup overhead; a fetch that has not returned within this deadline
-  /// fails with a timeout error (in milliseconds when serialized).
+  /// screenshot capture, and every retry of the fetch. Must exceed `timeout`
+  /// to leave room for launch and setup overhead; a fetch that has not
+  /// returned within this deadline fails with a timeout error (in
+  /// milliseconds when serialized). The wait for the delay of the domain
+  /// (`rate_limit_ms`) is not counted, so a delay longer than this deadline
+  /// does not fail the page. A scrape with the native backend is not bounded
+  /// by this deadline.
   ///
   /// Shutdown/teardown is governed separately by `shutdown_timeout` and is
   /// not counted against this deadline: an already-computed result is
@@ -2599,7 +2603,7 @@ class BrowserConfig {
 
   /// URL patterns to block before the network request fires. Supports `*`
   /// wildcards. Useful for skipping ads/analytics/large images. Honored by
-  /// `BrowserBackend::Native`; chromiumoxide ignores this field today.
+  /// both browser backends.
   final List<String> blockUrlPatterns;
 
   /// JavaScript snippet evaluated after navigation completes.
@@ -2619,7 +2623,8 @@ class BrowserConfig {
 
   /// Enable session affinity: reuse chromiumoxide Pages for same-domain
   /// requests so cookies + fingerprint + solved challenges persist.
-  /// Default: true. When false, each request gets a fresh Page.
+  /// Default: true. Session reuse requires `CrawlConfig.browser_session_pool` alongside a browser pool.
+  /// Without a session pool, or when false, each request gets a fresh Page.
   final bool sessionAffinity;
 
   /// Chrome or Chromium executable to launch. When set, crawlberg launches only this
@@ -4047,6 +4052,28 @@ class ContentConfig {
   /// parsed DOM, so turning this off does not lose any metadata field.
   final bool extractMetadata;
 
+  /// Replace paragraph source line breaks with spaces. Default: `false`.
+  final bool stripNewlines;
+
+  /// Markdown unordered-list markers, cycled by nesting level. Default: `"-*+"`.
+  final String bullets;
+
+  /// Spaces per nested list level. Default: `2`.
+  final PlatformInt64 listIndentWidth;
+
+  /// Markdown emphasis marker: `"*"` (default) or `"_"`.
+  final String strongEmSymbol;
+
+  /// Render tables without column-width padding. Default: `false`.
+  final bool compactTables;
+
+  /// HTML elements whose inline images stay images instead of alt text. Default: `[]`.
+  final List<String> keepInlineImagesIn;
+
+  /// Keep hidden elements, including body templates, in converted output. Default: `false`.
+  /// Scripts and styles remain excluded; explicit exclusions and image settings still apply.
+  final bool keepHidden;
+
   const ContentConfig({
     required this.outputFormat,
     required this.preprocessingPreset,
@@ -4061,6 +4088,13 @@ class ContentConfig {
     required this.wrapWidth,
     required this.includeDocumentStructure,
     required this.extractMetadata,
+    this.stripNewlines = false,
+    this.bullets = "-*+",
+    this.listIndentWidth = 2,
+    this.strongEmSymbol = "*",
+    this.compactTables = false,
+    this.keepInlineImagesIn = const [],
+    this.keepHidden = false,
   });
 
   @override
@@ -4077,7 +4111,14 @@ class ContentConfig {
       wrap.hashCode ^
       wrapWidth.hashCode ^
       includeDocumentStructure.hashCode ^
-      extractMetadata.hashCode;
+      extractMetadata.hashCode ^
+      stripNewlines.hashCode ^
+      bullets.hashCode ^
+      listIndentWidth.hashCode ^
+      strongEmSymbol.hashCode ^
+      compactTables.hashCode ^
+      keepInlineImagesIn.hashCode ^
+      keepHidden.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -4096,7 +4137,14 @@ class ContentConfig {
           wrap == other.wrap &&
           wrapWidth == other.wrapWidth &&
           includeDocumentStructure == other.includeDocumentStructure &&
-          extractMetadata == other.extractMetadata;
+          extractMetadata == other.extractMetadata &&
+          stripNewlines == other.stripNewlines &&
+          bullets == other.bullets &&
+          listIndentWidth == other.listIndentWidth &&
+          strongEmSymbol == other.strongEmSymbol &&
+          compactTables == other.compactTables &&
+          keepInlineImagesIn == other.keepInlineImagesIn &&
+          keepHidden == other.keepHidden;
 }
 
 /// Cross-extractor content filtering configuration.
@@ -4297,6 +4345,12 @@ class ConversionOptions {
   /// Automatically convert bare URLs into Markdown autolinks.
   final bool autolinks;
 
+  /// Append the title of an `<abbr>` in parentheses (default `true`).
+  final bool expandAbbreviations;
+
+  /// Append the `cite` URL after a blockquote (default `true`).
+  final bool includeBlockquoteCitations;
+
   /// Emit a default title when no `<title>` tag is present.
   final bool defaultTitle;
 
@@ -4395,6 +4449,13 @@ class ConversionOptions {
   /// text alone, or nothing. See [`InlineDataMedia`] for the elements it covers.
   final InlineDataMedia inlineDataMedia;
 
+  /// Which text that a browser does not show at first the output holds: none of it
+  /// ([`HiddenContent::Drop`], the default), the text a reader can get to in the page, such as
+  /// an inactive tab panel ([`HiddenContent::Reachable`]), or that text and the content of
+  /// `<template>` and `<noscript>` ([`HiddenContent::All`]). No choice writes a script or a
+  /// style sheet as text. See [`HiddenContent`] for each kind of hidden markup.
+  final HiddenContent hiddenContent;
+
   /// URL encoding strategy for link and image destinations.
   ///
   /// Controls how special characters in URL destinations are escaped:
@@ -4444,8 +4505,17 @@ class ConversionOptions {
   ///
   /// Unlike `strip_tags` (which removes the tag wrapper but keeps children),
   /// excluded elements and all their descendants are dropped from the output.
-  /// Supports any CSS selector that `tl` supports: tag names, `.class`,
-  /// `#id`, `[attribute]`, etc.
+  ///
+  /// A selector matches an element by its own properties: a tag name (`nav`), `.class`,
+  /// `#id`, an attribute (`[hidden]`, `[role=banner]`, and the `~=`, `^=`, `$=` and `*=`
+  /// forms), `*`, and these joined with no space (`div.note`, `a[href$="share"]`). One entry
+  /// can hold a comma-separated list of such selectors (`nav, footer`). Write a tag name in
+  /// lower case.
+  ///
+  /// A selector with a combinator (`.menu a`, `div > p`, `h2 + p`, `h2 ~ p`) or a
+  /// pseudo-class (`li:first-child`) matches nothing, and the conversion reports no error.
+  /// In a comma-separated list, such a member can stop the other members of the list too:
+  /// give each selector as an entry of its own.
   ///
   /// Invalid selectors are silently skipped at conversion time.
   ///
@@ -4492,6 +4562,8 @@ class ConversionOptions {
     required this.escapeAscii,
     required this.codeLanguage,
     required this.autolinks,
+    required this.expandAbbreviations,
+    required this.includeBlockquoteCitations,
     required this.defaultTitle,
     required this.brInTables,
     required this.compactTables,
@@ -4514,6 +4586,7 @@ class ConversionOptions {
     required this.preserveTags,
     required this.skipImages,
     required this.inlineDataMedia,
+    required this.hiddenContent,
     required this.urlEscapeStyle,
     required this.linkStyle,
     required this.outputFormat,
@@ -4542,6 +4615,8 @@ class ConversionOptions {
       escapeAscii.hashCode ^
       codeLanguage.hashCode ^
       autolinks.hashCode ^
+      expandAbbreviations.hashCode ^
+      includeBlockquoteCitations.hashCode ^
       defaultTitle.hashCode ^
       brInTables.hashCode ^
       compactTables.hashCode ^
@@ -4564,6 +4639,7 @@ class ConversionOptions {
       preserveTags.hashCode ^
       skipImages.hashCode ^
       inlineDataMedia.hashCode ^
+      hiddenContent.hashCode ^
       urlEscapeStyle.hashCode ^
       linkStyle.hashCode ^
       outputFormat.hashCode ^
@@ -4594,6 +4670,8 @@ class ConversionOptions {
           escapeAscii == other.escapeAscii &&
           codeLanguage == other.codeLanguage &&
           autolinks == other.autolinks &&
+          expandAbbreviations == other.expandAbbreviations &&
+          includeBlockquoteCitations == other.includeBlockquoteCitations &&
           defaultTitle == other.defaultTitle &&
           brInTables == other.brInTables &&
           compactTables == other.compactTables &&
@@ -4616,6 +4694,7 @@ class ConversionOptions {
           preserveTags == other.preserveTags &&
           skipImages == other.skipImages &&
           inlineDataMedia == other.inlineDataMedia &&
+          hiddenContent == other.hiddenContent &&
           urlEscapeStyle == other.urlEscapeStyle &&
           linkStyle == other.linkStyle &&
           outputFormat == other.outputFormat &&
@@ -4831,10 +4910,10 @@ class CrawlConfig {
   /// (`bücher.de` is matched as `xn--bcher-kva.de`).
   final bool pathPatternsMatchUrl;
 
-  /// Whether the crawl-dedup key includes the (sorted) query string. Defaults to `false`,
-  /// matching historical behavior: `/item?id=1` and `/item?id=2` are treated as one page and
-  /// only the first is fetched. `true` keeps the query, sorted, in the key, so each distinct
-  /// query is fetched once.
+  /// Whether the crawl-dedup key includes the query string, sorted by parameter name.
+  /// Defaults to `true`: `/item?id=1` and `/item?id=2` are distinct pages, each fetched once.
+  /// Set to `false` to merge query variants and fetch only the first. Session parameters
+  /// produce a page for each distinct value unless removed with `strip_tracking_params`.
   final bool dedupIncludeQuery;
 
   /// Whether to strip `tracking_params` from a discovered URL before it is deduplicated,
@@ -4857,7 +4936,8 @@ class CrawlConfig {
   final PlatformInt64 requestTimeout;
 
   /// Per-domain rate limit in milliseconds. When set, enforces a minimum delay
-  /// between requests to the same domain. Defaults to 200ms when `None`.
+  /// between requests to the same domain, in HTTP mode and before each page load in
+  /// browser mode. When `None`, HTTP mode uses 200ms and browser mode applies no delay.
   final PlatformInt64? rateLimitMs;
 
   /// Maximum number of redirects to follow.
@@ -9940,6 +10020,54 @@ sealed class HeuristicsError with _$HeuristicsError {
       HeuristicsError_PdfAnalysisError;
 }
 
+/// Which text that a browser does not show at first the output holds.
+///
+/// The choice answers one question: can a reader get to the text? It does not depend on how the
+/// page hides it.
+///
+/// | Markup | `Drop` | `Reachable` | `All` |
+/// | --- | --- | --- | --- |
+/// | An element with the `hidden` attribute, any value (`hidden="until-found"` too) | dropped | kept | kept |
+/// | An element with inline `display: none`, `visibility: hidden` or `font-size: 0` | dropped | kept | kept |
+/// | An element of an inline `<svg>` with `display="none"` or `visibility="hidden"` | dropped | kept | kept |
+/// | A declarative shadow root: a `<template>` whose `shadowrootmode` is `open` or `closed` | dropped | kept | kept |
+/// | Any other `<template>`, and `<noscript>` | dropped | dropped | kept |
+/// | `<script>`, `<style>`, comments, the value of `<input type="hidden">` | dropped | dropped | dropped |
+///
+/// `aria-hidden` is not hidden for this option. It takes an element away from assistive
+/// technology only: a browser still shows the element, so a reader sees its text, and every
+/// choice keeps it. One rule is older than this option and does not change with it: for an
+/// inline `<svg aria-hidden="true">` no choice writes the title, the description or the label
+/// of the graphic.
+///
+/// Every choice also keeps what the converter never treated as hidden: `inert`, a closed
+/// `<details>` or `<dialog>`, `<datalist>` and `<option>` text, and an element hidden by a class
+/// name, a style sheet rule, `opacity`, `content-visibility`, a zero size or an off-screen
+/// position. The converter reads the inline `style` attribute only. It does no layout and reads no
+/// style sheet, so it cannot tell that a rule in a style sheet hides an element.
+///
+/// A kept element converts like the same element without the attribute or style. Kept
+/// `<template>` and `<noscript>` content converts where it is written, as if the two tags were
+/// not there: a row in a `<template>` inside a `<table>` is a row of that table, and the content
+/// of a declarative shadow root comes before the other children of its host element. Slots are
+/// not resolved. `All` keeps `<noscript>` content with every preprocessing preset. A `<template>`
+/// or `<noscript>` in the document head holds metadata (`<link>`, `<meta>`, `<style>`), not text
+/// for a reader, and no choice keeps it. A document with no `<head>` tag has a head too: it
+/// starts at the doctype, at the `<html>` tag or at the first metadata element, and it ends
+/// where the body starts.
+enum HiddenContent {
+  /// Drop the text a browser does not show at first. Default.
+  drop,
+
+  /// Keep the text of elements that are in the page and that the page can show: an inactive tab
+  /// panel, a collapsed section, an answer shown on a click, a declarative shadow root.
+  reachable,
+
+  /// Keep what `Reachable` keeps, and the content of `<template>` and `<noscript>`. A reader
+  /// gets to that text only after a script copies it into the page, or with scripting off.
+  all,
+}
+
 class HierarchicalBlock {
   /// The text content of this block
   final String text;
@@ -10919,7 +11047,7 @@ enum InlineDataMedia {
   /// Write the `data:` URL as the destination, payload included. Default.
   keep,
 
-  /// Write the alt text (the title for an `<svg>`, the fallback content for `<video>` and
+  /// Write the alt text (the text of an `<svg>`, the fallback content for `<video>` and
   /// `<audio>`) without a destination.
   altTextOnly,
 

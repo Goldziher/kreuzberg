@@ -16,8 +16,8 @@ use crate::types::document_structure::{AnnotationKind, ContentLayer, TextAnnotat
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement, list_item_source_label_from_attributes};
 
 use super::common::{
-    FootnoteCollector, NestingKind, RenderState, handle_container_end, is_body_element, is_container_end,
-    parse_metadata_entries,
+    FootnoteCollector, NestingKind, RenderState, annotated_math, handle_container_end, is_body_element,
+    is_container_end, parse_metadata_entries, sorted_inline_annotations, valid_math_annotation,
 };
 
 /// Minimum valid ATX heading depth (CommonMark `#`).
@@ -69,6 +69,9 @@ fn normalize_text(text: &str) -> String {
 fn uniform_annotation_kind(elem: &InternalElement) -> Option<&AnnotationKind> {
     let mut formatting_ann: Option<&AnnotationKind> = None;
     for ann in &elem.annotations {
+        if valid_math_annotation(&elem.text, ann) {
+            return None;
+        }
         match &ann.kind {
             AnnotationKind::Bold | AnnotationKind::Italic | AnnotationKind::Strikethrough => {
                 if ann.start == 0 && ann.end as usize >= elem.text.len() {
@@ -227,15 +230,7 @@ fn build_inlines<'a>(
         return;
     }
 
-    let mut sorted: Vec<&TextAnnotation> = annotations.iter().collect();
-    sorted.sort_by_key(|a| {
-        let width = a.end.saturating_sub(a.start);
-        let priority: u8 = match &a.kind {
-            AnnotationKind::Link { .. } => 0,
-            _ => 1,
-        };
-        (a.start, std::cmp::Reverse(width), priority)
-    });
+    let sorted = sorted_inline_annotations(text, annotations);
 
     let len = text.len() as u32;
     let mut pos: u32 = 0;
@@ -333,6 +328,18 @@ fn append_annotated_span<'a>(
     kind: &AnnotationKind,
     inner: &[TextAnnotation],
 ) {
+    if let Some((literal, display_math)) = annotated_math(span, kind) {
+        parent.append(mk(
+            arena,
+            NodeValue::Math(NodeMath {
+                dollar_math: true,
+                display_math,
+                literal: literal.to_string(),
+            }),
+        ));
+        return;
+    }
+
     let (leading_ws, trimmed, trailing_ws) = if matches!(
         kind,
         AnnotationKind::Bold | AnnotationKind::Italic | AnnotationKind::Strikethrough
@@ -440,7 +447,27 @@ fn append_annotated_span<'a>(
             parent.append(link);
         }
         AnnotationKind::Color { .. } | AnnotationKind::FontSize { .. } | AnnotationKind::Custom { .. } => {
-            parent.append(mk_text(arena, trimmed));
+            if inner_for_node
+                .iter()
+                .any(|annotation| valid_math_annotation(trimmed, annotation))
+            {
+                let visible_children: Vec<_> = inner_for_node
+                    .iter()
+                    .filter(|annotation| {
+                        annotation.kind.math_display().is_some()
+                            || !matches!(
+                                &annotation.kind,
+                                AnnotationKind::Color { .. }
+                                    | AnnotationKind::FontSize { .. }
+                                    | AnnotationKind::Custom { .. }
+                            )
+                    })
+                    .cloned()
+                    .collect();
+                build_inlines(arena, parent, trimmed, &visible_children);
+            } else {
+                parent.append(mk_text(arena, trimmed));
+            }
         }
     }
 
@@ -2044,6 +2071,322 @@ mod tests {
         assert!(
             large < small * 24,
             "{LARGE} annotations took {large:?} against {small:?} for {SMALL}: growth is superlinear"
+        );
+    }
+    #[test]
+    fn should_keep_issue_2123_annotated_math_latex_unescaped() {
+        let text = r"From $5 to $10; $\alpha^{2}$ holds.";
+        let start = text.find(r"$\alpha").unwrap() as u32;
+        let end = start + r"$\alpha^{2}$".len() as u32;
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph(
+            text,
+            vec![TextAnnotation {
+                start,
+                end,
+                kind: AnnotationKind::Custom {
+                    name: "xberg.math".into(),
+                    value: Some("inline".into()),
+                },
+            }],
+            None,
+            None,
+        );
+        let doc = builder.build();
+        let arena = comrak::Arena::new();
+        let ast = build_comrak_ast(&doc, &arena);
+        let math: Vec<_> = ast
+            .descendants()
+            .filter_map(|node| {
+                let data = node.data.borrow();
+                if let NodeValue::Math(math) = &data.value {
+                    Some((math.literal.clone(), math.display_math))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(math, vec![(r"\alpha^{2}".into(), false)]);
+        assert_eq!(crate::rendering::render_markdown(&doc).trim(), text);
+    }
+
+    #[test]
+    fn should_preserve_issue_2123_math_under_bold_and_links_without_consolidation_loss() {
+        let text = r"$\alpha$";
+        let mut builder = InternalDocumentBuilder::new("test");
+        for _ in 0..2 {
+            builder.push_paragraph(
+                text,
+                vec![
+                    TextAnnotation {
+                        start: 0,
+                        end: text.len() as u32,
+                        kind: AnnotationKind::math(false),
+                    },
+                    TextAnnotation {
+                        start: 0,
+                        end: text.len() as u32,
+                        kind: AnnotationKind::Bold,
+                    },
+                    TextAnnotation {
+                        start: 0,
+                        end: text.len() as u32,
+                        kind: AnnotationKind::Link {
+                            url: "https://example.com".into(),
+                            title: None,
+                        },
+                    },
+                ],
+                None,
+                None,
+            );
+        }
+        let doc = builder.build();
+        let arena = comrak::Arena::new();
+        let ast = build_comrak_ast(&doc, &arena);
+        let math: Vec<_> = ast
+            .descendants()
+            .filter(|node| matches!(node.data.borrow().value, NodeValue::Math(_)))
+            .collect();
+        assert_eq!(math.len(), 2);
+        assert!(
+            math.iter()
+                .all(|node| matches!(node.parent().unwrap().data.borrow().value, NodeValue::Strong))
+        );
+        assert_eq!(crate::rendering::render_markdown(&doc).matches(r"\alpha").count(), 2);
+        let html = crate::rendering::render_html(&doc);
+        assert_eq!(html.matches("data-math-style=\"inline\"").count(), 2);
+        assert_eq!(html.matches("<strong>").count(), 2);
+        assert_eq!(html.matches("<a href=\"https://example.com\">").count(), 2);
+    }
+
+    #[test]
+    fn should_keep_issue_2123_adjacent_equations_and_literal_whitespace() {
+        let text = "$a  + b$$c\n+d$";
+        let first = "$a  + b$".len() as u32;
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph(
+            text,
+            vec![
+                TextAnnotation {
+                    start: 0,
+                    end: first,
+                    kind: AnnotationKind::math(false),
+                },
+                TextAnnotation {
+                    start: first,
+                    end: text.len() as u32,
+                    kind: AnnotationKind::math(false),
+                },
+            ],
+            None,
+            None,
+        );
+        let doc = builder.build();
+        let arena = comrak::Arena::new();
+        let ast = build_comrak_ast(&doc, &arena);
+        let literals: Vec<_> = ast
+            .descendants()
+            .filter_map(|node| match &node.data.borrow().value {
+                NodeValue::Math(math) => Some(math.literal.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(literals, ["a  + b", "c\n+d"]);
+        assert_eq!(crate::rendering::render_plain(&doc).trim(), text);
+    }
+
+    #[test]
+    fn should_reject_issue_2123_invalid_math_byte_ranges() {
+        for (text, start, end) in [("$x$", 0, 99), ("$x$", 99, 100), ("$x$", 2, 1), ("$α$", 1, 2)] {
+            let mut builder = InternalDocumentBuilder::new("test");
+            builder.push_paragraph(
+                text,
+                vec![TextAnnotation {
+                    start,
+                    end,
+                    kind: AnnotationKind::math(false),
+                }],
+                None,
+                None,
+            );
+            let doc = builder.build();
+            let arena = comrak::Arena::new();
+            let ast = build_comrak_ast(&doc, &arena);
+            assert_eq!(
+                ast.descendants()
+                    .filter(|node| matches!(node.data.borrow().value, NodeValue::Math(_)))
+                    .count(),
+                0,
+                "invalid byte range {start}..{end} in {text}"
+            );
+        }
+    }
+
+    #[test]
+    fn should_leave_issue_2123_unmarked_dollars_and_code_as_prose() {
+        let text = r"From $5 to $10 and $x$; $HOME; 5$; $\alpha$";
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph(text, vec![], None, None);
+        builder.push_paragraph(
+            "$x$",
+            vec![TextAnnotation {
+                start: 0,
+                end: 3,
+                kind: AnnotationKind::Custom {
+                    name: "other.math".into(),
+                    value: Some("inline".into()),
+                },
+            }],
+            None,
+            None,
+        );
+        builder.push_paragraph(
+            "$x$",
+            vec![
+                TextAnnotation {
+                    start: 0,
+                    end: 3,
+                    kind: AnnotationKind::math(false),
+                },
+                TextAnnotation {
+                    start: 0,
+                    end: 3,
+                    kind: AnnotationKind::Code,
+                },
+            ],
+            None,
+            None,
+        );
+        builder.push_table_from_cells(&[vec!["From $5 to $10 and $x$".into()]], None, None);
+        let doc = builder.build();
+        let arena = comrak::Arena::new();
+        let ast = build_comrak_ast(&doc, &arena);
+        assert_eq!(
+            ast.descendants()
+                .filter(|node| matches!(node.data.borrow().value, NodeValue::Math(_)))
+                .count(),
+            0
+        );
+        let html = crate::rendering::render_html(&doc);
+        assert!(!html.contains("data-math-style"));
+        assert!(html.contains("From $5 to $10 and $x$"));
+        assert!(html.contains(r"$\alpha$"));
+    }
+    #[test]
+    fn should_preserve_issue_2123_math_inside_transparent_annotations() {
+        let mut cases = 0;
+        for kind in [
+            AnnotationKind::Color { value: "red".into() },
+            AnnotationKind::FontSize { value: "12pt".into() },
+            AnnotationKind::Custom {
+                name: "other.annotation".into(),
+                value: None,
+            },
+        ] {
+            for (prefix, suffix) in [("", ""), ("π before ", " after")] {
+                let math = r"$\alpha  + x$";
+                let text = format!("{prefix}{math}{suffix}");
+                let start = prefix.len() as u32;
+                let end = start + math.len() as u32;
+                let mut builder = InternalDocumentBuilder::new("test");
+                builder.push_paragraph(
+                    &text,
+                    vec![
+                        TextAnnotation {
+                            start,
+                            end,
+                            kind: AnnotationKind::math(false),
+                        },
+                        TextAnnotation {
+                            start: 0,
+                            end: text.len() as u32,
+                            kind: kind.clone(),
+                        },
+                        TextAnnotation {
+                            start,
+                            end,
+                            kind: AnnotationKind::Bold,
+                        },
+                    ],
+                    None,
+                    None,
+                );
+                let doc = builder.build();
+                let arena = comrak::Arena::new();
+                let ast = build_comrak_ast(&doc, &arena);
+                let nodes: Vec<_> = ast
+                    .descendants()
+                    .filter(|node| matches!(node.data.borrow().value, NodeValue::Math(_)))
+                    .collect();
+                assert_eq!(nodes.len(), 1, "transparent annotation {kind:?}: {text}");
+                if let NodeValue::Math(value) = &nodes[0].data.borrow().value {
+                    assert_eq!(value.literal, r"\alpha  + x");
+                }
+                assert!(matches!(
+                    nodes[0].parent().unwrap().data.borrow().value,
+                    NodeValue::Strong
+                ));
+                assert_eq!(
+                    crate::rendering::render_markdown(&doc).trim(),
+                    format!("{prefix}**{math}**{suffix}")
+                );
+                let html = crate::rendering::render_html(&doc);
+                assert_eq!(html.matches("data-math-style=\"inline\"").count(), 1);
+                assert_eq!(html.matches("<strong>").count(), 1);
+                cases += 1;
+            }
+        }
+        assert_eq!(cases, 6);
+    }
+
+    #[test]
+    fn should_keep_issue_2123_math_free_transparent_annotation_behavior() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph(
+            "plain",
+            vec![
+                TextAnnotation {
+                    start: 0,
+                    end: 5,
+                    kind: AnnotationKind::Color { value: "red".into() },
+                },
+                TextAnnotation {
+                    start: 0,
+                    end: 5,
+                    kind: AnnotationKind::Bold,
+                },
+            ],
+            None,
+            None,
+        );
+        assert_eq!(crate::rendering::render_markdown(&builder.build()).trim(), "plain");
+    }
+    #[test]
+    fn should_flatten_issue_2123_transparent_annotation_chains() {
+        let text = r"$\alpha  + x$";
+        let mut annotations = vec![
+            TextAnnotation {
+                start: 0,
+                end: text.len() as u32,
+                kind: AnnotationKind::Color { value: "red".into() }
+            };
+            5000
+        ];
+        annotations.push(TextAnnotation {
+            start: 0,
+            end: text.len() as u32,
+            kind: AnnotationKind::math(false),
+        });
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph(text, annotations, None, None);
+        let doc = builder.build();
+        assert_eq!(crate::rendering::render_markdown(&doc).trim(), text);
+        assert_eq!(
+            crate::rendering::render_html(&doc)
+                .matches("data-math-style=\"inline\"")
+                .count(),
+            1
         );
     }
 }

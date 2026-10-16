@@ -194,7 +194,9 @@ fn parse_eqedit_script(data: &[u8]) -> Option<String> {
     let char_count = u16::from_le_bytes([data[4], data[5]]) as usize;
     let script_bytes = data.get(6..6 + char_count * 2)?;
     let units: Vec<u16> = script_bytes
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|b| u16::from_le_bytes([b[0], b[1]]))
         .collect();
     Some(String::from_utf16_lossy(&units).trim().to_string())

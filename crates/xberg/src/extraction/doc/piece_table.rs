@@ -196,7 +196,12 @@ fn decode_piece_chars(
         } else {
             let mut chars = Vec::new();
             let mut fc_ends = Vec::new();
-            for (i, unit) in word_doc[byte_offset..available_end].chunks_exact(2).enumerate() {
+            for (i, unit) in word_doc[byte_offset..available_end]
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .enumerate()
+            {
                 if let Some(c) = char::from_u32(u16::from_le_bytes([unit[0], unit[1]]) as u32) {
                     chars.push(c);
                     fc_ends.push((byte_offset + i * 2 + 2) as u32);
@@ -447,7 +452,9 @@ fn read_story_bounds(
     }
     let plc = table_stream.get(fc..fc.checked_add(lcb)?)?;
     let mut bounds: Vec<usize> = plc
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|cp| u32::from_le_bytes([cp[0], cp[1], cp[2], cp[3]]) as usize)
         .collect();
     bounds.pop();

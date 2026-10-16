@@ -802,12 +802,17 @@ fn a_gray_jpx_without_a_colorspace_routes_to_the_black_plate() {
     let plates = render_separations(&doc, 0, 72).expect("render");
     let black = plate(&plates, "Black");
     assert!(
-        black.data.chunks_exact(4).any(|pixel| pixel[0] > 200),
+        black.data.as_chunks::<4>().0.iter().any(|pixel| pixel[0] > 200),
         "the grayscale image's dark glyphs must reach the Black plate"
     );
     for ink in ["Cyan", "Magenta", "Yellow"] {
         assert!(
-            plate(&plates, ink).data.chunks_exact(4).all(|pixel| pixel[0] < 50),
+            plate(&plates, ink)
+                .data
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .all(|pixel| pixel[0] < 50),
             "the grayscale image must not reach the {ink} plate"
         );
     }

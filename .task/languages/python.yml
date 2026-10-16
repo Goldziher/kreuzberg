@@ -25,3 +25,18 @@ tasks:
       - cmd: |
           cd e2e/python && uv lock --upgrade
         ignore_error: true
+
+  publish:archive:prepare:
+    desc: Validate combined Python artifacts and prepare their public archive release
+    cmds:
+      - python3 scripts/ci/python_archive_publication.py prepare
+
+  publish:archive:wait:
+    desc: Refresh the central Python index and wait for verified public artifacts
+    cmds:
+      - python3 scripts/ci/python_archive_publication.py wait
+
+  publish:archive:test:
+    desc: Test Python archive publication and its bounded readiness gate
+    cmds:
+      - uv run --no-sync python -m pytest scripts/ci/test_python_archive_publication.py -v

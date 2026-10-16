@@ -1391,10 +1391,10 @@ async fn run_ocr_with_layout(
 ///
 /// This comparator deliberately matches the order the OCR side channel emits
 /// formulas in (`glm_ocr_backend::process_paired` sorts its regions the same
-/// way) — the pairing below is positional, so both sides must sort
-/// identically. It is NOT the row-banded reading order the image extractor
-/// uses for element layout; do not "unify" them without changing the
-/// pairing to a geometric match.
+/// way). Pairing falls back to position when the page has no geometry or
+/// overlap cannot pair every region, so both sides must sort identically. It
+/// is NOT the row-banded reading order the image extractor uses for element
+/// layout; do not "unify" them while that fallback exists.
 #[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
 fn formula_regions_in_reading_order(
     detection: &crate::layout::DetectionResult,
@@ -1458,8 +1458,15 @@ mod formula_region_tests {
     }
 
     #[test]
-    fn matching_counts_pair_positionally() {
+    fn matching_counts_without_geometry_pair_positionally() {
         let assigned = super::assign_formula_slots(2, &[None, None], None);
+        assert_eq!(assigned, vec![Some(0), Some(1)]);
+    }
+
+    #[test]
+    fn matching_counts_without_slot_bboxes_pair_positionally() {
+        let regions = [pt_box(10.0, 100.0, 200.0, 130.0), pt_box(10.0, 10.0, 200.0, 40.0)];
+        let assigned = super::assign_formula_slots(2, &[None, None], Some(&regions));
         assert_eq!(assigned, vec![Some(0), Some(1)]);
     }
 
@@ -1477,6 +1484,88 @@ mod formula_region_tests {
         ];
         let assigned = super::assign_formula_slots(3, &slots, Some(&regions));
         assert_eq!(assigned, vec![Some(1), None, Some(0)]);
+    }
+
+    #[test]
+    fn matching_counts_pair_by_geometry_not_by_position() {
+        // Two formulas on one line; the right one sits slightly higher, so it sorts first.
+        let regions = [pt_box(180.5, 339.8, 190.0, 351.0), pt_box(119.5, 340.0, 150.0, 350.5)];
+        let slots = [
+            Some(pt_box(120.2, 340.2, 149.4, 350.2)),
+            Some(pt_box(181.6, 340.2, 188.7, 350.2)),
+        ];
+        let assigned = super::assign_formula_slots(2, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(1), Some(0)]);
+    }
+
+    #[test]
+    fn matching_counts_pair_positionally_when_a_region_overlaps_nothing() {
+        // Region 0 overlaps slot 1; region 1 overlaps neither a missing box nor a distant one.
+        let regions = [pt_box(10.0, 100.0, 200.0, 130.0), pt_box(10.0, 10.0, 200.0, 40.0)];
+        let near = Some(pt_box(12.0, 102.0, 190.0, 128.0));
+        for slots in [[None, near], [Some(pt_box(300.0, 300.0, 400.0, 330.0)), near]] {
+            let assigned = super::assign_formula_slots(2, &slots, Some(&regions));
+            assert_eq!(assigned, vec![Some(0), Some(1)]);
+        }
+    }
+
+    #[test]
+    fn best_overlap_pairs_first_regardless_of_region_order() {
+        // Region 0 overlaps slot 0 by 0.8 and slot 1 by 0.6; region 1 covers slot 0 exactly.
+        let regions = [pt_box(2.0, 0.0, 16.0, 10.0), pt_box(0.0, 0.0, 10.0, 10.0)];
+        let slots = [Some(pt_box(0.0, 0.0, 10.0, 10.0)), Some(pt_box(10.0, 0.0, 20.0, 10.0))];
+        let assigned = super::assign_formula_slots(2, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(1), Some(0)]);
+    }
+
+    #[test]
+    fn matching_counts_find_a_complete_geometric_assignment_before_falling_back() {
+        let regions = [pt_box(10.0, 0.0, 25.0, 10.0), pt_box(5.0, 0.0, 15.0, 10.0)];
+        let slots = [Some(pt_box(10.0, 0.0, 20.0, 10.0)), Some(pt_box(20.0, 0.0, 30.0, 10.0))];
+        let assigned = super::assign_formula_slots(2, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(1), Some(0)]);
+    }
+
+    #[test]
+    fn matching_counts_complete_a_chain_of_contested_slots() {
+        let regions = [
+            pt_box(10.0, 0.0, 25.0, 10.0),
+            pt_box(20.0, 0.0, 35.0, 10.0),
+            pt_box(5.0, 0.0, 15.0, 10.0),
+        ];
+        let slots = [
+            Some(pt_box(10.0, 0.0, 20.0, 10.0)),
+            Some(pt_box(20.0, 0.0, 30.0, 10.0)),
+            Some(pt_box(30.0, 0.0, 40.0, 10.0)),
+        ];
+        let assigned = super::assign_formula_slots(3, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(1), Some(2), Some(0)]);
+    }
+
+    #[test]
+    fn mismatched_counts_give_a_contested_slot_to_the_best_overlap() {
+        // Region 0 overlaps the slot by 0.6 (IoU 0.43); region 1 contains it (IoU 0.25).
+        let regions = [pt_box(4.0, 0.0, 14.0, 10.0), pt_box(0.0, 0.0, 40.0, 10.0)];
+        let slots = [Some(pt_box(0.0, 0.0, 10.0, 10.0))];
+        let assigned = super::assign_formula_slots(2, &slots, Some(&regions));
+        assert_eq!(assigned, vec![None, Some(0)]);
+    }
+
+    #[test]
+    fn a_region_keeps_the_slot_it_overlaps_most() {
+        let regions = [pt_box(0.0, 0.0, 10.0, 10.0)];
+        let slots = [Some(pt_box(0.0, 0.0, 10.0, 10.0)), Some(pt_box(3.0, 0.0, 13.0, 10.0))];
+        let assigned = super::assign_formula_slots(1, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(0)]);
+    }
+
+    #[test]
+    fn nested_boxes_tied_on_overlap_pair_by_iou() {
+        // Each region contains or sits inside both slots, so every overlap is 1.0.
+        let regions = [pt_box(0.0, 0.0, 100.0, 20.0), pt_box(10.0, 5.0, 20.0, 15.0)];
+        let slots = [Some(pt_box(10.0, 5.0, 20.0, 15.0)), Some(pt_box(0.0, 0.0, 98.0, 20.0))];
+        let assigned = super::assign_formula_slots(2, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(1), Some(0)]);
     }
 
     #[test]
@@ -1536,14 +1625,37 @@ impl AsPageRgb for image::RgbImage {
     }
 }
 
+#[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
+fn bbox_intersection_area(a: &crate::types::BoundingBox, b: &crate::types::BoundingBox) -> f64 {
+    let ix = (a.x1.min(b.x1) - a.x0.max(b.x0)).max(0.0);
+    let iy = (a.y1.min(b.y1) - a.y0.max(b.y0)).max(0.0);
+    ix * iy
+}
+
+#[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
+fn bbox_area(b: &crate::types::BoundingBox) -> f64 {
+    (b.x1 - b.x0) * (b.y1 - b.y0)
+}
+
 /// Intersection area over the smaller box's area, in a shared coordinate
 /// space. 0.0 when either box is degenerate.
 #[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
 fn bbox_overlap_ratio(a: &crate::types::BoundingBox, b: &crate::types::BoundingBox) -> f64 {
-    let ix = (a.x1.min(b.x1) - a.x0.max(b.x0)).max(0.0);
-    let iy = (a.y1.min(b.y1) - a.y0.max(b.y0)).max(0.0);
-    let min_area = ((a.x1 - a.x0) * (a.y1 - a.y0)).min((b.x1 - b.x0) * (b.y1 - b.y0));
-    if min_area <= 0.0 { 0.0 } else { (ix * iy) / min_area }
+    let min_area = bbox_area(a).min(bbox_area(b));
+    if min_area <= 0.0 {
+        0.0
+    } else {
+        bbox_intersection_area(a, b) / min_area
+    }
+}
+
+/// Intersection over union. Breaks ties between overlaps of 1.0, where one
+/// box sits inside several others.
+#[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
+fn bbox_iou(a: &crate::types::BoundingBox, b: &crate::types::BoundingBox) -> f64 {
+    let intersection = bbox_intersection_area(a, b);
+    let union = bbox_area(a) + bbox_area(b) - intersection;
+    if union <= 0.0 { 0.0 } else { intersection / union }
 }
 
 /// A detection must cover a slot's box (or vice versa) by at least this
@@ -1551,49 +1663,113 @@ fn bbox_overlap_ratio(a: &crate::types::BoundingBox, b: &crate::types::BoundingB
 #[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
 const FORMULA_PAIR_MIN_OVERLAP: f64 = 0.5;
 
+#[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
+fn complete_formula_assignment(
+    start: usize,
+    choices: &[Vec<usize>],
+    assigned: &mut [Option<usize>],
+    slot_owners: &mut [Option<usize>],
+) -> bool {
+    let mut pending = std::collections::VecDeque::from([start]);
+    let mut visited_regions = vec![false; assigned.len()];
+    let mut predecessors = vec![None; slot_owners.len()];
+    visited_regions[start] = true;
+    while let Some(region) = pending.pop_front() {
+        for &slot in &choices[region] {
+            if predecessors[slot].is_some() {
+                continue;
+            }
+            predecessors[slot] = Some(region);
+            if let Some(owner) = slot_owners[slot] {
+                if !visited_regions[owner] {
+                    visited_regions[owner] = true;
+                    pending.push_back(owner);
+                }
+            } else {
+                let mut next_slot = slot;
+                while let Some(region) = predecessors[next_slot] {
+                    let previous_slot = assigned[region].replace(next_slot);
+                    slot_owners[next_slot] = Some(region);
+                    let Some(previous_slot) = previous_slot else { break };
+                    next_slot = previous_slot;
+                }
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Assign each detected region to at most one formula slot on one side
 /// (side-channel formulas or formula elements).
 ///
-/// When the counts match, pairing is positional in reading order — the
-/// OCR side channel emits its formulas in the same sort, and that invariant
-/// must hold (see [`formula_regions_in_reading_order`]). When the counts
-/// differ, each region pairs with the unused slot whose bounding box it
-/// overlaps most (both in PDF points); regions and slots without a
-/// sufficient overlap stay unassigned. Without region geometry
-/// (`regions_pts` is `None`), a count mismatch assigns nothing.
+/// With region geometry, region/slot pairs whose bounding boxes (both in PDF
+/// points) overlap enough are initially accepted best first, by overlap and
+/// then IoU, independently of region order.
+/// When the counts match, contested slots are reassigned along augmenting
+/// paths when needed to pair every region. If no complete matching exists,
+/// geometry is not trusted for the page and pairing is positional in reading
+/// order, as it is without geometry; the OCR side
+/// channel emits its formulas in the same sort (see
+/// [`formula_regions_in_reading_order`]). When the counts differ, unpaired
+/// regions stay unassigned, and without geometry nothing is assigned.
 #[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
 fn assign_formula_slots(
     region_count: usize,
     slot_bboxes: &[Option<crate::types::BoundingBox>],
     regions_pts: Option<&[crate::types::BoundingBox]>,
 ) -> Vec<Option<usize>> {
-    if slot_bboxes.len() == region_count {
-        return (0..region_count).map(Some).collect();
-    }
+    let counts_match = slot_bboxes.len() == region_count;
+    let positional = || (0..region_count).map(Some).collect();
     let Some(regions_pts) = regions_pts else {
-        return vec![None; region_count];
+        return if counts_match {
+            positional()
+        } else {
+            vec![None; region_count]
+        };
     };
-    let mut used = vec![false; slot_bboxes.len()];
-    regions_pts
-        .iter()
-        .map(|region| {
-            let mut best: Option<(usize, f64)> = None;
-            for (index, slot) in slot_bboxes.iter().enumerate() {
-                if used[index] {
-                    continue;
-                }
-                let Some(slot) = slot else { continue };
-                let overlap = bbox_overlap_ratio(region, slot);
-                if overlap >= FORMULA_PAIR_MIN_OVERLAP && best.is_none_or(|(_, b)| overlap > b) {
-                    best = Some((index, overlap));
-                }
+    debug_assert_eq!(regions_pts.len(), region_count);
+    let mut candidates: Vec<(usize, usize, f64, f64)> = Vec::new();
+    for (region_idx, region) in regions_pts.iter().enumerate() {
+        for (slot_idx, slot) in slot_bboxes.iter().enumerate() {
+            let Some(slot) = slot else { continue };
+            let overlap = bbox_overlap_ratio(region, slot);
+            if overlap >= FORMULA_PAIR_MIN_OVERLAP {
+                candidates.push((region_idx, slot_idx, overlap, bbox_iou(region, slot)));
             }
-            best.map(|(index, _)| {
-                used[index] = true;
-                index
-            })
-        })
-        .collect()
+        }
+    }
+    candidates.sort_by(|&(_, _, overlap_a, iou_a), &(_, _, overlap_b, iou_b)| {
+        overlap_b.total_cmp(&overlap_a).then(iou_b.total_cmp(&iou_a))
+    });
+    let mut assigned: Vec<Option<usize>> = vec![None; region_count];
+    let mut slot_taken = vec![false; slot_bboxes.len()];
+    for &(region_idx, slot_idx, _, _) in &candidates {
+        if assigned[region_idx].is_none() && !slot_taken[slot_idx] {
+            assigned[region_idx] = Some(slot_idx);
+            slot_taken[slot_idx] = true;
+        }
+    }
+    if counts_match && assigned.contains(&None) {
+        let mut choices = vec![Vec::new(); region_count];
+        for (region_idx, slot_idx, _, _) in candidates {
+            choices[region_idx].push(slot_idx);
+        }
+        let mut slot_owners = vec![None; slot_bboxes.len()];
+        for (region, slot) in assigned.iter().enumerate() {
+            if let Some(slot) = slot {
+                slot_owners[*slot] = Some(region);
+            }
+        }
+        for region in 0..region_count {
+            if assigned[region].is_none()
+                && !complete_formula_assignment(region, &choices, &mut assigned, &mut slot_owners)
+            {
+                return positional();
+            }
+        }
+    }
+    assigned
 }
 
 /// Whether an unpaired detection may become a new formula on this page.
@@ -1611,6 +1787,10 @@ fn formula_synthesis_allowed(has_region_geometry: bool, formula_slot_count: usiz
 /// point space. `None` when the document cannot be opened (for example an
 /// encrypted PDF); synthesized formulas then keep pixel coordinates, the
 /// documented fallback for pages whose geometry is unavailable.
+///
+/// The page rasters reaching formula recognition are MediaBox-oriented: OCR
+/// rasters are normalized, and markdown rasters survive only when no page is
+/// rotated (`markdown_layout_reusable_for_ocr`).
 #[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
 fn pdf_page_sizes_pt(content: &[u8], page_count: usize) -> Option<Vec<(f32, f32)>> {
     let doc = xberg_native_pdf::PdfDocument::from_bytes(content.to_vec()).ok()?;
@@ -1624,9 +1804,10 @@ fn pdf_page_sizes_pt(content: &[u8], page_count: usize) -> Option<Vec<(f32, f32)
 /// Recognize layout-detected formula regions on rendered PDF pages.
 ///
 /// Each detected region pairs with the formula text the extraction side
-/// already produced (side-channel formulas and formula elements), per page:
-/// positionally in reading order when the counts match, by bounding-box
-/// overlap in PDF points when they differ. Recognized LaTeX replaces the
+/// already produced (side-channel formulas and formula elements), per page,
+/// by bounding-box overlap in PDF points. When the counts match but overlap
+/// cannot pair every region, the page pairs in reading order instead (see
+/// [`assign_formula_slots`] for the rule). Recognized LaTeX replaces the
 /// text of paired slots. A region paired with nothing — for example on a
 /// scanned page whose OCR backend emits plain text only — becomes a new
 /// formula with its bbox in PDF points. Failures keep the existing text.
@@ -1681,8 +1862,11 @@ async fn recognize_pdf_formula_regions(
             let rgb = image.page_rgb();
             let rgb: &image::RgbImage = &rgb;
 
-            let need_geometry = formula_slots.len() != regions.len() || elements.len() != regions.len();
-            let page_size = if need_geometry {
+            let counts_differ = formula_slots.len() != regions.len() || elements.len() != regions.len();
+            let formula_boxes: Vec<Option<crate::types::BoundingBox>> = formula_slots.iter().map(|f| f.bbox).collect();
+            let element_boxes: Vec<Option<crate::types::BoundingBox>> =
+                elements.iter().map(|(bbox, _)| *bbox).collect();
+            let page_size = if counts_differ || formula_boxes.iter().chain(&element_boxes).any(Option::is_some) {
                 page_sizes_pt
                     .get_or_insert_with(|| pdf_page_sizes_pt(content, images.len()))
                     .as_ref()
@@ -1710,7 +1894,7 @@ async fn recognize_pdf_formula_regions(
                     })
                     .collect()
             });
-            if need_geometry && (!formula_slots.is_empty() || !elements.is_empty()) {
+            if counts_differ && (!formula_slots.is_empty() || !elements.is_empty()) {
                 if regions_pts.is_some() {
                     tracing::warn!(
                         page = page_number,
@@ -1730,9 +1914,6 @@ async fn recognize_pdf_formula_regions(
                 }
             }
             let allow_synthesis = formula_synthesis_allowed(regions_pts.is_some(), formula_slots.len(), elements.len());
-            let formula_boxes: Vec<Option<crate::types::BoundingBox>> = formula_slots.iter().map(|f| f.bbox).collect();
-            let element_boxes: Vec<Option<crate::types::BoundingBox>> =
-                elements.iter().map(|(bbox, _)| *bbox).collect();
             let formula_assign = assign_formula_slots(regions.len(), &formula_boxes, regions_pts.as_deref());
             let element_assign = assign_formula_slots(regions.len(), &element_boxes, regions_pts.as_deref());
 

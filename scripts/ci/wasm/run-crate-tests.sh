@@ -15,6 +15,21 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
+test_posix_compat() (
+  test_dir="$(mktemp -d)"
+  [ -n "$test_dir" ] && [ -d "$test_dir" ] || exit 90
+  trap 'rm -f "$test_dir/posix-compat-test"; rmdir "$test_dir"' EXIT
+  # Rename the symbols so host libc cannot accidentally satisfy the regression. ~keep
+  cc -std=c11 -Wall -Wextra -Werror \
+    -Dsystem=xberg_test_system -Dmkstemp=xberg_test_mkstemp \
+    "$repo_root/crates/xberg-tesseract/src/wasm_compat.c" \
+    "$repo_root/scripts/ci/wasm/posix-compat-test.c" \
+    -o "$test_dir/posix-compat-test"
+  "$test_dir/posix-compat-test"
+)
+
+test_posix_compat
+
 # CI exports RUSTFLAGS for the native builds (onnxruntime -L paths and
 # -Wl,-rpath,$ORIGIN link args that rust-lld rejects). The env var overrides
 # .cargo/config.toml's [target.wasm32-unknown-unknown] rustflags entirely,

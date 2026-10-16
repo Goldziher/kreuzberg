@@ -90,7 +90,7 @@ async fn page_ranges_out_of_bounds_is_rejected() {
     let bytes = std::fs::read(get_test_file_path("pdf/multi_page.pdf")).expect("read multi_page.pdf");
 
     let config = SplitConfig {
-        strategy: SplitStrategy::PageRanges(vec![1..=9999]),
+        strategy: SplitStrategy::PageRanges(std::iter::once(1..=9999).collect()),
         ..Default::default()
     };
     let result = split_and_extract(&bytes, &config).await;

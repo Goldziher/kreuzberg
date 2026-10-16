@@ -654,6 +654,39 @@ pub enum AnnotationKind {
     },
 }
 
+impl AnnotationKind {
+    /// Mark a LaTeX equation without introducing a new enum variant.
+    ///
+    /// The annotation's byte range includes its `$...$` delimiters, or `$$...$$`
+    /// when `display` is true. Text remains available unchanged to plain-text,
+    /// chunking, and search consumers. Only explicitly annotated spans are math.
+    ///
+    /// This uses the reserved `Custom` name `xberg.math` and value `inline` or
+    /// `display`: `{"annotation_type":"custom","name":"xberg.math","value":"inline"}`.
+    /// Existing bindings can construct and inspect that same Custom value.
+    pub fn math(display: bool) -> Self {
+        Self::Custom {
+            name: "xberg.math".to_string(),
+            value: Some(if display { "display" } else { "inline" }.to_string()),
+        }
+    }
+
+    /// Return the display mode of an explicitly marked math annotation.
+    ///
+    /// Only the exact reserved name and values produced by [`Self::math`] are
+    /// recognized. Other custom annotations return `None`.
+    pub fn math_display(&self) -> Option<bool> {
+        match self {
+            Self::Custom { name, value } if name == "xberg.math" => match value.as_deref() {
+                Some("inline") => Some(false),
+                Some("display") => Some(true),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+}
+
 /// Convert PDF hierarchy's `(f32, f32, f32, f32)` bounding box to canonical `BoundingBox`.
 ///
 /// The tuple order is `(left, top, right, bottom)` matching the PDF coordinate convention.

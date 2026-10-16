@@ -61,6 +61,15 @@ Point Xberg at anything — a PDF, a spreadsheet, a scanned image, an audio file
 pip install xberg
 ```
 
+For archived versions and the PyPI storage fallback:
+
+```sh
+pip install xberg --extra-index-url https://xberg-io.github.io/python-wheels/simple/
+```
+
+PyPI keeps all releases in the current minor and the latest stable patch of each
+older minor. See the [permanent archive and retention policy](https://github.com/xberg-io/python-wheels#pypi-retention-policy).
+
 See [Python README](https://github.com/xberg-io/xberg/tree/main/packages/python) for full documentation.
 
 </details>

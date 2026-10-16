@@ -270,7 +270,7 @@ fn decode_utf16_to_utf8(data: &[u8], big_endian: bool) -> Result<Vec<u8>> {
     let even_len = data.len() & !1;
     let data = &data[..even_len];
 
-    let u16_iter = data.chunks_exact(2).map(|chunk| {
+    let u16_iter = data.as_chunks::<2>().0.iter().map(|chunk| {
         if big_endian {
             u16::from_be_bytes([chunk[0], chunk[1]])
         } else {

@@ -41,7 +41,7 @@ fn cmyk_jpeg_with_adobe_marker_decodes_to_bright_rgb() {
     let jpeg = adobe_all_zero_cmyk_jpeg();
     let rgb = decode_cmyk_jpeg_to_rgb(&jpeg).expect("CMYK JPEG should decode");
 
-    for chunk in rgb.chunks_exact(3) {
+    for chunk in rgb.as_chunks::<3>().0 {
         assert!(
             chunk[0] > 200 && chunk[1] > 200 && chunk[2] > 200,
             "expected bright RGB from Adobe-inverted CMYK white, got {:?}",

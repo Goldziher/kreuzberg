@@ -40,10 +40,10 @@ fn build_pdf_with_actual_text(actual_text_bytes: &[u8]) -> Vec<u8> {
 
     push!("<< /Type /Catalog /Pages 2 0 R >>");
     push!("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-    push!(format!(
+    push!(
         "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] \
          /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>"
-    ));
+    );
     push!(font_obj);
     push!(format!("<< /Length {} >>\nstream\n{}endstream", content.len(), content));
 

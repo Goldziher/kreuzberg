@@ -122,7 +122,7 @@ fn indexed_4bpc_predictor12_tag0_decodes_raw_rows() {
     // tag honoured, decoding yields raw nibble stream → every pixel
     // maps to palette entry 15 = pure red. An Up-cascade on rows 1..H
     // would drift pixels away from (255,0,0). ~keep
-    for chunk in pixels.chunks_exact(3) {
-        assert_eq!(chunk, [255, 0, 0], "every pixel should be pure red");
+    for chunk in pixels.as_chunks::<3>().0 {
+        assert_eq!(chunk.as_slice(), [255, 0, 0], "every pixel should be pure red");
     }
 }

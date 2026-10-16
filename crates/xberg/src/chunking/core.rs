@@ -93,44 +93,7 @@ pub(crate) fn chunk_text_with_heading_source(
         return super::semantic::chunk_semantic(text, config, page_boundaries);
     }
 
-    let text_chunks: Vec<&str> = match &config.sizing {
-        #[cfg(feature = "chunking-tokenizers")]
-        crate::core::config::ChunkSizing::Tokenizer { model, .. } => {
-            let registered = crate::plugins::registry::get_tokenizer_backend_registry()
-                .read()
-                .lookup(model);
-            if let Some(backend) = registered {
-                let chunk_config = ChunkConfig::new(ChunkCapacity::new(config.max_characters))
-                    .with_sizer(TokenizerBackendSizer(backend))
-                    .with_overlap(config.overlap)
-                    .map(|c| c.with_trim(config.trim))
-                    .map_err(|e| crate::XbergError::validation(format!("Invalid chunking configuration: {}", e)))?;
-                split_with_config(text, &config.chunker_type, chunk_config)
-            } else {
-                let tokenizer = super::tokenizer_cache::get_or_init_tokenizer(model).map_err(|e| match e {
-                    crate::XbergError::Validation { message, source } => crate::XbergError::Validation {
-                        message: format!(
-                            "{message}. No tokenizer backend is registered under '{model}' either; \
-                             use a HuggingFace model id, or register your own tokenizer with \
-                             register_tokenizer_backend."
-                        ),
-                        source,
-                    },
-                    other => other,
-                })?;
-                let chunk_config = ChunkConfig::new(ChunkCapacity::new(config.max_characters))
-                    .with_sizer((*tokenizer).clone())
-                    .with_overlap(config.overlap)
-                    .map(|c| c.with_trim(config.trim))
-                    .map_err(|e| crate::XbergError::validation(format!("Invalid chunking configuration: {}", e)))?;
-                split_with_config(text, &config.chunker_type, chunk_config)
-            }
-        }
-        _ => {
-            let chunk_config = build_chunk_config(config.max_characters, config.overlap, config.trim)?;
-            split_with_config(text, &config.chunker_type, chunk_config)
-        }
-    };
+    let text_chunks = split_text_by_sizing(text, config)?;
 
     let mut chunks = build_chunks(text, text_chunks, page_boundaries)?;
 
@@ -173,6 +136,47 @@ pub(crate) fn chunk_text_with_heading_source(
     let chunk_count = chunks.len();
 
     Ok(ChunkingResult { chunks, chunk_count })
+}
+
+fn split_text_by_sizing<'a>(text: &'a str, config: &ChunkingConfig) -> Result<Vec<&'a str>> {
+    Ok(match &config.sizing {
+        #[cfg(feature = "chunking-tokenizers")]
+        crate::core::config::ChunkSizing::Tokenizer { model, .. } => {
+            let registered = crate::plugins::registry::get_tokenizer_backend_registry()
+                .read()
+                .lookup(model);
+            if let Some(backend) = registered {
+                let chunk_config = ChunkConfig::new(ChunkCapacity::new(config.max_characters))
+                    .with_sizer(TokenizerBackendSizer(backend))
+                    .with_overlap(config.overlap)
+                    .map(|c| c.with_trim(config.trim))
+                    .map_err(|e| crate::XbergError::validation(format!("Invalid chunking configuration: {}", e)))?;
+                split_with_config(text, &config.chunker_type, chunk_config)
+            } else {
+                let tokenizer = super::tokenizer_cache::get_or_init_tokenizer(model).map_err(|e| match e {
+                    crate::XbergError::Validation { message, source } => crate::XbergError::Validation {
+                        message: format!(
+                            "{message}. No tokenizer backend is registered under '{model}' either; \
+                             use a HuggingFace model id, or register your own tokenizer with \
+                             register_tokenizer_backend."
+                        ),
+                        source,
+                    },
+                    other => other,
+                })?;
+                let chunk_config = ChunkConfig::new(ChunkCapacity::new(config.max_characters))
+                    .with_sizer((*tokenizer).clone())
+                    .with_overlap(config.overlap)
+                    .map(|c| c.with_trim(config.trim))
+                    .map_err(|e| crate::XbergError::validation(format!("Invalid chunking configuration: {}", e)))?;
+                split_with_config(text, &config.chunker_type, chunk_config)
+            }
+        }
+        _ => {
+            let chunk_config = build_chunk_config(config.max_characters, config.overlap, config.trim)?;
+            split_with_config(text, &config.chunker_type, chunk_config)
+        }
+    })
 }
 
 /// Render `content` with its Markdown heading breadcrumb prepended.

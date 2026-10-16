@@ -93,7 +93,9 @@ fn read_string_property(data: &[u8], offset: usize) -> Option<String> {
             let char_count = read_u32(data, offset + 4)? as usize;
             let bytes = data.get(offset + 8..offset + 8 + char_count.checked_mul(2)?)?;
             let units: Vec<u16> = bytes
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|b| u16::from_le_bytes([b[0], b[1]]))
                 .collect();
             let s = String::from_utf16_lossy(&units);

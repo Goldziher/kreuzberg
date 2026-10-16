@@ -4939,7 +4939,9 @@ fn spatial_footnote_run_rejects_overflowing_marker_sequence() {
 fn spatial_footnote_run_requires_marker_pair_provenance() {
     let paragraphs = positioned_numeric_footnote_run([1, 2, 3], [97.2274, 85.7284, 74.2294], [10.0; 3]);
     let mut preexisting = paragraphs
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| {
             let mut paragraph = pair.to_vec();
             merge_spatial_footnote_markers(&mut paragraph);

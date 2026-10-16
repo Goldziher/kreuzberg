@@ -533,3 +533,72 @@ fn test_escape_html_text_escapes_ampersand_and_angle_brackets() {
     let result = escape_html_text("a < b & c > d");
     assert_eq!(result, "a &lt; b &amp; c &gt; d");
 }
+
+#[test]
+fn should_validate_issue_2123_math_namespace_and_delimiters() {
+    assert_eq!(
+        annotated_math(r"$\alpha$", &AnnotationKind::math(false)),
+        Some((r"\alpha", false))
+    );
+    assert_eq!(
+        annotated_math("$$a  b$$", &AnnotationKind::math(true)),
+        Some(("a  b", true))
+    );
+    for text in ["$", "$$", "$$x$$", "x$", "$x", "ordinary"] {
+        assert_eq!(annotated_math(text, &AnnotationKind::math(false)), None, "{text}");
+    }
+    for text in ["$$", "$$$$", "$x$", "$$x$"] {
+        assert_eq!(annotated_math(text, &AnnotationKind::math(true)), None, "{text}");
+    }
+    assert_eq!(
+        annotated_math(
+            "$x$",
+            &AnnotationKind::Custom {
+                name: "other.math".into(),
+                value: Some("inline".into())
+            }
+        ),
+        None
+    );
+}
+
+#[test]
+fn should_bound_issue_2123_same_range_annotation_nesting() {
+    let text = "$<x>$";
+    for count in [64, 4096] {
+        let mut annotations = vec![
+            TextAnnotation {
+                start: 0,
+                end: text.len() as u32,
+                kind: AnnotationKind::Bold
+            };
+            count
+        ];
+        annotations.push(TextAnnotation {
+            start: 0,
+            end: text.len() as u32,
+            kind: AnnotationKind::math(false),
+        });
+        let output = render_nested_annotated_text(
+            text,
+            &annotations,
+            &|span, kind| annotated_math(span, kind).map(|_| "<math>x</math>".to_string()),
+            &|inner, _| format!("<b>{inner}</b>"),
+            &|span| escape_html_text(span).into_owned(),
+        );
+        assert_eq!(output.matches("<b>").count(), 32);
+        assert!(output.contains("$&lt;x&gt;$"));
+        assert!(!output.contains("<math>"));
+    }
+}
+
+#[test]
+fn should_reject_issue_2123_unmatched_trailing_dollars() {
+    assert_eq!(annotated_math("$x$$", &AnnotationKind::math(false)), None);
+    assert_eq!(annotated_math("$$x$$$", &AnnotationKind::math(true)), None);
+    assert_eq!(
+        annotated_math(r"$x\$$", &AnnotationKind::math(false)),
+        Some((r"x\$", false))
+    );
+    assert_eq!(annotated_math(r"$x\\$$", &AnnotationKind::math(false)), None);
+}

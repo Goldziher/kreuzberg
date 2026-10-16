@@ -890,7 +890,9 @@ fn extract_texts_from_records(
                 if content_end <= data.len() {
                     let text_data = &data[content_start..content_end];
                     let chars: Vec<u16> = text_data
-                        .chunks_exact(2)
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
                         .map(|c| u16::from_le_bytes([c[0], c[1]]))
                         .collect();
                     let text = String::from_utf16_lossy(&chars);
@@ -1501,7 +1503,12 @@ fn table_cell_text(data: &[u8], records: &[ArtRecord]) -> String {
         };
         let text: String = match record.rec_type {
             RT_TEXT_CHARS_ATOM => {
-                let units: Vec<u16> = body.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+                let units: Vec<u16> = body
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                    .collect();
                 String::from_utf16_lossy(&units)
             }
             RT_TEXT_BYTES_ATOM => body.iter().map(|&b| cp1252_to_char(b)).collect(),
@@ -1681,7 +1688,9 @@ fn read_property_value(data: &[u8], offset: usize) -> Option<String> {
             }
             let bytes = &data[offset + 8..offset + 8 + len * 2];
             let chars: Vec<u16> = bytes
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|c| u16::from_le_bytes([c[0], c[1]]))
                 .take_while(|&c| c != 0)
                 .collect();

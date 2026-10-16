@@ -52,7 +52,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.9.1",
-    "@types/node": "^26.5.1"
+    "@napi-rs/cli": "^3.10.8",
+    "@types/node": "^26.6.5"
   }
 }

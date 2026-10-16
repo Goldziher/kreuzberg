@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling>=1,<2"]
+requires = ["hatchling>=1.32.4,<2"]
 
 [project]
 name = "txtai-xberg"
@@ -56,7 +56,7 @@ urls.Issues = "https://github.com/xberg-io/xberg/issues"
 urls.Repository = "https://github.com/xberg-io/xberg/tree/main/integrations/python/txtai"
 
 [dependency-groups]
-dev = ["mypy>=1.20.1", "pre-commit>=4.5.1", "pytest>=9", "pytest-cov>=7.1"]
+dev = ["mypy>=2.4.0", "pre-commit>=4.5.1", "pytest>=9.1.1", "pytest-cov>=7.1.0"]
 
 [tool.hatch]
 build.targets.sdist.include = ["src/txtai_xberg", "CHANGELOG.md", "LICENSE", "README.md", "pyproject.toml"]

@@ -52,10 +52,10 @@
     "n8n-workflow": ">=2.16.0 <3"
   },
   "devDependencies": {
-    "@types/node": "^20.19.0",
-    "gulp": "^5.0.0",
+    "@types/node": "^26.6.5",
+    "gulp": "^5.0.1",
     "n8n-workflow": "^2.16.0",
-    "typescript": "^5.7.3"
+    "typescript": "^7.0.2"
   },
   "publishConfig": {
     "access": "public"

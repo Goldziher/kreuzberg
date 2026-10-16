@@ -326,7 +326,7 @@ fn decode_jp2_to_rgb_with_security_limits(bytes: &[u8], limits: &SecurityLimits)
         }
         (1, true) => {
             let mut rgb = Vec::with_capacity((pixels.len() / 2) * 3);
-            for chunk in pixels.chunks_exact(2) {
+            for chunk in pixels.as_chunks::<2>().0 {
                 rgb.push(chunk[0]);
                 rgb.push(chunk[0]);
                 rgb.push(chunk[0]);
@@ -336,7 +336,7 @@ fn decode_jp2_to_rgb_with_security_limits(bytes: &[u8], limits: &SecurityLimits)
         (3, false) => pixels,
         (3, true) => {
             let mut rgb = Vec::with_capacity((pixels.len() / 4) * 3);
-            for chunk in pixels.chunks_exact(4) {
+            for chunk in pixels.as_chunks::<4>().0 {
                 rgb.push(chunk[0]);
                 rgb.push(chunk[1]);
                 rgb.push(chunk[2]);
@@ -345,7 +345,7 @@ fn decode_jp2_to_rgb_with_security_limits(bytes: &[u8], limits: &SecurityLimits)
         }
         (4, false) => {
             let mut rgb = Vec::with_capacity((pixels.len() / 4) * 3);
-            for chunk in pixels.chunks_exact(4) {
+            for chunk in pixels.as_chunks::<4>().0 {
                 let c = chunk[0] as f32 / 255.0;
                 let m = chunk[1] as f32 / 255.0;
                 let y = chunk[2] as f32 / 255.0;

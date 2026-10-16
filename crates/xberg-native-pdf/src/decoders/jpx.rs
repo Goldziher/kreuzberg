@@ -332,7 +332,7 @@ fn codestream_opacity_component(bytes: &[u8]) -> Option<usize> {
     let definitions = find_box(header, b"cdef")?;
     let count = usize::from(u16::from_be_bytes(definitions.get(0..2)?.try_into().ok()?));
     let entries = definitions.get(2..2 + count.checked_mul(6)?)?;
-    let channel = entries.chunks_exact(6).find_map(|entry| {
+    let channel = entries.as_chunks::<6>().0.iter().find_map(|entry| {
         let channel = u16::from_be_bytes(entry[0..2].try_into().ok()?);
         let kind = u16::from_be_bytes(entry[2..4].try_into().ok()?);
         matches!(kind, 1 | 2).then_some(usize::from(channel))

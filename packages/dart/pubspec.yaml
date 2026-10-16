@@ -8,18 +8,19 @@ environment:
 executables:
   download_libs:
 dependencies:
-  http: "^1.2.0"
+  http: "^1.6.0"
   # SHA-256 verification of downloaded native-library release assets.
-  crypto: "^3.0.0"
+  crypto: "^3.0.7"
   # FRB runtime is pure-Dart; works in both Flutter and server-Dart contexts.
-  flutter_rust_bridge: 2.13.0
+  flutter_rust_bridge: "2.13.0"
   # FRB codegen-2.x emits `@freezed` sealed classes annotated with these.
   freezed_annotation: "^3.1.0"
-  json_annotation: "^4.11.0"
+  json_annotation: "^4.12.0"
 dev_dependencies:
-  test: "^1.25.0"
+  test: "^1.33.0"
   lints: "^6.1.0"
   # Freezed is build-only, so its SDK floor does not constrain package consumers. ~keep
-  freezed: ^4.0.1
-  build_runner: "^2.15.0"
-  json_serializable: "^6.13.2"
+  freezed: "^4.0.2"
+  # json_serializable 6.14 requires build 4; build_runner 2.17 requires build 5. ~keep
+  build_runner: "^2.16.2"
+  json_serializable: "^6.14.1"

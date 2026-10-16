@@ -12,7 +12,9 @@ pub(crate) mod pixels {
     /// should be used instead.
     #[allow(unused)]
     pub(crate) fn unaligned_rgb_to_rgba(rgb: &[u8]) -> Vec<u8> {
-        rgb.chunks_exact(BYTES_PER_THREE_CHANNEL_PIXEL)
+        rgb.as_chunks::<BYTES_PER_THREE_CHANNEL_PIXEL>()
+            .0
+            .iter()
             .flat_map(|channels| [channels[0], channels[1], channels[2], 255])
             .collect::<Vec<_>>()
     }
@@ -32,7 +34,10 @@ pub(crate) mod pixels {
     pub(crate) fn aligned_rgb_to_rgba(rgb: &[u8], width: usize, stride: usize) -> Vec<u8> {
         rgb.chunks_exact(stride)
             .flat_map(|scanline| {
-                scanline[..width * BYTES_PER_THREE_CHANNEL_PIXEL].chunks_exact(BYTES_PER_THREE_CHANNEL_PIXEL)
+                scanline[..width * BYTES_PER_THREE_CHANNEL_PIXEL]
+                    .as_chunks::<BYTES_PER_THREE_CHANNEL_PIXEL>()
+                    .0
+                    .iter()
             })
             .flat_map(|channels| [channels[0], channels[1], channels[2], 255])
             .collect::<Vec<_>>()
@@ -46,7 +51,9 @@ pub(crate) mod pixels {
     /// should be used instead.
     #[inline]
     pub(crate) fn unaligned_bgr_to_rgba(bgr: &[u8]) -> Vec<u8> {
-        bgr.chunks_exact(BYTES_PER_THREE_CHANNEL_PIXEL)
+        bgr.as_chunks::<BYTES_PER_THREE_CHANNEL_PIXEL>()
+            .0
+            .iter()
             .flat_map(|channels| [channels[2], channels[1], channels[0], 255])
             .collect::<Vec<_>>()
     }
@@ -66,7 +73,10 @@ pub(crate) mod pixels {
     pub(crate) fn aligned_bgr_to_rgba(bgr: &[u8], width: usize, stride: usize) -> Vec<u8> {
         bgr.chunks_exact(stride)
             .flat_map(|scanline| {
-                scanline[..width * BYTES_PER_THREE_CHANNEL_PIXEL].chunks_exact(BYTES_PER_THREE_CHANNEL_PIXEL)
+                scanline[..width * BYTES_PER_THREE_CHANNEL_PIXEL]
+                    .as_chunks::<BYTES_PER_THREE_CHANNEL_PIXEL>()
+                    .0
+                    .iter()
             })
             .flat_map(|channels| [channels[2], channels[1], channels[0], 255])
             .collect::<Vec<_>>()
@@ -76,7 +86,9 @@ pub(crate) mod pixels {
     /// into pixel data encoded as four-channel RGBA.
     #[inline]
     pub(crate) fn bgra_to_rgba(bgra: &[u8]) -> Vec<u8> {
-        bgra.chunks_exact(BYTES_PER_FOUR_CHANNEL_PIXEL)
+        bgra.as_chunks::<BYTES_PER_FOUR_CHANNEL_PIXEL>()
+            .0
+            .iter()
             .flat_map(|channels| [channels[2], channels[1], channels[0], channels[3]])
             .collect::<Vec<_>>()
     }

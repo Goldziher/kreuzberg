@@ -72,7 +72,10 @@ fn render_raw(content: &str) -> Vec<u8> {
 /// True when any pixel differs from the white background — i.e. some
 /// content actually painted.
 fn has_ink(rgba: &[u8]) -> bool {
-    rgba.chunks_exact(4).any(|px| px[0] < 250 || px[1] < 250 || px[2] < 250)
+    rgba.as_chunks::<4>()
+        .0
+        .iter()
+        .any(|px| px[0] < 250 || px[1] < 250 || px[2] < 250)
 }
 
 #[test]
@@ -134,7 +137,10 @@ fn ordinary_geometry_still_renders() {
 
 /// True when every pixel is inked — the shape covered the whole page.
 fn fully_inked(rgba: &[u8]) -> bool {
-    rgba.chunks_exact(4).all(|px| px[0] < 250 && px[1] < 250 && px[2] < 250)
+    rgba.as_chunks::<4>()
+        .0
+        .iter()
+        .all(|px| px[0] < 250 && px[1] < 250 && px[2] < 250)
 }
 
 #[test]

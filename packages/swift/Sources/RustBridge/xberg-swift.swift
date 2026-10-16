@@ -2420,6 +2420,9 @@ public func __alef_phantom_vec_format_metadata() -> RustVec<FormatMetadata> {
 public func __alef_phantom_vec_heading_style() -> RustVec<HeadingStyle> {
     RustVec(ptr: __swift_bridge__$__alef_phantom_vec_heading_style())
 }
+public func __alef_phantom_vec_hidden_content() -> RustVec<HiddenContent> {
+    RustVec(ptr: __swift_bridge__$__alef_phantom_vec_hidden_content())
+}
 public func __alef_phantom_vec_highlight_style() -> RustVec<HighlightStyle> {
     RustVec(ptr: __swift_bridge__$__alef_phantom_vec_highlight_style())
 }
@@ -5633,6 +5636,11 @@ extension ContentConfig {
         self.init(ptr: __swift_bridge__$ContentConfig$new({ let rustString = output_format.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), { let rustString = preprocessing_preset.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), remove_navigation, remove_forms, { let val = strip_tags; val.isOwned = false; return val.ptr }(), { let val = preserve_tags; val.isOwned = false; return val.ptr }(), { let val = exclude_selectors; val.isOwned = false; return val.ptr }(), skip_images, max_depth.intoFfiRepr(), wrap, wrap_width, include_document_structure, extract_metadata))
     }
 }
+extension ContentConfig {
+    class public func new_with_fields<GenericIntoRustString: IntoRustString>(_ output_format: GenericIntoRustString, _ preprocessing_preset: GenericIntoRustString, _ remove_navigation: Bool, _ remove_forms: Bool, _ strip_tags: RustVec<GenericIntoRustString>, _ preserve_tags: RustVec<GenericIntoRustString>, _ exclude_selectors: RustVec<GenericIntoRustString>, _ skip_images: Bool, _ max_depth: Optional<UInt>, _ wrap: Bool, _ wrap_width: UInt, _ include_document_structure: Bool, _ extract_metadata: Bool, _ strip_newlines: Bool, _ bullets: GenericIntoRustString, _ list_indent_width: UInt, _ strong_em_symbol: GenericIntoRustString, _ compact_tables: Bool, _ keep_inline_images_in: RustVec<GenericIntoRustString>, _ keep_hidden: Bool) -> ContentConfig {
+        ContentConfig(ptr: __swift_bridge__$ContentConfig$new_with_fields({ let rustString = output_format.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), { let rustString = preprocessing_preset.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), remove_navigation, remove_forms, { let val = strip_tags; val.isOwned = false; return val.ptr }(), { let val = preserve_tags; val.isOwned = false; return val.ptr }(), { let val = exclude_selectors; val.isOwned = false; return val.ptr }(), skip_images, max_depth.intoFfiRepr(), wrap, wrap_width, include_document_structure, extract_metadata, strip_newlines, { let rustString = bullets.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), list_indent_width, { let rustString = strong_em_symbol.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), compact_tables, { let val = keep_inline_images_in; val.isOwned = false; return val.ptr }(), keep_hidden))
+    }
+}
 public class ContentConfigRefMut: ContentConfigRef {
     public override init(ptr: UnsafeMutableRawPointer) {
         super.init(ptr: ptr)
@@ -5696,6 +5704,34 @@ extension ContentConfigRef {
 
     public func extractMetadata() -> Bool {
         __swift_bridge__$ContentConfig$extract_metadata(ptr)
+    }
+
+    public func stripNewlines() -> Bool {
+        __swift_bridge__$ContentConfig$strip_newlines(ptr)
+    }
+
+    public func bullets() -> RustString {
+        RustString(ptr: __swift_bridge__$ContentConfig$bullets(ptr))
+    }
+
+    public func listIndentWidth() -> UInt {
+        __swift_bridge__$ContentConfig$list_indent_width(ptr)
+    }
+
+    public func strongEmSymbol() -> RustString {
+        RustString(ptr: __swift_bridge__$ContentConfig$strong_em_symbol(ptr))
+    }
+
+    public func compactTables() -> Bool {
+        __swift_bridge__$ContentConfig$compact_tables(ptr)
+    }
+
+    public func keepInlineImagesIn() -> RustVec<RustString> {
+        RustVec(ptr: __swift_bridge__$ContentConfig$keep_inline_images_in(ptr))
+    }
+
+    public func keepHidden() -> Bool {
+        __swift_bridge__$ContentConfig$keep_hidden(ptr)
     }
 }
 extension ContentConfig: Vectorizable {
@@ -5947,8 +5983,8 @@ public class ConversionOptions: ConversionOptionsRefMut {
     }
 }
 extension ConversionOptions {
-    public convenience init<GenericIntoRustString: IntoRustString>(_ heading_style: HeadingStyle, _ list_indent_type: ListIndentType, _ list_indent_width: UInt, _ bullets: GenericIntoRustString, _ strong_em_symbol: GenericIntoRustString, _ escape_asterisks: Bool, _ escape_underscores: Bool, _ escape_misc: Bool, _ escape_ascii: Bool, _ code_language: GenericIntoRustString, _ autolinks: Bool, _ default_title: Bool, _ br_in_tables: Bool, _ compact_tables: Bool, _ highlight_style: HighlightStyle, _ extract_metadata: Bool, _ whitespace_mode: WhitespaceMode, _ strip_newlines: Bool, _ wrap: Bool, _ wrap_width: UInt, _ convert_as_inline: Bool, _ sub_symbol: GenericIntoRustString, _ sup_symbol: GenericIntoRustString, _ newline_style: NewlineStyle, _ code_block_style: CodeBlockStyle, _ keep_inline_images_in: RustVec<GenericIntoRustString>, _ preprocessing: PreprocessingOptions, _ encoding: GenericIntoRustString, _ debug: Bool, _ strip_tags: RustVec<GenericIntoRustString>, _ preserve_tags: RustVec<GenericIntoRustString>, _ skip_images: Bool, _ inline_data_media: InlineDataMedia, _ url_escape_style: UrlEscapeStyle, _ link_style: LinkStyle, _ output_format: HtmlToMarkdownRsOutputFormat, _ include_document_structure: Bool, _ extract_images: Bool, _ max_image_size: UInt64, _ max_input_size: Optional<UInt64>, _ capture_svg: Bool, _ infer_dimensions: Bool, _ max_depth: Optional<UInt>, _ exclude_selectors: RustVec<GenericIntoRustString>, _ tier_strategy: TierStrategy, _ base_url: Optional<GenericIntoRustString>) {
-        self.init(ptr: __swift_bridge__$ConversionOptions$new({heading_style.isOwned = false; return heading_style.ptr;}(), {list_indent_type.isOwned = false; return list_indent_type.ptr;}(), list_indent_width, { let rustString = bullets.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), { let rustString = strong_em_symbol.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), escape_asterisks, escape_underscores, escape_misc, escape_ascii, { let rustString = code_language.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), autolinks, default_title, br_in_tables, compact_tables, {highlight_style.isOwned = false; return highlight_style.ptr;}(), extract_metadata, {whitespace_mode.isOwned = false; return whitespace_mode.ptr;}(), strip_newlines, wrap, wrap_width, convert_as_inline, { let rustString = sub_symbol.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), { let rustString = sup_symbol.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), {newline_style.isOwned = false; return newline_style.ptr;}(), {code_block_style.isOwned = false; return code_block_style.ptr;}(), { let val = keep_inline_images_in; val.isOwned = false; return val.ptr }(), {preprocessing.isOwned = false; return preprocessing.ptr;}(), { let rustString = encoding.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), debug, { let val = strip_tags; val.isOwned = false; return val.ptr }(), { let val = preserve_tags; val.isOwned = false; return val.ptr }(), skip_images, {inline_data_media.isOwned = false; return inline_data_media.ptr;}(), {url_escape_style.isOwned = false; return url_escape_style.ptr;}(), {link_style.isOwned = false; return link_style.ptr;}(), {output_format.isOwned = false; return output_format.ptr;}(), include_document_structure, extract_images, max_image_size, max_input_size.intoFfiRepr(), capture_svg, infer_dimensions, max_depth.intoFfiRepr(), { let val = exclude_selectors; val.isOwned = false; return val.ptr }(), {tier_strategy.isOwned = false; return tier_strategy.ptr;}(), { if let rustString = optionalStringIntoRustString(base_url) { rustString.isOwned = false; return rustString.ptr } else { return nil } }()))
+    public convenience init<GenericIntoRustString: IntoRustString>(_ heading_style: HeadingStyle, _ list_indent_type: ListIndentType, _ list_indent_width: UInt, _ bullets: GenericIntoRustString, _ strong_em_symbol: GenericIntoRustString, _ escape_asterisks: Bool, _ escape_underscores: Bool, _ escape_misc: Bool, _ escape_ascii: Bool, _ code_language: GenericIntoRustString, _ autolinks: Bool, _ expand_abbreviations: Bool, _ include_blockquote_citations: Bool, _ default_title: Bool, _ br_in_tables: Bool, _ compact_tables: Bool, _ highlight_style: HighlightStyle, _ extract_metadata: Bool, _ whitespace_mode: WhitespaceMode, _ strip_newlines: Bool, _ wrap: Bool, _ wrap_width: UInt, _ convert_as_inline: Bool, _ sub_symbol: GenericIntoRustString, _ sup_symbol: GenericIntoRustString, _ newline_style: NewlineStyle, _ code_block_style: CodeBlockStyle, _ keep_inline_images_in: RustVec<GenericIntoRustString>, _ preprocessing: PreprocessingOptions, _ encoding: GenericIntoRustString, _ debug: Bool, _ strip_tags: RustVec<GenericIntoRustString>, _ preserve_tags: RustVec<GenericIntoRustString>, _ skip_images: Bool, _ inline_data_media: InlineDataMedia, _ hidden_content: HiddenContent, _ url_escape_style: UrlEscapeStyle, _ link_style: LinkStyle, _ output_format: HtmlToMarkdownRsOutputFormat, _ include_document_structure: Bool, _ extract_images: Bool, _ max_image_size: UInt64, _ max_input_size: Optional<UInt64>, _ capture_svg: Bool, _ infer_dimensions: Bool, _ max_depth: Optional<UInt>, _ exclude_selectors: RustVec<GenericIntoRustString>, _ tier_strategy: TierStrategy, _ base_url: Optional<GenericIntoRustString>) {
+        self.init(ptr: __swift_bridge__$ConversionOptions$new({heading_style.isOwned = false; return heading_style.ptr;}(), {list_indent_type.isOwned = false; return list_indent_type.ptr;}(), list_indent_width, { let rustString = bullets.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), { let rustString = strong_em_symbol.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), escape_asterisks, escape_underscores, escape_misc, escape_ascii, { let rustString = code_language.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), autolinks, expand_abbreviations, include_blockquote_citations, default_title, br_in_tables, compact_tables, {highlight_style.isOwned = false; return highlight_style.ptr;}(), extract_metadata, {whitespace_mode.isOwned = false; return whitespace_mode.ptr;}(), strip_newlines, wrap, wrap_width, convert_as_inline, { let rustString = sub_symbol.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), { let rustString = sup_symbol.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), {newline_style.isOwned = false; return newline_style.ptr;}(), {code_block_style.isOwned = false; return code_block_style.ptr;}(), { let val = keep_inline_images_in; val.isOwned = false; return val.ptr }(), {preprocessing.isOwned = false; return preprocessing.ptr;}(), { let rustString = encoding.intoRustString(); rustString.isOwned = false; return rustString.ptr }(), debug, { let val = strip_tags; val.isOwned = false; return val.ptr }(), { let val = preserve_tags; val.isOwned = false; return val.ptr }(), skip_images, {inline_data_media.isOwned = false; return inline_data_media.ptr;}(), {hidden_content.isOwned = false; return hidden_content.ptr;}(), {url_escape_style.isOwned = false; return url_escape_style.ptr;}(), {link_style.isOwned = false; return link_style.ptr;}(), {output_format.isOwned = false; return output_format.ptr;}(), include_document_structure, extract_images, max_image_size, max_input_size.intoFfiRepr(), capture_svg, infer_dimensions, max_depth.intoFfiRepr(), { let val = exclude_selectors; val.isOwned = false; return val.ptr }(), {tier_strategy.isOwned = false; return tier_strategy.ptr;}(), { if let rustString = optionalStringIntoRustString(base_url) { rustString.isOwned = false; return rustString.ptr } else { return nil } }()))
     }
 }
 public class ConversionOptionsRefMut: ConversionOptionsRef {
@@ -6006,6 +6042,14 @@ extension ConversionOptionsRef {
 
     public func autolinks() -> Bool {
         __swift_bridge__$ConversionOptions$autolinks(ptr)
+    }
+
+    public func expandAbbreviations() -> Bool {
+        __swift_bridge__$ConversionOptions$expand_abbreviations(ptr)
+    }
+
+    public func includeBlockquoteCitations() -> Bool {
+        __swift_bridge__$ConversionOptions$include_blockquote_citations(ptr)
     }
 
     public func defaultTitle() -> Bool {
@@ -6094,6 +6138,10 @@ extension ConversionOptionsRef {
 
     public func inlineDataMedia() -> RustString {
         RustString(ptr: __swift_bridge__$ConversionOptions$inline_data_media(ptr))
+    }
+
+    public func hiddenContent() -> RustString {
+        RustString(ptr: __swift_bridge__$ConversionOptions$hidden_content(ptr))
     }
 
     public func urlEscapeStyle() -> RustString {
@@ -31263,6 +31311,86 @@ extension HeadingStyle: Vectorizable {
 
     public static func vecOfSelfLen(vecPtr: UnsafeMutableRawPointer) -> UInt {
         __swift_bridge__$Vec_HeadingStyle$len(vecPtr)
+    }
+}
+
+
+public class HiddenContent: HiddenContentRefMut {
+    public var isOwned: Bool = true
+
+    public override init(ptr: UnsafeMutableRawPointer) {
+        super.init(ptr: ptr)
+    }
+
+    deinit {
+        if isOwned {
+            __swift_bridge__$HiddenContent$_free(ptr)
+        }
+    }
+}
+public class HiddenContentRefMut: HiddenContentRef {
+    public override init(ptr: UnsafeMutableRawPointer) {
+        super.init(ptr: ptr)
+    }
+}
+public class HiddenContentRef {
+    public var ptr: UnsafeMutableRawPointer
+
+    public init(ptr: UnsafeMutableRawPointer) {
+        self.ptr = ptr
+    }
+}
+extension HiddenContentRef {
+    public func to_string() -> RustString {
+        RustString(ptr: __swift_bridge__$HiddenContent$to_string(ptr))
+    }
+}
+extension HiddenContent: Vectorizable {
+    public static func vecOfSelfNew() -> UnsafeMutableRawPointer {
+        __swift_bridge__$Vec_HiddenContent$new()
+    }
+
+    public static func vecOfSelfFree(vecPtr: UnsafeMutableRawPointer) {
+        __swift_bridge__$Vec_HiddenContent$drop(vecPtr)
+    }
+
+    public static func vecOfSelfPush(vecPtr: UnsafeMutableRawPointer, value: HiddenContent) {
+        __swift_bridge__$Vec_HiddenContent$push(vecPtr, {value.isOwned = false; return value.ptr;}())
+    }
+
+    public static func vecOfSelfPop(vecPtr: UnsafeMutableRawPointer) -> Optional<Self> {
+        let pointer = __swift_bridge__$Vec_HiddenContent$pop(vecPtr)
+        if pointer == nil {
+            return nil
+        } else {
+            return (HiddenContent(ptr: pointer!) as! Self)
+        }
+    }
+
+    public static func vecOfSelfGet(vecPtr: UnsafeMutableRawPointer, index: UInt) -> Optional<HiddenContentRef> {
+        let pointer = __swift_bridge__$Vec_HiddenContent$get(vecPtr, index)
+        if pointer == nil {
+            return nil
+        } else {
+            return HiddenContentRef(ptr: pointer!)
+        }
+    }
+
+    public static func vecOfSelfGetMut(vecPtr: UnsafeMutableRawPointer, index: UInt) -> Optional<HiddenContentRefMut> {
+        let pointer = __swift_bridge__$Vec_HiddenContent$get_mut(vecPtr, index)
+        if pointer == nil {
+            return nil
+        } else {
+            return HiddenContentRefMut(ptr: pointer!)
+        }
+    }
+
+    public static func vecOfSelfAsPtr(vecPtr: UnsafeMutableRawPointer) -> UnsafePointer<HiddenContentRef> {
+        UnsafePointer<HiddenContentRef>(OpaquePointer(__swift_bridge__$Vec_HiddenContent$as_ptr(vecPtr)))
+    }
+
+    public static func vecOfSelfLen(vecPtr: UnsafeMutableRawPointer) -> UInt {
+        __swift_bridge__$Vec_HiddenContent$len(vecPtr)
     }
 }
 

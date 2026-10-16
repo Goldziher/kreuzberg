@@ -4,7 +4,7 @@ import java.util.zip.ZipFile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id("com.android.library") version "9.2.1"
+    id("com.android.library") version "9.4.1"
 }
 
 group = "io.xberg"
@@ -57,14 +57,14 @@ kotlin {
 dependencies {
 
     // Jackson for JSON assertion helpers
-    testImplementation("com.fasterxml.jackson.core:jackson-annotations:2.19.0")
-    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
-    testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.19.0")
+    testImplementation("com.fasterxml.jackson.core:jackson-annotations:2.22")
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
+    testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.22.3")
 
     // jackson-module-kotlin registers constructors/properties for Kotlin data
     // classes, which have no default constructor and cannot be deserialized by
     // plain Jackson without this module.
-    testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.0")
+    testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.22.3")
 
     // jspecify for null-safety annotations on wrapped types
     testImplementation("org.jspecify:jspecify:1.0.1")

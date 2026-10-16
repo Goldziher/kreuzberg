@@ -2568,10 +2568,9 @@ fn parameter_row_evidence(row: &[String]) -> Option<ParameterRowEvidence> {
     let last = cells.last()?;
     let (parameter_name, ends_with_comma, closes_declaration) = if let Some(name) = last.strip_suffix(',') {
         (name, true, false)
-    } else if let Some(name) = last.strip_suffix(");") {
-        (name, false, true)
     } else {
-        return None;
+        let name = last.strip_suffix(");")?;
+        (name, false, true)
     };
     if !looks_like_parameter_name(parameter_name) {
         return None;

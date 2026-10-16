@@ -8,6 +8,119 @@ use std::borrow::Cow;
 use crate::types::document_structure::{AnnotationKind, ContentLayer, TextAnnotation};
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement, RelationshipKind, RelationshipTarget};
 
+const MAX_INLINE_ANNOTATION_DEPTH: usize = 32;
+
+pub(crate) fn annotated_math<'a>(span: &'a str, kind: &AnnotationKind) -> Option<(&'a str, bool)> {
+    let display = kind.math_display()?;
+    if !display && span.starts_with("$$") {
+        return None;
+    }
+    let delimiter = if display { "$$" } else { "$" };
+    let literal = span.strip_prefix(delimiter)?.strip_suffix(delimiter)?;
+    if literal.is_empty() || literal.starts_with('$') {
+        return None;
+    }
+    if let Some(prefix) = literal.strip_suffix('$') {
+        let backslashes = prefix.bytes().rev().take_while(|byte| *byte == b'\\').count();
+        if backslashes.is_multiple_of(2) {
+            return None;
+        }
+    }
+    Some((literal, display))
+}
+
+pub(crate) fn valid_math_annotation(text: &str, annotation: &TextAnnotation) -> bool {
+    text.get(annotation.start as usize..annotation.end as usize)
+        .and_then(|span| annotated_math(span, &annotation.kind))
+        .is_some()
+}
+
+pub(crate) fn sorted_inline_annotations<'a>(text: &str, annotations: &'a [TextAnnotation]) -> Vec<&'a TextAnnotation> {
+    let mut sorted: Vec<_> = annotations
+        .iter()
+        .filter(|annotation| annotation.kind.math_display().is_none() || valid_math_annotation(text, annotation))
+        .collect();
+    sorted.sort_by_key(|annotation| {
+        let priority = match &annotation.kind {
+            AnnotationKind::Link { .. } => 0,
+            kind if kind.math_display().is_some() => 2,
+            _ => 1,
+        };
+        (
+            annotation.start,
+            std::cmp::Reverse(annotation.end.saturating_sub(annotation.start)),
+            priority,
+        )
+    });
+    sorted
+}
+
+pub(crate) fn render_nested_annotated_text(
+    text: &str,
+    annotations: &[TextAnnotation],
+    atomic: &impl Fn(&str, &AnnotationKind) -> Option<String>,
+    wrap: &impl Fn(&str, &AnnotationKind) -> String,
+    plain: &impl Fn(&str) -> String,
+) -> String {
+    render_nested_annotations(text, annotations, atomic, wrap, plain, 0)
+}
+
+fn render_nested_annotations(
+    text: &str,
+    annotations: &[TextAnnotation],
+    atomic: &impl Fn(&str, &AnnotationKind) -> Option<String>,
+    wrap: &impl Fn(&str, &AnnotationKind) -> String,
+    plain: &impl Fn(&str) -> String,
+    depth: usize,
+) -> String {
+    // Same-range annotations consume no text as they nest; bound their recursion. ~keep
+    if depth >= MAX_INLINE_ANNOTATION_DEPTH {
+        tracing::warn!(
+            depth_limit = MAX_INLINE_ANNOTATION_DEPTH,
+            "inline annotation nesting limit reached"
+        );
+        return plain(text);
+    }
+    let sorted = sorted_inline_annotations(text, annotations);
+    let mut output = String::new();
+    let mut position = 0;
+    for (index, annotation) in sorted.iter().enumerate() {
+        let start = text.ceil_char_boundary((annotation.start as usize).min(text.len()));
+        let end = text.floor_char_boundary((annotation.end as usize).min(text.len()));
+        if start < position || start >= end {
+            continue;
+        }
+        output.push_str(&plain(&text[position..start]));
+        let span = &text[start..end];
+        if let Some(rendered) = atomic(span, &annotation.kind) {
+            output.push_str(&rendered);
+        } else {
+            let inner = contained_annotations(text, &sorted[index + 1..], start, end);
+            let rendered = render_nested_annotations(span, &inner, atomic, wrap, plain, depth + 1);
+            output.push_str(&wrap(&rendered, &annotation.kind));
+        }
+        position = end;
+    }
+    output.push_str(&plain(&text[position..]));
+    output
+}
+
+fn contained_annotations(text: &str, annotations: &[&TextAnnotation], start: usize, end: usize) -> Vec<TextAnnotation> {
+    annotations
+        .iter()
+        .take_while(|annotation| (annotation.start as usize) < end)
+        .filter_map(|annotation| {
+            let inner_start = text.ceil_char_boundary((annotation.start as usize).min(text.len()));
+            let inner_end = text.floor_char_boundary((annotation.end as usize).min(text.len()));
+            (inner_start >= start && inner_end <= end && inner_start < inner_end).then(|| TextAnnotation {
+                start: (inner_start - start) as u32,
+                end: (inner_end - start) as u32,
+                kind: annotation.kind.clone(),
+            })
+        })
+        .collect()
+}
+
 /// Kind of container on the nesting stack.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum NestingKind {

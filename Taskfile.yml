@@ -374,7 +374,7 @@ tasks:
   alef:generate:
     desc: "Regenerate all Alef-managed outputs (formatting via poly, no build or snippet validation)"
     cmds:
-      - alef all --clean --skip-snippet-validation
+      - alef all --clean --skip-compile --skip-snippet-validation
 
   alef:verify:
     desc: "Check Alef-generated files are up to date"
@@ -448,6 +448,11 @@ tasks:
     desc: "Generate E2E tests for all languages from fixtures"
     cmds:
       - alef e2e generate --strict
+
+  e2e:mock-server:build:
+    desc: "Build the mock server for generated e2e suites"
+    cmds:
+      - bash scripts/e2e/build-mock-server.sh
 
   e2e:build:
     desc: "Build all language bindings used by e2e suites (release)"
@@ -630,13 +635,13 @@ tasks:
 
   csharp:build:release:
     desc: "Build the C# binding in Release configuration"
-    dir: packages/csharp
+    dir: packages/csharp/Xberg
     cmds:
       - dotnet build --configuration Release
 
   csharp:package:
     desc: "Pack the C# binding into a NuGet package (forwards extra args)"
-    dir: packages/csharp
+    dir: packages/csharp/Xberg
     cmds:
       - dotnet pack --configuration Release {{.CLI_ARGS}}
 
@@ -644,13 +649,13 @@ tasks:
     desc: "Format C# binding with dotnet format"
     cmds:
       - dotnet format
-    dir: packages/csharp
+    dir: packages/csharp/Xberg
 
   csharp:lint:
     desc: "Lint C# binding with dotnet format --verify-no-changes"
     cmds:
       - dotnet format --verify-no-changes
-    dir: packages/csharp
+    dir: packages/csharp/Xberg
 
   kotlin-android:format:
     desc: "Format Kotlin/Android binding with ktlint via gradle"
@@ -749,7 +754,7 @@ tasks:
   plugin:hermes:test:
     desc: Verify the Hermes bridge against a real MCP stdio fixture
     cmds:
-      - uv run --no-project --python 3.11 --with mcp==1.28.1 --with PyYAML==6.0.3 python scripts/tests/test_hermes_plugin.py
+      - uv run --no-project --python 3.11 --with mcp==2.3.0 --with PyYAML==6.0.3 python scripts/tests/test_hermes_plugin.py
 
   governance:check:
     desc: Check materialized local governance outputs against shared sources

@@ -6,7 +6,7 @@ name: xberg-batch-extraction
 <!--
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
 Content-Hash: blake3:324433f2b10c7c9cdc1c06b98c1e427c8cb0ca9ccf034d336e28d49706add520
-Source-Hash: blake3:662aa704cf97ad20f02258c9dcd1c73822213a426e27ec7ebc292d3f599fb7c2
+Source-Hash: blake3:dbaab95ae525c5e4a221b5552123f1c8ea0932bfcf9ad7a9041d9d8b1d90ec47
 Schema-Version: v1
 -->
 

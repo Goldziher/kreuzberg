@@ -1506,6 +1506,20 @@ namespace this_thread {
         config.build();
     }
 
+    fn build_wasm_posix_compat(wasi_sdk_dir: &Path) {
+        println!("cargo:rerun-if-changed=src/wasm_compat.c");
+        cc::Build::new()
+            .file("src/wasm_compat.c")
+            .compiler(tool_argument_path(&wasi_sdk_dir.join("bin/clang")))
+            .archiver(tool_argument_path(&wasi_sdk_dir.join("bin/llvm-ar")))
+            .target("wasm32-wasip1")
+            .flag(format!(
+                "--sysroot={}",
+                tool_argument_path(&wasi_sdk_dir.join("share/wasi-sysroot")).display()
+            ))
+            .compile("xberg_wasm_posix_compat");
+    }
+
     fn build_wasm() {
         eprintln!("Building for WASM target with WASI SDK");
 
@@ -1532,6 +1546,8 @@ Installation instructions:
                 );
             }
         };
+
+        build_wasm_posix_compat(&wasi_sdk_dir);
 
         let leptonica_dir = get_or_download_source(
             &artifact_cache_dir,

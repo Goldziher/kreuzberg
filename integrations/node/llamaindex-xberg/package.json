@@ -63,11 +63,11 @@
     "@llamaindex/core": "^0.6.0"
   },
   "devDependencies": {
-    "@llamaindex/core": "^0.6.22",
+    "@llamaindex/core": "^0.6.23",
     "@types/node": "^26.6.5",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.3",
-    "vitest": "^5.0.3"
+    "tsup": "^9.0.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
   },
   "publishConfig": {
     "access": "public"

@@ -12,8 +12,6 @@
 //! 3. **Projector**: Linear layer adapts vision embeddings to language model dimension.
 //! 4. **Language Decoder**: Qwen2 or DeepSeek V2 processes fused vision+text embeddings.
 
-use std::f32;
-
 use candle_core::{D, IndexOp, Tensor};
 use candle_nn::{
     Activation, Conv2d, Embedding, Init, LayerNorm, Linear, Module, RmsNorm, VarBuilder, embedding, linear,

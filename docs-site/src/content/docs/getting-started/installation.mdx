@@ -325,6 +325,42 @@ Run one extraction after you install a package. Each example reads `document.pdf
 
 ---
 
+## Python archive and PyPI retention
+
+PyPI remains the primary source for Python packages. If an older version is no longer
+on PyPI, or a new release is available through the storage fallback, install from the
+permanent GitHub index:
+
+```bash
+python -m pip install "xberg==1.2.1" \
+  --extra-index-url https://xberg-io.github.io/python-wheels/simple/
+
+uv pip install "xberg==1.2.1" \
+  --index https://xberg-io.github.io/python-wheels/simple/
+```
+
+For a uv project, select the archive explicitly for Xberg:
+
+```toml
+[[tool.uv.index]]
+name = "xberg-wheels"
+url = "https://xberg-io.github.io/python-wheels/simple/"
+explicit = true
+
+[tool.uv.sources]
+xberg = { index = "xberg-wheels" }
+```
+
+We keep every release in the current minor on PyPI. For each older minor, we keep its
+latest stable patch, or its latest prerelease if that minor has no stable release.
+For the current **1.3** minor, that means all **1.3.x** releases plus **1.0.14**,
+**1.1.5**, and **1.2.9** remain on PyPI.
+
+Before removing a release from PyPI, we archive every wheel and source distribution
+as a public GitHub Release asset and verify its SHA-256 and byte size against PyPI.
+Archived files and their package-index entries remain available permanently. See the
+[archive and retention policy](https://github.com/xberg-io/python-wheels#pypi-retention-policy).
+
 ## System requirements
 
 Only relevant if building from source or enabling OCR:

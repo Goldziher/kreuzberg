@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.5",
     "@xberg-io/xberg": "workspace:*",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   }
 }

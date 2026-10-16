@@ -75,7 +75,8 @@ fn collect_frac_pr(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> R
 pub(super) fn collect_rad(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Result<MathNode, SecurityError> {
     let mut deg = Vec::new();
     let mut body = Vec::new();
-    let mut deg_hide = true;
+    // An absent m:radPr or m:degHide is off, so the degree shows. ~keep
+    let mut deg_hide = false;
     let mut buf = Vec::new();
 
     loop {
@@ -112,14 +113,14 @@ pub(super) fn collect_rad(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudge
 
 /// Read radical properties (degHide).
 fn collect_rad_pr(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Result<bool, SecurityError> {
-    let mut deg_hide = true;
+    let mut deg_hide = false;
     let mut buf = Vec::new();
 
     loop {
         budget.step()?;
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e) | Event::Empty(ref e)) if e.name().as_ref() == "m:degHide" => {
-                deg_hide = get_m_val(e).as_deref() != Some("0");
+                deg_hide = is_toggle_on(e);
             }
             Ok(Event::End(ref e)) if e.name().as_ref() == "m:radPr" => {
                 break;
@@ -600,6 +601,92 @@ fn collect_bar_pr(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Re
     Ok(top)
 }
 
+/// Collect an m:groupChr element.
+pub(super) fn collect_group_chr(
+    reader: &mut Reader<&[u8]>,
+    budget: &mut SecurityBudget,
+) -> Result<MathNode, SecurityError> {
+    let mut chr = "\u{23DF}".to_string();
+    let mut top = false;
+    let mut body = Vec::new();
+    let mut buf = Vec::new();
+
+    loop {
+        budget.step()?;
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                budget.enter()?;
+                match e.name().as_ref() {
+                    "m:groupChrPr" => {
+                        collect_group_chr_pr(reader, &mut chr, &mut top, budget)?;
+                    }
+                    "m:e" => body = collect_children(reader, "m:e", budget)?,
+                    _ => {}
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                budget.leave();
+                if e.name().as_ref() == "m:groupChr" {
+                    break;
+                }
+            }
+            Ok(Event::Eof) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    budget.check_entity(&chr)?;
+    budget.account_text(chr.len())?;
+    Ok(MathNode::GroupChr { chr, top, body })
+}
+
+/// Read group character properties (chr, pos).
+fn collect_group_chr_pr(
+    reader: &mut Reader<&[u8]>,
+    chr: &mut String,
+    top: &mut bool,
+    budget: &mut SecurityBudget,
+) -> Result<(), SecurityError> {
+    let mut buf = Vec::new();
+
+    loop {
+        budget.step()?;
+        let event = reader.read_event_into(&mut buf);
+        if matches!(event, Ok(Event::Start(_))) {
+            budget.enter()?;
+        }
+        match event {
+            Ok(Event::Start(ref e) | Event::Empty(ref e)) => match e.name().as_ref() {
+                "m:chr" => {
+                    if let Some(val) = get_m_val(e) {
+                        budget.check_attr("m:val", &val)?;
+                        *chr = val;
+                    }
+                }
+                "m:pos" => {
+                    if let Some(val) = get_m_val(e) {
+                        budget.check_attr("m:val", &val)?;
+                        *top = val == "top";
+                    }
+                }
+                _ => {}
+            },
+            Ok(Event::End(ref e)) => {
+                budget.leave();
+                if e.name().as_ref() == "m:groupChrPr" {
+                    break;
+                }
+            }
+            Ok(Event::Eof) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    Ok(())
+}
+
 /// Collect an m:borderBox element.
 pub(super) fn collect_borderbox(
     reader: &mut Reader<&[u8]>,
@@ -794,10 +881,16 @@ fn get_m_val(e: &quick_xml::events::BytesStart) -> Option<String> {
     for attr in e.attributes().flatten() {
         let key = attr.key.as_ref();
         if key == "m:val" || key == "val" {
-            return Some(attr.value.to_string());
+            let raw = attr.value.as_ref();
+            return Some(quick_xml::escape::unescape(raw).map_or_else(|_| raw.to_string(), |s| s.into_owned()));
         }
     }
     None
+}
+
+/// Check an ST_OnOff `m:val`: absent, `1`, `true` and `on` are on.
+fn is_toggle_on(e: &quick_xml::events::BytesStart) -> bool {
+    !matches!(get_m_val(e).as_deref(), Some("0" | "false" | "off"))
 }
 
 /// Skip forward until the matching end tag is consumed.

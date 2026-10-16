@@ -897,7 +897,9 @@ fn fill_row(
 
 fn parse_cell_offsets(offsets: &[u8], column_count: usize, wide_offsets: bool) -> Result<Vec<Option<usize>>> {
     offsets
-        .chunks_exact(OFFSET_ENTRY_LENGTH)
+        .as_chunks::<OFFSET_ENTRY_LENGTH>()
+        .0
+        .iter()
         .take(column_count)
         .map(|bytes| {
             let offset = u16::from_le_bytes([bytes[0], bytes[1]]);

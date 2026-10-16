@@ -9,8 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.11] - 2026-10-16
+
+### Added
+
+- **(math): explicit text annotations preserve LaTeX in Markdown, HTML, and Djot.**
+  Rust callers can use `AnnotationKind::math(display)` and `math_display()`; other bindings can use the existing
+  `Custom` representation with name `xberg.math` and value `inline` or `display`. Annotation byte ranges include
+  the equation's `$...$` or `$$...$$` delimiters; unannotated dollar signs remain prose.
+
 ### Fixed
 
+- **(wasm): OCR-enabled WebAssembly builds link successfully with Rust 1.99.**
+- **(wasm, url): URL extraction no longer decompresses a response twice after Fetch has decoded gzip, deflate, or Brotli.**
+- **(docx): inline equations stay in their original sentences and remain in the extracted formula inventory.** (#2123)
+- **(docx, pptx): an equation character written as a character reference is converted.** OMML attribute values
+  were read without unescaping, so `m:chr m:val="&#x23DF;"` kept the reference text and printed it in place of the
+  brace. Character and entity references in these values now resolve to their characters.
+- **(docx, pptx): an underbrace or overbrace in an equation is no longer dropped.** `m:groupChr` was skipped, so
+  the brace and the text inside it were missing from the output. A brace now renders as `\underbrace` or
+  `\overbrace` by its position, and any other character is set under or over its body.
+- **(docx, pptx): an n-th root in an equation keeps its degree.** A radical without `m:degHide` was read as a
+  square root, so a cube root came out as `\sqrt{x}`. The degree is now dropped only when `m:degHide` is on; `off`
+  and `false` read as off.
+- **(pdf): recognized formulas no longer swap places when two sit on one line.** When a page had as many detected
+  formula regions as extracted formulas, they were paired in reading order, and a formula that sat slightly higher
+  than its left neighbour took that neighbour's LaTeX. Regions now pair with formulas by bounding-box overlap, and
+  fall back to reading order when overlap cannot pair every region. Pages with mismatched counts also pair best
+  overlap first, so an earlier region no longer takes a formula a later one overlaps better.
+- **(macos): native libraries preserve the Mach-O alignment required by the system loader.**
 - **(pdf): Markdown output honors header, footer, and watermark opt-ins for tagged pagination artifacts.**
   Tagged page numbers follow either the header or footer opt-in. (#2120)
 - **(pdf): table numbers split across touching text runs retain their thousands separators without inserted spaces.**
@@ -46,9 +73,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.0 and `tree-sitter-language-pack` 1.22.1.**
+- **(python): distributions have a permanent GitHub package index alongside PyPI.** PyPI retains all releases
+  in the current minor and the latest stable patch of each older minor; archived versions remain installable
+  from `https://xberg-io.github.io/python-wheels/simple/`.
+- **(rust): the minimum supported Rust version is now 1.95**, matching the upgraded crawler dependency.
+- **(html): conversion options add `expand_abbreviations`, `include_blockquote_citations`, and `hidden_content`.**
+  Abbreviation expansion and blockquote citations default to enabled; hidden content defaults to being dropped.
+  Rust callers constructing `ConversionOptions` with exhaustive struct literals must supply these fields or use
+  `..Default::default()`.
+  Java callers using the canonical record constructor must add the fields or use the builder; Kotlin callers
+  passing positional conversion options should migrate to named arguments because the added fields shift positions.
+- **(url): crawler configuration gains additional content options and query-aware deduplication defaults to enabled.**
+  Rust callers using exhaustive crawler configuration literals may need to add the new fields.
+- **(deps): ONNX Runtime moves to `ort` 2.0.0-rc.14, with `sceptre` 0.8.1 and `tree-sitter-language-pack` 1.22.1.**
   `ort` rc.14 builds sessions from a shared process environment, so every session in xberg, `xberg-gliner` and
-  `xberg-paddle-ocr` now takes it. `unhwp` 0.20, `zip` 9.0.3 and `tokio` 1.53.3 are also current.
+  `xberg-paddle-ocr` now takes it. `unhwp` 0.22, `zip` 9.0.3 and `tokio` 1.53.3 are also current.
 - **(deps): hayro-jpeg2000 0.4.1 is the minimum, and it resolves JPEG 2000 palettes itself.** 0.4.1 clamps a palette
   index that lossy coding pushes outside the palette, so xberg no longer reads the palette of an image without an
   `/Indexed` colour space and looks it up by hand. A project whose lockfile held 0.4.0 now gets the clamp for every

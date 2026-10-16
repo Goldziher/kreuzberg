@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@xberg-io/xberg": "1.3.11",
-    "fast-glob": "^3.3.2"
+    "fast-glob": "^3.3.3"
   },
   "peerDependencies": {
     "@langchain/core": ">=0.3.0 <2"
@@ -60,9 +60,9 @@
   "devDependencies": {
     "@langchain/core": "^1.2.17",
     "@types/node": "^26.6.5",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.3",
-    "vitest": "^5.0.3"
+    "tsup": "^9.0.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
   },
   "publishConfig": {
     "access": "public"

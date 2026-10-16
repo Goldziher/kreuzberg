@@ -188,11 +188,11 @@ fn test_ocr_quality_simple_text_high_accuracy() {
     println!("OCR content length: {}", ocr_result.content.len());
     println!(
         "Truth first 100 chars: {:?}",
-        &truth_result.content.chars().take(100).collect::<String>()
+        truth_result.content.chars().take(100).collect::<String>()
     );
     println!(
         "OCR first 100 chars: {:?}",
-        &ocr_result.content.chars().take(100).collect::<String>()
+        ocr_result.content.chars().take(100).collect::<String>()
     );
 
     let truth_tokens = tokenize_text(&truth_result.content);

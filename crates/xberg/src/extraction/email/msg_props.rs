@@ -141,7 +141,12 @@ pub(super) fn read_msg_html_prop<F: std::io::Read + std::io::Seek>(
 
 /// Decode UTF-16LE bytes to a String, stripping trailing NUL chars.
 pub(super) fn decode_utf16le_bytes(data: &[u8]) -> String {
-    let u16s: Vec<u16> = data.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+    let u16s: Vec<u16> = data
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .collect();
     String::from_utf16_lossy(&u16s).trim_end_matches('\0').to_string()
 }
 

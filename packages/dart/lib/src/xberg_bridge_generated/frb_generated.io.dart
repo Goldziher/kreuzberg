@@ -1444,6 +1444,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HeuristicsError dco_decode_heuristics_error(dynamic raw);
 
   @protected
+  HiddenContent dco_decode_hidden_content(dynamic raw);
+
+  @protected
   HierarchicalBlock dco_decode_hierarchical_block(dynamic raw);
 
   @protected
@@ -4371,6 +4374,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   HeuristicsError sse_decode_heuristics_error(SseDeserializer deserializer);
+
+  @protected
+  HiddenContent sse_decode_hidden_content(SseDeserializer deserializer);
 
   @protected
   HierarchicalBlock sse_decode_hierarchical_block(SseDeserializer deserializer);
@@ -8261,6 +8267,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     HeuristicsError self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_hidden_content(HiddenContent self, SseSerializer serializer);
 
   @protected
   void sse_encode_hierarchical_block(

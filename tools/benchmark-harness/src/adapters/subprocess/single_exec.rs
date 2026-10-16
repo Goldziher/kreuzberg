@@ -244,7 +244,8 @@ impl SubprocessAdapter {
         ocr_language: Option<&str>,
         output_format: OutputFormat,
         file_size: u64,
-    ) -> std::result::Result<(serde_json::Value, Duration, crate::monitoring::ResourceStats), BenchmarkResult> {
+    ) -> std::result::Result<(serde_json::Value, Duration, crate::monitoring::ResourceStats), Box<BenchmarkResult>>
+    {
         let start_time = std::time::Instant::now();
 
         let execution = match self
@@ -254,14 +255,14 @@ impl SubprocessAdapter {
             Ok(result) => result,
             Err(e) => {
                 let actual_duration = start_time.elapsed();
-                return Err(self.build_failure_result(
+                return Err(Box::new(self.build_failure_result(
                     file_path,
                     file_size,
                     actual_duration,
                     &crate::monitoring::ResourceStats::default(),
                     &e,
                     output_format,
-                ));
+                )));
             }
         };
         let SubprocessExecution {
@@ -272,27 +273,27 @@ impl SubprocessAdapter {
             ..
         } = execution;
         if let Some(error) = error {
-            return Err(self.build_failure_result(
+            return Err(Box::new(self.build_failure_result(
                 file_path,
                 file_size,
                 duration,
                 &resource_stats,
                 &error,
                 output_format,
-            ));
+            )));
         }
 
         let parsed = match self.parse_output(&stdout) {
             Ok(value) => value,
             Err(e) => {
-                return Err(self.build_failure_result(
+                return Err(Box::new(self.build_failure_result(
                     file_path,
                     file_size,
                     duration,
                     &resource_stats,
                     &e,
                     output_format,
-                ));
+                )));
             }
         };
 
@@ -386,7 +387,7 @@ impl SubprocessAdapter {
             .await
         {
             Ok(value) => value,
-            Err(failure) => return Ok(failure),
+            Err(failure) => return Ok(*failure),
         };
 
         let extraction_time_raw = parsed.get("_extraction_time_ms");

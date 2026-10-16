@@ -189,7 +189,9 @@ fn decode_xp_bytes(value: &nom_exif::EntryValue) -> Option<String> {
     };
 
     let units: Vec<u16> = bytes
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
         .take_while(|&unit| unit != 0)
         .collect();

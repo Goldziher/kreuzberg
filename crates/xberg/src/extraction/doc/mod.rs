@@ -450,7 +450,9 @@ fn extract_text_contiguous(word_doc: &[u8], ccp_text: usize) -> Result<String> {
 
     let text = if is_unicode {
         let chars: Vec<u16> = text_data
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .take(ccp_text)
             .map(|c| u16::from_le_bytes([c[0], c[1]]))
             .collect();

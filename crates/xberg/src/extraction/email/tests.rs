@@ -1,6 +1,4 @@
 use super::eml::*;
-use super::msg::*;
-use super::rtf::*;
 use super::*;
 
 #[test]

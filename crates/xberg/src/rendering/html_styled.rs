@@ -18,7 +18,10 @@ use crate::Result;
 use crate::XbergError;
 use crate::core::config::html_output::{HtmlOutputConfig, HtmlTheme};
 use crate::plugins::{InternalRenderer, Plugin};
-use crate::rendering::common::{NestingKind, RenderState, render_annotated_text_with_plain};
+use crate::rendering::common::{
+    NestingKind, RenderState, annotated_math, render_annotated_text_with_plain, render_nested_annotated_text,
+    valid_math_annotation,
+};
 use crate::types::document_structure::{AnnotationKind, ContentLayer};
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
 
@@ -551,25 +554,49 @@ fn render_page_break(elem: &InternalElement, p: &str, buf: &mut String) {
 }
 
 fn render_inline(_doc: &InternalDocument, elem: &crate::types::internal::InternalElement, p: &str) -> String {
-    if elem.annotations.is_empty() {
-        return esc(&elem.text);
+    if elem
+        .annotations
+        .iter()
+        .any(|annotation| valid_math_annotation(&elem.text, annotation))
+    {
+        return render_nested_annotated_text(
+            &elem.text,
+            &elem.annotations,
+            &|span, kind| {
+                if let Some((_, display)) = annotated_math(span, kind) {
+                    let style = if display { "display" } else { "inline" };
+                    Some(format!(
+                        r#"<span class="{p}math" data-math-style="{style}">{}</span>"#,
+                        esc(span)
+                    ))
+                } else if matches!(kind, AnnotationKind::Code) {
+                    Some(esc(span))
+                } else {
+                    None
+                }
+            },
+            &|span, kind| wrap_inline(span, kind, p),
+            &esc,
+        );
     }
-
-    let p = p.to_string();
     render_annotated_text_with_plain(
         &elem.text,
         &elem.annotations,
-        move |span, kind| match kind {
-            AnnotationKind::Bold => format!("<strong>{}</strong>", esc(span)),
-            AnnotationKind::Italic => format!("<em>{}</em>", esc(span)),
-            AnnotationKind::Strikethrough => format!("<del>{}</del>", esc(span)),
-            AnnotationKind::Link { url, .. } => {
-                format!(r#"<a class="{p}link" href="{}">{}</a>"#, esc(url), esc(span))
-            }
-            _ => esc(span),
-        },
+        |span, kind| wrap_inline(&esc(span), kind, p),
         esc,
     )
+}
+
+fn wrap_inline(span: &str, kind: &AnnotationKind, p: &str) -> String {
+    match kind {
+        AnnotationKind::Bold => format!("<strong>{span}</strong>"),
+        AnnotationKind::Italic => format!("<em>{span}</em>"),
+        AnnotationKind::Strikethrough => format!("<del>{span}</del>"),
+        AnnotationKind::Link { url, .. } => {
+            format!(r#"<a class="{p}link" href="{}">{span}</a>"#, esc(url))
+        }
+        _ => span.to_string(),
+    }
 }
 
 fn render_table(table: &crate::types::tables::Table, p: &str, buf: &mut String) {
@@ -959,3 +986,7 @@ mod tests {
         assert!(out.contains("kb-ocr-text"), "expected ocr-text class: {out}");
     }
 }
+
+#[cfg(test)]
+#[path = "html_styled/math/tests.rs"]
+mod math_tests;

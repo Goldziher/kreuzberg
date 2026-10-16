@@ -134,7 +134,9 @@ fn read_property_value(data: &[u8], offset: usize) -> Option<String> {
             }
             let bytes = &data[offset + 8..offset + 8 + len * 2];
             let chars: Vec<u16> = bytes
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|c| u16::from_le_bytes([c[0], c[1]]))
                 .take_while(|&c| c != 0)
                 .collect();

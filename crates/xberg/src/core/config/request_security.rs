@@ -113,6 +113,7 @@ mod tests {
         "/browser/endpoint",
         "/browser/chrome_path",
         "/browser/chrome_args",
+        "/browser/private_pipe",
         "/browser/eval_script",
         "/browser/session_affinity",
         "/browser_profile",

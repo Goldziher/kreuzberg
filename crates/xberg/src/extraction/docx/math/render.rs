@@ -38,6 +38,7 @@ fn render_node(node: &MathNode, out: &mut String) {
         MathNode::LimLow { body, lim } => render_limlow(body, lim, out),
         MathNode::LimUpp { body, lim } => render_limupp(body, lim, out),
         MathNode::Bar { body, top } => render_bar(body, *top, out),
+        MathNode::GroupChr { chr, top, body } => render_group_chr(chr, *top, body, out),
         MathNode::BorderBox { body } => render_borderbox(body, out),
         MathNode::Matrix { rows } => render_matrix(rows, out),
         MathNode::Group { children } => out.push_str(&render_nodes(children)),
@@ -236,6 +237,19 @@ fn render_bar(body: &[MathNode], top: bool, out: &mut String) {
         out.push_str("\\overline{");
     } else {
         out.push_str("\\underline{");
+    }
+    out.push_str(&render_nodes(body));
+    out.push('}');
+}
+
+fn render_group_chr(chr: &str, top: bool, body: &[MathNode], out: &mut String) {
+    match chr {
+        "\u{23DE}" | "\u{23DF}" => out.push_str(if top { "\\overbrace{" } else { "\\underbrace{" }),
+        _ => {
+            out.push_str(if top { "\\overset{" } else { "\\underset{" });
+            render_run_text(chr, out);
+            out.push_str("}{");
+        }
     }
     out.push_str(&render_nodes(body));
     out.push('}');

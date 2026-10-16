@@ -116,6 +116,11 @@ fn build_internal_document(
                 let paragraph = &doc.paragraphs[*idx];
 
                 let (text, annotations, math_formulas) = collect_run_annotations(&paragraph.runs);
+                for run in &paragraph.runs {
+                    if let Some((latex, false)) = &run.math_latex {
+                        builder.record_formula(latex, Some(current_page));
+                    }
+                }
 
                 if text.is_empty() && math_formulas.is_empty() {
                     if current_list_numbering_id.is_some() {
@@ -503,9 +508,9 @@ fn push_header_footer_content(
 /// Collect plain text, annotations, and math formulas from a slice of Runs.
 ///
 /// Returns `(plain_text, annotations, math_formulas)` where:
-/// - `plain_text` is the concatenated non-math run text
+/// - `plain_text` keeps inline equations in their original position, including `$` delimiters
 /// - `annotations` are byte-offset-based formatting annotations for the plain text
-/// - `math_formulas` are LaTeX strings from math runs (to be emitted as Formula nodes)
+/// - `math_formulas` are display equations emitted as separate Formula nodes
 fn collect_run_annotations(
     runs: &[crate::extraction::docx::parser::Run],
 ) -> (String, Vec<crate::types::TextAnnotation>, Vec<String>) {
@@ -516,9 +521,21 @@ fn collect_run_annotations(
     let mut math_formulas = Vec::new();
 
     for run in runs {
-        if let Some((ref latex, _is_display)) = run.math_latex {
+        if let Some((ref latex, is_display)) = run.math_latex {
             if !latex.is_empty() {
-                math_formulas.push(latex.clone());
+                if is_display {
+                    math_formulas.push(latex.clone());
+                } else {
+                    let start = text.len() as u32;
+                    text.push('$');
+                    text.push_str(latex);
+                    text.push('$');
+                    annotations.push(crate::types::TextAnnotation {
+                        start,
+                        end: text.len() as u32,
+                        kind: crate::types::AnnotationKind::math(false),
+                    });
+                }
             }
             continue;
         }
@@ -4716,5 +4733,111 @@ mod tests {
             err_msg.contains(&default_limit.to_string()),
             "error should mention the default limit ({default_limit}), got: {err_msg}"
         );
+    }
+    #[tokio::test]
+    async fn should_keep_issue_2123_inline_math_in_its_docx_sentence() {
+        let xml = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><w:body><w:p>
+            <w:r><w:t>Équation </w:t></w:r><m:oMath><m:r><m:t>α</m:t></m:r></m:oMath>
+            <w:r><w:t> holds.</w:t></w:r></w:p></w:body></w:document>"#;
+        let data = build_test_docx(xml);
+        let internal = DocxExtractor::new()
+            .extract_content(
+                &data,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                &ExtractionConfig::default(),
+            )
+            .await
+            .unwrap();
+        let paragraphs: Vec<_> = internal
+            .elements
+            .iter()
+            .filter(|element| element.kind == crate::types::internal::ElementKind::Paragraph)
+            .collect();
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(paragraphs[0].text, "Équation $\\alpha $ holds.");
+        let annotation = paragraphs[0]
+            .annotations
+            .iter()
+            .find(|annotation| {
+                matches!(&annotation.kind,
+            crate::types::AnnotationKind::Custom { name, .. } if name == "xberg.math")
+            })
+            .unwrap();
+        assert_eq!(
+            &paragraphs[0].text[annotation.start as usize..annotation.end as usize],
+            "$\\alpha $"
+        );
+        assert_eq!(annotation.start as usize, "Équation ".len());
+        let result = crate::extraction::derive::derive_extraction_result(
+            internal,
+            true,
+            crate::core::config::OutputFormat::Markdown,
+        );
+        assert_eq!(result.content.trim(), "Équation $\\alpha $ holds.");
+        assert_eq!(result.formulas.len(), 1);
+        assert_eq!(result.formulas[0].latex.trim(), "\\alpha");
+        assert_issue_2123_public_math_payload(&result);
+    }
+
+    fn assert_issue_2123_public_math_payload(result: &crate::types::extraction::ExtractedDocument) {
+        let document = result.document.as_ref().expect("public document structure requested");
+        assert_eq!(document.nodes.len(), 1);
+        let node = &document.nodes[0];
+        let text = node.content.text().expect("public paragraph text");
+        assert_eq!(text, "Équation $\\alpha $ holds.");
+        assert_eq!(node.annotations.len(), 1);
+        let annotation = &node.annotations[0];
+        assert_eq!(annotation.start as usize, "Équation ".len());
+        assert_eq!(annotation.end as usize, "Équation $\\alpha $".len());
+        assert_eq!(&text[annotation.start as usize..annotation.end as usize], "$\\alpha $");
+        assert_eq!(
+            annotation.kind,
+            crate::types::AnnotationKind::Custom {
+                name: "xberg.math".into(),
+                value: Some("inline".into()),
+            }
+        );
+        let payload = serde_json::to_value(result).expect("serialize actual public extraction");
+        assert_eq!(
+            payload["document"]["nodes"][0]["annotations"],
+            serde_json::json!([{
+                "start": "Équation ".len(), "end": "Équation $\\alpha $".len(),
+                "kind": {"annotation_type":"custom", "name":"xberg.math", "value":"inline"},
+            }])
+        );
+        let restored: crate::types::extraction::ExtractedDocument =
+            serde_json::from_value(payload).expect("deserialize public binding payload");
+        assert_eq!(restored.document.as_ref(), Some(document));
+    }
+
+    #[test]
+    fn should_keep_issue_2123_adjacent_inline_math_separate_from_display_math() {
+        use crate::extraction::docx::parser::Run;
+        let runs = vec![
+            Run::new("π ".into()),
+            Run {
+                math_latex: Some(("x".into(), false)),
+                ..Default::default()
+            },
+            Run {
+                math_latex: Some(("y".into(), false)),
+                ..Default::default()
+            },
+            Run::new(" tail".into()),
+            Run {
+                math_latex: Some(("z".into(), true)),
+                ..Default::default()
+            },
+        ];
+        let (text, annotations, display) = collect_run_annotations(&runs);
+        assert_eq!(text, "π $x$$y$ tail");
+        assert_eq!(display, ["z"]);
+        assert_eq!(annotations.len(), 2);
+        let spans: Vec<_> = annotations
+            .iter()
+            .map(|annotation| &text[annotation.start as usize..annotation.end as usize])
+            .collect();
+        assert_eq!(spans, ["$x$", "$y$"]);
     }
 }

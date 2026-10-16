@@ -43,7 +43,7 @@ fn jpeg_decoder_returns_straight_cmyk_for_app14_inverted_input() {
     assert_eq!(info.height, 8);
     assert_eq!(decoded.len(), 8 * 8 * 4);
 
-    for (i, chunk) in decoded.chunks_exact(4).enumerate() {
+    for (i, chunk) in decoded.as_chunks::<4>().0.iter().enumerate() {
         assert!(
             chunk[0] > 200,
             "pixel {i}: Cyan channel after jpeg-decoder auto-inversion (expected ≳255); got {chunk:?}"

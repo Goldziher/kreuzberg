@@ -4,5 +4,5 @@ description: "Local document extraction: text, tables, metadata, images from 107
 author: "Kreuzberg, Inc."
 kind: "standalone"
 python_dependencies:
-  - "mcp==1.28.1"
+  - "mcp==2.3.0"
   - "PyYAML==6.0.3"

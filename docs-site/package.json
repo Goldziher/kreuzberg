@@ -13,7 +13,7 @@
   "dependencies": {
     "@astrojs/starlight": "^0.42.6",
     "@xberg-io/docs-theme": "^0.4.1",
-    "astro": "^7.3.8",
+    "astro": "^7.4.0",
     "sharp": "^0.35.5",
     "starlight-llms-txt": "^0.12.0"
   }

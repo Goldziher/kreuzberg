@@ -1167,7 +1167,7 @@ values = ["function-too-long"]
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg/src/chunking/core.rs"
-values = ["file-too-long", "function-too-long"]
+values = ["file-too-long"]
 
 [[entries]]
 relative_path = "poly.toml"

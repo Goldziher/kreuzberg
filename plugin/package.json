@@ -5,7 +5,7 @@
     "url": "https://xberg.io"
   },
   "dependencies": {
-    "@opencode/plugin": "^2.0.26"
+    "@opencode/plugin": "^2.0.29"
   },
   "description": "Local document extraction: text, tables, metadata, images from 107 formats with optional OCR.",
   "exports": {

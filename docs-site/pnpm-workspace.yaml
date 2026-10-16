@@ -3,3 +3,12 @@ allowBuilds:
   sharp: true
 minimumReleaseAgeExclude:
   - "@xberg-io/docs-theme@0.4.1"
+  - "@astrojs/internal-helpers@0.13.0"
+  - "@astrojs/markdown-satteri@0.4.4"
+  - "@astrojs/prism@4.1.0"
+  - "@astrojs/telemetry@3.4.0"
+  - astro@7.4.0
+overrides:
+  # The plugin uses only isMatch, which picomatch provides without vulnerable braces. ~keep
+  "starlight-llms-txt>micromatch": "npm:picomatch@4.0.7"
+  "postcss-nested>postcss-selector-parser": "^7.1.6"

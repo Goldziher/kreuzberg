@@ -235,7 +235,12 @@ fn retain_budgeted_attachment_content(
     for (attachment, elements) in extracted_attachments
         .iter()
         .filter(|attachment| !attachment.result.content.trim().is_empty())
-        .zip(attachment_elements.chunks_exact(INLINED_ATTACHMENT_ELEMENT_COUNT))
+        .zip(
+            attachment_elements
+                .as_chunks::<INLINED_ATTACHMENT_ELEMENT_COUNT>()
+                .0
+                .iter(),
+        )
     {
         let mut candidate_budget = budget.clone();
         let fits_budget = elements

@@ -684,13 +684,11 @@ fn omml_node_to_run(container: &Node, xml_str: &str) -> Option<Run> {
         .find(|d| d.tag_name().namespace() == Some(MATH_NAMESPACE) && d.tag_name().name() == "oMathPara")
     {
         (true, n)
-    } else if let Some(n) = container
-        .descendants()
-        .find(|d| d.tag_name().namespace() == Some(MATH_NAMESPACE) && d.tag_name().name() == "oMath")
-    {
-        (false, n)
     } else {
-        return None;
+        let n = container
+            .descendants()
+            .find(|d| d.tag_name().namespace() == Some(MATH_NAMESPACE) && d.tag_name().name() == "oMath")?;
+        (false, n)
     };
 
     let raw_xml = xml_str.get(math_node.range())?;

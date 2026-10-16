@@ -565,8 +565,8 @@ jobs:
           # the wheel against it instead of Homebrew's runner-OS bottles. ~keep
           cibw-before-build-macos: bash {project}/scripts/ci/build-macos-heif-deps.sh
           cibw-environment-macos: 'MATURIN_BUILD_ARGS="" CARGO_BUILD_LOCKED=true MACOSX_DEPLOYMENT_TARGET=11.0 PKG_CONFIG_PATH=/tmp/xberg-heif/lib/pkgconfig'
-          cibw-before-build-windows: "rustup install 1.95-x86_64-pc-windows-msvc --profile minimal --component rust-src --component rustfmt --component clippy && rustup target add x86_64-pc-windows-msvc --toolchain 1.95-x86_64-pc-windows-msvc && pip install maturin uv && set PATH=%USERPROFILE%\\.cargo\\bin;%PATH%"
-          cibw-environment-windows: 'MATURIN_BUILD_ARGS="--target x86_64-pc-windows-msvc" RUSTUP_TOOLCHAIN="1.95-x86_64-pc-windows-msvc" RUSTC_WRAPPER='
+          cibw-before-build-windows: "rustup install 1.99.1-x86_64-pc-windows-msvc --profile minimal --component rust-src --component rustfmt --component clippy && rustup target add x86_64-pc-windows-msvc --toolchain 1.99.1-x86_64-pc-windows-msvc && pip install maturin uv && set PATH=%USERPROFILE%\\.cargo\\bin;%PATH%"
+          cibw-environment-windows: 'MATURIN_BUILD_ARGS="--target x86_64-pc-windows-msvc" RUSTUP_TOOLCHAIN="1.99.1-x86_64-pc-windows-msvc" RUSTC_WRAPPER='
 
       - name: Vendor ONNX Runtime into wheel
         if: runner.os == 'Linux'
@@ -3731,35 +3731,89 @@ jobs:
     name: Publish to PyPI
     needs: [prepare, python-wheels, python-wheels-musl, python-sdist, check-pypi, publish-crates]
     if: >-
-      ${{ !inputs.plugins-only && (needs.publish-crates.result != 'failure' && needs.prepare.outputs.release_python == 'true' && needs.prepare.outputs.is_tag == 'true' && (needs.check-pypi.outputs.exists != 'true' || needs.prepare.outputs.force_republish == 'true')) }}
+      ${{ !inputs.plugins-only && (!cancelled() && needs.publish-crates.result != 'failure' && needs.prepare.outputs.release_python == 'true' && needs.prepare.outputs.is_tag == 'true' && (needs.check-pypi.outputs.exists != 'true' || needs.prepare.outputs.force_republish == 'true') && needs.python-wheels.result == 'success' && needs.python-wheels-musl.result == 'success' && (needs.python-sdist.result == 'success' || (needs.prepare.outputs.dry_run == 'true' && needs.python-sdist.result == 'skipped'))) }}
     runs-on: ubuntu-latest
     environment: pypi
+    concurrency:
+      group: python-archive-xberg-${{ needs.prepare.outputs.version }}
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v8
+      - name: Checkout publication helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Checkout pinned shared publication verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xberg-io/actions
+          ref: cc89740654cef67b752113ddd87d4f0d23dda3f5
+          path: .python-publication-actions
+          persist-credentials: false
+      - name: Install task runner
+        uses: xberg-io/actions/install-task@cc89740654cef67b752113ddd87d4f0d23dda3f5
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           pattern: python-wheels-*
           path: dist
           merge-multiple: true
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        if: needs.prepare.outputs.dry_run != 'true'
         with:
           name: python-sdist
           path: dist
 
       - name: Verify Python wheel package contents
-        uses: xberg-io/actions/verify-package-contents@v1
+        uses: xberg-io/actions/verify-package-contents@cc89740654cef67b752113ddd87d4f0d23dda3f5
         with:
           language: python
           artifact-path: dist
           package-name: xberg
           strict: "false"
 
-      - uses: xberg-io/actions/publish-pypi@v1
+      - name: Create central archive token
+        if: needs.prepare.outputs.dry_run != 'true'
+        id: archive-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: xberg-io
+          repositories: python-wheels
+          permission-contents: write
+      - name: Prepare public Python archive release
+        if: needs.prepare.outputs.dry_run != 'true'
+        id: archive-release
+        env:
+          GH_TOKEN: ${{ steps.archive-token.outputs.token }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: task python:publish:archive:prepare
+      - name: Archive every Python distribution permanently
+        if: needs.prepare.outputs.dry_run != 'true'
+        uses: xberg-io/actions/archive-python@cc89740654cef67b752113ddd87d4f0d23dda3f5
         with:
           packages-dir: dist
+          repository: xberg-io/python-wheels
+          tag: ${{ steps.archive-release.outputs.tag }}
+          expected-version: ${{ needs.prepare.outputs.version }}
+          output-dir: python-index
+          token: ${{ steps.archive-token.outputs.token }}
+      - name: Wait for every distribution in the public Python index
+        if: needs.prepare.outputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ steps.archive-token.outputs.token }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: task python:publish:archive:wait
+      - name: Publish primarily to PyPI
+        uses: xberg-io/actions/publish-pypi@cc89740654cef67b752113ddd87d4f0d23dda3f5
+        with:
+          packages-dir: dist
+          expected-version: ${{ needs.prepare.outputs.version }}
           dry-run: ${{ needs.prepare.outputs.dry_run }}
+          fallback-index-url: https://xberg-io.github.io/python-wheels/simple/
 
   publish-cli-proxy:
     name: Publish CLI proxy to PyPI (wheels + sdist)

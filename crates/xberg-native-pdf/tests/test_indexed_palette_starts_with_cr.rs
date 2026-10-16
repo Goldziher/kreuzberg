@@ -112,7 +112,7 @@ fn indexed_cmyk_palette_leading_cr_preserved() {
         "pixel ({r},{g},{b}) should be near-white from CMYK(13,12,12,4); a black \
          result indicates the palette's leading 0x0D byte was stripped"
     );
-    for chunk in pixels.chunks_exact(3) {
+    for chunk in pixels.as_chunks::<3>().0 {
         assert_eq!(chunk[0], r);
         assert_eq!(chunk[1], g);
         assert_eq!(chunk[2], b);

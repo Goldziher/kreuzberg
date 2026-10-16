@@ -1,6 +1,6 @@
 {
   "schema_version": "v1",
-  "source_hash": "blake3:662aa704cf97ad20f02258c9dcd1c73822213a426e27ec7ebc292d3f599fb7c2",
+  "source_hash": "blake3:dbaab95ae525c5e4a221b5552123f1c8ea0932bfcf9ad7a9041d9d8b1d90ec47",
   "outputs": {
     ".claude-plugin/plugin.json": {
       "content_hash": "blake3:eadef0a46e211d9233fd213d29969e726c4821c73fe74178c0286e60546b18cb",
@@ -307,7 +307,7 @@
       "mode": "0644"
     },
     ".hermes/package/pyproject.toml": {
-      "content_hash": "blake3:5d4f86d907cf1dc954c3908b057b578fb80daf35affd5f8ef4bfa5fa69b0cf91",
+      "content_hash": "blake3:d873cf74c043cabf07ee17de4b0455e1cc0407312d8aacbf280676b49269776f",
       "mode": "0644"
     },
     ".hermes/package/src/xberg_hermes_plugin/__init__.py": {
@@ -323,11 +323,11 @@
       "mode": "0644"
     },
     ".hermes/package/src/xberg_hermes_plugin/hermes.py": {
-      "content_hash": "blake3:23b424112cf0f17bbb00141542574873bfeaaed52d0ca22cf0bb1f12eb457b5d",
+      "content_hash": "blake3:199f3e90234e860d46281b652c3c16600eb856c60d40c71b5843051da11fd702",
       "mode": "0644"
     },
     ".hermes/package/src/xberg_hermes_plugin/plugin.yaml": {
-      "content_hash": "blake3:e4b19de150726e1fb8d49ab7381df48a8195807c34e91072d7a9fc0da4f42107",
+      "content_hash": "blake3:900471bfc16d9bee88ddb37058c2eec8d56fb8805c3d077352663dd50b6b22c3",
       "mode": "0644"
     },
     ".hermes/package/src/xberg_hermes_plugin/skills/xberg-batch-extraction/SKILL.md": {
@@ -623,11 +623,11 @@
       "mode": "0644"
     },
     ".hermes/plugins/xberg/hermes.py": {
-      "content_hash": "blake3:23b424112cf0f17bbb00141542574873bfeaaed52d0ca22cf0bb1f12eb457b5d",
+      "content_hash": "blake3:199f3e90234e860d46281b652c3c16600eb856c60d40c71b5843051da11fd702",
       "mode": "0644"
     },
     ".hermes/plugins/xberg/plugin.yaml": {
-      "content_hash": "blake3:e4b19de150726e1fb8d49ab7381df48a8195807c34e91072d7a9fc0da4f42107",
+      "content_hash": "blake3:900471bfc16d9bee88ddb37058c2eec8d56fb8805c3d077352663dd50b6b22c3",
       "mode": "0644"
     },
     ".hermes/plugins/xberg/skills/xberg-batch-extraction/SKILL.md": {
@@ -1539,7 +1539,7 @@
       "mode": "0644"
     },
     "package.json": {
-      "content_hash": "blake3:af29ae72db39f8b748f0dff55af140a68823086e4d8431c9792d7513d1ec6f7b",
+      "content_hash": "blake3:40c20bfd18effa16545c469b0d04a007fe17f601fe4ca3fb352bb0f4d55f36a3",
       "mode": "0644"
     },
     "plugin.json": {

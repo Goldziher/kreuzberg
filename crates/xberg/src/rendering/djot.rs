@@ -5,10 +5,11 @@ use crate::types::document_structure::AnnotationKind;
 use crate::types::internal::{ElementKind, InternalDocument};
 
 use super::common::{
-    FootnoteCollector, NestingKind, RenderState, annotation_display_text, annotation_type_label,
+    FootnoteCollector, NestingKind, RenderState, annotated_math, annotation_display_text, annotation_type_label,
     ensure_trailing_newline, finalize_output, get_admonition_kind, get_admonition_title, get_language,
     handle_container_end, is_body_element, is_container_end, normalize_inline_text, parse_metadata_entries,
-    push_with_bq, render_annotated_text_with_plain, render_table_djot,
+    push_with_bq, render_annotated_text_with_plain, render_nested_annotated_text, render_table_djot,
+    valid_math_annotation,
 };
 
 /// Render an `InternalDocument` to Djot markup.
@@ -338,37 +339,74 @@ fn render_annotations_djot(annotations: &[PdfAnnotation]) -> String {
 /// newlines replaced, control characters stripped) to match the markdown renderer.
 /// Code spans are left un-normalized to preserve literal content.
 fn render_djot_annotated(text: &str, annotations: &[crate::types::document_structure::TextAnnotation]) -> String {
+    if annotations
+        .iter()
+        .any(|annotation| valid_math_annotation(text, annotation))
+    {
+        return render_nested_annotated_text(
+            text,
+            annotations,
+            &|span, kind| {
+                if let Some((literal, display)) = annotated_math(span, kind) {
+                    Some(render_djot_math(literal, display))
+                } else if matches!(kind, AnnotationKind::Code) {
+                    Some(render_djot_span(span, kind, false))
+                } else {
+                    None
+                }
+            },
+            &|span, kind| render_djot_span(span, kind, false),
+            &|span| normalize_inline_text(span).into_owned(),
+        );
+    }
     render_annotated_text_with_plain(
         text,
         annotations,
-        |span, kind| {
-            let normalized = normalize_inline_text(span);
-            match kind {
-                AnnotationKind::Bold => format!("*{}*", normalized),
-                AnnotationKind::Italic => format!("_{}_", normalized),
-                AnnotationKind::Code => format!("`{}`", span),
-                AnnotationKind::Strikethrough => format!("{{-{}-}}", normalized),
-                AnnotationKind::Underline => format!("[{}]{{.underline}}", normalized),
-                AnnotationKind::Subscript => format!("~{}~", normalized),
-                AnnotationKind::Superscript => format!("^{}^", normalized),
-                AnnotationKind::Highlight => format!("{{={}=}}", normalized),
-                AnnotationKind::Link { url, title } => {
-                    if let Some(t) = title {
-                        format!("[{}]({} \"{}\")", normalized, url, t)
-                    } else {
-                        format!("[{}]({})", normalized, url)
-                    }
-                }
-                AnnotationKind::Color { .. } | AnnotationKind::FontSize { .. } | AnnotationKind::Custom { .. } => {
-                    normalized.into_owned()
-                }
-            }
-        },
-        // `render_annotated_text_with_plain` wants an owned `String` for the plain
-        // rendering, so the borrow `normalize_inline_text` can now return has to be
-        // materialised here rather than at every call site inside the closure above.
-        |text| normalize_inline_text(text).into_owned(),
+        |span, kind| render_djot_span(span, kind, true),
+        |span| normalize_inline_text(span).into_owned(),
     )
+}
+
+fn render_djot_span(span: &str, kind: &AnnotationKind, normalize: bool) -> String {
+    let normalized = if normalize {
+        normalize_inline_text(span)
+    } else {
+        std::borrow::Cow::Borrowed(span)
+    };
+    match kind {
+        AnnotationKind::Bold => format!("*{}*", normalized),
+        AnnotationKind::Italic => format!("_{}_", normalized),
+        AnnotationKind::Code => format!("`{}`", span),
+        AnnotationKind::Strikethrough => format!("{{-{}-}}", normalized),
+        AnnotationKind::Underline => format!("[{}]{{.underline}}", normalized),
+        AnnotationKind::Subscript => format!("~{}~", normalized),
+        AnnotationKind::Superscript => format!("^{}^", normalized),
+        AnnotationKind::Highlight => format!("{{={}=}}", normalized),
+        AnnotationKind::Link { url, title } => {
+            if let Some(title) = title {
+                format!("[{}]({} \"{}\")", normalized, url, title)
+            } else {
+                format!("[{}]({})", normalized, url)
+            }
+        }
+        AnnotationKind::Color { .. } | AnnotationKind::FontSize { .. } | AnnotationKind::Custom { .. } => {
+            normalized.into_owned()
+        }
+    }
+}
+
+fn render_djot_math(literal: &str, display: bool) -> String {
+    let width = literal
+        .split(|character| character != '`')
+        .map(str::len)
+        .max()
+        .unwrap_or(0)
+        + 1;
+    let fence = "`".repeat(width);
+    let before = if literal.starts_with('`') { " " } else { "" };
+    let after = if literal.ends_with('`') { " " } else { "" };
+    let dollar = if display { "$$" } else { "$" };
+    format!("{dollar}{fence}{before}{literal}{after}{fence}")
 }
 
 #[cfg(test)]
@@ -1053,5 +1091,54 @@ mod tests {
         let doc = b.build();
         let out = render_djot(&doc);
         assert!(out.contains("![Missing image]()"), "got: {}", out);
+    }
+    #[test]
+    fn should_render_issue_2123_nested_math_as_native_djot() {
+        let text = r"$\alpha  + `b`$";
+        let annotations = vec![
+            TextAnnotation {
+                start: 0,
+                end: text.len() as u32,
+                kind: AnnotationKind::math(false),
+            },
+            TextAnnotation {
+                start: 0,
+                end: text.len() as u32,
+                kind: AnnotationKind::Bold,
+            },
+            TextAnnotation {
+                start: 0,
+                end: text.len() as u32,
+                kind: AnnotationKind::Link {
+                    url: "https://example.com".into(),
+                    title: None,
+                },
+            },
+        ];
+        let output = render_djot_annotated(text, &annotations);
+        assert_eq!(output, r"[*$``\alpha  + `b` ``*](https://example.com)");
+        let events: Vec<_> = jotdown::Parser::new(&output).collect();
+        let literals: Vec<_> = events
+            .iter()
+            .filter_map(|event| {
+                if let jotdown::Event::Str(value) = event {
+                    Some(value.as_ref())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(literals, [r"\alpha  + `b`"]);
+
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| matches!(
+                    event,
+                    jotdown::Event::Start(jotdown::Container::Math { display: false }, _)
+                ))
+                .count(),
+            1
+        );
     }
 }

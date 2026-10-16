@@ -513,9 +513,18 @@ mod tests {
     #[test]
     #[allow(clippy::reversed_empty_ranges)]
     fn page_ranges_validation_rejects_out_of_bounds() {
-        assert!(ranges_from_page_ranges(&[1..=6], 5).is_err(), "end beyond page count");
-        assert!(ranges_from_page_ranges(&[0..=2], 5).is_err(), "start below 1");
-        assert!(ranges_from_page_ranges(&[3..=2], 5).is_err(), "start after end");
+        assert!(
+            ranges_from_page_ranges(std::slice::from_ref(&(1..=6)), 5).is_err(),
+            "end beyond page count"
+        );
+        assert!(
+            ranges_from_page_ranges(std::slice::from_ref(&(0..=2)), 5).is_err(),
+            "start below 1"
+        );
+        assert!(
+            ranges_from_page_ranges(std::slice::from_ref(&(3..=2)), 5).is_err(),
+            "start after end"
+        );
         assert!(ranges_from_page_ranges(&[], 5).is_err(), "empty range list");
         assert!(ranges_from_page_ranges(&[1..=3, 4..=5], 5).is_ok());
     }
@@ -569,7 +578,7 @@ mod tests {
     fn auto_ranges_single_document_yields_one_full_range() {
         let doc = sample_doc();
         let ranges = auto_ranges(&doc, 5).unwrap();
-        assert_eq!(ranges, vec![1..=5]);
+        assert_eq!(ranges, std::iter::once(1..=5).collect::<Vec<_>>());
     }
 
     #[cfg(feature = "heuristics")]

@@ -133,7 +133,7 @@ impl LoraAdapter {
             let bytes = view.data();
             let n = bytes.len() / 4;
             let mut data = Vec::with_capacity(n);
-            for chunk in bytes.chunks_exact(4) {
+            for chunk in bytes.as_chunks::<4>().0 {
                 data.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
             }
             let tensor = Tensor::from_vec(data, shape, device)
@@ -267,7 +267,7 @@ fn decode_view(
             let bytes = view.data();
             let n = bytes.len() / 4;
             let mut data = Vec::with_capacity(n);
-            for chunk in bytes.chunks_exact(4) {
+            for chunk in bytes.as_chunks::<4>().0 {
                 data.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
             }
             Tensor::from_vec(data, shape, device)
@@ -276,7 +276,7 @@ fn decode_view(
             let bytes = view.data();
             let n = bytes.len() / 8;
             let mut data: Vec<i64> = Vec::with_capacity(n);
-            for chunk in bytes.chunks_exact(8) {
+            for chunk in bytes.as_chunks::<8>().0 {
                 data.push(i64::from_le_bytes([
                     chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
                 ]));

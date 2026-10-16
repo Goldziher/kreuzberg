@@ -18868,8 +18868,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ContentConfig dco_decode_content_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
     return ContentConfig(
       outputFormat: dco_decode_String(arr[0]),
       preprocessingPreset: dco_decode_String(arr[1]),
@@ -18884,6 +18884,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       wrapWidth: dco_decode_i_64(arr[10]),
       includeDocumentStructure: dco_decode_bool(arr[11]),
       extractMetadata: dco_decode_bool(arr[12]),
+      stripNewlines: dco_decode_bool(arr[13]),
+      bullets: dco_decode_String(arr[14]),
+      listIndentWidth: dco_decode_i_64(arr[15]),
+      strongEmSymbol: dco_decode_String(arr[16]),
+      compactTables: dco_decode_bool(arr[17]),
+      keepInlineImagesIn: dco_decode_list_String(arr[18]),
+      keepHidden: dco_decode_bool(arr[19]),
     );
   }
 
@@ -18930,8 +18937,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ConversionOptions dco_decode_conversion_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 46)
-      throw Exception('unexpected arr length: expect 46 but see ${arr.length}');
+    if (arr.length != 49)
+      throw Exception('unexpected arr length: expect 49 but see ${arr.length}');
     return ConversionOptions(
       headingStyle: dco_decode_heading_style(arr[0]),
       listIndentType: dco_decode_list_indent_type(arr[1]),
@@ -18944,41 +18951,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       escapeAscii: dco_decode_bool(arr[8]),
       codeLanguage: dco_decode_String(arr[9]),
       autolinks: dco_decode_bool(arr[10]),
-      defaultTitle: dco_decode_bool(arr[11]),
-      brInTables: dco_decode_bool(arr[12]),
-      compactTables: dco_decode_bool(arr[13]),
-      highlightStyle: dco_decode_highlight_style(arr[14]),
-      extractMetadata: dco_decode_bool(arr[15]),
-      whitespaceMode: dco_decode_whitespace_mode(arr[16]),
-      stripNewlines: dco_decode_bool(arr[17]),
-      wrap: dco_decode_bool(arr[18]),
-      wrapWidth: dco_decode_i_64(arr[19]),
-      convertAsInline: dco_decode_bool(arr[20]),
-      subSymbol: dco_decode_String(arr[21]),
-      supSymbol: dco_decode_String(arr[22]),
-      newlineStyle: dco_decode_newline_style(arr[23]),
-      codeBlockStyle: dco_decode_code_block_style(arr[24]),
-      keepInlineImagesIn: dco_decode_list_String(arr[25]),
-      preprocessing: dco_decode_preprocessing_options(arr[26]),
-      encoding: dco_decode_String(arr[27]),
-      debug: dco_decode_bool(arr[28]),
-      stripTags: dco_decode_list_String(arr[29]),
-      preserveTags: dco_decode_list_String(arr[30]),
-      skipImages: dco_decode_bool(arr[31]),
-      inlineDataMedia: dco_decode_inline_data_media(arr[32]),
-      urlEscapeStyle: dco_decode_url_escape_style(arr[33]),
-      linkStyle: dco_decode_link_style(arr[34]),
-      outputFormat: dco_decode_html_to_markdown_rs_output_format(arr[35]),
-      includeDocumentStructure: dco_decode_bool(arr[36]),
-      extractImages: dco_decode_bool(arr[37]),
-      maxImageSize: dco_decode_i_64(arr[38]),
-      maxInputSize: dco_decode_opt_box_autoadd_i_64(arr[39]),
-      captureSvg: dco_decode_bool(arr[40]),
-      inferDimensions: dco_decode_bool(arr[41]),
-      maxDepth: dco_decode_opt_box_autoadd_i_64(arr[42]),
-      excludeSelectors: dco_decode_list_String(arr[43]),
-      tierStrategy: dco_decode_tier_strategy(arr[44]),
-      baseUrl: dco_decode_opt_String(arr[45]),
+      expandAbbreviations: dco_decode_bool(arr[11]),
+      includeBlockquoteCitations: dco_decode_bool(arr[12]),
+      defaultTitle: dco_decode_bool(arr[13]),
+      brInTables: dco_decode_bool(arr[14]),
+      compactTables: dco_decode_bool(arr[15]),
+      highlightStyle: dco_decode_highlight_style(arr[16]),
+      extractMetadata: dco_decode_bool(arr[17]),
+      whitespaceMode: dco_decode_whitespace_mode(arr[18]),
+      stripNewlines: dco_decode_bool(arr[19]),
+      wrap: dco_decode_bool(arr[20]),
+      wrapWidth: dco_decode_i_64(arr[21]),
+      convertAsInline: dco_decode_bool(arr[22]),
+      subSymbol: dco_decode_String(arr[23]),
+      supSymbol: dco_decode_String(arr[24]),
+      newlineStyle: dco_decode_newline_style(arr[25]),
+      codeBlockStyle: dco_decode_code_block_style(arr[26]),
+      keepInlineImagesIn: dco_decode_list_String(arr[27]),
+      preprocessing: dco_decode_preprocessing_options(arr[28]),
+      encoding: dco_decode_String(arr[29]),
+      debug: dco_decode_bool(arr[30]),
+      stripTags: dco_decode_list_String(arr[31]),
+      preserveTags: dco_decode_list_String(arr[32]),
+      skipImages: dco_decode_bool(arr[33]),
+      inlineDataMedia: dco_decode_inline_data_media(arr[34]),
+      hiddenContent: dco_decode_hidden_content(arr[35]),
+      urlEscapeStyle: dco_decode_url_escape_style(arr[36]),
+      linkStyle: dco_decode_link_style(arr[37]),
+      outputFormat: dco_decode_html_to_markdown_rs_output_format(arr[38]),
+      includeDocumentStructure: dco_decode_bool(arr[39]),
+      extractImages: dco_decode_bool(arr[40]),
+      maxImageSize: dco_decode_i_64(arr[41]),
+      maxInputSize: dco_decode_opt_box_autoadd_i_64(arr[42]),
+      captureSvg: dco_decode_bool(arr[43]),
+      inferDimensions: dco_decode_bool(arr[44]),
+      maxDepth: dco_decode_opt_box_autoadd_i_64(arr[45]),
+      excludeSelectors: dco_decode_list_String(arr[46]),
+      tierStrategy: dco_decode_tier_strategy(arr[47]),
+      baseUrl: dco_decode_opt_String(arr[48]),
     );
   }
 
@@ -20477,6 +20487,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       default:
         throw Exception("unreachable");
     }
+  }
+
+  @protected
+  HiddenContent dco_decode_hidden_content(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return HiddenContent.values[raw as int];
   }
 
   @protected
@@ -27674,6 +27690,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_wrapWidth = sse_decode_i_64(deserializer);
     var var_includeDocumentStructure = sse_decode_bool(deserializer);
     var var_extractMetadata = sse_decode_bool(deserializer);
+    var var_stripNewlines = sse_decode_bool(deserializer);
+    var var_bullets = sse_decode_String(deserializer);
+    var var_listIndentWidth = sse_decode_i_64(deserializer);
+    var var_strongEmSymbol = sse_decode_String(deserializer);
+    var var_compactTables = sse_decode_bool(deserializer);
+    var var_keepInlineImagesIn = sse_decode_list_String(deserializer);
+    var var_keepHidden = sse_decode_bool(deserializer);
     return ContentConfig(
       outputFormat: var_outputFormat,
       preprocessingPreset: var_preprocessingPreset,
@@ -27688,6 +27711,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       wrapWidth: var_wrapWidth,
       includeDocumentStructure: var_includeDocumentStructure,
       extractMetadata: var_extractMetadata,
+      stripNewlines: var_stripNewlines,
+      bullets: var_bullets,
+      listIndentWidth: var_listIndentWidth,
+      strongEmSymbol: var_strongEmSymbol,
+      compactTables: var_compactTables,
+      keepInlineImagesIn: var_keepInlineImagesIn,
+      keepHidden: var_keepHidden,
     );
   }
 
@@ -27750,6 +27780,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_escapeAscii = sse_decode_bool(deserializer);
     var var_codeLanguage = sse_decode_String(deserializer);
     var var_autolinks = sse_decode_bool(deserializer);
+    var var_expandAbbreviations = sse_decode_bool(deserializer);
+    var var_includeBlockquoteCitations = sse_decode_bool(deserializer);
     var var_defaultTitle = sse_decode_bool(deserializer);
     var var_brInTables = sse_decode_bool(deserializer);
     var var_compactTables = sse_decode_bool(deserializer);
@@ -27772,6 +27804,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_preserveTags = sse_decode_list_String(deserializer);
     var var_skipImages = sse_decode_bool(deserializer);
     var var_inlineDataMedia = sse_decode_inline_data_media(deserializer);
+    var var_hiddenContent = sse_decode_hidden_content(deserializer);
     var var_urlEscapeStyle = sse_decode_url_escape_style(deserializer);
     var var_linkStyle = sse_decode_link_style(deserializer);
     var var_outputFormat = sse_decode_html_to_markdown_rs_output_format(
@@ -27799,6 +27832,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       escapeAscii: var_escapeAscii,
       codeLanguage: var_codeLanguage,
       autolinks: var_autolinks,
+      expandAbbreviations: var_expandAbbreviations,
+      includeBlockquoteCitations: var_includeBlockquoteCitations,
       defaultTitle: var_defaultTitle,
       brInTables: var_brInTables,
       compactTables: var_compactTables,
@@ -27821,6 +27856,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       preserveTags: var_preserveTags,
       skipImages: var_skipImages,
       inlineDataMedia: var_inlineDataMedia,
+      hiddenContent: var_hiddenContent,
       urlEscapeStyle: var_urlEscapeStyle,
       linkStyle: var_linkStyle,
       outputFormat: var_outputFormat,
@@ -29778,6 +29814,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       default:
         throw UnimplementedError('');
     }
+  }
+
+  @protected
+  HiddenContent sse_decode_hidden_content(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return HiddenContent.values[inner];
   }
 
   @protected
@@ -39439,6 +39482,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_64(self.wrapWidth, serializer);
     sse_encode_bool(self.includeDocumentStructure, serializer);
     sse_encode_bool(self.extractMetadata, serializer);
+    sse_encode_bool(self.stripNewlines, serializer);
+    sse_encode_String(self.bullets, serializer);
+    sse_encode_i_64(self.listIndentWidth, serializer);
+    sse_encode_String(self.strongEmSymbol, serializer);
+    sse_encode_bool(self.compactTables, serializer);
+    sse_encode_list_String(self.keepInlineImagesIn, serializer);
+    sse_encode_bool(self.keepHidden, serializer);
   }
 
   @protected
@@ -39496,6 +39546,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.escapeAscii, serializer);
     sse_encode_String(self.codeLanguage, serializer);
     sse_encode_bool(self.autolinks, serializer);
+    sse_encode_bool(self.expandAbbreviations, serializer);
+    sse_encode_bool(self.includeBlockquoteCitations, serializer);
     sse_encode_bool(self.defaultTitle, serializer);
     sse_encode_bool(self.brInTables, serializer);
     sse_encode_bool(self.compactTables, serializer);
@@ -39518,6 +39570,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_String(self.preserveTags, serializer);
     sse_encode_bool(self.skipImages, serializer);
     sse_encode_inline_data_media(self.inlineDataMedia, serializer);
+    sse_encode_hidden_content(self.hiddenContent, serializer);
     sse_encode_url_escape_style(self.urlEscapeStyle, serializer);
     sse_encode_link_style(self.linkStyle, serializer);
     sse_encode_html_to_markdown_rs_output_format(self.outputFormat, serializer);
@@ -40903,6 +40956,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(1, serializer);
         sse_encode_String(field0, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_hidden_content(HiddenContent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected

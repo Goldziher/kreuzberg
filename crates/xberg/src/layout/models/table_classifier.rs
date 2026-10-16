@@ -210,7 +210,7 @@ fn preprocess_lcnet(img: &RgbImage) -> Result<Array4<f32>, LayoutError> {
     let mut data = vec![0.0f32; 3 * hw];
     let pixels = cropped.as_raw();
 
-    for (i, pixel) in pixels.chunks_exact(3).enumerate() {
+    for (i, pixel) in pixels.as_chunks::<3>().0.iter().enumerate() {
         let r = pixel[0] as f32;
         let g = pixel[1] as f32;
         let b = pixel[2] as f32;

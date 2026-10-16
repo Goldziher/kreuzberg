@@ -4567,8 +4567,8 @@ impl PageRenderer {
         let Some(bbox) = read_array("BBox", 4) else {
             return Ok(false);
         };
-        let x_step = pdict.get("XStep").and_then(&num).unwrap_or(bbox[2] - bbox[0]);
-        let y_step = pdict.get("YStep").and_then(&num).unwrap_or(bbox[3] - bbox[1]);
+        let x_step = pdict.get("XStep").and_then(num).unwrap_or(bbox[2] - bbox[0]);
+        let y_step = pdict.get("YStep").and_then(num).unwrap_or(bbox[3] - bbox[1]);
         let m = read_array("Matrix", 6).unwrap_or_else(|| vec![1.0, 0.0, 0.0, 1.0, 0.0, 0.0]);
         let pattern_matrix = Transform::from_row(m[0], m[1], m[2], m[3], m[4], m[5]);
 
@@ -5162,7 +5162,7 @@ impl PageRenderer {
         paint.set_color(tiny_skia::Color::from_rgba8(0, 0, 0, 255));
         paint.anti_alias = true;
         guarded_stroke_path(&mut scratch, path, &paint, &stroke, transform, clip);
-        let buf: Vec<u8> = scratch.data().chunks_exact(4).map(|px| px[3]).collect();
+        let buf: Vec<u8> = scratch.data().as_chunks::<4>().0.iter().map(|px| px[3]).collect();
         Some(buf)
     }
 
@@ -9871,7 +9871,7 @@ mod tests {
         let sil = Rect::from_xywh(5.0, 5.0, 10.0, 10.0).unwrap();
         scratch.fill_rect(sil, &paint, Transform::identity(), None);
 
-        let has_coverage = scratch.data().chunks_exact(4).any(|px| px[3] != 0);
+        let has_coverage = scratch.data().as_chunks::<4>().0.iter().any(|px| px[3] != 0);
         assert!(has_coverage, "painted silhouette must report coverage");
 
         let mut existing = Mask::new(w, h).unwrap();
@@ -9896,7 +9896,7 @@ mod tests {
     fn text_clip_empty_accumulator_is_degenerate() {
         use tiny_skia::Pixmap;
         let scratch = Pixmap::new(16, 16).unwrap(); // fresh -> fully transparent ~keep
-        let has_coverage = scratch.data().chunks_exact(4).any(|px| px[3] != 0);
+        let has_coverage = scratch.data().as_chunks::<4>().0.iter().any(|px| px[3] != 0);
         assert!(!has_coverage, "empty accumulator must be treated as no clip change");
     }
 

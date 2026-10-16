@@ -12715,6 +12715,13 @@ const _: fn() = || {
         let _: i64 = ContentConfig.wrap_width;
         let _: bool = ContentConfig.include_document_structure;
         let _: bool = ContentConfig.extract_metadata;
+        let _: bool = ContentConfig.strip_newlines;
+        let _: String = ContentConfig.bullets;
+        let _: i64 = ContentConfig.list_indent_width;
+        let _: String = ContentConfig.strong_em_symbol;
+        let _: bool = ContentConfig.compact_tables;
+        let _: Vec<String> = ContentConfig.keep_inline_images_in;
+        let _: bool = ContentConfig.keep_hidden;
     }
     {
         let ContentFilterConfig = None::<crate::ContentFilterConfig>.unwrap();
@@ -12742,6 +12749,8 @@ const _: fn() = || {
         let _: bool = ConversionOptions.escape_ascii;
         let _: String = ConversionOptions.code_language;
         let _: bool = ConversionOptions.autolinks;
+        let _: bool = ConversionOptions.expand_abbreviations;
+        let _: bool = ConversionOptions.include_blockquote_citations;
         let _: bool = ConversionOptions.default_title;
         let _: bool = ConversionOptions.br_in_tables;
         let _: bool = ConversionOptions.compact_tables;
@@ -12764,6 +12773,7 @@ const _: fn() = || {
         let _: Vec<String> = ConversionOptions.preserve_tags;
         let _: bool = ConversionOptions.skip_images;
         let _: crate::InlineDataMedia = ConversionOptions.inline_data_media;
+        let _: crate::HiddenContent = ConversionOptions.hidden_content;
         let _: crate::UrlEscapeStyle = ConversionOptions.url_escape_style;
         let _: crate::LinkStyle = ConversionOptions.link_style;
         let _: crate::HtmlToMarkdownRsOutputFormat = ConversionOptions.output_format;
@@ -17218,6 +17228,13 @@ impl SseDecode for crate::ContentConfig {
         let mut var_wrapWidth = <i64>::sse_decode(deserializer);
         let mut var_includeDocumentStructure = <bool>::sse_decode(deserializer);
         let mut var_extractMetadata = <bool>::sse_decode(deserializer);
+        let mut var_stripNewlines = <bool>::sse_decode(deserializer);
+        let mut var_bullets = <String>::sse_decode(deserializer);
+        let mut var_listIndentWidth = <i64>::sse_decode(deserializer);
+        let mut var_strongEmSymbol = <String>::sse_decode(deserializer);
+        let mut var_compactTables = <bool>::sse_decode(deserializer);
+        let mut var_keepInlineImagesIn = <Vec<String>>::sse_decode(deserializer);
+        let mut var_keepHidden = <bool>::sse_decode(deserializer);
         return crate::ContentConfig {
             output_format: var_outputFormat,
             preprocessing_preset: var_preprocessingPreset,
@@ -17232,6 +17249,13 @@ impl SseDecode for crate::ContentConfig {
             wrap_width: var_wrapWidth,
             include_document_structure: var_includeDocumentStructure,
             extract_metadata: var_extractMetadata,
+            strip_newlines: var_stripNewlines,
+            bullets: var_bullets,
+            list_indent_width: var_listIndentWidth,
+            strong_em_symbol: var_strongEmSymbol,
+            compact_tables: var_compactTables,
+            keep_inline_images_in: var_keepInlineImagesIn,
+            keep_hidden: var_keepHidden,
         };
     }
 }
@@ -17305,6 +17329,8 @@ impl SseDecode for crate::ConversionOptions {
         let mut var_escapeAscii = <bool>::sse_decode(deserializer);
         let mut var_codeLanguage = <String>::sse_decode(deserializer);
         let mut var_autolinks = <bool>::sse_decode(deserializer);
+        let mut var_expandAbbreviations = <bool>::sse_decode(deserializer);
+        let mut var_includeBlockquoteCitations = <bool>::sse_decode(deserializer);
         let mut var_defaultTitle = <bool>::sse_decode(deserializer);
         let mut var_brInTables = <bool>::sse_decode(deserializer);
         let mut var_compactTables = <bool>::sse_decode(deserializer);
@@ -17327,6 +17353,7 @@ impl SseDecode for crate::ConversionOptions {
         let mut var_preserveTags = <Vec<String>>::sse_decode(deserializer);
         let mut var_skipImages = <bool>::sse_decode(deserializer);
         let mut var_inlineDataMedia = <crate::InlineDataMedia>::sse_decode(deserializer);
+        let mut var_hiddenContent = <crate::HiddenContent>::sse_decode(deserializer);
         let mut var_urlEscapeStyle = <crate::UrlEscapeStyle>::sse_decode(deserializer);
         let mut var_linkStyle = <crate::LinkStyle>::sse_decode(deserializer);
         let mut var_outputFormat = <crate::HtmlToMarkdownRsOutputFormat>::sse_decode(deserializer);
@@ -17352,6 +17379,8 @@ impl SseDecode for crate::ConversionOptions {
             escape_ascii: var_escapeAscii,
             code_language: var_codeLanguage,
             autolinks: var_autolinks,
+            expand_abbreviations: var_expandAbbreviations,
+            include_blockquote_citations: var_includeBlockquoteCitations,
             default_title: var_defaultTitle,
             br_in_tables: var_brInTables,
             compact_tables: var_compactTables,
@@ -17374,6 +17403,7 @@ impl SseDecode for crate::ConversionOptions {
             preserve_tags: var_preserveTags,
             skip_images: var_skipImages,
             inline_data_media: var_inlineDataMedia,
+            hidden_content: var_hiddenContent,
             url_escape_style: var_urlEscapeStyle,
             link_style: var_linkStyle,
             output_format: var_outputFormat,
@@ -19376,6 +19406,19 @@ impl SseDecode for crate::HeuristicsError {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseDecode for crate::HiddenContent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::HiddenContent::Drop,
+            1 => crate::HiddenContent::Reachable,
+            2 => crate::HiddenContent::All,
+            _ => unreachable!("Invalid variant for HiddenContent: {}", inner),
+        };
     }
 }
 
@@ -28231,6 +28274,13 @@ impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::ContentConfig> {
             self.0.wrap_width.into_into_dart().into_dart(),
             self.0.include_document_structure.into_into_dart().into_dart(),
             self.0.extract_metadata.into_into_dart().into_dart(),
+            self.0.strip_newlines.into_into_dart().into_dart(),
+            self.0.bullets.into_into_dart().into_dart(),
+            self.0.list_indent_width.into_into_dart().into_dart(),
+            self.0.strong_em_symbol.into_into_dart().into_dart(),
+            self.0.compact_tables.into_into_dart().into_dart(),
+            self.0.keep_inline_images_in.into_into_dart().into_dart(),
+            self.0.keep_hidden.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -28324,6 +28374,8 @@ impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::ConversionOptions> {
             self.0.escape_ascii.into_into_dart().into_dart(),
             self.0.code_language.into_into_dart().into_dart(),
             self.0.autolinks.into_into_dart().into_dart(),
+            self.0.expand_abbreviations.into_into_dart().into_dart(),
+            self.0.include_blockquote_citations.into_into_dart().into_dart(),
             self.0.default_title.into_into_dart().into_dart(),
             self.0.br_in_tables.into_into_dart().into_dart(),
             self.0.compact_tables.into_into_dart().into_dart(),
@@ -28346,6 +28398,7 @@ impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::ConversionOptions> {
             self.0.preserve_tags.into_into_dart().into_dart(),
             self.0.skip_images.into_into_dart().into_dart(),
             self.0.inline_data_media.into_into_dart().into_dart(),
+            self.0.hidden_content.into_into_dart().into_dart(),
             self.0.url_escape_style.into_into_dart().into_dart(),
             self.0.link_style.into_into_dart().into_dart(),
             self.0.output_format.into_into_dart().into_dart(),
@@ -30240,6 +30293,23 @@ impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::HeuristicsError> {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<crate::HeuristicsError> {}
 impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<crate::HeuristicsError>> for crate::HeuristicsError {
     fn into_into_dart(self) -> FrbWrapper<crate::HeuristicsError> {
+        self.into()
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<crate::HiddenContent> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self.0 {
+            crate::HiddenContent::Drop => 0.into_dart(),
+            crate::HiddenContent::Reachable => 1.into_dart(),
+            crate::HiddenContent::All => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<crate::HiddenContent> {}
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<crate::HiddenContent>> for crate::HiddenContent {
+    fn into_into_dart(self) -> FrbWrapper<crate::HiddenContent> {
         self.into()
     }
 }
@@ -35821,6 +35891,13 @@ impl SseEncode for crate::ContentConfig {
         <i64>::sse_encode(self.wrap_width, serializer);
         <bool>::sse_encode(self.include_document_structure, serializer);
         <bool>::sse_encode(self.extract_metadata, serializer);
+        <bool>::sse_encode(self.strip_newlines, serializer);
+        <String>::sse_encode(self.bullets, serializer);
+        <i64>::sse_encode(self.list_indent_width, serializer);
+        <String>::sse_encode(self.strong_em_symbol, serializer);
+        <bool>::sse_encode(self.compact_tables, serializer);
+        <Vec<String>>::sse_encode(self.keep_inline_images_in, serializer);
+        <bool>::sse_encode(self.keep_hidden, serializer);
     }
 }
 
@@ -35890,6 +35967,8 @@ impl SseEncode for crate::ConversionOptions {
         <bool>::sse_encode(self.escape_ascii, serializer);
         <String>::sse_encode(self.code_language, serializer);
         <bool>::sse_encode(self.autolinks, serializer);
+        <bool>::sse_encode(self.expand_abbreviations, serializer);
+        <bool>::sse_encode(self.include_blockquote_citations, serializer);
         <bool>::sse_encode(self.default_title, serializer);
         <bool>::sse_encode(self.br_in_tables, serializer);
         <bool>::sse_encode(self.compact_tables, serializer);
@@ -35912,6 +35991,7 @@ impl SseEncode for crate::ConversionOptions {
         <Vec<String>>::sse_encode(self.preserve_tags, serializer);
         <bool>::sse_encode(self.skip_images, serializer);
         <crate::InlineDataMedia>::sse_encode(self.inline_data_media, serializer);
+        <crate::HiddenContent>::sse_encode(self.hidden_content, serializer);
         <crate::UrlEscapeStyle>::sse_encode(self.url_escape_style, serializer);
         <crate::LinkStyle>::sse_encode(self.link_style, serializer);
         <crate::HtmlToMarkdownRsOutputFormat>::sse_encode(self.output_format, serializer);
@@ -37318,6 +37398,23 @@ impl SseEncode for crate::HeuristicsError {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseEncode for crate::HiddenContent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::HiddenContent::Drop => 0,
+                crate::HiddenContent::Reachable => 1,
+                crate::HiddenContent::All => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 

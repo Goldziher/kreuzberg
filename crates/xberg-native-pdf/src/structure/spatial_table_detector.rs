@@ -4323,7 +4323,7 @@ fn tables_from_leftover_rules(
     let free_lines: Vec<_> = lines.iter().filter(|p| free(&p.rendered_bbox())).cloned().collect();
     tables_from_horizontal_rules(spans, &free_lines, config)
         .into_iter()
-        .filter(|t| is_valid_table(t) && t.bbox.as_ref().is_some_and(&free))
+        .filter(|t| is_valid_table(t) && t.bbox.as_ref().is_some_and(free))
         .collect()
 }
 

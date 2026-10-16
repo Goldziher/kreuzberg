@@ -208,7 +208,9 @@ fn extract_lopdf_string(obj: &lopdf::Object) -> Option<String> {
         Object::String(bytes, _) => {
             if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
                 let u16s: Vec<u16> = bytes[2..]
-                    .chunks_exact(2)
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
                     .map(|c| u16::from_be_bytes([c[0], c[1]]))
                     .collect();
                 let s = String::from_utf16_lossy(&u16s);

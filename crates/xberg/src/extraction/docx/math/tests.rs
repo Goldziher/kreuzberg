@@ -34,6 +34,8 @@ fn omml_with_budget(xml: &str, budget: &mut SecurityBudget) {
         }
         buf.clear();
     }
+    // The DOCX parser's outer loop enters for the `<m:oMath>` start tag. ~keep
+    budget.enter().expect("depth for <m:oMath>");
     collect_and_convert_omath(&mut reader, budget).expect("conversion ok");
 }
 
@@ -122,19 +124,36 @@ fn should_reset_depth_counter_to_zero_after_parsing_frac_with_fpr() {
     );
 }
 
-/// GH#1395: an unrecognized OMML tag falls into `collect_children`'s `_` arm,
+/// GH#1395: an unrecognized OMML tag falls into `dispatch_omml_tag`'s `_` arm,
 /// which also delegates to `skip_to_end` and must refund the same way.
 #[test]
 fn should_reset_depth_counter_to_zero_after_parsing_unrecognized_tag() {
     let mut budget = budget_with_max_depth(64);
     omml_with_budget(
-        r#"<m:groupChr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:groupChr>"#,
+        r#"<m:unknownObj><m:e><m:r><m:t>x</m:t></m:r></m:e></m:unknownObj>"#,
         &mut budget,
     );
     assert_eq!(
         probe_remaining_depth(&mut budget, 64),
         64,
         "an unrecognized OMML tag (skip_to_end fallback) must not leak a depth level"
+    );
+}
+
+#[test]
+fn should_reset_depth_counter_to_zero_after_parsing_group_chr_with_group_chr_pr() {
+    let mut budget = budget_with_max_depth(64);
+    omml_with_budget(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:ctrlPr><w:rPr/></m:ctrlPr></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+        &mut budget,
+    );
+    assert_eq!(
+        probe_remaining_depth(&mut budget, 64),
+        64,
+        "m:groupChrPr must not leak a depth level"
     );
 }
 
@@ -244,10 +263,148 @@ fn test_rad_with_degree() {
 }
 
 #[test]
+fn test_rad_degree_without_deg_hide() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:radPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math"/></w:rPr></m:ctrlPr></m:radPr>
+                <m:deg><m:r><m:t>3</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt[3]{x}");
+}
+
+#[test]
+fn test_rad_degree_without_rad_pr() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:deg><m:r><m:t>n</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>y</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt[n]{y}");
+}
+
+#[test]
+fn test_rad_deg_hide_without_val() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:radPr><m:degHide/></m:radPr>
+                <m:deg><m:r><m:t>2</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt{x}");
+}
+
+#[test]
+fn test_rad_deg_hide_off() {
+    let latex = omml_to_latex(
+        r#"<m:rad>
+                <m:radPr><m:degHide m:val="off"/></m:radPr>
+                <m:deg><m:r><m:t>3</m:t></m:r></m:deg>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:rad>"#,
+    );
+    assert_eq!(latex, "\\sqrt[3]{x}");
+}
+
+#[test]
+fn test_group_chr_underbrace() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\underbrace{x}");
+}
+
+#[test]
+fn test_group_chr_character_reference() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="&#x23DF;"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\underbrace{x}");
+}
+
+#[test]
+fn test_group_chr_overbrace() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="⏞"/><m:pos m:val="top"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\overbrace{x}");
+}
+
+#[test]
+fn test_group_chr_default_brace_on_top() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:pos m:val="top"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\overbrace{x}");
+}
+
+#[test]
+fn test_group_chr_arrow_over() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="→"/><m:pos m:val="top"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\overset{\\rightarrow }{x}");
+}
+
+#[test]
+fn test_group_chr_arrow_under() {
+    let latex = omml_to_latex(
+        r#"<m:groupChr>
+                <m:groupChrPr><m:chr m:val="→"/></m:groupChrPr>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:groupChr>"#,
+    );
+    assert_eq!(latex, "\\underset{\\rightarrow }{x}");
+}
+
+#[test]
+fn test_group_chr_in_lim_low() {
+    let latex = omml_to_latex(
+        r#"<m:limLow>
+                <m:e><m:groupChr><m:groupChrPr><m:ctrlPr/></m:groupChrPr>
+                    <m:e><m:r><m:t>a+b</m:t></m:r></m:e>
+                </m:groupChr></m:e>
+                <m:lim><m:r><m:t>n</m:t></m:r></m:lim>
+            </m:limLow>"#,
+    );
+    assert_eq!(latex, "\\underset{n}{\\underbrace{a+b}}");
+}
+
+#[test]
 fn test_nary_sum() {
     let latex = omml_to_latex(
         r#"<m:nary>
                 <m:naryPr><m:chr m:val="∑"/></m:naryPr>
+                <m:sub><m:r><m:t>i=1</m:t></m:r></m:sub>
+                <m:sup><m:r><m:t>n</m:t></m:r></m:sup>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+            </m:nary>"#,
+    );
+    assert_eq!(latex, "\\sum_{i=1}^{n}{x}");
+}
+
+#[test]
+fn test_nary_character_reference() {
+    let latex = omml_to_latex(
+        r#"<m:nary>
+                <m:naryPr><m:chr m:val="&#x2211;"/></m:naryPr>
                 <m:sub><m:r><m:t>i=1</m:t></m:r></m:sub>
                 <m:sup><m:r><m:t>n</m:t></m:r></m:sup>
                 <m:e><m:r><m:t>x</m:t></m:r></m:e>
@@ -457,4 +614,76 @@ fn test_delim_multiple_elements() {
             </m:d>"#,
     );
     assert_eq!(latex, "\\left(a \\mid b\\right)");
+}
+
+#[test]
+fn should_reject_group_chr_properties_exceeding_xml_depth() {
+    let mut budget = budget_with_max_depth(4);
+    budget.enter().unwrap();
+    let mut reader = Reader::from_str(
+        "<m:groupChr><m:groupChrPr><m:ctrlPr><w:rPr><w:b></w:b></w:rPr></m:ctrlPr></m:groupChrPr></m:groupChr>",
+    );
+    assert!(matches!(
+        collect_and_convert_omath(&mut reader, &mut budget),
+        Err(SecurityError::NestingTooDeep { max: 4, .. })
+    ));
+}
+
+#[test]
+fn should_reject_group_character_exceeding_entity_limit() {
+    let limits = crate::extractors::security::SecurityLimits {
+        max_entity_length: 3,
+        ..Default::default()
+    };
+    let mut budget = SecurityBudget::from_limits(&limits);
+    budget.enter().unwrap();
+    let mut reader = Reader::from_str(r#"<m:groupChr><m:groupChrPr><m:chr m:val="abcd"/></m:groupChrPr></m:groupChr>"#);
+    assert!(matches!(
+        collect_and_convert_omath(&mut reader, &mut budget),
+        Err(SecurityError::EntityTooLong { max: 3, .. })
+    ));
+}
+
+#[test]
+fn should_account_group_character_in_content_limit() {
+    let limits = crate::extractors::security::SecurityLimits {
+        max_content_size: 3,
+        ..Default::default()
+    };
+    let mut budget = SecurityBudget::from_limits(&limits);
+    budget.enter().unwrap();
+    let mut reader = Reader::from_str(r#"<m:groupChr><m:groupChrPr><m:chr m:val="abcd"/></m:groupChrPr></m:groupChr>"#);
+    assert!(matches!(
+        collect_and_convert_omath(&mut reader, &mut budget),
+        Err(SecurityError::ContentTooLarge { max: 3, .. })
+    ));
+}
+
+#[test]
+fn should_parse_all_radical_toggle_spellings() {
+    for (value, expected) in [
+        ("0", "\\sqrt[3]{x}"),
+        ("false", "\\sqrt[3]{x}"),
+        ("off", "\\sqrt[3]{x}"),
+        ("1", "\\sqrt{x}"),
+        ("true", "\\sqrt{x}"),
+        ("on", "\\sqrt{x}"),
+    ] {
+        let xml = format!(
+            r#"<m:rad><m:radPr><m:degHide m:val="{value}"/></m:radPr><m:deg><m:r><m:t>3</m:t></m:r></m:deg><m:e><m:r><m:t>x</m:t></m:r></m:e></m:rad>"#
+        );
+        assert_eq!(omml_to_latex(&xml), expected, "toggle {value}");
+    }
+}
+
+#[test]
+fn should_keep_group_character_position_independent_of_vertical_justification() {
+    for (position, expected) in [("top", "\\overbrace{x}"), ("bot", "\\underbrace{x}")] {
+        for justification in ["top", "bot"] {
+            let xml = format!(
+                r#"<m:groupChr><m:groupChrPr><m:pos m:val="{position}"/><m:vertJc m:val="{justification}"/></m:groupChrPr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:groupChr>"#
+            );
+            assert_eq!(omml_to_latex(&xml), expected);
+        }
+    }
 }

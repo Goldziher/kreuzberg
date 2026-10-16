@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling>=1,<2"]
+requires = ["hatchling>=1.32.4,<2"]
 
 [project]
 name = "llama-index-node-parser-xberg"
@@ -35,13 +35,13 @@ classifiers = [
   "Topic :: Text Processing :: Indexing",
   "Typing :: Typed",
 ]
-dependencies = ["llama-index-core>=0.14.23,<0.15"]
+dependencies = ["llama-index-core>=0.14.25,<0.15"]
 urls.Homepage = "https://github.com/xberg-io/xberg/tree/main/integrations/python/llama-index/node_parsers/llama-index-node-parser-xberg"
 urls.Issues = "https://github.com/xberg-io/xberg/issues"
 urls.Repository = "https://github.com/xberg-io/xberg/tree/main/integrations/python/llama-index/node_parsers/llama-index-node-parser-xberg"
 
 [dependency-groups]
-dev = ["pytest>=9", "pytest-asyncio>=0.24", "pytest-cov>=6"]
+dev = ["pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0"]
 
 [tool.hatch]
 build.targets.sdist.include = ["llama_index/"]

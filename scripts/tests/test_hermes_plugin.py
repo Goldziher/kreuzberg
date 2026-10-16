@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from types import SimpleNamespace
 
-SERVER_SOURCE = 'from mcp.server.fastmcp import FastMCP\nserver = FastMCP("plugin-contract")\n@server.tool()\ndef echo(value: str) -> str:\n    return value\nserver.run(transport="stdio")\n'
+SERVER_SOURCE = 'from mcp.server.mcpserver import MCPServer\nserver = MCPServer("plugin-contract")\n@server.tool()\ndef echo(value: str) -> str:\n    return value\nserver.run(transport="stdio")\n'
 
 
 class HermesBridgeTests(unittest.IsolatedAsyncioTestCase):

@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling>=1,<2"]
+requires = ["hatchling>=1.32.4,<2"]
 
 [project]
 name = "crewai-xberg"
@@ -33,13 +33,13 @@ classifiers = [
   "Topic :: Text Processing :: General",
   "Typing :: Typed",
 ]
-dependencies = ["crewai>=1.15,<2", "xberg>=1.3.11,<2"]
+dependencies = ["crewai>=1.15.28,<2", "xberg>=1.3.11,<2"]
 urls.Changelog = "https://github.com/xberg-io/xberg/blob/main/integrations/python/crewai/CHANGELOG.md"
 urls.Homepage = "https://github.com/xberg-io/xberg/tree/main/integrations/python/crewai"
 urls.Repository = "https://github.com/xberg-io/xberg/tree/main/integrations/python/crewai"
 
 [dependency-groups]
-dev = ["mypy>=1.19", "pre-commit>=4", "pytest>=9", "pytest-asyncio>=1", "pytest-cov>=6"]
+dev = ["mypy>=2.4.0", "pre-commit>=4", "pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0"]
 
 [tool.hatch]
 build.targets.sdist.include = ["src/crewai_xberg", "CHANGELOG.md", "LICENSE", "README.md", "pyproject.toml"]

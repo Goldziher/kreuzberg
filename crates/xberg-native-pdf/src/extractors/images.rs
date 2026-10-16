@@ -845,7 +845,7 @@ fn decode_ranges(decode: Option<&crate::object::Object>, ncomp: usize) -> Option
     }
     let as_num = |o: &crate::object::Object| o.as_integer().map(|i| i as f64).or_else(|| o.as_real());
     let mut out = Vec::with_capacity(ncomp);
-    for pair in arr.chunks_exact(2) {
+    for pair in arr.as_chunks::<2>().0 {
         out.push((as_num(&pair[0])? as f32, as_num(&pair[1])? as f32));
     }
     Some(out)

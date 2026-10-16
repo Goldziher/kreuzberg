@@ -36,7 +36,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.95"
+          toolchain: "1.99.1"
 
       - name: Cache Cargo
         uses: actions/cache@v6
@@ -142,7 +142,7 @@ jobs:
       - name: Setup Rust
         uses: xberg-io/actions/setup-rust@v1
         with:
-          toolchain: "1.95"
+          toolchain: "1.99.1"
           cache-key-prefix: candle-build-${{ matrix.model.name }}
           use-sccache: "true"
 

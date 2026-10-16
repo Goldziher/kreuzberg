@@ -415,25 +415,17 @@ impl DbNet {
         });
 
         let mut box_points = Vec::new();
-        let index_1;
-        let index_4;
-        if rect_points[1].y > rect_points[0].y {
-            index_1 = 0;
-            index_4 = 1;
+        let (index_1, index_4) = if rect_points[1].y > rect_points[0].y {
+            (0, 1)
         } else {
-            index_1 = 1;
-            index_4 = 0;
-        }
+            (1, 0)
+        };
 
-        let index_2;
-        let index_3;
-        if rect_points[3].y > rect_points[2].y {
-            index_2 = 2;
-            index_3 = 3;
+        let (index_2, index_3) = if rect_points[3].y > rect_points[2].y {
+            (2, 3)
         } else {
-            index_2 = 3;
-            index_3 = 2;
-        }
+            (3, 2)
+        };
 
         box_points.push(rect_points[index_1]);
         box_points.push(rect_points[index_2]);

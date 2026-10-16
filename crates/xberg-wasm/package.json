@@ -50,7 +50,7 @@
     "clean": "rm -rf pkg dist"
   },
   "devDependencies": {
-    "vitest": "^4.1.11",
-    "@vitest/coverage-v8": "^4.1.11"
+    "@vitest/coverage-v8": "^5.0.5",
+    "vitest": "^5.0.5"
   }
 }

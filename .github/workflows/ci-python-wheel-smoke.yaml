@@ -92,8 +92,8 @@ jobs:
           # the wheel against it instead of Homebrew's runner-OS bottles. ~keep
           cibw-before-build-macos: bash {project}/scripts/ci/build-macos-heif-deps.sh
           cibw-environment-macos: 'MATURIN_BUILD_ARGS="" CARGO_BUILD_LOCKED=true MACOSX_DEPLOYMENT_TARGET=11.0 PKG_CONFIG_PATH=/tmp/xberg-heif/lib/pkgconfig'
-          cibw-before-build-windows: "rustup install 1.95-x86_64-pc-windows-msvc --profile minimal --component rust-src --component rustfmt --component clippy && rustup target add x86_64-pc-windows-msvc --toolchain 1.95-x86_64-pc-windows-msvc && pip install maturin uv && set PATH=%USERPROFILE%\\.cargo\\bin;%PATH%"
-          cibw-environment-windows: 'MATURIN_BUILD_ARGS="--target x86_64-pc-windows-msvc" RUSTUP_TOOLCHAIN="1.95-x86_64-pc-windows-msvc" RUSTC_WRAPPER='
+          cibw-before-build-windows: "rustup install 1.99.1-x86_64-pc-windows-msvc --profile minimal --component rust-src --component rustfmt --component clippy && rustup target add x86_64-pc-windows-msvc --toolchain 1.99.1-x86_64-pc-windows-msvc && pip install maturin uv && set PATH=%USERPROFILE%\\.cargo\\bin;%PATH%"
+          cibw-environment-windows: 'MATURIN_BUILD_ARGS="--target x86_64-pc-windows-msvc" RUSTUP_TOOLCHAIN="1.99.1-x86_64-pc-windows-msvc" RUSTC_WRAPPER='
 
       - name: Vendor ONNX Runtime into wheel
         if: runner.os == 'Linux'

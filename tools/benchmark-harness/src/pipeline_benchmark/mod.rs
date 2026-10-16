@@ -435,7 +435,7 @@ fn print_table_row(doc: &PipelineDocResult) {
         } else {
             &doc.name
         },
-        &doc.file_type,
+        doc.file_type,
     );
     for pr in &doc.results {
         let time_str = if pr.time_ms.is_nan() {

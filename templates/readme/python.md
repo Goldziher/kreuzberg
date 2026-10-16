@@ -19,6 +19,17 @@ pip install xberg
 
 There are no optional extras to install. The wheel bundles the feature set for your platform — OCR (including PaddleOCR), layout detection, embeddings, chunking, and the rest — so `pip install xberg` is all you need.
 
+PyPI remains the primary package source. For archived versions or releases published through the storage fallback,
+add the permanent GitHub index:
+
+```bash
+pip install xberg --extra-index-url https://xberg-io.github.io/python-wheels/simple/
+```
+
+PyPI keeps every release in the current minor and the latest stable patch from each older minor. All wheels and
+source distributions remain permanently available under the
+[archive retention policy](https://github.com/xberg-io/python-wheels#pypi-retention-policy).
+
 ## Quick Start
 
 ### Basic Usage
