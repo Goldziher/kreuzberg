@@ -65,6 +65,7 @@ public sealed class WebVttExtractor : IExtractor
         var body = new StringBuilder();
         foreach (var cue in cues)
         {
+            Cancel.ThrowIfRequested();
             string text = cue.Speaker is null ? cue.Text.Trim() : $"{cue.Speaker}: {cue.Text.Trim()}";
             uint index = builder.PushParagraph(text, new List<TextAnnotation>(), null, null);
             builder.SetAttributes(index, CueAttributes(cue));

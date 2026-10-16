@@ -94,6 +94,7 @@ public sealed partial class TypstExtractor : IExtractor
 
         while (lineIdx < lines.Count)
         {
+            Cancel.ThrowIfRequested();
             string trimmed = lines[lineIdx].Trim();
             lineIdx++;
 

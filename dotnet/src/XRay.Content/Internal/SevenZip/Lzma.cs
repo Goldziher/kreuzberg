@@ -18,6 +18,7 @@ internal sealed class LzmaDecoder
 
     private int _lc, _lp, _pb;
     private int _pbMask, _lpMask;
+    private int _tick;
 
     // Probability models.
     private ushort[] _isMatch = null!;      // [state << 4 | posState]
@@ -124,6 +125,7 @@ internal sealed class LzmaDecoder
 
         while (_outPos < target)
         {
+            Cancel.Every(_tick++, 0x3FFF);
             int posState = _outPos & _pbMask;
 
             if (DecodeBit(_isMatch, (_state << 4) | posState) == 0)
@@ -353,6 +355,7 @@ internal static class Lzma
 
         while (pos < span.Length && dec.OutPos < output.Length)
         {
+            Cancel.ThrowIfRequested();
             byte control = span.Span[pos++];
             if (control == 0) break; // end of stream
 

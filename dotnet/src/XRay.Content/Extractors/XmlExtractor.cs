@@ -44,8 +44,10 @@ public sealed class XmlExtractor : IExtractor
         int elementCount = 0;
         var unique = new HashSet<string>(StringComparer.Ordinal);
 
+        int eventCounter = 0;
         foreach (var ev in Tokenize(xml))
         {
+            Cancel.Every(eventCounter++, 0xFF);
             budget.Step();
             switch (ev.Kind)
             {
@@ -190,6 +192,7 @@ public sealed class XmlExtractor : IExtractor
         int n = s.Length;
         while (i < n)
         {
+            Cancel.Every(i, 0xFFFF);
             if (s[i] == '<')
             {
                 if (i + 1 < n && s[i + 1] == '!')

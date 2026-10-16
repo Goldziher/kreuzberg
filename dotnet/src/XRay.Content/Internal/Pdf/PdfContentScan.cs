@@ -51,8 +51,10 @@ internal static class PdfContentScan
         byte renderMode = 0;
         var renderStack = new Stack<byte>();
 
+        int tokenCount = 0;
         while (lex.Pos < lex.Length)
         {
+            Cancel.Every(tokenCount++, 0xFF);
             lex.SkipWhitespace();
             if (lex.Pos >= lex.Length) break;
             byte b = lex.Buffer[lex.Pos];

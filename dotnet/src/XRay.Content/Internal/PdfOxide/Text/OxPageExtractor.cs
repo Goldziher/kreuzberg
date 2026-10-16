@@ -67,6 +67,7 @@ internal static class OxPageExtractor
     /// <summary>Both span pipelines for one page, from a single content-stream pass.</summary>
     public static OxPage ExtractPage(PdfDocument doc, int pageIndex)
     {
+        Cancel.ThrowIfRequested();
         var page = pageIndex >= 0 && pageIndex < doc.PageCount ? doc.Pages[pageIndex] : null;
         var (llx, lly, urx, ury) = doc.GetPageMediaBox(pageIndex);
         var result = new OxPage { Text = new OxPageText { PageWidth = (float)urx, PageHeight = (float)ury } };

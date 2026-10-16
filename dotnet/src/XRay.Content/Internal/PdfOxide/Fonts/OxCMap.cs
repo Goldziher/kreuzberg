@@ -280,6 +280,7 @@ internal sealed partial class OxCMap
         {
             foreach (string line in Lines(content, s, e))
             {
+                Cancel.ThrowIfRequested();
                 byte width = ParseCodespaceRangeLineWidth(line);
                 if (width > cmap.CodeWidth) cmap.CodeWidth = width;
             }
@@ -292,6 +293,7 @@ internal sealed partial class OxCMap
         {
             foreach (string line in Lines(content, s, e))
             {
+                Cancel.ThrowIfRequested();
                 if (isRange)
                 {
                     List<(uint Src, string Dst)>? mappings = ParseBfRangeLine(line);
@@ -309,6 +311,7 @@ internal sealed partial class OxCMap
         {
             foreach (string line in Lines(content, s, e))
             {
+                Cancel.ThrowIfRequested();
                 List<(uint Src, string Dst)>? mappings = ParseNotdefRangeLine(line);
                 if (mappings == null) continue;
                 foreach ((uint src, string dst) in mappings)
@@ -399,6 +402,7 @@ internal sealed partial class OxCMap
         bool first = true;
         foreach (string line in Lines(content, 0, content.Length))
         {
+            Cancel.ThrowIfRequested();
             if (!first) cleaned.Append('\n');
             first = false;
             int idx = line.IndexOf('%');

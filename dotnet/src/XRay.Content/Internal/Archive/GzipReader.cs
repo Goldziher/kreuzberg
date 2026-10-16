@@ -11,9 +11,9 @@ internal static class GzipReader
     /// <summary>Decompress a gzip stream and extract metadata/text/bytes. If the decompressed
     /// payload is a TAR archive, delegates to <see cref="TarReader"/>; Rust keeps the outer
     /// "GZIP" format label for .tar.gz, so we do too.</summary>
-    public static ArchiveReadResult Read(byte[] bytes)
+    public static ArchiveReadResult Read(byte[] bytes, XRay.Content.Core.SecurityLimits? limits = null)
     {
-        byte[] decompressed = Decompress(bytes);
+        byte[] decompressed = Decompress(bytes, (limits ?? new XRay.Content.Core.SecurityLimits()).MaxArchiveSize);
 
         if (TarReader.IsTarArchive(decompressed))
         {
@@ -44,12 +44,17 @@ internal static class GzipReader
         return result;
     }
 
-    private static byte[] Decompress(byte[] bytes)
+    /// <summary>
+    /// Decompress with a size ceiling, as upstream does (<c>decompress_gzip_limited</c>), so a few
+    /// kilobytes of gzip cannot inflate to gigabytes; cancellable between chunks.
+    /// </summary>
+    private static byte[] Decompress(byte[] bytes, long maxSize)
     {
         using var input = new MemoryStream(bytes, writable: false);
         using var gz = new GZipStream(input, CompressionMode.Decompress);
         using var output = new MemoryStream();
-        gz.CopyTo(output);
+        if (!Cancel.CopyBounded(gz, output, maxSize))
+            throw new XRay.Content.Core.ValidationException($"Gzip decompressed size exceeds {maxSize} byte limit");
         return output.ToArray();
     }
 

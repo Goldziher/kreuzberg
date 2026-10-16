@@ -75,6 +75,7 @@ public sealed class RstExtractor : IExtractor
         int i = 0;
         while (i < lines.Count)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
             string trimmed = line.Trim();
 
@@ -613,6 +614,7 @@ public sealed class RstExtractor : IExtractor
 
         while (i < lines.Count)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
             string trimmed = line.Trim();
 
@@ -725,6 +727,7 @@ public sealed class RstExtractor : IExtractor
                 var caption = new StringBuilder();
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     if (lines[i].Length == 0)
                     {
                         if (caption.Length != 0) break;
@@ -768,6 +771,7 @@ public sealed class RstExtractor : IExtractor
                     csvCells.Add(ParseCsvLine(headerLine));
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string l = lines[i];
                     if (l.Trim().Length == 0
                         || !(l.StartsWith("   ", StringComparison.Ordinal) || l.StartsWith("\t", StringComparison.Ordinal)))
@@ -785,6 +789,7 @@ public sealed class RstExtractor : IExtractor
                 i++;
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string l = lines[i].Trim();
                     if ((l.StartsWith(':') && l.EndsWith(':')) || (l.StartsWith(':') && l.Contains(": ")))
                     {
@@ -886,6 +891,7 @@ public sealed class RstExtractor : IExtractor
                 var bodyText = new StringBuilder();
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string l = lines[i];
                     if (l.Length == 0)
                     {
@@ -913,6 +919,7 @@ public sealed class RstExtractor : IExtractor
                 var tableLines = new List<string>();
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string tl = lines[i].Trim();
                     if (tl.Length == 0) break;
                     tableLines.Add(lines[i]);
@@ -997,6 +1004,7 @@ public sealed class RstExtractor : IExtractor
                 var codeContent = new StringBuilder();
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string l = lines[i];
                     byte[] lb = Encoding.UTF8.GetBytes(l);
                     bool isIndented = l.StartsWith("\t") || (lb.Length >= indent && AllSpaces(lb, indent));

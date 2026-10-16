@@ -32,7 +32,7 @@ internal static class OdfPresentationParser
         if (contentXml is null)
             return new InternalDocumentBuilder("odp").Build();
 
-        var doc = XDocument.Parse(contentXml, LoadOptions.PreserveWhitespace);
+        var doc = Cancel.ParseXml(contentXml, LoadOptions.PreserveWhitespace);
         var root = doc.Root!;
         var styleMap = OdfStyles.BuildStyleMap(root);
         var listStyleMap = OdfStyles.BuildListStyleMap(root);
@@ -194,7 +194,7 @@ internal static class OdfPresentationParser
         if (stylesXml is null) return;
 
         XDocument doc;
-        try { doc = XDocument.Parse(stylesXml, LoadOptions.PreserveWhitespace); }
+        try { doc = Cancel.ParseXml(stylesXml, LoadOptions.PreserveWhitespace); }
         catch (System.Xml.XmlException) { return; }
         if (doc.Root is null) return;
 

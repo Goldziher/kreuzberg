@@ -156,8 +156,10 @@ public static class PdfFilters
         var result = new List<byte>(data.Length);
         byte[] prev = new byte[rowLen];
         int pos = 0;
+        int rowTick = 0;
         while (pos + 1 + rowLen <= data.Length + rowLen && pos < data.Length)
         {
+            Cancel.Every(rowTick++, 0x3FF);
             int ft = data[pos++];
             int avail = Math.Min(rowLen, data.Length - pos);
             if (avail <= 0) break;
@@ -213,8 +215,10 @@ public static class PdfFilters
         byte[]? prev = null;
         int ec = earlyChange ? 1 : 0;
 
+        int cancelTick = 0;
         while (pos < data.Length || bitCount >= codeWidth)
         {
+            Cancel.Every(cancelTick++, 0xFFFF);
             while (bitCount < codeWidth && pos < data.Length)
             {
                 bitBuffer = (bitBuffer << 8) | data[pos++];
@@ -306,8 +310,10 @@ public static class PdfFilters
     {
         var outp = new List<byte>();
         int i = 0;
+        int runTick = 0;
         while (i < data.Length)
         {
+            Cancel.Every(runTick++, 0xFFFF);
             int len = data[i++];
             if (len == 128) break;
             if (len < 128)

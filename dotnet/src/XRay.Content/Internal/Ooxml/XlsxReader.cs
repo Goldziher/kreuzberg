@@ -47,6 +47,7 @@ public static class XlsxReader
 
         foreach (var (name, target, _) in sheetNames)
         {
+            Cancel.ThrowIfRequested();
             var sheet = ProcessSheet(pkg, name, target, shared, formats);
             wb.Sheets.Add(sheet);
             if (CollectSheetFormulas(pkg, target) is { } formulas) wb.Metadata[$"formulas_{name}"] = formulas;
@@ -110,7 +111,10 @@ public static class XlsxReader
         var xml = pkg.ReadXml("xl/sharedStrings.xml");
         if (xml?.Root is null) return list;
         foreach (var si in xml.Root.Elements().Where(e => e.Name.LocalName == "si"))
+        {
+            Cancel.Every(list.Count, 0x3FF);
             list.Add(ConcatText(si));
+        }
         return list;
     }
 
@@ -147,6 +151,7 @@ public static class XlsxReader
         int autoRow = 0;
         foreach (var row in sheetData.Elements().Where(e => e.Name.LocalName == "row"))
         {
+            Cancel.ThrowIfRequested();
             int rowIdx = ParseRowIndex(row) ?? autoRow;
             autoRow = rowIdx + 1;
             int autoCol = 0;
@@ -215,6 +220,7 @@ public static class XlsxReader
             int autoRow = 0;
             foreach (var row in sheetData.Elements().Where(e => e.Name.LocalName == "row"))
             {
+                Cancel.ThrowIfRequested();
                 int rowIdx = ParseRowIndex(row) ?? autoRow;
                 autoRow = rowIdx + 1;
                 int autoCol = 0;
@@ -245,6 +251,7 @@ public static class XlsxReader
         var grid = new List<List<string>>(rowMax - rowMin + 1);
         for (int r = rowMin; r <= rowMax; r++)
         {
+            Cancel.Every(r, 0xFF);
             var rowCells = new List<string>(width);
             for (int col = colMin; col <= colMax; col++)
                 rowCells.Add(cellsByPos.TryGetValue((r, col), out var v) ? v : "");

@@ -522,8 +522,10 @@ public static class PdfPageText
         if (spans.Count < 2) return spans;
         var seen = new Dictionary<string, Dictionary<(int, int), List<TextSpan>>>(StringComparer.Ordinal);
         var kept = new List<TextSpan>(spans.Count);
+        int spanCount = 0;
         foreach (var span in spans)
         {
+            Cancel.Every(spanCount++, 0xFF);
             string trimmed = span.Text.Trim();
             if (trimmed.Length < 2) { kept.Add(span); continue; }
             string key = trimmed.ToLowerInvariant();

@@ -98,6 +98,17 @@ public sealed class PdfAnnotation
     public double? PageHeight { get; set; }
 
     /// <summary>
+    /// The page's visible box (crop box, else media box) in default user space: the origin to subtract
+    /// from <see cref="BoundingBox"/> to place it on the page.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public BoundingBox? PageBox { get; set; }
+
+    /// <summary>The page's <c>/Rotate</c> (0, 90, 180 or 270). <see cref="BoundingBox"/> is in the unrotated space.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? PageRotation { get; set; }
+
+    /// <summary>
     /// Whether a viewer would draw it: not invisible, hidden or no-view, and not zero opacity.
     /// Most consumers want only these.
     /// </summary>

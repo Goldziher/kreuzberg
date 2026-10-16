@@ -78,6 +78,7 @@ public sealed class HwpExtractor : IExtractor
         var b = new InternalDocumentBuilder("hwp");
         foreach (var para in paragraphs)
         {
+            Cancel.ThrowIfRequested();
             if (para.Text is { Length: > 0 } t)
             {
                 var annotations = ApplyCharShapes(t, para.Runs, charShapes);
@@ -122,6 +123,7 @@ public sealed class HwpExtractor : IExtractor
         int pos = 0;
         while (pos + 4 <= data.Length)
         {
+            Cancel.ThrowIfRequested();
             if (!ReadRecord(data, ref pos, out int tagId, out int dataStart, out int dataLen)) break;
             if (tagId == TagCharShapeInfo && dataLen >= 4)
             {
@@ -142,6 +144,7 @@ public sealed class HwpExtractor : IExtractor
         int pos = 0;
         while (pos + 4 <= data.Length)
         {
+            Cancel.ThrowIfRequested();
             if (!ReadRecord(data, ref pos, out int tagId, out int dataStart, out int dataLen)) break;
             switch (tagId)
             {

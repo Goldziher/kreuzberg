@@ -238,6 +238,9 @@ public sealed class InternalDocument
 
     public uint PushElement(InternalElement element)
     {
+        // Every extractor builds its document through here, so this is where a long extraction
+        // notices a cancellation between two elements however its own loops are written.
+        Cancel.Every(Elements.Count, 0x3F);
         uint idx = (uint)Elements.Count;
         Elements.Add(element);
         return idx;
@@ -247,6 +250,7 @@ public sealed class InternalDocument
 
     public uint PushTable(Table table)
     {
+        Cancel.Every(Tables.Count, 0x0F);
         uint idx = (uint)Tables.Count;
         Tables.Add(table);
         return idx;

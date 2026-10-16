@@ -113,8 +113,10 @@ public sealed class StyledHtmlRenderer
         var state = new RenderState();
         var listOrderedStack = new List<bool>();
 
+        int elementIndex = 0;
         foreach (var elem in doc.Elements)
         {
+            Cancel.Every(elementIndex++, 0x3FF);
             if (elem.Layer != ContentLayer.Body) continue;
 
             switch (elem.Kind.Tag)

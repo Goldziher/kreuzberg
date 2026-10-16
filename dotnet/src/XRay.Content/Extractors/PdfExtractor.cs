@@ -180,8 +180,10 @@ public sealed class PdfExtractor : IExtractor
         // keeps, and measurably loses fixtures.
         if (structured is not null && ReferenceEquals(doc, structured))
         {
+            int repaired = 0;
             foreach (var elem in doc.Elements)
             {
+                Cancel.Every(repaired++, 0x3F);
                 if (elem.Text.Length == 0) continue;
                 elem.Text = PdfTextRepair.Repair(elem.Text);
             }
@@ -503,6 +505,7 @@ public sealed class PdfExtractor : IExtractor
         var tables = new List<RuledTable>();
         for (int i = 0; i < pageWords.Count && i < pagePaths.Count; i++)
         {
+            Cancel.ThrowIfRequested();
             uint pageNumber = (uint)(i + 1);
             try
             {
@@ -672,6 +675,7 @@ public sealed class PdfExtractor : IExtractor
             // Match the previous text path: once the wall-clock guard trips, stop
             // emitting pages entirely rather than appending empty tails.
             if (DateTime.UtcNow.Ticks > deadline) break;
+            Cancel.ThrowIfRequested();
 
             string pageText = "";
             List<SegmentData> segs = new();

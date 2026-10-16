@@ -44,6 +44,7 @@ public static class PptxReader
         var main = new ContentBuilder(plain);
         for (int i = 0; i < slidePaths.Count; i++)
         {
+            Cancel.ThrowIfRequested();
             var xml = pkg.ReadXml(slidePaths[i]);
             var elements = xml is null ? new List<SlideElement>() : ParseSlide(xml);
             ResolveImageTargets(pkg, slidePaths[i], elements);
@@ -112,7 +113,10 @@ public static class PptxReader
         var spTree = cSld?.Elements().FirstOrDefault(e => e.Name.LocalName == "spTree");
         if (spTree is null) return elements;
         foreach (var child in spTree.Elements())
+        {
+            Cancel.ThrowIfRequested();
             ParseGroup(child, elements);
+        }
         return elements;
     }
 
@@ -539,6 +543,7 @@ public static class PptxReader
         var notes = new Dictionary<uint, string>();
         for (int i = 0; i < slidePaths.Count; i++)
         {
+            Cancel.ThrowIfRequested();
             var notesPath = slidePaths[i].Replace("slides/slide", "notesSlides/notesSlide");
             var xml = pkg.ReadXml(notesPath);
             if (xml?.Root is null) continue;

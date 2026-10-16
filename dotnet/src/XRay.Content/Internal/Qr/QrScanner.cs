@@ -110,6 +110,7 @@ internal static class QrScanner
 
         for (int idx = 0; idx < capstones.Count; idx++)
         {
+            Cancel.ThrowIfRequested();
             if (used.Contains(idx)) continue;
 
             foreach (var (h, v) in QrDetector.FindAndRankPossibleNeighbors(capstones, idx))

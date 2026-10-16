@@ -709,11 +709,15 @@ internal static partial class PdfSpatialTables
     private static List<Intersection> FindIntersections(List<Edge> hEdges, List<Edge> vEdges)
     {
         var pts = new List<Intersection>();
+        int hIndex = 0;
         foreach (var h in hEdges)
+        {
+            Cancel.Every(hIndex++, 0x3F);
             foreach (var v in vEdges)
                 if (v.Coord >= h.Start - SnapTol && v.Coord <= h.End + SnapTol
                     && h.Coord >= v.Start - SnapTol && h.Coord <= v.End + SnapTol)
                     pts.Add(new Intersection(v.Coord, h.Coord));
+        }
 
         pts.Sort((a, b) =>
         {
@@ -859,6 +863,7 @@ internal static partial class PdfSpatialTables
         order.Sort((a, b) => cells[a].Y1.CompareTo(cells[b].Y1));
         for (int a = 0; a < n; a++)
         {
+            Cancel.Every(a, 0x3F);
             int i = order[a];
             var ci = cells[i];
             double yLimit = ci.Y2 + SnapTol;

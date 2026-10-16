@@ -75,6 +75,7 @@ internal static class IwaContainer
 
         while (data.Length - position >= 4)
         {
+            Cancel.ThrowIfRequested();
             byte chunkType = data[position];
             int chunkLength = data[position + 1] | (data[position + 2] << 8) | (data[position + 3] << 16);
             int payloadOffset = position + 4;
@@ -147,6 +148,7 @@ internal static class IwaContainer
         int position = 0;
         while (position < data.Length)
         {
+            Cancel.ThrowIfRequested();
             if (!TryReadVarint(data, position, out ulong tag, out int tagLength)) break;
             position += tagLength;
             if (!ExtractProtoField(data, ref position, tag & 0x7, texts, depth)) break;

@@ -24,14 +24,17 @@ public static class Derive
         HtmlOutputConfig? htmlOutput = null, bool renderPagesInOutputFormat = false)
     {
         ResolveRelationships(doc);
+        Cancel.ThrowIfRequested();
 
         string content = PlainRenderer.Render(doc);
+        Cancel.ThrowIfRequested();
 
         string mimeType = doc.MimeType != Mime.OctetStream
             ? doc.MimeType
             : SourceFormatToMimeType(doc.SourceFormat);
 
         string? formatted = RenderFormatted(doc, outputFormat, htmlOutput);
+        Cancel.ThrowIfRequested();
 
         List<PageContent>? pages = doc.PrebuiltPages ?? BuildPages(doc);
 
@@ -41,7 +44,9 @@ public static class Derive
         if (renderPagesInOutputFormat && pages is not null && formatted is not null && doc.PrebuiltPages is null)
             RenderPagesFormatted(doc, pages, outputFormat, htmlOutput);
 
+        Cancel.ThrowIfRequested();
         DocumentStructure? document = includeDocumentStructure ? DeriveDocumentStructure(doc) : null;
+        Cancel.ThrowIfRequested();
 
         List<ExtractedImage>? images = doc.Images.Count == 0 ? null : doc.Images;
 
@@ -105,6 +110,7 @@ public static class Derive
 
         foreach (var page in pages)
         {
+            Cancel.ThrowIfRequested();
             if (!byPage.TryGetValue(page.PageNumber, out var elements)) continue;
 
             var slice = new InternalDocument(doc.SourceFormat)
@@ -160,6 +166,7 @@ public static class Derive
         var anchorToIndex = new Dictionary<string, uint>();
         for (int i = 0; i < doc.Elements.Count; i++)
         {
+            Cancel.Every(i, 0x3FF);
             var elem = doc.Elements[i];
             if (elem.Kind.Tag == ElementKindTag.FootnoteRef) continue;
             if (elem.Anchor is not null && !anchorToIndex.ContainsKey(elem.Anchor))
@@ -220,6 +227,7 @@ public static class Derive
         var pages = new List<PageContent>();
         foreach (var (pageNum, elems) in pageMap)
         {
+            Cancel.ThrowIfRequested();
             var content = new System.Text.StringBuilder();
             var tables = new List<Table>();
             var imageIndices = new List<uint>();
@@ -303,6 +311,7 @@ public static class Derive
 
         for (int i = 0; i < doc.Elements.Count; i++)
         {
+            Cancel.Every(i, 0xFF);
             if (consumed[i]) continue;
             var elem = doc.Elements[i];
             var tag = elem.Kind.Tag;

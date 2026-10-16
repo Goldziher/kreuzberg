@@ -70,8 +70,10 @@ public static class MarkdownParser
     private static void ScanRefDefs(List<string> lines)
     {
         bool inFence = false; char fenceChar = ' '; int fenceLen = 0;
+        int refLine = 0;
         foreach (var line in lines)
         {
+            Cancel.Every(refLine++, 0x3FF);
             string ts = line.TrimStart();
             int indent = line.Length - ts.Length;
             if (inFence)
@@ -205,6 +207,7 @@ public static class MarkdownParser
         bool ruleSinceParagraph = false;
         while (i < hi)
         {
+            Cancel.ThrowIfRequested();
             // Strict-progress safety net: if a full iteration ever returns to the top without
             // advancing the cursor, force a single-line advance so no input can hang the parser.
             if (i == stuckAt) { i++; stuckAt = -1; continue; }

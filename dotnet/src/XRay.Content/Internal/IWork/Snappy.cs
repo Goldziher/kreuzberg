@@ -28,6 +28,7 @@ internal static class Snappy
 
         while (position < source.Length)
         {
+            Cancel.ThrowIfRequested();
             byte tag = source[position++];
             if ((tag & 0x03) == 0)
             {

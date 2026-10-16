@@ -193,6 +193,7 @@ internal static class PstExtraction
 
         while (stack.Count > 0)
         {
+            Cancel.ThrowIfRequested();
             var (folder, depth, folderPath) = stack[^1];
             stack.RemoveAt(stack.Count - 1);
 
@@ -282,6 +283,7 @@ internal static class PstExtraction
         var ids = new List<uint>();
         foreach (var row in table.Rows)
         {
+            Cancel.ThrowIfRequested();
             if (ids.Count >= MaxTableRows) return (ids, true);
             ids.Add(PstTableContext.RowId(row));
         }

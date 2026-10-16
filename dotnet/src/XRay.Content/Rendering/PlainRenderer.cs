@@ -11,8 +11,10 @@ public static class PlainRenderer
         var sb = new StringBuilder(doc.Elements.Count * 80);
         ushort? lastHeadingDepth = null;
 
+        int elementIndex = 0;
         foreach (var elem in doc.Elements)
         {
+            Cancel.Every(elementIndex++, 0x3FF);
             if (elem.Layer != ContentLayer.Body) continue;
             if (elem.Kind.IsContainerStart || elem.Kind.IsContainerEnd) continue;
 

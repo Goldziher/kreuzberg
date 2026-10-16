@@ -27,6 +27,7 @@ public static class DocTagsRenderer
 
         for (int i = 0; i < doc.Elements.Count; i++)
         {
+            Cancel.Every(i, 0x3FF);
             uint index = (uint)i;
             var elem = doc.Elements[i];
 

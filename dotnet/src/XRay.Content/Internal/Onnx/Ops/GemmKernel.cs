@@ -122,7 +122,7 @@ internal static class GemmKernel
         if (spread && tiles > 1)
         {
             int capturedStrideN = strideN, capturedRows = rowsPerChunk, capturedChunks = rowChunks;
-            Parallel.For(0, tiles, tile =>
+            Parallel.For(0, tiles, Cancel.ParallelOptions, tile =>
             {
                 int index = tile / capturedChunks;
                 int jc = index * capturedStrideN;

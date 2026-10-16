@@ -31,8 +31,10 @@ internal static class ComrakBridge
 
         MdNode CurrentParent() => containerStack.Count > 0 ? containerStack[^1].Node : root;
 
+        int consolidatedIndex = 0;
         foreach (var ce in consolidated)
         {
+            Cancel.Every(consolidatedIndex++, 0x3FF);
             ElementKind elemKind;
             string elemText;
             IReadOnlyList<TextAnnotation> elemAnnotations;
@@ -852,6 +854,7 @@ internal static class ComrakBridge
         int i = 0;
         while (i < elements.Count)
         {
+            Cancel.Every(i, 0x3FF);
             var elem = elements[i];
             AnnotationKind? uniform = null;
             if (elem.Kind.Tag == ElementKindTag.Paragraph && elem.Layer == ContentLayer.Body && elem.Text.Length > 0)

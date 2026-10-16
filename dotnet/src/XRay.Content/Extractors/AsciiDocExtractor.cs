@@ -156,6 +156,7 @@ internal sealed class AsciiDocParser
     {
         while (_index < _lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string trimmed = _lines[_index].Trim();
             if (trimmed.Length == 0 || trimmed.StartsWith("//", StringComparison.Ordinal)) { _index++; continue; }
             if (ParseAttributeEntry(trimmed) is not { } entry) return;
@@ -168,6 +169,7 @@ internal sealed class AsciiDocParser
     {
         while (_index < _lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string trimmed = _lines[_index].Trim();
             if (trimmed.Length == 0 || (trimmed.StartsWith("//", StringComparison.Ordinal) && !IsDelimiter(trimmed, '/')))
                 _index++;
@@ -425,6 +427,7 @@ internal sealed class AsciiDocParser
         bool terminated = false;
         while (_index < _lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string trimmed = _lines[_index].Trim();
             _index++;
             if (trimmed.StartsWith("|===", StringComparison.Ordinal)) { terminated = true; break; }
@@ -463,6 +466,7 @@ internal sealed class AsciiDocParser
         // An item's text continues onto following lines until something else starts.
         while (_index < _lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string next = _lines[_index].Trim();
             if (next.Length == 0 || ListMarker(next) is not null || SectionLevel(next) is not null) break;
             text.Append(' ').Append(next);
@@ -479,6 +483,7 @@ internal sealed class AsciiDocParser
         var text = new StringBuilder();
         while (_index < _lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string trimmed = _lines[_index].Trim();
             if (trimmed.Length == 0 || StartsNewBlock(trimmed)) break;
             if (text.Length > 0) text.Append(' ');
@@ -516,6 +521,7 @@ internal sealed class AsciiDocParser
         var body = new List<string>();
         while (_index < _lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string raw = _lines[_index];
             _index++;
             if (raw.Trim() == delimiter) return (string.Join("\n", body), true);
@@ -529,6 +535,7 @@ internal sealed class AsciiDocParser
         _index++;
         while (_index < _lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string raw = _lines[_index];
             _index++;
             if (IsDelimiter(raw.Trim(), '/')) return;

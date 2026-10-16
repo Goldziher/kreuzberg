@@ -102,6 +102,7 @@ public sealed class LatexExtractor : IExtractor
 
         while (pos < len)
         {
+            Cancel.Every(pos, 0xFFF);
             if (b[pos] == (byte)'\\')
             {
                 var inlineCmd = TryParseInlineCommand(b, pos);

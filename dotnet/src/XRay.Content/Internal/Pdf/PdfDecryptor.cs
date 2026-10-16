@@ -124,6 +124,10 @@ public sealed class PdfDecryptor
         };
     }
 
+    /// <summary>Authenticate with the empty password only (the original, password-less form).</summary>
+    public static PdfDecryptor? TryCreate(PdfDict enc, byte[]? id, PdfDocument doc) =>
+        TryCreate(enc, id, doc, null);
+
     /// <summary>
     /// Authenticate with the first password that works, trying each as the user password and then
     /// the owner password. Null when none does (or the handler is not the Standard one).

@@ -39,7 +39,7 @@ internal static class OdfMetadata
             return new OdtProperties();
 
         // Rust returns Err on malformed XML; XDocument.Parse throws, which the caller lets propagate.
-        var doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
+        var doc = Cancel.ParseXml(xml, LoadOptions.PreserveWhitespace);
         var root = doc.Root!;
 
         return new OdtProperties
@@ -72,7 +72,7 @@ internal static class OdfMetadata
             return null;
         using var stream = entry.Open();
         using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+        return Cancel.ReadToEnd(reader);
     }
 
     /// <summary>

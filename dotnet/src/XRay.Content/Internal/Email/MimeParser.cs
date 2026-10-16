@@ -283,6 +283,7 @@ internal static class MimeParser
         var segments = new List<(string Segment, bool Terminated)>();
         for (int k = 0; k < markerPositions.Count; k++)
         {
+            Cancel.ThrowIfRequested();
             int start = markerPositions[k];
             int afterMarker = start + marker.Length;
             // Close delimiter "--boundary--".

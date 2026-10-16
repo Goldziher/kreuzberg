@@ -37,6 +37,7 @@ public static class QrPostProcessor
 
         for (int index = 0; index < images.Count; index++)
         {
+            Cancel.ThrowIfRequested();
             var codes = QrDetection.Detect(images[index].Data, images[index].Format);
             foreach (var code in codes)
             {

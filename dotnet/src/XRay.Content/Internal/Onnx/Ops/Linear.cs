@@ -89,7 +89,7 @@ internal static class Linear
         // through.
         if (batches > 1)
         {
-            Parallel.For(0, batches, batch => MultiplyInto(
+            Parallel.For(0, batches, Cancel.ParallelOptions, batch => MultiplyInto(
                 fa.Floats.AsMemory(offsetsA[batch] * sizeA, sizeA),
                 fb.Floats.AsMemory(offsetsB[batch] * sizeB, sizeB),
                 result.Floats.AsMemory(batch * sizeC, sizeC),

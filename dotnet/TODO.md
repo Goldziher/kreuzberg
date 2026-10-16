@@ -894,6 +894,51 @@ current upstream. Its two remaining spellings are the stale golden traced above,
 `vendored/unstructured/msg/fake-email-multiple-attachments.msg` (both traced and closed on every
 hard dimension — see "Every failing fixture, categorized" above).
 
+## PDF features and cancellation (2026-10-16)
+
+Driven by what Mosaik's file-extraction helper reads out of a PDF and how it cancels extraction.
+Parity with the commercial library the helper used before is **unverified**: no reference output
+was available, so everything here is derived from the helper's own use of the output, the PDF
+specification and upstream's Rust. A golden-comparison test can be dropped in beside
+`PdfAnnotationTests` / `PdfEmbeddedFileTests` once reference output exists; none was written
+against output that could not be checked.
+
+- [x] **Annotations** (`Internal/Pdf/PdfAnnotations.cs`, `Types/Annotations.cs`): ported from
+      `pdf/native/annotations.rs`; every non-widget, non-popup annotation with subtype, comment,
+      author, dates, colour, rectangle, flags, quad boxes and marked text; rendered in all five
+      renderers; links to `Uris`; opt-in through `ExtractionConfig.Pdf.ExtractAnnotations`.
+- [x] **Outline and link URIs** (`PdfBookmarks`, `PdfLinks`): bookmark destinations as `Uris`
+      (upstream's bookmark URIs), outline as `PdfMetadata.Outline`.
+- [x] **Embedded files** (`PdfEmbeddedFiles`): name tree, file-attachment annotations,
+      portfolios, `/AF`; bomb ceilings; `Attachments` plus `Children`.
+- [x] **Encryption** (`PdfDecryptor`): verification, user and owner passwords, R2 to R6,
+      crypt filters, permissions; `PdfPasswordRequiredException` and the
+      `password_required`/`invalid_password` error types.
+- [x] **Typed form fields** (`PdfFormModel`) on `ExtractedDocument.FormFields`.
+- [x] **Document facts:** catalog language, custom Info entries, extra XMP properties.
+- [x] **Cancellation** across the library (`Core/Cancel`, `Core/CancellableApi`); see
+      `../CLAUDE.md`. Twelve formats tested pre-cancelled and ten mid-flight.
+- [x] **Gzip decompression ceiling** (`MaxArchiveSize`), which upstream has and the port lacked.
+- [ ] **Free-text annotations as body text for a page with none**
+      (`extract_annotations_with_empty_body_fallback`). Needs the visibility test (`/OC` against the
+      default-off optional-content groups, the crop box, `/AP` text agreeing with `/Contents`).
+- [ ] **PDF revisions** (`pdf/xref_revisions.rs`, `ExtractedDocument.Revisions`): still `null`.
+- [ ] **Annotation text under rotated pages.** `MarkedText` compares quad boxes with word boxes in
+      default user space and does not apply `/Rotate`; a rotated page's markup may recover nothing.
+- [ ] **Token overloads in X-Ray.Psd:** when `X-Ray.Psd` ships
+      `Load`/`ExtractText` overloads taking a token, pass it from `PsdExtractor` (today it polls
+      between layers and before each stage; the load of a very large PSB is one uninterruptible call).
+- [ ] **Uninterruptible single calls** worth a streaming replacement if latency matters:
+      `JsonDocument.Parse` (about 1.2 s per 50 MB here), ImageSharp decode, PDFium page render.
+- [ ] **Decompression ceilings outside PDF and gzip:** OOXML and ODF parts are read with no size
+      cap (`OoxmlPackage.ReadBytes`, `OdfContentParser`), and 7z allocates the declared unpack size.
+      Cancellation makes them stoppable; a budget would make them bounded.
+- [ ] **`StyledHtmlRenderer`/`DocTagsRenderer` do not render annotations**; upstream's do not exist
+      for those two either.
+- [ ] **Fixtures:** `test_documents/pdf/encrypted/` and `pdf/features/` are written but not
+      committed (the corpus is a separate repository); commit them there and bump the pin.
+
+
 ## X-Ray additions beyond upstream
 
 Formats this port reads that upstream xberg does not. No golden can measure them — the Rust
@@ -1058,9 +1103,10 @@ the local header and the central directory.
 - **`fix(mime): sniff files with unknown extensions`.** `ResolveWithContent` already falls back to
   content detection when the extension yields nothing.
 - **`fix(docx)` text-box entity references (#1562)** — kept as a pinning test, not a fix; see above.
-- **`fix(pdf): recover visible annotation-only text`.** The port has no PDF annotation support at
-  all — no annotation type, no `/Annots` reading. This is a feature the port never had rather than
-  behaviour that drifted, so it belongs with annotation support, not with this sync.
+- **`fix(pdf): recover visible annotation-only text`.** The port had no PDF annotation support at
+  all when this sync was written; annotations are in now (see "PDF features and cancellation"
+  below), but this particular fallback — free-text annotations standing in for the body of a page
+  with none (`extract_annotations_with_empty_body_fallback`) — is still not ported.
 - **`fix(plugins)` registry lifecycle, `fix(url)` HTTP metadata, `fix(config)` nested-field
   rejection, `fix(image)`/`fix(security)` Rust feature gating, `chore`/`refactor`/`ci`/`docs`/alef
   regeneration.** No counterpart in the port's surface.

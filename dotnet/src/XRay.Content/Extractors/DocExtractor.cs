@@ -289,6 +289,7 @@ public sealed class DocExtractor : IExtractor
         int clxEnd = fcClx + lcbClx;
         while (pos < clxEnd)
         {
+            Cancel.ThrowIfRequested();
             byte clxt = table[pos];
             if (clxt == 0x02)
             {
@@ -408,6 +409,7 @@ public sealed class DocExtractor : IExtractor
 
         for (int i = 0; i < main.Length; i++)
         {
+            Cancel.Every(i, 0x3FFF);
             if (main[i] != ParagraphMark) continue;
             PushParagraph(paragraphs, main, start, i, FcEndAt(mainFcEnds, i), listTables);
             start = i + 1;
@@ -628,6 +630,7 @@ public sealed class DocExtractor : IExtractor
         var run = new StringBuilder();
         for (int i = 256; i < wordDoc.Length; i++)
         {
+            Cancel.Every(i, 0x3FFF);
             byte b = wordDoc[i];
             if (b == 0x0D || b == 0x0A || b == 0x09 || (b >= 0x20 && b <= 0xFE))
                 run.Append(OleUtil.Cp1252ToChar(b));

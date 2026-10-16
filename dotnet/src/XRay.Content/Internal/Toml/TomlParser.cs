@@ -24,6 +24,7 @@ internal static class TomlParser
         int i = 0;
         while (i < lines.Length)
         {
+            Cancel.ThrowIfRequested();
             string line = StripComment(lines[i]).Trim();
             i++;
             if (line.Length == 0) continue;

@@ -108,6 +108,7 @@ public sealed class HtmlWalker
     {
         while (_pos < _src.Length)
         {
+            Cancel.ThrowIfRequested();
             if (Starts("<!--"))
             {
                 _pos = CommentEnd(_src, _pos);

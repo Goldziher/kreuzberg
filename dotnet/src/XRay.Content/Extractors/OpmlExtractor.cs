@@ -25,7 +25,7 @@ public sealed partial class OpmlExtractor : IExtractor
     public InternalDocument Extract(ReadOnlySpan<byte> content, string mimeType, ExtractionConfig config)
     {
         string xml = DecodeText(content);
-        XDocument xdoc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
+        XDocument xdoc = Cancel.ParseXml(xml, LoadOptions.PreserveWhitespace);
 
         var meta = new Metadata();
         var additional = new Dictionary<string, object>();

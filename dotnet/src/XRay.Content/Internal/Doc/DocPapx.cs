@@ -129,6 +129,7 @@ internal static class DocPapx
 
         while (pos + 2 <= grpprl.Length)
         {
+            Cancel.ThrowIfRequested();
             ushort sprm = (ushort)(grpprl[pos] | (grpprl[pos + 1] << 8));
             pos += 2;
 

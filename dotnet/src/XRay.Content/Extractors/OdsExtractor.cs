@@ -232,7 +232,7 @@ public sealed class OdsExtractor : IExtractor
 
         XDocument content;
         using (var s = entry.Open())
-            content = XDocument.Load(s, LoadOptions.PreserveWhitespace);
+            content = XDocument.Load(Cancel.Poll(s), LoadOptions.PreserveWhitespace);
 
         var sheets = new List<OdsSheet>();
         foreach (var table in content.Descendants().Where(e => e.Name.LocalName == "table"

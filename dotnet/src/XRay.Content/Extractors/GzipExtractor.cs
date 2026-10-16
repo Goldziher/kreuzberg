@@ -19,7 +19,7 @@ public sealed class GzipExtractor : IExtractor
 
     public InternalDocument Extract(ReadOnlySpan<byte> content, string mimeType, ExtractionConfig config)
     {
-        var read = GzipReader.Read(content.ToArray());
+        var read = GzipReader.Read(content.ToArray(), config.SecurityLimits);
         return ArchiveDocument.Build(read, mimeType, config);
     }
 }

@@ -116,6 +116,7 @@ internal static class Wp6Parser
     {
         while (!reader.AtEnd)
         {
+            Cancel.ThrowIfRequested();
             byte value = reader.ReadU8();
 
             if (value == 0)
@@ -260,6 +261,7 @@ internal static class Wp6Parser
         int end = contentStart + sizeNonDeletable;
         while (reader.Position < end && !reader.AtEnd)
         {
+            Cancel.ThrowIfRequested();
             byte function = reader.ReadU8();
             int after = reader.Position;
             int size;

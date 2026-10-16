@@ -127,6 +127,7 @@ internal static class SevenZipReader
             var folderData = DecodeFolders(bytes, streams);
             for (int f = 0; f < folderData.Count; f++)
             {
+                Cancel.ThrowIfRequested();
                 int n = streams.NumUnpackStreams[f];
                 if (n == 1)
                 {
@@ -148,6 +149,7 @@ internal static class SevenZipReader
             int next = 0;
             for (int i = 0; i < files.Count; i++)
             {
+                Cancel.Every(i, 0x0F);
                 bool hasStream = emptyStreamFlags is null || !emptyStreamFlags[i];
                 if (!hasStream || files[i].IsDir) continue;
                 if (next < substreams.Count)
@@ -438,6 +440,7 @@ internal static class SevenZipReader
         var result = new List<byte[]>(si.Folders.Count);
         foreach (var folder in si.Folders)
         {
+            Cancel.ThrowIfRequested();
             if (folder.Coders.Count != 1)
                 throw new SevenZipException("multi-coder 7z folders (filters/encryption) are unsupported");
 

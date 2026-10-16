@@ -34,7 +34,7 @@ internal static class EpubContainer
         XDocument doc;
         try
         {
-            doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
+            doc = Cancel.ParseXml(xml, LoadOptions.PreserveWhitespace);
         }
         catch (Exception e) when (Cancel.NotCancelling)
         {
@@ -63,7 +63,7 @@ internal static class EpubContainer
 
         using var stream = entry.Open();
         using var reader = new StreamReader(stream, Encoding.UTF8);
-        return reader.ReadToEnd();
+        return Cancel.ReadToEnd(reader);
     }
 
     /// <summary>Read a binary entry from the ZIP, or an empty array if missing/unreadable.</summary>
@@ -76,7 +76,7 @@ internal static class EpubContainer
         {
             using var stream = entry.Open();
             using var ms = new MemoryStream();
-            stream.CopyTo(ms);
+            Cancel.CopyTo(stream, ms);
             return ms.ToArray();
         }
         catch (Exception) when (Cancel.NotCancelling)

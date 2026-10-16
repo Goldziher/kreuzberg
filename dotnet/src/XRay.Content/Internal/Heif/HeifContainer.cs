@@ -396,6 +396,7 @@ internal static class HeifContainer
 
         while (p + 8 <= end)
         {
+            Cancel.ThrowIfRequested();
             long size = ReadU32(bytes, p);
             string type = BoxType(bytes, p + 4);
             int header = 8;

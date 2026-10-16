@@ -53,7 +53,8 @@ var input = ExtractInput.FromBytes(bytes, "application/vnd.openxmlformats-office
 
 `Extract` never throws for a bad document: a failure lands in `result.Errors` with a type and
 code, and an unsupported MIME type comes back as an empty document carrying a
-`ProcessingWarning`. `ExtractAsync` is available for the same call.
+`ProcessingWarning`. `ExtractAsync` is available for the same call. Both take an optional
+`CancellationToken`; see [Cancellation](#cancellation).
 
 ## Output formats
 
@@ -81,6 +82,64 @@ email (EML, MSG, PST), iWork, HWP/HWPX, images (metadata and EXIF), Photoshop PS
 and type-layer text), CSV/TSV/DBF, JSON/YAML/TOML,
 BibTeX and citation formats, Jupyter notebooks, source code, and ZIP/TAR/7z/GZip archives
 (extracted recursively as child documents).
+
+## PDF features
+
+```csharp
+var config = new ExtractionConfig
+{
+    OutputFormat = OutputFormat.Markdown,
+    Pdf = new PdfOptions
+    {
+        Password = "secret",            // user or owner password; Passwords tries several
+        ExtractAnnotations = true,      // comments, highlights with the text they cover, links
+        AttachEmbeddedFileBytes = true, // keep each attachment's bytes, not only its text
+    },
+};
+```
+
+- **Passwords.** The standard security handler is read for RC4-40, RC4-128, AES-128 and AES-256
+  (revisions 2 to 6), as the user password or the owner password. A document no password opens
+  fails with `PdfPasswordRequiredException`; through `Extract` that is an error item of type
+  `password_required` (nothing supplied) or `invalid_password` (a password was tried), never the
+  generic parse failure a corrupt file gets. `PdfMetadata` reports `IsEncrypted`,
+  `RequiresPassword`, `AuthenticatedAs`, the algorithm, the key length and the permission flags.
+- **Annotations** (`ExtractionConfig.Pdf.ExtractAnnotations`, off by default as upstream has it).
+  `ExtractedDocument.Annotations` lists every non-widget annotation with its subtype, comment,
+  author, dates, colour, rectangle and flags; text markup (highlight, underline, strike-out,
+  squiggly) carries its quad boxes and the page text underneath. They are appended to the
+  rendered content, and link annotations become `Uris`.
+- **Embedded files.** Attachments from the `/EmbeddedFiles` name tree, file-attachment
+  annotations, PDF portfolios and the catalog's `/AF` list are decoded under size and
+  compression-ratio ceilings, listed in `ExtractedDocument.Attachments` (name, type, size,
+  description, relationship, optionally the bytes) and extracted into `Children` through the
+  normal pipeline, to the same recursion depth archives get.
+- **Form fields.** `ExtractedDocument.FormFields` types every AcroForm field (text, checkbox,
+  radio, choice with its display text, button, signature) with value, options, page and
+  rectangle.
+- **Document facts.** The outline (`PdfMetadata.Outline`, and its destinations as `Uris`), page
+  labels, the catalog language, custom Info entries and further XMP properties (rights, PDF/A
+  conformance) sit beside the title, author, dates and producer.
+
+## Cancellation
+
+Every entry point that does real work takes a `CancellationToken`:
+
+```csharp
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+var result = extractor.Extract(input, config, cts.Token);          // or ExtractAsync(...)
+```
+
+The token is polled at the loop boundaries that bound latency — PDF pages and content operators,
+archive entries and decompression chunks, OOXML parts and spreadsheet rows, binary record loops,
+email parts, HTML and Markdown parsing, the ONNX runtime's operators and parallel tiles, the OCR
+pass, and the derive and render stages — so a cancelled extraction returns within a bounded slice
+of work, not at the end of the document. Cancellation always surfaces as
+`OperationCanceledException`; it is never turned into an error item or a warning. A few calls
+into other libraries cannot be interrupted once started (`System.Text.Json` parsing one large
+document, image decoding, `X-Ray.Psd`'s load, PDFium's page render), so the latency there is
+that one call. The lower-level APIs have cancellable counterparts in `CancellableApi`
+(`IExtractor.Extract(..., token)`, `RenderMarkdown`, `DeriveExtractionResult`, ...).
 
 ## Optional OCR
 

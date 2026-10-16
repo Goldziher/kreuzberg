@@ -122,8 +122,10 @@ internal sealed class HtmlFormatter
         var stack = new Stack<(MdNode node, ChildRendering cr, bool post)>();
         stack.Push((root, ChildRendering.Html, false));
 
+        int visited = 0;
         while (stack.Count > 0)
         {
+            Cancel.Every(visited++, 0x3FF);
             var (node, childRendering, post) = stack.Pop();
             if (!post)
             {

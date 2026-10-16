@@ -34,6 +34,7 @@ internal static class DjotParser
         int i = start;
         while (i < end)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
 
             if (IsBlank(line)) { i++; continue; }
@@ -114,6 +115,7 @@ internal static class DjotParser
         int i = start;
         while (i < end)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
             if (IsBlank(line)) break;
             string trimmed = line.TrimStart();
@@ -136,6 +138,7 @@ internal static class DjotParser
         int i = start + 1;
         while (i < end)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
             if (IsBlank(line)) break;
             string trimmed = line.TrimStart();
@@ -158,6 +161,7 @@ internal static class DjotParser
         bool first = true;
         while (i < end)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
             string t = line.TrimStart();
             if (IsClosingFence(t, fence, fenceLen)) { i++; break; }
@@ -191,6 +195,7 @@ internal static class DjotParser
             i = start + 1;
             while (i < end)
             {
+                Cancel.ThrowIfRequested();
                 string line = lines[i];
                 if (IsBlank(line)) { i++; break; }
                 if (line.TrimEnd().EndsWith("$$", StringComparison.Ordinal))
@@ -229,6 +234,7 @@ internal static class DjotParser
         int i = start;
         while (i < end)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
             string trimmed = line.TrimStart();
             if (trimmed.StartsWith(">", StringComparison.Ordinal))
@@ -256,6 +262,7 @@ internal static class DjotParser
         int i = start;
         while (i < end)
         {
+            Cancel.ThrowIfRequested();
             string line = lines[i];
             if (IsBlank(line)) { i++; continue; }
             string trimmed = line.TrimStart();
@@ -267,6 +274,7 @@ internal static class DjotParser
             i++;
             while (i < end)
             {
+                Cancel.ThrowIfRequested();
                 string cont = lines[i];
                 if (IsBlank(cont)) { i++; break; }
                 string contTrim = cont.TrimStart();

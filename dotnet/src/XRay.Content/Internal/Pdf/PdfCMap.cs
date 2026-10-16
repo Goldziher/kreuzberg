@@ -36,6 +36,7 @@ public sealed class PdfCMap
         var stack = new List<PdfObject>();
         while (lex.Pos < lex.Length)
         {
+            Cancel.ThrowIfRequested();
             lex.SkipWhitespace();
             if (lex.Pos >= lex.Length) break;
             byte b = lex.Buffer[lex.Pos];

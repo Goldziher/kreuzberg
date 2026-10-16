@@ -120,6 +120,7 @@ public static class HtmlMeta
 
         while (pos < n)
         {
+            Cancel.ThrowIfRequested();
             if (html[pos] == '<')
             {
                 if (string.CompareOrdinal(html, pos, "<!--", 0, 4) == 0)

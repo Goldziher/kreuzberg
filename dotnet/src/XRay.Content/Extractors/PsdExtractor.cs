@@ -100,6 +100,7 @@ public sealed class PsdExtractor : IExtractor
     public InternalDocument Extract(ReadOnlySpan<byte> content, string mimeType, ExtractionConfig config)
     {
         PsdDocument document;
+        Cancel.ThrowIfRequested();
         try
         {
             document = PsdDocument.Load(content.ToArray(), LoadOptions);
@@ -109,9 +110,11 @@ public sealed class PsdExtractor : IExtractor
             throw new InvalidDataException($"psd parse failed: {e.Message}", e);
         }
 
+        Cancel.ThrowIfRequested();
         var builder = new InternalDocumentBuilder("psd");
         var facts = new DocumentFacts();
         var text = TextOf(document);
+        Cancel.ThrowIfRequested();
         var metadata = BuildMetadata(document, text, config, facts, builder);
 
         byte baseLevel = 1;
@@ -181,6 +184,9 @@ public sealed class PsdExtractor : IExtractor
         InternalDocumentBuilder builder, PsdDocument document, PsdLayer layer, DocumentText text, byte level,
         int embeddedDepth, DocumentFacts facts)
     {
+        // Between layers: X-Ray.Psd's own loops are not interruptible until it ships overloads
+        // taking a token, so a layer tree is the finest grain available here.
+        Cancel.ThrowIfRequested();
         bool top = embeddedDepth == 0;
         if (top) facts.LayerCount++;
         bool named = layer.Name.Length > 0;

@@ -126,8 +126,10 @@ public sealed class MarkdownExtractor : IExtractor
 
         uint Off(StringBuilder buf) => (uint)Encoding.UTF8.GetByteCount(buf.ToString());
 
+        int eventCounter = 0;
         foreach (var e in events)
         {
+            Cancel.Every(eventCounter++, 0xFF);
             switch (e.Kind)
             {
                 case MdEventKind.StartHeading:

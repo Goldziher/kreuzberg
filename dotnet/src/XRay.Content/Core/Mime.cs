@@ -531,6 +531,7 @@ public static class Mime
         if (needle.Length == 0 || haystack.Length < needle.Length) return -1;
         for (int i = 0; i <= haystack.Length - needle.Length; i++)
         {
+            Cancel.Every(i, 0xFFFF);
             if (haystack.Slice(i, needle.Length).SequenceEqual(needle)) return i;
         }
         return -1;

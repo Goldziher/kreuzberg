@@ -160,8 +160,10 @@ public sealed class PdfContentExtractor
 
         var lex = new PdfLexer(content, 0, null);
         var operands = new List<PdfObject>();
+        int operatorCount = 0;
         while (lex.Pos < lex.Length)
         {
+            Cancel.Every(operatorCount++, 0xFF);
             if (DateTime.UtcNow.Ticks > _deadline) return;
             lex.SkipWhitespace();
             if (lex.Pos >= lex.Length) break;

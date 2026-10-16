@@ -191,6 +191,7 @@ internal static class NumbersParser
 
         foreach (var sheet in DocumentSheets(objects, data.Warnings))
         {
+            Cancel.ThrowIfRequested();
             // Carry the sheet name alongside each table so rendering can surface it as its own
             // heading, matching how the xlsx/ods path headings a sheet separately from its
             // table content rather than folding it into the table's title text.
@@ -215,6 +216,7 @@ internal static class NumbersParser
 
         foreach (var path in IwaContainer.CollectIwaPaths(archive))
         {
+            Cancel.ThrowIfRequested();
             byte[] decompressed;
             try
             {
@@ -253,6 +255,7 @@ internal static class NumbersParser
         var objects = new Dictionary<ulong, List<IwaObject>>();
         foreach (var path in IwaContainer.CollectIwaPaths(archive))
         {
+            Cancel.ThrowIfRequested();
             byte[] decompressed;
             try
             {

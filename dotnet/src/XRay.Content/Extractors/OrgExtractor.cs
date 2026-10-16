@@ -115,6 +115,7 @@ public sealed class OrgExtractor : IExtractor
         var metaEntries = new List<(string, string)>();
         while (i < lines.Count)
         {
+            Cancel.ThrowIfRequested();
             string trimmed = lines[i].Trim();
             if (trimmed.StartsWith("#+"))
             {
@@ -138,6 +139,7 @@ public sealed class OrgExtractor : IExtractor
 
         while (i < lines.Count)
         {
+            Cancel.ThrowIfRequested();
             string trimmed = lines[i].Trim();
 
             if (trimmed.StartsWith("#+") && !trimmed.StartsWith("#+BEGIN") && !trimmed.StartsWith("#+begin")
@@ -149,6 +151,7 @@ public sealed class OrgExtractor : IExtractor
                 i++;
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string pt = lines[i].Trim();
                     if (pt == ":END:") { i++; break; }
                     if (pt.StartsWith(':') && pt.Length > 1)
@@ -207,6 +210,7 @@ public sealed class OrgExtractor : IExtractor
                 var code = new StringBuilder();
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string t = lines[i].Trim();
                     if (t.StartsWith("#+END_SRC") || t.StartsWith("#+end_src")) { i++; break; }
                     if (code.Length != 0) code.Append('\n');
@@ -223,6 +227,7 @@ public sealed class OrgExtractor : IExtractor
                 i++;
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string t = lines[i].Trim();
                     if (t.StartsWith("#+END_QUOTE") || t.StartsWith("#+end_quote")) { i++; break; }
                     if (t.Length != 0)
@@ -245,6 +250,7 @@ public sealed class OrgExtractor : IExtractor
                 var block = new StringBuilder();
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string t = lines[i].Trim();
                     if (t.StartsWith("#+END_EXAMPLE") || t.StartsWith("#+end_example")) { i++; break; }
                     if (block.Length != 0) block.Append('\n');
@@ -267,6 +273,7 @@ public sealed class OrgExtractor : IExtractor
                 var block = new StringBuilder();
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string t = lines[i].Trim();
                     if (t.StartsWith(endUpper) || t.StartsWith(endLower)) { i++; break; }
                     if (block.Length != 0) block.Append('\n');
@@ -285,6 +292,7 @@ public sealed class OrgExtractor : IExtractor
                 bool hasHeaderSeparator = false;
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string t = lines[i].Trim();
                     if (!t.StartsWith('|') || !t.EndsWith('|')) break;
                     if (IsOrgTableHorizontalLine(t))
@@ -307,6 +315,7 @@ public sealed class OrgExtractor : IExtractor
                 b.PushList(isOrdered);
                 while (i < lines.Count)
                 {
+                    Cancel.ThrowIfRequested();
                     string t = lines[i].Trim();
                     if (t.Length == 0) break;
                     if (IsOrgListItem(t))
@@ -316,6 +325,7 @@ public sealed class OrgExtractor : IExtractor
                         i++;
                         while (i < lines.Count)
                         {
+                            Cancel.ThrowIfRequested();
                             string rawNext = lines[i];
                             string nextT = rawNext.Trim();
                             if (nextT.Length == 0 || IsOrgListItem(nextT) || IsStructuralStart(nextT)) break;

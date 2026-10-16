@@ -49,6 +49,7 @@ public static class JsonRenderer
 
         for (int elemIndex = 0; elemIndex < doc.Elements.Count; elemIndex++)
         {
+            Cancel.Every(elemIndex, 0x3FF);
             var elem = doc.Elements[elemIndex];
             if (!RenderCommon.IsBodyElement(elem)) continue;
 

@@ -81,7 +81,7 @@ internal static class Sampling
 
         bool linear = mode == "linear";
 
-        Parallel.For(0, batch * channels, plane =>
+        Parallel.For(0, batch * channels, Cancel.ParallelOptions, plane =>
         {
             var src = fx.Floats.AsSpan(plane * planeIn, planeIn);
             var dst = result.Floats.AsSpan(plane * planeOut, planeOut);
@@ -135,7 +135,7 @@ internal static class Sampling
         int planeOut = outH * outW;
         bool nearest = mode == "nearest";
 
-        Parallel.For(0, batch, n =>
+        Parallel.For(0, batch, Cancel.ParallelOptions, n =>
         {
             for (int oy = 0; oy < outH; oy++)
             {

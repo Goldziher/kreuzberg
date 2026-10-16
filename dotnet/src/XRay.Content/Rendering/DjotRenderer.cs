@@ -23,8 +23,10 @@ public static class DjotRenderer
             if (sb.Length == 0 || sb[^1] != '\n') sb.Append('\n');
         }
 
+        int elementIndex = 0;
         foreach (var elem in doc.Elements)
         {
+            Cancel.Every(elementIndex++, 0x3FF);
             if (elem.Layer != ContentLayer.Body) continue;
 
             switch (elem.Kind.Tag)

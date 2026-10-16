@@ -329,6 +329,7 @@ public sealed class StructuredExtractor : IExtractor
     private static void ExtractFromJson(JsonElement value, StringBuilder path,
         Dictionary<string, string> meta, List<string> textFields, List<string> flattened)
     {
+        Cancel.ThrowIfRequested();
         switch (value.ValueKind)
         {
             case JsonValueKind.Object:
@@ -403,6 +404,7 @@ public sealed class StructuredExtractor : IExtractor
     private static void ExtractFromNode(JsonNode? value, StringBuilder path,
         Dictionary<string, string> meta, List<string> textFields, List<string> flattened, bool serdeNumbers)
     {
+        Cancel.ThrowIfRequested();
         switch (value)
         {
             case JsonObject obj:
@@ -504,6 +506,7 @@ internal static class SerdeJson
 
     public static void WriteValue(JsonElement e, StringBuilder sb, int level)
     {
+        Cancel.ThrowIfRequested();
         switch (e.ValueKind)
         {
             case JsonValueKind.Object:
@@ -566,6 +569,7 @@ internal static class SerdeJson
 
     private static void WriteCompact(JsonElement e, StringBuilder sb)
     {
+        Cancel.ThrowIfRequested();
         switch (e.ValueKind)
         {
             case JsonValueKind.Object:

@@ -83,6 +83,9 @@ internal static class PdfAnnotations
         List<PdfAnnotation> result)
     {
         var (pageW, pageH) = PageSize(pdf, pageIndex);
+        var pageBox = PageBoxOf(pdf, pageIndex);
+        int rotation = pdf.Resolve(pdf.Pages[pageIndex].Get("Rotate")).AsLong() is { } rot
+            ? (int)(((rot % 360) + 360) % 360) : 0;
         foreach (var dict in PageAnnotationDicts(pdf, pageIndex))
         {
             string? subtype = pdf.Resolve(dict.Get("Subtype")).AsName();
@@ -96,6 +99,8 @@ internal static class PdfAnnotations
                 PageNumber = (uint)(pageIndex + 1),
                 PageWidth = pageW,
                 PageHeight = pageH,
+                PageBox = pageBox,
+                PageRotation = rotation,
                 Flags = pdf.Resolve(dict.Get("F")).AsLong() is { } f ? (uint)f : null,
             };
 
@@ -142,6 +147,20 @@ internal static class PdfAnnotations
             }
             result.Add(annotation);
         }
+    }
+
+    /// <summary>The visible box (CropBox, else MediaBox) of a page, normalised so x0 &lt;= x1 and y0 &lt;= y1.</summary>
+    public static BoundingBox PageBoxOf(PdfDocument pdf, int pageIndex)
+    {
+        var crop = Numbers(pdf, pdf.Pages[pageIndex].Get("CropBox"));
+        if (crop is { Count: >= 4 })
+            return new BoundingBox
+            {
+                X0 = Math.Min(crop[0], crop[2]), Y0 = Math.Min(crop[1], crop[3]),
+                X1 = Math.Max(crop[0], crop[2]), Y1 = Math.Max(crop[1], crop[3]),
+            };
+        var (llx, lly, urx, ury) = pdf.GetPageMediaBox(pageIndex);
+        return new BoundingBox { X0 = Math.Min(llx, urx), Y0 = Math.Min(lly, ury), X1 = Math.Max(llx, urx), Y1 = Math.Max(lly, ury) };
     }
 
     /// <summary>The visible box (CropBox, else MediaBox) of a page.</summary>

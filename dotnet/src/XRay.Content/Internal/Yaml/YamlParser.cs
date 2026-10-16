@@ -16,8 +16,10 @@ internal static class YamlParser
     public static JsonNode? Parse(string text)
     {
         var lines = new List<Line>();
+        int lineCounter = 0;
         foreach (var raw in JoinQuotedContinuations(text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')))
         {
+            Cancel.Every(lineCounter++, 0x3FF);
             string stripped = StripComment(raw);
             string trimmed = stripped.TrimEnd();
             if (trimmed.Trim().Length == 0) continue;

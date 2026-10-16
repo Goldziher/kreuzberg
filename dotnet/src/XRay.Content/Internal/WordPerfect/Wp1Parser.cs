@@ -46,6 +46,7 @@ internal static class Wp1Parser
 
         while (!reader.AtEnd)
         {
+            Cancel.ThrowIfRequested();
             byte value = reader.ReadU8();
 
             if (value <= 0x7F) continue;
@@ -91,6 +92,7 @@ internal static class Wp1Parser
 
         while (!reader.AtEnd)
         {
+            Cancel.ThrowIfRequested();
             byte value = reader.ReadU8();
 
             if (value < 0x20)

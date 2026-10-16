@@ -149,8 +149,10 @@ internal static class HtmlToMarkdown
     {
         var stack = new Stack<HNode>();
         for (int i = node.Children.Count - 1; i >= 0; i--) stack.Push(node.Children[i]);
+        int visited = 0;
         while (stack.Count > 0)
         {
+            Cancel.Every(visited++, 0x3FF);
             var current = stack.Pop();
             yield return current;
             for (int i = current.Children.Count - 1; i >= 0; i--) stack.Push(current.Children[i]);
@@ -281,6 +283,7 @@ internal static class HtmlToMarkdown
         int last = 0, idx = 0, n = html.Length, svgDepth = 0;
         while (idx < n)
         {
+            Cancel.Every(idx, 0xFFFF);
             if (html[idx] != '<' || idx + 1 >= n) { idx++; continue; }
 
             if (MatchesTagStart(html, idx + 1, "svg"))
@@ -406,6 +409,7 @@ internal static class HtmlToMarkdown
         int last = 0, idx = 0, n = html.Length;
         while (idx < n)
         {
+            Cancel.Every(idx, 0xFFFF);
             if (html[idx] != '<' || idx + 1 >= n || html[idx + 1] == '/' || html[idx + 1] == '!')
             {
                 idx++;

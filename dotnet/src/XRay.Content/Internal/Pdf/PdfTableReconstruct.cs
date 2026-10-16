@@ -45,6 +45,7 @@ internal static partial class PdfTableReconstruct
         var tables = new List<Table>();
         for (int pageIdx = 0; pageIdx < allPageSegments.Count; pageIdx++)
         {
+            Cancel.ThrowIfRequested();
             uint pageNumber = (uint)(pageIdx + 1);
             if (skipPages is not null && skipPages.Contains(pageNumber)) continue;
             var segments = allPageSegments[pageIdx];

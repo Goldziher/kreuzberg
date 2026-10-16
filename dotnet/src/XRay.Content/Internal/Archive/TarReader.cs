@@ -19,6 +19,7 @@ internal static class TarReader
 
         while (offset + BlockSize <= bytes.Length)
         {
+            Cancel.ThrowIfRequested();
             // A block of all zeros marks the end of the archive.
             if (IsZeroBlock(bytes, offset))
                 break;

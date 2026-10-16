@@ -103,6 +103,7 @@ public sealed class JupyterExtractor : IExtractor
 
         foreach (var cellNode in cells)
         {
+            Cancel.ThrowIfRequested();
             var cell = cellNode as JsonObject;
             if (cell is null) continue;
             string cellType = (cell["cell_type"] as JsonValue)?.ToString() ?? "unknown";

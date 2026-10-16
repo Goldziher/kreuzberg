@@ -356,6 +356,10 @@ The loop that works:
   `JsonSerializerOptions` / `[JsonPropertyName]` so golden diffs are meaningful.
 - Keep extractor logic close to the Rust source; cite the Rust file at the top of each C#
   extractor so re-syncing after upstream changes is mechanical.
+- **Cancellation is cooperative and ambient.** `Extractor.Extract` / `ExtractAsync` take a
+  `CancellationToken` (an added overload, last parameter), and `Core/Cancel` installs it in an
+  `AsyncLocal` for the extent of the call, so no extractor signature carries it. See
+  [Cancellation contract](#cancellation-contract) before adding a loop, a `catch`, or a public API.
 - No `unsafe`, no P/Invoke to native libs — pure managed so the NuGet package is portable.
   This is why layout detection ships as a hand-written ONNX runtime (`Internal/Onnx`)
   rather than a binding to ONNX Runtime: the Rust build links `ort` natively, which a
@@ -364,6 +368,113 @@ The loop that works:
   The optional OCR pass is the single documented exception — it pulls native code in
   transitively, which is why it is off by default. See
   [Deviation: optional OCR](#deviation-optional-ocr).
+
+---
+
+## Cancellation contract
+
+The family's convention: every public API that does non-trivial work has an overload taking
+`CancellationToken cancellationToken` as its last parameter, checked cooperatively where latency
+is bounded, throwing `OperationCanceledException` and never swallowing it into an error item, a
+warning or a package exception.
+
+**How it is built here.** Threading a token through ~330 files by signature would have meant an
+overload on every extractor, reader and renderer, so the token is *ambient*: `Core/Cancel`
+holds it in an `AsyncLocal<CancellationToken>`, `Extractor.Extract(input, config, token)` installs
+it (`Cancel.Begin`) and restores the previous value on the way out, and anything that runs inside
+the call — on this thread, a `Task.Run`, or a `Parallel.For` worker — reads it with
+`Cancel.ThrowIfRequested()` / `Cancel.Every(i, mask)`. A nested `Extract` that passes no token (an
+archive extracting a member, a PDF extracting an attachment) keeps the outer one in force.
+
+**Rules that keep it correct:**
+
+- **Every best-effort `catch` carries `when (Cancel.NotCancelling)`.** A bare `catch { }` or
+  `catch (Exception)` around an optional stage (table detection, a form-field pass, a metadata
+  read) would otherwise eat the cancellation and let the document carry on. While a cancellation
+  is in flight the filter is false, the exception propagates, and `Extractor` reports it as
+  `OperationCanceledException` (an `AggregateException` of cancellations from a `Parallel.For` is
+  unwrapped too). `catch (Exception e) when (e is not X)` becomes `when (e is not X &&
+  Cancel.NotCancelling)`. Catching a *specific* type (`InvalidDataException`, `XmlException`) needs
+  nothing. A new swallow-and-continue handler that forgets the filter is a bug the mid-flight tests
+  can catch only if they hit that stage, so write the filter.
+- **Where checks go.** Cheap and bounded: once per page, part, record, archive entry, spreadsheet
+  row, element; every 256 to 65536 iterations in a per-byte loop (`Cancel.Every(i, 0xFFFF)` —
+  keep the counter strictly incrementing; a mask test on a value that jumps will skip it).
+  Choke points already poll for everyone: `InternalDocument.PushElement` / `PushTable` (every
+  extractor builds through them), `SecurityBudget.Step` (CSV, XML, JSON, iWork), the PDF operator
+  loops, `PdfFilters` (decode loops and chunked inflate), `OnnxSession.Run` and its
+  `Parallel.For` loops (`Cancel.ParallelOptions`), the derive and render loops.
+- **Reading a stream or an XML part has a cancellable form:** `Cancel.CopyTo`, `Cancel.CopyBounded`
+  (also the bomb ceiling: it stops at a size limit), `Cancel.ReadToEnd`, `Cancel.ParseXml` (use it
+  instead of `XDocument.Parse`), `Cancel.Poll(stream)` for a parser that pulls from a stream.
+- **What cannot be interrupted:** one call into a library that has no token. `System.Text.Json`
+  parsing a single large document, ImageSharp decoding, `X-Ray.Psd`'s `Load`/`ExtractText` (until it
+  ships token overloads, `PsdExtractor` checks between layers and before each stage), PDFium's
+  rasterisation of a page. Latency there is that one call; say so rather than pretending.
+- **Lower-level public APIs** get their counterparts in `Core/CancellableApi` as extension or
+  static methods (`IExtractor.Extract(bytes, mime, config, token)`, `RenderMarkdown`,
+  `DeriveExtractionResult`, `ProcessQrCodes`, `DetectQrCodes`, `DetectMimeTypeFromBytes`) and
+  `LayoutEngine.Detect(page, token)`. The existing signatures and every `IExtractor`
+  implementation are untouched.
+- **OCR** links the ambient token into each image's own timeout source: the timeout abandons one
+  image (a warning), the caller's cancellation abandons the extraction (an exception).
+
+**Tests** (`CancellationTests`): a pre-cancelled token throws for twelve formats; a live token gives
+byte-identical results to no token; and deliberately huge inputs (a 60,000-entry zip, a 4-million-row
+CSV, a 6,000-page PDF, 1.5 million HTML paragraphs, a 400,000-row sheet, a 600,000-paragraph DOCX, a
+many-part e-mail) are cancelled after 300 ms and must throw within five seconds. They fail if the
+extraction finishes first, so an input that a faster machine chews through needs to grow.
+
+---
+
+## PDF additions beyond the Rust port
+
+Upstream's native PDF backend reads annotations, embedded files and passwords; this port's reader
+had none of them. They are ported from `pdf/native/annotations.rs`, `pdf/embedded_files.rs` and
+`pdf/bookmarks.rs`, and extended where a consumer needed more than upstream models. None of it
+changes what the goldens pin: every new option is off or inert for a document that does not use
+the feature, and the TestRunner's metadata normaliser ignores the PDF keys the port adds
+(`requires_password`, `authenticated_as`, `encryption_*`, `permissions`, `outline`, `language`, and
+`additional.pdf_info`, `.xmp`, `.pdf_catalog_version`).
+
+- **Configuration:** `ExtractionConfig.Pdf` (`Core/PdfOptions.cs`): `Password`, `OwnerPassword`,
+  `Passwords` (never serialized), `ExtractAnnotations` (off, as upstream's `extract_annotations`),
+  `ExtractEmbeddedFiles` (on; upstream does it unconditionally), `MaxEmbeddedFileBytes`,
+  `AttachEmbeddedFileBytes`.
+- **Encryption** (`Internal/Pdf/PdfDecryptor.cs`): the standard security handler for V1, V2, V4
+  (RC4 or AESV2 through crypt filters) and V5 (AESV3, R5 and R6, algorithm 2.B), authenticating
+  the user password and the owner password (algorithms 6, 7 and 2.A), the empty password last.
+  Authentication is *verified*, so a wrong password is a typed failure instead of garbage text:
+  `PdfPasswordRequiredException`, error items `password_required` (1010) and `invalid_password`
+  (1011). A handler other than Standard is not decrypted and keeps the older warning. `/Identity`
+  crypt filters, cleartext metadata, `/EmbeddedFile` filters and `/Crypt` stream filters are
+  honoured per stream. The tests write encrypted PDFs themselves (`SyntheticPdf`, the writing side of
+  each algorithm from the specification) and read qpdf-encrypted ones from `test_documents/pdf/encrypted/`.
+- **Annotations** (`PdfAnnotations`, `Types/Annotations.cs`): upstream's `PdfAnnotation` model plus
+  `Subtype`, `Flags`, `IsVisible`, `Created`, `Destination`, page size. `MarkedText` is recovered by
+  intersecting the `QuadPoints` boxes with the page's word boxes (the same words the table
+  detector reads), where upstream asks pdfium for the text in a rectangle. Rendered as an
+  "Annotations" section in plain, Markdown, HTML, Djot and the JSON tree, as upstream's renderers do;
+  link annotations and outline entries become `Uris` (`PdfLinkResolver`). Not ported:
+  `extract_annotations_with_empty_body_fallback` (free-text annotations standing in for the body of a
+  page that has none) — see `dotnet/TODO.md`.
+- **Embedded files** (`PdfEmbeddedFiles`): the name tree, file-attachment annotations,
+  portfolios (`/Collection`), the catalog's `/AF`. Decoded through `PdfFilters.Decode(stream, doc,
+  ceiling)`, whose ceiling is the tightest of the per-file cap, what is left of
+  `SecurityLimits.MaxArchiveSize`, and `MaxCompressionRatio` times the stored size, so a bomb is
+  stopped while inflating. Extracted by `ArchiveDocument.TryExtractChild`, the helper archives
+  use, so the recursion depth (`MaxArchiveDepth`, 3) is shared.
+- **Form fields** (`PdfFormModel`, `Types/FormFields.cs`): beside upstream-shaped
+  `PdfFormFields.Extract` (which feeds the text injection and must keep its shape).
+- **Document facts:** outline into `PdfMetadata.Outline`; catalog `/Lang` into `Metadata.Language`;
+  non-standard Info entries and extra XMP properties into `Metadata.Additional`. `PdfVersion` stays the
+  header's, as upstream reports it.
+- **Gzip** now has upstream's decompressed-size ceiling (`MaxArchiveSize`, a `ValidationException`
+  past it), which it lacked.
+
+Fixtures for all of it are generated, not committed here: `test_documents/pdf/encrypted/` and
+`pdf/features/` each carry a `generate.py` and a README (see `.claude/skills/test-documents`).
+The corpus tests skip when those folders are absent.
 
 ---
 

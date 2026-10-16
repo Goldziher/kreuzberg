@@ -244,8 +244,10 @@ internal static class RtfParser
                 });
         }
 
+        int rtfTick = 0;
         while (true)
         {
+            Cancel.Every(rtfTick++, 0xFFF);
             int ci = chars.Next();
             if (ci < 0) break;
 

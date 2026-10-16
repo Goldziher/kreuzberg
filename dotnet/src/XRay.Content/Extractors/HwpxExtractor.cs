@@ -56,7 +56,7 @@ public sealed class HwpxExtractor : IExtractor
         {
             string? xml = ReadEntry(archive, path);
             if (xml is null) continue;
-            ProcessSection(XDocument.Parse(xml, LoadOptions.PreserveWhitespace).Root!, builder, headingLevels);
+            ProcessSection(Cancel.ParseXml(xml, LoadOptions.PreserveWhitespace).Root!, builder, headingLevels);
         }
 
         var doc = builder.Build();
@@ -72,7 +72,7 @@ public sealed class HwpxExtractor : IExtractor
         if (hpf is null) return m;
 
         XDocument doc;
-        try { doc = XDocument.Parse(hpf); }
+        try { doc = Cancel.ParseXml(hpf); }
         catch (Exception) when (Cancel.NotCancelling) { return m; }
 
         string? title = null, creator = null, subject = null, date = null, modified = null, generator = null;
@@ -120,7 +120,7 @@ public sealed class HwpxExtractor : IExtractor
         if (headerXml is null) return map;
 
         XDocument doc;
-        try { doc = XDocument.Parse(headerXml); }
+        try { doc = Cancel.ParseXml(headerXml); }
         catch (Exception) when (Cancel.NotCancelling) { return map; }
 
         foreach (var el in doc.Descendants())
@@ -238,7 +238,7 @@ public sealed class HwpxExtractor : IExtractor
         {
             try
             {
-                var doc = XDocument.Parse(hpf);
+                var doc = Cancel.ParseXml(hpf);
                 var manifest = new Dictionary<string, string>(StringComparer.Ordinal);
                 var spine = new List<string>();
                 foreach (var el in doc.Descendants())

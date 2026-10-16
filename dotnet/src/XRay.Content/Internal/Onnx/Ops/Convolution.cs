@@ -132,7 +132,7 @@ internal static class Convolution
         int planeOut = outH * outW;
         int filters = channels * multiplier;
 
-        Parallel.For(0, batch * filters, plane =>
+        Parallel.For(0, batch * filters, Cancel.ParallelOptions, plane =>
         {
             int n = plane / filters;
             int f = plane % filters;
@@ -413,7 +413,7 @@ internal static class Convolution
     {
         if (bias is null && activation == FusedActivation.None) return;
 
-        Parallel.For(0, batch * channels, plane =>
+        Parallel.For(0, batch * channels, Cancel.ParallelOptions, plane =>
         {
             var span = result.Floats.AsSpan(plane * spatial, spatial);
             if (bias is not null) TensorPrimitives.Add(span, bias.Floats[plane % channels], span);

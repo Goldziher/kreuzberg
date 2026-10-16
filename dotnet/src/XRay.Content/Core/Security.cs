@@ -206,6 +206,9 @@ public sealed class SecurityBudget
     public void Step()
     {
         _iterations = SaturatingAdd(_iterations, 1);
+        // Every parser that charges its loop turns to a budget — CSV, XML, JSON, iWork — notices a
+        // cancellation here without a check of its own.
+        Cancel.Every(_iterations, 0xFF);
         if (_iterations > _maxIterations)
             throw SecurityException.TooManyIterations(_iterations, _maxIterations);
     }

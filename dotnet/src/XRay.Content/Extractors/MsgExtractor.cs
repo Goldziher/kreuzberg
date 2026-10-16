@@ -128,6 +128,7 @@ public sealed class MsgExtractor : IExtractor
         // same heading-plus-body shape, rendered in the format the caller asked for.
         for (int idx = 0; idx < result.NestedEmbeddedMessages.Count; idx++)
         {
+            Cancel.ThrowIfRequested();
             var nested = BuildInternalDocument(result.NestedEmbeddedMessages[idx], config);
             string content = Derive
                 .DeriveExtractionResult(nested, includeDocumentStructure: false, config.OutputFormat)

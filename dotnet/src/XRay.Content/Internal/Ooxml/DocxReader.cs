@@ -117,8 +117,12 @@ public static class DocxReader
         if (body is not null)
         {
             var pageBreaks = new PageBreakState();
+            int bodyChildren = 0;
             foreach (var child in body.Elements())
+            {
+                Cancel.Every(bodyChildren++, 0x1F);
                 ParseBodyChild(child, doc, rels, pageBreaks);
+            }
         }
 
         _styles = styles; // used by ResolveHeadingLevel
@@ -494,6 +498,7 @@ public static class DocxReader
 
         foreach (var tr in tbl.Elements().Where(e => e.Name.LocalName == "tr"))
         {
+            Cancel.ThrowIfRequested();
             var row = new DocxRow();
             var trPr = tr.Elements().FirstOrDefault(e => e.Name.LocalName == "trPr");
             if (trPr is not null)

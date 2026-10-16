@@ -56,6 +56,7 @@ internal static class DbfReader
         int pos = headerSize;
         for (int r = 0; r < numRecords && pos + recordSize <= data.Length; r++, pos += recordSize)
         {
+            Cancel.Every(r, 0x3FF);
             byte deletionFlag = data[pos];
             if (deletionFlag == 0x2A) continue; // deleted record
             var row = new List<string>(fields.Count);

@@ -32,7 +32,7 @@ internal static class OdfContentParser
         if (contentXml is null)
             return new InternalDocumentBuilder("odt").Build();
 
-        var doc = XDocument.Parse(contentXml, LoadOptions.PreserveWhitespace);
+        var doc = Cancel.ParseXml(contentXml, LoadOptions.PreserveWhitespace);
         var root = doc.Root!;
         var styleMap = OdfStyles.BuildStyleMap(root);
         var listStyleMap = OdfStyles.BuildListStyleMap(root);
@@ -43,7 +43,7 @@ internal static class OdfContentParser
         {
             try
             {
-                var stylesDoc = XDocument.Parse(stylesXmlForLists, LoadOptions.PreserveWhitespace);
+                var stylesDoc = Cancel.ParseXml(stylesXmlForLists, LoadOptions.PreserveWhitespace);
                 if (stylesDoc.Root is not null)
                     foreach (var (name, ordered) in OdfStyles.BuildListStyleMap(stylesDoc.Root))
                         listStyleMap.TryAdd(name, ordered);
@@ -54,6 +54,7 @@ internal static class OdfContentParser
 
         foreach (var bodyChild in root.Elements())
         {
+            Cancel.ThrowIfRequested();
             if (bodyChild.Name.LocalName != "body")
                 continue;
             foreach (var textElem in bodyChild.Elements())
@@ -360,7 +361,7 @@ internal static class OdfContentParser
         XDocument doc;
         try
         {
-            doc = XDocument.Parse(stylesXml, LoadOptions.PreserveWhitespace);
+            doc = Cancel.ParseXml(stylesXml, LoadOptions.PreserveWhitespace);
         }
         catch (Exception) when (Cancel.NotCancelling)
         {
@@ -731,7 +732,7 @@ internal static class OdfContentParser
             string xml;
             using (var stream = entry.Open())
             using (var reader = new StreamReader(stream))
-                xml = reader.ReadToEnd();
+                xml = Cancel.ReadToEnd(reader);
 
             if (!xml.Contains("math", StringComparison.Ordinal))
                 continue;
@@ -784,14 +785,14 @@ internal static class OdfContentParser
             return null;
         using var stream = entry.Open();
         using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+        return Cancel.ReadToEnd(reader);
     }
 
     private static byte[] ReadEntryBytes(ZipArchiveEntry entry)
     {
         using var stream = entry.Open();
         using var ms = new MemoryStream();
-        stream.CopyTo(ms);
+        Cancel.CopyTo(stream, ms);
         return ms.ToArray();
     }
 }

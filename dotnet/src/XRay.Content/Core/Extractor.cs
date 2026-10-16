@@ -68,7 +68,9 @@ public sealed class Extractor
         var result = new ExtractionResult();
         try
         {
+            Cancel.ThrowIfRequested();
             var (bytes, mimeType) = Resolve(input, config);
+            Cancel.ThrowIfRequested();
             // Extension-based language detection needs the file's name, and only the caller or
             // this resolution step knows it.
             config.SourceName ??= input.Filename ?? (input.Uri is { } u ? Path.GetFileName(u) : null);
@@ -87,13 +89,16 @@ public sealed class Extractor
             else
             {
                 var internalDoc = extractor.Extract(bytes, mimeType, config);
+                Cancel.ThrowIfRequested();
                 // Before derive, unlike the QR pass: working on the element stream lets an
                 // image's recognised text be inserted where the image sits, so every renderer
                 // places it inline rather than appending it to the end of the document.
                 Ocr.OcrProcessor.Process(internalDoc, bytes, mimeType, config);
+                Cancel.ThrowIfRequested();
                 var extracted = Derive.DeriveExtractionResult(
                     internalDoc, config.IncludeDocumentStructure, config.OutputFormat, config.HtmlOutput,
                     config.RenderPagesInOutputFormat);
+                Cancel.ThrowIfRequested();
                 // Record the format the content was rendered in (Rust `pipeline::format`).
                 // Set after derive so the extractor-supplied value the renderer consults for
                 // `PreRenderedContent` is not disturbed.

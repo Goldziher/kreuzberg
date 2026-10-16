@@ -69,8 +69,10 @@ internal static class OxContentParser
         int consecutiveErrors = 0;
         int cap = EffectiveMaxOperators;
 
+        int cancelTick = 0;
         while (i < data.Length)
         {
+            Cancel.Every(cancelTick++, 0xFF);
             i = SkipMultispace(data, i);
             if (i >= data.Length)
             {
@@ -461,8 +463,10 @@ internal static class OxContentParser
         bool insideText = false;
         int cap = EffectiveMaxOperators;
 
+        int cancelTick = 0;
         while (i < data.Length)
         {
+            Cancel.Every(cancelTick++, 0xFF);
             i = SkipMultispace(data, i);
             if (i >= data.Length)
             {
@@ -660,8 +664,10 @@ internal static class OxContentParser
         bool insideText = false;
         int cap = EffectiveMaxOperators;
 
+        int cancelTick = 0;
         while (i < data.Length)
         {
+            Cancel.Every(cancelTick++, 0xFF);
             i = SkipMultispace(data, i);
             if (i >= data.Length)
             {
@@ -773,8 +779,10 @@ internal static class OxContentParser
         bool insideText = false;
         int opCount = 0;
 
+        int cancelTick3 = 0;
         while (i < data.Length)
         {
+            Cancel.Every(cancelTick3++, 0xFF);
             while (i < data.Length && IsAsciiWhitespace(data[i]))
             {
                 i++;
@@ -1165,8 +1173,10 @@ internal static class OxContentParser
             results[origIdx] = state;
         }
 
+        int cancelTick2 = 0;
         while (i < len)
         {
+            Cancel.Every(cancelTick2++, 0xFF);
             while (nextTp < sorted.Count && sorted[nextTp].Pos <= i)
             {
                 Record(sorted[nextTp].OrigIdx);

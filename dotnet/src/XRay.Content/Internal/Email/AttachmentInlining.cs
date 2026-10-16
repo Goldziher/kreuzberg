@@ -40,6 +40,7 @@ internal static class AttachmentInlining
 
         for (int idx = 0; idx < attachments.Count; idx++)
         {
+            Cancel.ThrowIfRequested();
             var attachment = attachments[idx];
 
             // A message/rfc822 part is body structure rather than an attachment, and upstream
@@ -64,7 +65,7 @@ internal static class AttachmentInlining
             _depth++;
             try
             {
-                var result = new Extractor().Extract(ExtractInput.FromBytes(bytes, mime, filename), config);
+                var result = Extractor.Shared.Extract(ExtractInput.FromBytes(bytes, mime, filename), config);
                 if (result.Errors.Count > 0) continue;
 
                 string content = (result.Results.FirstOrDefault()?.Content ?? "").Trim();

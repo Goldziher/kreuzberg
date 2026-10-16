@@ -207,6 +207,7 @@ internal sealed class CompoundFile
         var seen = new HashSet<uint>();
         while (sector <= MAXREGSECT && written < (int)size)
         {
+            Cancel.ThrowIfRequested();
             if (!seen.Add(sector)) break;
             long off = (long)(sector + 1) * _sectorSize;
             int toCopy = Math.Min(_sectorSize, (int)size - written);
@@ -225,6 +226,7 @@ internal sealed class CompoundFile
         var seen = new HashSet<uint>();
         while (mini <= MAXREGSECT && written < (int)size)
         {
+            Cancel.ThrowIfRequested();
             if (!seen.Add(mini)) break;
             long off = (long)mini * _miniSectorSize;
             int toCopy = Math.Min(_miniSectorSize, (int)size - written);
@@ -266,6 +268,7 @@ internal sealed class CompoundFile
         int guard = 0;
         while (difatSector <= MAXREGSECT && guard++ < 1 << 20 && seenDifat.Add(difatSector))
         {
+            Cancel.ThrowIfRequested();
             byte[] sec = RawSector(difatSector);
             for (int i = 0; i < entriesPerSector - 1; i++)
             {
@@ -295,6 +298,7 @@ internal sealed class CompoundFile
         int guard = 0;
         while (sector <= MAXREGSECT && guard++ < 1 << 20 && seen.Add(sector))
         {
+            Cancel.ThrowIfRequested();
             byte[] sec = RawSector(sector);
             for (int i = 0; i < entriesPerSector; i++)
                 result.Add(U32(sec, i * 4));
@@ -311,6 +315,7 @@ internal sealed class CompoundFile
         int guard = 0;
         while (sector <= MAXREGSECT && guard++ < 1 << 20 && seen.Add(sector))
         {
+            Cancel.ThrowIfRequested();
             bytes.AddRange(RawSector(sector));
             sector = sector < _fat.Length ? _fat[sector] : ENDOFCHAIN;
         }

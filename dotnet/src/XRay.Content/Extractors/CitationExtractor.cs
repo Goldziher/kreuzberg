@@ -56,6 +56,7 @@ public sealed class CitationExtractor : IExtractor
 
         foreach (var citation in citations)
         {
+            Cancel.ThrowIfRequested();
             foreach (var a in citation.Authors)
             {
                 string authorName = a.GivenName is not null ? $"{a.GivenName} {a.Name}" : a.Name;

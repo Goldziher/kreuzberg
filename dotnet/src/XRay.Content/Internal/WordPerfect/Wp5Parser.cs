@@ -69,6 +69,7 @@ internal static class Wp5Parser
 
         while (!reader.AtEnd)
         {
+            Cancel.ThrowIfRequested();
             byte value = reader.ReadU8();
 
             if (value is 0 or 0x7F or 0xFF)

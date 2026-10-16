@@ -32,6 +32,7 @@ public sealed class BibtexExtractor : IExtractor
 
         foreach (var entry in entries)
         {
+            Cancel.ThrowIfRequested();
             citationKeys.Add(entry.Key);
             entryTypes[entry.EntryType] = entryTypes.GetValueOrDefault(entry.EntryType) + 1;
             var sb = new StringBuilder();

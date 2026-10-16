@@ -52,6 +52,7 @@ internal static class Wp42Parser
 
         while (!reader.AtEnd)
         {
+            Cancel.ThrowIfRequested();
             byte value = reader.ReadU8();
 
             if (value <= 0x7F) continue;            // control characters and literal ASCII
@@ -64,6 +65,7 @@ internal static class Wp42Parser
                 int closing = -1;
                 while (!reader.AtEnd)
                 {
+                    Cancel.ThrowIfRequested();
                     closing = reader.ReadU8();
                     if (closing == value) break;
                 }
@@ -97,6 +99,7 @@ internal static class Wp42Parser
     {
         while (!reader.AtEnd)
         {
+            Cancel.ThrowIfRequested();
             byte value = reader.ReadU8();
 
             if (value < 0x20)

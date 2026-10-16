@@ -149,7 +149,7 @@ internal static class CitationParser
     {
         var citations = new List<Citation>();
         XDocument doc;
-        try { doc = XDocument.Parse(src); }
+        try { doc = Cancel.ParseXml(src); }
         catch (Exception) when (Cancel.NotCancelling) { return citations; }
         foreach (var record in doc.Descendants("record"))
         {

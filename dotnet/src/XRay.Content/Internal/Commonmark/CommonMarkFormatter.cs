@@ -190,8 +190,10 @@ internal sealed class CommonMarkFormatter
         var stack = new Stack<(MdNode node, bool post)>();
         stack.Push((root, false));
 
+        int visited = 0;
         while (stack.Count > 0)
         {
+            Cancel.Every(visited++, 0x3FF);
             var (node, post) = stack.Pop();
             if (!post)
             {

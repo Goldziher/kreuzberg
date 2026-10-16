@@ -143,6 +143,7 @@ public sealed class PptExtractor : IExtractor
 
         while (pos + 8 <= data.Length)
         {
+            Cancel.ThrowIfRequested();
             // A slide/notes container's text only spans its own declared byte range; close it out
             // as soon as the walk passes that range's end, rather than leaving the container open
             // until the next one starts (which would run the last slide on to end of stream).

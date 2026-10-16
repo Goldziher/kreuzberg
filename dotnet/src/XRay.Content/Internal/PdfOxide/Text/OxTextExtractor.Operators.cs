@@ -64,8 +64,11 @@ internal sealed partial class OxTextExtractor
     /// Execute one content-stream operator, updating the graphics state and extracting text
     /// as appropriate.
     /// </summary>
+    private int _cancelTick;
+
     internal void ExecuteOperator(OxOperator op)
     {
+        Cancel.Every(_cancelTick++, 0xFF);
         switch (op)
         {
             // ── Text state ────────────────────────────────────────────────────

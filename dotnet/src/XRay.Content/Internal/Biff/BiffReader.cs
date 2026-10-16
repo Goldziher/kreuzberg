@@ -83,6 +83,7 @@ internal static class BiffReader
         int pos = 0;
         while (pos + 4 <= wb.Length)
         {
+            Cancel.ThrowIfRequested();
             int type = U16(wb, pos);
             int len = U16(wb, pos + 2);
             int dataStart = pos + 4;
@@ -292,6 +293,7 @@ internal static class BiffReader
         int depth = 0;
         while (pos + 4 <= wb.Length)
         {
+            Cancel.ThrowIfRequested();
             int type = U16(wb, pos);
             int len = U16(wb, pos + 2);
             int d = pos + 4;

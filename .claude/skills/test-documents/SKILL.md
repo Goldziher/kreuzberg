@@ -40,6 +40,17 @@ git -C test_documents remote -v      # curiosity-ai/test_documents once repointe
   (`test_documents`), and the goldens (`*-results-rust.json`) are generated into it locally and
   never committed. See "Re-syncing after an upstream sync" in `CLAUDE.md`.
 
+## The `pdf/encrypted/` and `pdf/features/` folders
+
+Generated fixtures for the PDF features beyond page text: eleven qpdf-encrypted copies of one
+document (every algorithm, with and without a user password), and annotation, attachment,
+portfolio, form and outline/metadata documents. Each folder has a `generate.py` (ReportLab and
+pikepdf) and a README naming the passwords and what each file holds. `PdfEncryptionTests`,
+`PdfAnnotationTests`, `PdfEmbeddedFileTests`, `PdfFormModelTests` and `PdfDocumentMetadataTests`
+read them through `XRAY_TEST_DOCUMENTS` or the submodule and return early when absent; the same
+classes also build their PDFs in test code (`SyntheticPdf`, which can encrypt) so the features are
+covered without a corpus. Regenerating needs `pip install reportlab pikepdf`.
+
 ## The `psd/` folder
 
 Photoshop fixtures for `PsdExtractor`: Patchy's PSD/PSB fixtures with their Photoshop reference

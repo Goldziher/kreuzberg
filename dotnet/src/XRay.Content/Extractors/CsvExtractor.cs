@@ -32,6 +32,7 @@ public sealed partial class CsvExtractor : IExtractor
         var budget = SecurityBudget.FromConfig(config);
         foreach (var row in rows)
         {
+            Cancel.ThrowIfRequested();
             budget.Step();
             budget.AddCells(row.Count);
             foreach (var cell in row)
@@ -41,12 +42,15 @@ public sealed partial class CsvExtractor : IExtractor
             }
         }
 
+        Cancel.ThrowIfRequested();
         int rowCount = rows.Count;
         int colCount = rows.Count == 0 ? 0 : rows.Max(r => r.Count);
         bool hasHeader = DetectHeader(rows);
         var columnTypes = InferColumnTypes(rows, hasHeader);
 
+        Cancel.ThrowIfRequested();
         string markdown = BuildMarkdownTable(rows, hasHeader);
+        Cancel.ThrowIfRequested();
 
         var csvMeta = new CsvMetadata
         {
@@ -70,6 +74,7 @@ public sealed partial class CsvExtractor : IExtractor
         // The table is pushed as a real element (so every renderer sees a table, not a
         // paragraph) and carries the canonical plain text the plain renderer prefers.
         string contentText = RenderTablePlainCsv(rows);
+        Cancel.ThrowIfRequested();
         uint tableElement = builder.PushTable(table, null, null);
         builder.SetText(tableElement, contentText);
 
@@ -108,6 +113,7 @@ public sealed partial class CsvExtractor : IExtractor
 
         for (int i = 0; i < text.Length; i++)
         {
+            Cancel.Every(i, 0xFFFF);
             char c = text[i];
             if (inQuotes)
             {
@@ -256,6 +262,7 @@ public sealed partial class CsvExtractor : IExtractor
             int numeric = 0, date = 0, nonEmpty = 0;
             for (int r = dataStart; r < scanEnd; r++)
             {
+                Cancel.Every(r, 0x3FF);
                 string cell = col < rows[r].Count ? rows[r][col].Trim() : "";
                 if (cell.Length == 0) continue;
                 nonEmpty++;
@@ -281,8 +288,10 @@ public sealed partial class CsvExtractor : IExtractor
     private static string RenderTablePlainCsv(List<List<string>> cells)
     {
         var sb = new StringBuilder();
+        int rowCounter = 0;
         foreach (var row in cells)
         {
+            Cancel.Every(rowCounter++, 0x3FF);
             if (row.All(c => c.Trim().Length == 0)) continue;
             sb.Append(string.Join(" ", row));
             sb.Append('\n');
@@ -309,6 +318,7 @@ public sealed partial class CsvExtractor : IExtractor
 
         for (int i = 0; i < rows.Count; i++)
         {
+            Cancel.Every(i, 0x3FF);
             md.Append('|');
             for (int j = 0; j < colCount; j++)
             {

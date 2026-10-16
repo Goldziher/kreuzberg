@@ -35,6 +35,7 @@ internal static class ZipReader
 
         foreach (var entry in archive.Entries)
         {
+            Cancel.ThrowIfRequested();
             string path = entry.FullName;
             bool isDir = path.EndsWith("/", StringComparison.Ordinal);
             ulong size = isDir ? 0 : (ulong)entry.Length;
@@ -64,7 +65,7 @@ internal static class ZipReader
     {
         using var es = entry.Open();
         using var ms = new MemoryStream(entry.Length > 0 ? (int)Math.Min(entry.Length, int.MaxValue) : 0);
-        es.CopyTo(ms);
+        Cancel.CopyTo(es, ms);
         return ms.ToArray();
     }
 

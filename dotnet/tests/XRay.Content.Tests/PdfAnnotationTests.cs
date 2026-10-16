@@ -64,7 +64,30 @@ public class PdfAnnotationTests
         Assert.Equal(620, a.BoundingBox.Y1);
         Assert.Equal(612, a.PageWidth);
         Assert.Equal(792, a.PageHeight);
+        Assert.Equal(612, a.PageBox!.X1);
+        Assert.Equal(0, a.PageRotation);
         Assert.True(a.IsVisible);
+    }
+
+    [Fact]
+    public void ARotatedCroppedPageReportsItsBoxAndRotationForPlacingTheRectangle()
+    {
+        var builder = new SyntheticPdf();
+        builder.Add("<</Type/Catalog/Pages 2 0 R>>");
+        builder.Add("<</Type/Pages/Kids[3 0 R]/Count 1>>");
+        builder.Add("<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/CropBox[50 100 550 700]/Rotate 90"
+            + "/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R/Annots[6 0 R]>>");
+        builder.Add("<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>");
+        builder.AddStream("", PageText);
+        builder.Add("<</Type/Annot/Subtype/Text/Rect[100 200 120 220]/Contents(rotated)>>");
+
+        var a = Assert.Single(Extract(builder.Build()).Annotations!);
+
+        Assert.Equal(500, a.PageWidth);
+        Assert.Equal(600, a.PageHeight);
+        Assert.Equal(50, a.PageBox!.X0);
+        Assert.Equal(100, a.PageBox.Y0);
+        Assert.Equal(90, a.PageRotation);
     }
 
     [Fact]

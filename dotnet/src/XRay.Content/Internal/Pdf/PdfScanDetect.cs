@@ -128,6 +128,7 @@ internal static class PdfScanDetect
 
         for (int i = 0; i < pageCount; i++)
         {
+            Cancel.ThrowIfRequested();
             double score;
             try
             {

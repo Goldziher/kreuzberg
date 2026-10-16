@@ -151,6 +151,21 @@ internal sealed class LayoutEngine
     public DetectionResult Detect(Image<Rgb24> page) => DetectBatch([page])[0];
 
     /// <summary>
+    /// <see cref="Detect(Image{Rgb24})"/>, cancellable: the token is polled between the network's
+    /// operators and its parallel tiles, so a cancelled detection stops within one operator.
+    /// </summary>
+    public DetectionResult Detect(Image<Rgb24> page, CancellationToken cancellationToken) =>
+        DetectBatch([page], cancellationToken)[0];
+
+    /// <summary><see cref="DetectBatch(IReadOnlyList{Image{Rgb24}})"/>, cancellable.</summary>
+    public IReadOnlyList<DetectionResult> DetectBatch(IReadOnlyList<Image<Rgb24>> pages, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var scope = Cancel.Begin(cancellationToken);
+        return DetectBatch(pages);
+    }
+
+    /// <summary>
     /// Detect over several pages at once.
     /// </summary>
     /// <remarks>
@@ -161,6 +176,7 @@ internal sealed class LayoutEngine
     public IReadOnlyList<DetectionResult> DetectBatch(IReadOnlyList<Image<Rgb24>> pages)
     {
         if (pages.Count == 0) return [];
+        Cancel.ThrowIfRequested();
 
         IReadOnlyList<IReadOnlyList<LayoutDetection>> perPage;
         if (_rtDetr is not null)

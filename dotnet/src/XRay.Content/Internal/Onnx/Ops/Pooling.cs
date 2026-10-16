@@ -99,7 +99,7 @@ internal static class Pooling
         bool separableMax = isMax
             && padTop < effKh && padBottom < effKh && padLeft < effKw && padRight < effKw;
 
-        Parallel.For(0, batch * channels, plane =>
+        Parallel.For(0, batch * channels, Cancel.ParallelOptions, plane =>
         {
             var src = fx.Floats.AsSpan(plane * planeIn, planeIn);
             var dst = result.Floats.AsSpan(plane * planeOut, planeOut);
