@@ -293,7 +293,10 @@ happens *after* the tree is up to date.
 
 The loop that works:
 
-1. **Sync upstream, then materialize the corpus.** The `test_documents` submodule is
+1. **Sync upstream, then materialize the corpus.** (Once the submodule points at the
+   curiosity-ai/test_documents fork, binaries are committed in git and the fetch step below
+   is unnecessary; see [`.claude/skills/test-documents`](.claude/skills/test-documents/SKILL.md).)
+   Upstream's `test_documents` is
    LFS-free: text fixtures are in git, but every binary (office, PDF, epub, images) lives
    in a public bucket listed in `corpus.lock.json`. Fetch them first, or the office and
    PDF fixtures silently do not exist:
