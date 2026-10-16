@@ -48,7 +48,7 @@ public sealed class PdfFont
         if (doc.Resolve(fontDict.Get("ToUnicode")) is PdfStream tuStream)
         {
             try { f._toUnicode = PdfCMap.ParseToUnicode(doc.DecodeStream(tuStream)); }
-            catch { f._toUnicode = null; }
+            catch (Exception) when (Cancel.NotCancelling) { f._toUnicode = null; }
         }
 
         if (f.Subtype == "Type0")
@@ -219,7 +219,7 @@ public sealed class PdfFont
         else if (encObj is PdfStream cmapStream)
         {
             try { f._cmap = PdfCMap.ParseCid(doc.DecodeStream(cmapStream)); }
-            catch { f._cmap = PdfCMap.Identity(2); }
+            catch (Exception) when (Cancel.NotCancelling) { f._cmap = PdfCMap.Identity(2); }
         }
         else f._cmap = PdfCMap.Identity(2);
 
@@ -307,7 +307,7 @@ public sealed class PdfFont
             if (descriptor.Get(key) is null) continue;
             if (doc.Resolve(descriptor.Get(key)) is not PdfStream st) continue;
             try { return doc.DecodeStream(st); }
-            catch { return null; }
+            catch (Exception) when (Cancel.NotCancelling) { return null; }
         }
         return null;
     }

@@ -11,6 +11,21 @@ public sealed class PdfMetaResult
     public bool IsEncrypted;
     public long? Width, Height;
     public uint PageCount;
+
+    /// <summary>The catalog's /Version when it names a later version than the file header.</summary>
+    public string? CatalogVersion;
+
+    /// <summary>The catalog's /Lang, else dc:language from the XMP packet.</summary>
+    public string? Language;
+
+    /// <summary>Info-dictionary entries beyond the standard ones, as written.</summary>
+    public SortedDictionary<string, string>? CustomInfo;
+
+    /// <summary>XMP properties beyond the ones that feed the standard fields.</summary>
+    public SortedDictionary<string, string>? XmpExtra;
+
+    /// <summary>What the /Encrypt dictionary declares and how the document opened.</summary>
+    public PdfEncryptionInfo? Encryption;
 }
 
 public static class PdfMetadataExtractor
@@ -19,7 +34,16 @@ public static class PdfMetadataExtractor
     {
         var r = new PdfMetaResult();
         if (doc.VersionMajor > 0) r.PdfVersion = $"{doc.VersionMajor}.{doc.VersionMinor}";
+        // The catalog's /Version overrides the header when it names a later one (ISO 32000-1
+        // §7.5.2). `PdfVersion` stays the header's, as upstream reports it; the override is kept
+        // apart so neither reading is lost.
+        if (doc.Catalog is { } cat && doc.Resolve(cat.Get("Version")).AsName() is { } catalogVersion
+            && IsLaterVersion(catalogVersion, doc.VersionMajor, doc.VersionMinor))
+            r.CatalogVersion = catalogVersion;
         r.IsEncrypted = doc.IsEncrypted;
+        r.Encryption = doc.Encryption;
+        r.Language = doc.Catalog is { } c2 && doc.Resolve(c2.Get("Lang")).AsStringBytes() is { } langBytes
+            ? DecodePdfString(langBytes) : null;
         r.PageCount = (uint)doc.PageCount;
 
         if (doc.PageCount > 0)
@@ -45,8 +69,41 @@ public static class PdfMetadataExtractor
         var md = GetInfoString(info, "ModDate");
         if (md != null) r.ModifiedAt = ParsePdfDate(md);
 
-        ApplyXmpFallbacks(r, PdfXmp.Extract(doc));
+        if (info is not null)
+            foreach (var kv in info.Map)
+            {
+                if (StandardInfoKeys.Contains(kv.Key)) continue;
+                string? text = kv.Value switch
+                {
+                    PdfString s => DecodePdfString(s.Bytes),
+                    PdfName n => n.Value,
+                    PdfNumber n => n.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    PdfBool b => b.Value ? "true" : "false",
+                    _ => null,
+                };
+                if (!string.IsNullOrEmpty(text)) (r.CustomInfo ??= new(StringComparer.Ordinal))[kv.Key] = text;
+            }
+
+        var xmp = PdfXmp.Extract(doc);
+        ApplyXmpFallbacks(r, xmp);
+        if (xmp is { Extra.Count: > 0 })
+        {
+            r.XmpExtra = xmp.Extra;
+            r.Language ??= NonEmpty(xmp.Extra.GetValueOrDefault("dc:language"));
+        }
         return r;
+    }
+
+    private static readonly HashSet<string> StandardInfoKeys = new(StringComparer.Ordinal)
+    {
+        "Title", "Author", "Subject", "Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped",
+    };
+
+    private static bool IsLaterVersion(string version, int major, int minor)
+    {
+        var parts = version.Split('.');
+        return parts.Length == 2 && int.TryParse(parts[0], out int a) && int.TryParse(parts[1], out int b)
+            && (a > major || (a == major && b > minor));
     }
 
     /// <summary>
@@ -115,7 +172,7 @@ public static class PdfMetadataExtractor
     private static bool IsValidUtf8(byte[] bytes)
     {
         try { var d = new UTF8Encoding(false, true); d.GetString(bytes); return true; }
-        catch { return false; }
+        catch (Exception) when (Cancel.NotCancelling) { return false; }
     }
 
     public static List<string> ParseAuthors(string authorStr)

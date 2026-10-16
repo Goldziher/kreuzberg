@@ -312,6 +312,53 @@ public sealed class PdfMetadata
 
     /// <summary>One-based page numbers graded at or above the configured confidence.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<uint>? ScannedPages { get; set; }
+
+    // ---- Port additions (no upstream counterpart); null for an unencrypted document. ----
+
+    /// <summary>
+    /// Whether a password beyond the empty one was needed to open the document. Always false
+    /// when it is set at all, because a document that needed one and was not given it is not
+    /// extracted: it fails with <see cref="Core.PdfPasswordRequiredException"/>.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public bool? RequiresPassword { get; set; }
+
+    /// <summary>Which password opened it: <c>user</c> (including the empty one) or <c>owner</c>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? AuthenticatedAs { get; set; }
+
+    /// <summary><c>RC4</c>, <c>AESV2</c>, <c>AESV3</c> or <c>Identity</c>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? EncryptionAlgorithm { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? EncryptionKeyBits { get; set; }
+
+    /// <summary>The permission flags the owner set (print, copy, modify…).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public PdfPermissions? Permissions { get; set; }
+
+    /// <summary>The document outline (bookmarks) in order, with nesting depth and destination page.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<PdfOutlineItem>? Outline { get; set; }
+}
+
+/// <summary>The permission flags of an encrypted PDF's <c>/P</c> entry.</summary>
+public sealed class PdfPermissions
+{
+    public int Raw { get; set; }
+    public bool Print { get; set; }
+    public bool Modify { get; set; }
+    public bool Copy { get; set; }
+    public bool Annotate { get; set; }
+    public bool FillForms { get; set; }
+    public bool ExtractForAccessibility { get; set; }
+    public bool Assemble { get; set; }
+    public bool PrintHighQuality { get; set; }
+}
+
+/// <summary>One bookmark of a PDF's outline.</summary>
+public sealed class PdfOutlineItem
+{
+    public string Title { get; set; } = "";
+    /// <summary>Nesting depth, 0 for a top-level bookmark.</summary>
+    public int Level { get; set; }
+    /// <summary>One-based destination page when it resolves within the document.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? Page { get; set; }
 }
 
 /// <summary>Year range for bibliographic metadata (Rust `YearRange`).</summary>

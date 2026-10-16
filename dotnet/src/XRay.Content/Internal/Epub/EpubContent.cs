@@ -566,7 +566,7 @@ internal static class EpubContent
         {
             doc = XDocument.Parse(xhtml, LoadOptions.PreserveWhitespace);
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             return false;
         }
@@ -637,7 +637,7 @@ internal static class EpubContent
             string result = CollapseBlankLines(output.ToString()).Trim();
             if (result.Length > 0) return result;
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             // fall through to tag stripping
         }

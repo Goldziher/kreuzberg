@@ -902,6 +902,22 @@ static void MetadataNormalizer(JsonObject obj)
             ao.Remove(k);
     obj.Remove("extraction_duration_ms");
     obj.Remove("output_format");
+
+    // Port additions to a PDF's metadata that upstream's goldens cannot carry: encryption detail,
+    // the outline, the catalog language, custom Info entries and extra XMP properties. They add
+    // information without changing any field upstream reports, so a golden comparison ignores them.
+    if (obj.TryGetPropertyValue("format_type", out var formatType) && formatType?.GetValue<string>() == "pdf")
+    {
+        foreach (var k in new[]
+        {
+            "requires_password", "authenticated_as", "encryption_algorithm", "encryption_key_bits",
+            "permissions", "outline", "language",
+        })
+            obj.Remove(k);
+        if (obj.TryGetPropertyValue("additional", out var pdfAdd) && pdfAdd is JsonObject pdfAo)
+            foreach (var k in new[] { "pdf_catalog_version", "pdf_info", "xmp" })
+                pdfAo.Remove(k);
+    }
 }
 
 // The per-table `markdown` string tracks the (not-yet-exact) markdown renderer; compare cells only.

@@ -101,6 +101,16 @@ public static class DjotRenderer
             }
         }
 
+        if (doc.Annotations is { Count: > 0 } annotations)
+        {
+            string block = RenderCommon.RenderAnnotationsDjot(annotations);
+            if (block.Length > 0)
+            {
+                if (sb.ToString().AsSpan().TrimEnd().Length > 0) sb.Append('\n');
+                sb.Append(block);
+            }
+        }
+
         string output = sb.ToString();
         int trimmedLen = RenderCommon.TrimEndLen(output);
         if (trimmedLen == 0) return "";

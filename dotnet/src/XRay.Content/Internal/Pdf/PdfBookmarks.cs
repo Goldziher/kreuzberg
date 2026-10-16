@@ -19,6 +19,13 @@ public sealed class PdfOutlineEntry
 
     /// <summary>One-based destination page, when the destination resolves within this PDF.</summary>
     public int? PageNumber;
+
+    /// <summary>
+    /// The entry as a link: an external URL (<c>/A /S /URI</c>) as a hyperlink, an internal
+    /// destination as an anchor (<c>#name</c> or <c>#page=N</c>) carrying its page. Null when the
+    /// item has neither.
+    /// </summary>
+    public Types.ExtractedUri? Uri;
 }
 
 internal static class PdfBookmarks
@@ -50,6 +57,14 @@ internal static class PdfBookmarks
         return entries;
     }
 
+    /// <summary>The URIs the outline carries, in document order (upstream's bookmark URIs).</summary>
+    public static List<Types.ExtractedUri> ExtractBookmarkUris(IEnumerable<PdfOutlineEntry> entries)
+    {
+        var uris = new List<Types.ExtractedUri>();
+        foreach (var e in entries) if (e.Uri is not null) uris.Add(e.Uri);
+        return uris;
+    }
+
     private static void Walk(
         PdfDocument doc, PdfRef itemRef, int depth,
         Dictionary<string, PdfObject> named, Dictionary<PdfRef, int> pageNumbers,
@@ -76,9 +91,14 @@ internal static class PdfBookmarks
             title = PdfMetadataExtractor.DecodePdfString(bytes);
 
         int? pageNumber = ResolveDestination(doc, dict, named, pageNumbers);
+
+        // The link form of the same item: /Dest first, then the action, as upstream does.
+        var links = new PdfLinkResolver(doc, named, pageNumbers);
+        var uri = links.DestinationUri(dict.Get("Dest"), title)
+                  ?? links.ActionUri(doc.Resolve(dict.Get("A")).AsDict(), title);
         if (title is null && pageNumber is null) return null;
 
-        return new PdfOutlineEntry { Title = title ?? "", Depth = depth, PageNumber = pageNumber };
+        return new PdfOutlineEntry { Title = title ?? "", Depth = depth, PageNumber = pageNumber, Uri = uri };
     }
 
     /// <summary>The item's page, from its /Dest or from a GoTo action's /D.</summary>
@@ -99,7 +119,7 @@ internal static class PdfBookmarks
         return ResolveDestinationObject(doc, d, named, pageNumbers, new HashSet<string>(StringComparer.Ordinal), 0);
     }
 
-    private static int? ResolveDestinationObject(
+    internal static int? ResolveDestinationObject(
         PdfDocument doc, PdfObject destination,
         Dictionary<string, PdfObject> named, Dictionary<PdfRef, int> pageNumbers,
         HashSet<string> visitedNames, int hops)
@@ -148,7 +168,7 @@ internal static class PdfBookmarks
         return array.Items[0] is PdfRef pageRef && pageNumbers.TryGetValue(pageRef, out int number) ? number : null;
     }
 
-    private static Dictionary<string, PdfObject> CollectNamedDestinations(PdfDocument doc, PdfDict catalog)
+    internal static Dictionary<string, PdfObject> CollectNamedDestinations(PdfDocument doc, PdfDict catalog)
     {
         var destinations = new Dictionary<string, PdfObject>(StringComparer.Ordinal);
 
@@ -201,7 +221,7 @@ internal static class PdfBookmarks
     }
 
     /// <summary>Destination names are byte strings; compare them as bytes, not as text.</summary>
-    private static string Latin1(byte[] bytes)
+    internal static string Latin1(byte[] bytes)
     {
         var chars = new char[bytes.Length];
         for (int i = 0; i < bytes.Length; i++) chars[i] = (char)bytes[i];

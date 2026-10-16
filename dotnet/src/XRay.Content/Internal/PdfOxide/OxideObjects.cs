@@ -54,7 +54,7 @@ internal static class Ox
         if (doc is null) return null;
         if (doc.Resolve(o) is not PdfStream st) return null;
         try { return doc.DecodeStream(st); }
-        catch { return null; }
+        catch (Exception) when (Cancel.NotCancelling) { return null; }
     }
 
     /// <summary>Six numbers as a matrix, for /Matrix and /FontMatrix entries.</summary>

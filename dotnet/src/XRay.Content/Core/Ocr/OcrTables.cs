@@ -156,7 +156,7 @@ internal static class OcrTables
         {
             table = FirstTable(HtmlDom.Parse(html));
         }
-        catch (Exception)
+        catch (Exception) when (Cancel.NotCancelling)
         {
             // OCR is never fatal: markup the parser chokes on stays in the text rather than
             // costing the document its recognition.

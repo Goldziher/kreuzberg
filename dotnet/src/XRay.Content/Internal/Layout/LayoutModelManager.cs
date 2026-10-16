@@ -279,7 +279,7 @@ internal sealed class LayoutModelManager
 
                 if (File.Exists(backup)) File.Delete(backup);
             }
-            catch
+            catch (Exception) when (Cancel.NotCancelling)
             {
                 // Put back whatever was there, so a failed publish leaves a working cache rather
                 // than an empty one.

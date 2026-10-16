@@ -179,7 +179,7 @@ public sealed class PdfContentExtractor
             if (op == null) break;
             if (op == "BI") { SkipInlineImage(lex); operands.Clear(); continue; }
             try { Execute(op, operands, fonts, xobjects, depth); }
-            catch { /* keep going */ }
+            catch (Exception) when (Cancel.NotCancelling) { /* keep going */ }
             operands.Clear();
         }
     }
@@ -209,7 +209,7 @@ public sealed class PdfContentExtractor
                     cache[fd] = font;
                     map[kv.Key] = font;
                 }
-                catch { }
+                catch (Exception) when (Cancel.NotCancelling) { }
             }
         }
         return map;
@@ -620,7 +620,7 @@ public sealed class PdfContentExtractor
             _gs.PathCtm = RoundToSingle(m).MultiplySingle(_gs.PathCtm);
         }
         var formRes = _doc.Resolve(st.Dict.Get("Resources")).AsDict();
-        try { Run(_doc.DecodeStream(st), formRes, depth + 1); } catch { }
+        try { Run(_doc.DecodeStream(st), formRes, depth + 1); } catch (Exception) when (Cancel.NotCancelling) { }
         EndPath();
         FlushBuffer();
         if (_stack.Count > 0) _gs = _stack.Pop();

@@ -73,7 +73,7 @@ internal static class AttachmentInlining
                 builder.PushHeading(2, filename, null, null);
                 builder.PushParagraph(content, new(), null, null);
             }
-            catch (Exception)
+            catch (Exception) when (Cancel.NotCancelling)
             {
                 // An attachment that will not parse is not a failure of the message.
             }

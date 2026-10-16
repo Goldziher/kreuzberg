@@ -362,7 +362,7 @@ internal static class OdfContentParser
         {
             doc = XDocument.Parse(stylesXml, LoadOptions.PreserveWhitespace);
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             return;
         }

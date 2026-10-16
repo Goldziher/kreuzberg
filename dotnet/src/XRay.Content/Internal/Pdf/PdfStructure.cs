@@ -225,7 +225,7 @@ public static class PdfStructure
         if (ruledTables is not null)
         {
             try { ruledTables = PdfTableStitch.StitchFragmentedTables(ruledTables, allPageSegments); }
-            catch { }
+            catch (Exception) when (Cancel.NotCancelling) { }
         }
         ruledCoverage ??= ruledTables;
 
@@ -277,7 +277,7 @@ public static class PdfStructure
                         words, hints, i, pageHeights[i], 0.5f,
                         allowSingleColumn: false, prevalidatedColumns: true);
             }
-            catch { pageTables = new List<Table>(); }
+            catch (Exception) when (Cancel.NotCancelling) { pageTables = new List<Table>(); }
             tablesByPage.Add(pageTables);
             coverageByPage.Add(pageTables);
         }

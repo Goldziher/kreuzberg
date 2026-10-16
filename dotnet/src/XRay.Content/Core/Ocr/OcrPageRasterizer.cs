@@ -49,6 +49,7 @@ internal static class OcrPageRasterizer
         uint pageNumber = 0;
         foreach (var image in PdfRasterizer.Render(pdf, dpi, maxPages: highest))
         {
+            Cancel.ThrowIfRequested();
             pageNumber++;
             using (image)
             {

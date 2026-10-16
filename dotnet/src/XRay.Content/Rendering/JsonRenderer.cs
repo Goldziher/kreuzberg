@@ -265,6 +265,8 @@ public static class JsonRenderer
         var result = new JsonObject();
         if (title is not null) result["title"] = title;
         result["body"] = rootBody;
+        if (doc.Annotations is { Count: > 0 } annotations)
+            result["annotations"] = JsonSerializer.SerializeToNode(annotations, XRay.Content.Types.Json.Options);
         return result;
     }
 

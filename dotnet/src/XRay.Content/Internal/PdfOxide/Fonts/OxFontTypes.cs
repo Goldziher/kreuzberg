@@ -825,7 +825,7 @@ internal static class OxFontTables
             var enc = Encoding.GetEncoding(codePage, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
             return enc.GetString(bytes);
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             return null;
         }

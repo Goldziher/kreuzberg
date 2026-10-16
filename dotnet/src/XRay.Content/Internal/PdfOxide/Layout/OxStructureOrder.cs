@@ -49,7 +49,7 @@ internal static class OxStructureOrder
             if (doc.Catalog?.Get("MarkInfo") is not { } raw) return false;
             return doc.Resolve(raw).AsDict()?.Get("Suspects").AsBool() ?? false;
         }
-        catch { return false; }
+        catch (Exception) when (Cancel.NotCancelling) { return false; }
     }
 
     /// <summary>

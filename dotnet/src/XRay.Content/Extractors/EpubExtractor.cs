@@ -350,7 +350,7 @@ public sealed class EpubExtractor : IExtractor
                         string slice = System.Text.Encoding.UTF8.GetString(utf8, (int)ann.Start, (int)(ann.End - ann.Start));
                         if (slice.Length > 0) label = slice;
                     }
-                    catch
+                    catch (Exception) when (Cancel.NotCancelling)
                     {
                         label = null;
                     }
@@ -384,7 +384,7 @@ public sealed class EpubExtractor : IExtractor
         {
             doc = System.Xml.Linq.XDocument.Parse(sanitized, System.Xml.Linq.LoadOptions.PreserveWhitespace);
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             return null;
         }

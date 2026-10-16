@@ -78,7 +78,7 @@ internal static class PstExtraction
         {
             ipmEntry = store.IpmSubTreeEntryId();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (Cancel.NotCancelling)
         {
             warnings.Add(Warn($"Failed to locate IPM (mail) sub-tree in PST store: {ex.Message}"));
             return (new List<EmailExtractionResult>(), warnings);
@@ -89,7 +89,7 @@ internal static class PstExtraction
         {
             rootFolder = store.OpenFolder(ipmEntry);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (Cancel.NotCancelling)
         {
             warnings.Add(Warn($"Failed to open IPM (mail) sub-tree root folder: {ex.Message}"));
             return (new List<EmailExtractionResult>(), warnings);
@@ -125,7 +125,7 @@ internal static class PstExtraction
         {
             rootFolder = store.OpenFolder(store.MakeEntryId(PstNodeType.RootFolderNid));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (Cancel.NotCancelling)
         {
             warnings.Add(Warn($"Failed to open PST root folder while enumerating non-IPM top-level folders: {ex.Message}"));
             return seeds;
@@ -136,7 +136,7 @@ internal static class PstExtraction
         {
             rootTable = rootFolder.HierarchyTable();
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             rootTable = null;
         }
@@ -163,7 +163,7 @@ internal static class PstExtraction
             {
                 folder = store.OpenFolder(store.MakeEntryId(nodeId));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (Cancel.NotCancelling)
             {
                 warnings.Add(Warn($"Failed to open non-IPM top-level folder (node 0x{nodeId:X}): {ex.Message}; folder skipped"));
                 continue;
@@ -220,7 +220,7 @@ internal static class PstExtraction
                     {
                         message = store.OpenMessage(entryId);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (Cancel.NotCancelling)
                     {
                         warnings.Add(Warn($"Failed to open message 0x{nodeId:X}: {ex.Message}"));
                         continue;
@@ -247,7 +247,7 @@ internal static class PstExtraction
                 {
                     subFolder = store.OpenFolder(store.MakeEntryId(nodeId));
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (Cancel.NotCancelling)
                 {
                     warnings.Add(Warn($"Failed to open folder 0x{nodeId:X}: {ex.Message}"));
                     continue;
@@ -267,7 +267,7 @@ internal static class PstExtraction
         {
             return read();
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             return null;
         }

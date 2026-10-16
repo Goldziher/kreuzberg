@@ -86,7 +86,7 @@ internal static class MathMl
         {
             doc = XDocument.Parse(stripped, LoadOptions.PreserveWhitespace);
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             return "";
         }

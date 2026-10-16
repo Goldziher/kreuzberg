@@ -68,6 +68,80 @@ public sealed class RenderState
 /// <summary>Shared rendering helpers ported from Rust `rendering/common.rs`.</summary>
 public static class RenderCommon
 {
+    // ------------------------------------------------------------------
+    // Document-level PDF annotations (upstream issue #63): one section appended to the rendering.
+    // ------------------------------------------------------------------
+
+    /// <summary>The label an annotation type is rendered under.</summary>
+    internal static string AnnotationTypeLabel(PdfAnnotationType type) => type switch
+    {
+        PdfAnnotationType.Text => "Text",
+        PdfAnnotationType.Highlight => "Highlight",
+        PdfAnnotationType.Link => "Link",
+        PdfAnnotationType.Stamp => "Stamp",
+        PdfAnnotationType.Underline => "Underline",
+        PdfAnnotationType.StrikeOut => "StrikeOut",
+        PdfAnnotationType.Squiggly => "Squiggly",
+        PdfAnnotationType.Ink => "Ink",
+        PdfAnnotationType.Square => "Square",
+        PdfAnnotationType.Circle => "Circle",
+        PdfAnnotationType.Polygon => "Polygon",
+        PdfAnnotationType.PolyLine => "PolyLine",
+        PdfAnnotationType.Line => "Line",
+        PdfAnnotationType.Caret => "Caret",
+        PdfAnnotationType.FileAttachment => "FileAttachment",
+        PdfAnnotationType.Sound => "Sound",
+        PdfAnnotationType.Movie => "Movie",
+        _ => "Other",
+    };
+
+    /// <summary>
+    /// The best text for a rendered annotation: the text a markup annotation covers wins over the
+    /// free-form comment or URL, since that is what the annotation is about.
+    /// </summary>
+    internal static string? AnnotationDisplayText(PdfAnnotation a) =>
+        !string.IsNullOrEmpty(a.MarkedText) ? a.MarkedText
+        : !string.IsNullOrEmpty(a.Content) ? a.Content
+        : null;
+
+    /// <summary>Minimal HTML text escaping: <c>&amp;</c>, <c>&lt;</c>, <c>&gt;</c>.</summary>
+    internal static string EscapeHtmlText(string input) =>
+        input.IndexOfAny(new[] { '&', '<', '>' }) < 0
+            ? input
+            : input.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+
+    /// <summary>One line per annotation: <c>{prefix}{type}{suffix} (page N) by author: text</c>.</summary>
+    private static string AnnotationLines(
+        IReadOnlyList<PdfAnnotation> annotations, string open, string close, bool escapeHtml)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var a in annotations)
+        {
+            sb.Append(open).Append(AnnotationTypeLabel(a.AnnotationType)).Append(close);
+            sb.Append(" (page ").Append(a.PageNumber).Append(')');
+            if (!string.IsNullOrEmpty(a.Author))
+                sb.Append(" by ").Append(escapeHtml ? EscapeHtmlText(a.Author) : a.Author);
+            if (AnnotationDisplayText(a) is { } text)
+                sb.Append(": ").Append(escapeHtml ? EscapeHtmlText(text) : text);
+            sb.Append(escapeHtml ? "</li>\n" : "\n");
+        }
+        return sb.ToString();
+    }
+
+    internal static string RenderAnnotationsPlain(IReadOnlyList<PdfAnnotation> annotations) =>
+        annotations.Count == 0 ? "" : "Annotations:\n" + AnnotationLines(annotations, "", "", false);
+
+    internal static string RenderAnnotationsMarkdown(IReadOnlyList<PdfAnnotation> annotations) =>
+        annotations.Count == 0 ? "" : "## Annotations\n\n" + AnnotationLines(annotations, "- **", "**", false);
+
+    internal static string RenderAnnotationsDjot(IReadOnlyList<PdfAnnotation> annotations) =>
+        annotations.Count == 0 ? "" : "## Annotations\n\n" + AnnotationLines(annotations, "- _", "_", false) + "\n";
+
+    internal static string RenderAnnotationsHtml(IReadOnlyList<PdfAnnotation> annotations) =>
+        annotations.Count == 0
+            ? ""
+            : "<h2>Annotations</h2>\n<ul>\n" + AnnotationLines(annotations, "<li><strong>", "</strong>", true) + "</ul>\n";
+
     public static bool IsBodyElement(InternalElement elem) => elem.Layer == ContentLayer.Body;
 
     public static bool IsContainerEnd(InternalElement elem) => elem.Kind.IsContainerEnd;

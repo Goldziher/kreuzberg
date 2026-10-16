@@ -25,8 +25,14 @@ public static class MarkdownRenderer
     {
         var root = ComrakBridge.Build(doc);
 
-        // Guard: empty AST (comrak panics on this; we return empty).
-        if (root.FirstChild is null) return "";
+        // Guard: empty AST (comrak panics on this; we return empty) — except that a document whose
+        // only content is an annotation (a highlight on a scanned page) still renders that.
+        if (root.FirstChild is null)
+        {
+            string only = doc.Annotations is { Count: > 0 } a ? RenderCommon.RenderAnnotationsMarkdown(a) : "";
+            int onlyLen = RenderCommon.TrimEndLen(only);
+            return onlyLen == 0 ? "" : only.Substring(0, onlyLen) + "\n";
+        }
 
         string output = CommonMarkFormatter.Format(root);
 
@@ -71,6 +77,17 @@ public static class MarkdownRenderer
 
         // Strip arXiv watermark noise.
         output = StripArxivWatermarkNoise(output);
+
+        // Document-level PDF annotations, appended as their own section.
+        if (doc.Annotations is { Count: > 0 } annotations)
+        {
+            string block = RenderCommon.RenderAnnotationsMarkdown(annotations);
+            if (block.Length > 0)
+            {
+                if (RenderCommon.TrimEndLen(output) > 0) output += "\n\n";
+                output += block;
+            }
+        }
 
         // Trim trailing whitespace but keep a single trailing newline.
         int trimmedLen = RenderCommon.TrimEndLen(output);

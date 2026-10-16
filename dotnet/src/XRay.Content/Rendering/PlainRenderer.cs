@@ -262,6 +262,17 @@ public static class PlainRenderer
             }
         }
 
+        // Document-level PDF annotations (only present when the extractor was asked for them).
+        if (doc.Annotations is { Count: > 0 } annotations)
+        {
+            string block = RenderCommon.RenderAnnotationsPlain(annotations);
+            if (block.Length > 0)
+            {
+                if (sb.ToString().AsSpan().TrimEnd().Length > 0) sb.Append("\n\n");
+                sb.Append(block);
+            }
+        }
+
         // Trim trailing whitespace, no trailing newline.
         string result = sb.ToString();
         return result.Substring(0, RenderCommon.TrimEndLen(result));

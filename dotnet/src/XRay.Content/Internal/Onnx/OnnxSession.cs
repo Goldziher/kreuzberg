@@ -134,7 +134,7 @@ internal sealed class OnnxSession
                     reused[i] = outputs.Length > 0
                                 && ReferenceEquals(outputs[0]?.Buffer, reusable.Buffer);
             }
-            catch (Exception ex) when (ex is not NotSupportedException)
+            catch (Exception ex) when (ex is not NotSupportedException && Cancel.NotCancelling)
             {
                 throw new InvalidOperationException(
                     $"onnx: node #{i} {node.OpType} ('{node.Name}') failed: {ex.Message}", ex);

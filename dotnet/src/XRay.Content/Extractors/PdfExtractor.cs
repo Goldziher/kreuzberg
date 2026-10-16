@@ -6,6 +6,7 @@
 // Backend lives under XRay.Content.Internal.Pdf (xref/trailer, objects, streams + filters,
 // content-stream tokenizer, text-showing operators, font encoding/ToUnicode, page tree).
 using XRay.Content.Core;
+using XRay.Content.Internal.Archive;
 using XRay.Content.Internal.Pdf;
 using XRay.Content.Types;
 
@@ -23,9 +24,18 @@ public sealed class PdfExtractor : IExtractor
     {
         byte[] bytes = content.ToArray();
 
+        var pdfOptions = config.Pdf ?? new PdfOptions();
+        var passwords = pdfOptions.CandidatePasswords();
+
         PdfDocument pdf;
-        try { pdf = PdfDocument.Open(bytes); }
-        catch (Exception e) { throw new InvalidDataException($"pdf parse failed: {e.Message}", e); }
+        try { pdf = PdfDocument.Open(bytes, passwords); }
+        catch (Exception e) when (Cancel.NotCancelling) { throw new InvalidDataException($"pdf parse failed: {e.Message}", e); }
+
+        // "Needs a password" is not "corrupt": a Standard-handler document that no supplied
+        // password (nor the empty one) opened fails with a type of its own, so the caller can ask
+        // for one instead of treating the file as broken.
+        if (pdf.Encryption is { Supported: true } declared && pdf.Decryptor is null)
+            throw new PdfPasswordRequiredException(passwords.Count > 0, declared);
 
         int pageCount = pdf.PageCount;
         if (pageCount == 0)
@@ -54,6 +64,12 @@ public sealed class PdfExtractor : IExtractor
 
         // --- Metadata ---
         var meta = PdfMetadataExtractor.Extract(pdf);
+
+        // The outline is read once: the structure pipeline recovers headings from it, the metadata
+        // lists it, and its destinations are URIs.
+        List<PdfOutlineEntry> outline;
+        try { outline = PdfBookmarks.ExtractOutlineEntries(pdf); }
+        catch (Exception) when (Cancel.NotCancelling) { outline = new List<PdfOutlineEntry>(); }
         // Advisory: a document we cannot grade reports no scan evidence.
         var scanDetection = PdfScanDetect.Detect(pdf);
 
@@ -76,9 +92,9 @@ public sealed class PdfExtractor : IExtractor
         // does to the combined list, one pass later.
         var ruled = new List<RuledTable>();
         try { ruled.AddRange(ExtractRuledTables(pageWords, pagePaths, TableDetectionConfig.Strict())); }
-        catch { }
+        catch (Exception) when (Cancel.NotCancelling) { }
         try { FoldTier(ruled, ExtractRuledTables(pageWords, pagePaths, TableDetectionConfig.Bordered()), r => r.Table); }
-        catch { }
+        catch (Exception) when (Cancel.NotCancelling) { }
 
         // A table longer than a page arrives as a fragment per page, because every tier here
         // reads one page at a time. Joining them needs the ruling-line geometry, so it happens
@@ -104,7 +120,7 @@ public sealed class PdfExtractor : IExtractor
                 t => t,
                 ruledPages);
         }
-        catch { }
+        catch (Exception) when (Cancel.NotCancelling) { }
         foreach (var table in tables) PdfTableNormalize.RepairConsistentlyMergedNumericColumn(table);
 
         // Upstream reduces this combined list before emitting it (`prepare_emitted_tables`):
@@ -131,9 +147,6 @@ public sealed class PdfExtractor : IExtractor
         InternalDocument? structured = null;
         if (needsStructured)
         {
-            List<PdfOutlineEntry> outline;
-            try { outline = PdfBookmarks.ExtractOutlineEntries(pdf); }
-            catch { outline = new List<PdfOutlineEntry>(); }
             // The joined tables place and the fragments cover: a page holding the rest of a
             // table joined from the page before carries no table of its own, and its rows would
             // otherwise come back out as prose beside the table they are already in.
@@ -144,7 +157,7 @@ public sealed class PdfExtractor : IExtractor
                 structured = PdfStructure.Build(
                     pageSegments, ruledTables: tables, outlineEntries: outline, ruledCoverage: coverage);
             }
-            catch { structured = null; }
+            catch (Exception) when (Cancel.NotCancelling) { structured = null; }
         }
 
         if (structured is not null && structured.Elements.Count > 0)
@@ -185,6 +198,7 @@ public sealed class PdfExtractor : IExtractor
             CreatedAt = meta.CreatedAt,
             ModifiedAt = meta.ModifiedAt,
             CreatedBy = meta.CreatedBy,
+            Language = meta.Language,
             OcrUsed = false,
             Format = new FormatMetadata
             {
@@ -199,11 +213,30 @@ public sealed class PdfExtractor : IExtractor
                     PageCount = meta.PageCount,
                     ScannedConfidence = (float)scanDetection.Confidence,
                     ScannedPages = scanDetection.ScannedPageNumbers(PdfScanDetect.DefaultScannedMinConfidence),
+                    RequiresPassword = meta.Encryption?.RequiresPassword,
+                    AuthenticatedAs = meta.Encryption is { Supported: true } ea && ea.Authenticated != PdfAuthentication.None
+                        ? ea.Authenticated.ToString().ToLowerInvariant() : null,
+                    EncryptionAlgorithm = meta.Encryption?.Algorithm,
+                    EncryptionKeyBits = meta.Encryption?.KeyBits,
+                    Permissions = meta.Encryption is { } enc ? ToPermissions(enc.Permissions) : null,
+                    Outline = outline.Count == 0 ? null : outline
+                        .Select(o => new PdfOutlineItem { Title = o.Title, Level = o.Depth, Page = o.PageNumber })
+                        .ToList(),
                 },
             },
         };
         doc.Metadata.Additional["extraction_method"] =
             System.Text.Json.JsonSerializer.SerializeToElement("native");
+
+        if (meta.CatalogVersion is not null)
+            doc.Metadata.Additional["pdf_catalog_version"] =
+                System.Text.Json.JsonSerializer.SerializeToElement(meta.CatalogVersion);
+        if (meta.CustomInfo is { Count: > 0 })
+            doc.Metadata.Additional["pdf_info"] =
+                System.Text.Json.JsonSerializer.SerializeToElement(meta.CustomInfo);
+        if (meta.XmpExtra is { Count: > 0 })
+            doc.Metadata.Additional["xmp"] =
+                System.Text.Json.JsonSerializer.SerializeToElement(meta.XmpExtra);
 
         // /PageLabels — one display label per page, index-aligned with the page structure.
         // Metadata has no field for it, so it rides in `additional`, as upstream does.
@@ -213,12 +246,18 @@ public sealed class PdfExtractor : IExtractor
                 doc.Metadata.Additional["page_labels"] =
                     System.Text.Json.JsonSerializer.SerializeToElement(pageLabels);
         }
-        catch { }
+        catch (Exception) when (Cancel.NotCancelling) { }
 
         // Filled AcroForm values reach `content` only through the per-page widget splice,
         // which the structured path never sees; this puts back the ones no element carries.
         try { InjectUnrepresentedFormFieldElements(doc, PdfFormFields.Extract(pdf)); }
-        catch { }
+        catch (Exception) when (Cancel.NotCancelling) { }
+        try
+        {
+            var typedFields = PdfFormModel.Extract(pdf);
+            if (typedFields.Count > 0) doc.FormFields = typedFields;
+        }
+        catch (Exception) when (Cancel.NotCancelling) { }
 
         // The structured path assembles its own table list in element order, so its indices
         // are already the ones its `Table` elements point at; only a document that carries
@@ -230,6 +269,14 @@ public sealed class PdfExtractor : IExtractor
         bool documentIsStructured = structured is not null && ReferenceEquals(doc, structured);
         InjectUnrepresentedTableElements(
             doc, documentIsStructured || !config.OutputFormat.Equals(OutputFormat.Plain));
+
+        // Bookmarks are links: external URLs as hyperlinks, internal destinations as anchors.
+        foreach (var uri in PdfBookmarks.ExtractBookmarkUris(outline)) doc.PushUri(uri);
+
+        if (pdfOptions.ExtractAnnotations)
+            AttachAnnotations(doc, pdf, pageWords);
+        if (pdfOptions.ExtractEmbeddedFiles)
+            AttachEmbeddedFiles(doc, pdf, config);
 
         if (meta.IsEncrypted && pdf.Decryptor is null && nativeText.Length == 0)
             doc.ProcessingWarnings.Add(new ProcessingWarning
@@ -254,6 +301,114 @@ public sealed class PdfExtractor : IExtractor
         }
 
         return doc;
+    }
+
+    private static PdfPermissions ToPermissions(PdfPermissionFlags f) => new()
+    {
+        Raw = f.Raw, Print = f.Print, Modify = f.Modify, Copy = f.Copy, Annotate = f.Annotate,
+        FillForms = f.FillForms, ExtractForAccessibility = f.ExtractForAccessibility,
+        Assemble = f.Assemble, PrintHighQuality = f.PrintHighQuality,
+    };
+
+    /// <summary>
+    /// Read the page annotations onto the document, and surface the links among them as URIs.
+    /// A failure costs the annotations, not the document.
+    /// </summary>
+    private static void AttachAnnotations(InternalDocument doc, PdfDocument pdf, List<List<TableSpan>> pageWords)
+    {
+        try
+        {
+            var annotations = PdfAnnotations.Extract(pdf, pageWords, doc.ProcessingWarnings);
+            if (annotations.Count == 0) return;
+            doc.Annotations = annotations;
+
+            foreach (var a in annotations)
+            {
+                if (a.AnnotationType != PdfAnnotationType.Link) continue;
+                string? url = a.Content ?? a.Destination;
+                if (url is null) continue;
+                var kind = url.StartsWith('#') ? UriKind.Anchor
+                    : url.StartsWith("mailto:", StringComparison.Ordinal) ? UriKind.Email
+                    : UriKind.Hyperlink;
+                doc.PushUri(new ExtractedUri { Url = url, Label = url, Page = a.PageNumber, Kind = kind });
+            }
+        }
+        catch (Exception e) when (Cancel.NotCancelling)
+        {
+            doc.ProcessingWarnings.Add(new ProcessingWarning
+            {
+                Source = "pdf_annotations",
+                Message = $"annotation extraction failed: {e.Message}",
+            });
+        }
+    }
+
+    /// <summary>
+    /// List the document's attachments and extract each one this package reads through the normal
+    /// pipeline into <c>Children</c>, one archive level deeper and under the same size, ratio and
+    /// depth limits an archive's members get.
+    /// </summary>
+    private static void AttachEmbeddedFiles(InternalDocument doc, PdfDocument pdf, ExtractionConfig config)
+    {
+        List<PdfEmbeddedFile> files;
+        try { files = PdfEmbeddedFiles.Collect(pdf, config, doc.ProcessingWarnings); }
+        catch (Exception e) when (Cancel.NotCancelling)
+        {
+            doc.ProcessingWarnings.Add(new ProcessingWarning
+            {
+                Source = "pdf_embedded_files",
+                Message = $"embedded file extraction failed: {e.Message}",
+            });
+            return;
+        }
+        if (files.Count == 0) return;
+
+        var options = config.Pdf ?? new PdfOptions();
+        var attachments = new List<ExtractedAttachment>(files.Count);
+        var children = new List<ArchiveEntry>();
+        foreach (var file in files)
+        {
+            Cancel.ThrowIfRequested();
+            var attachment = new ExtractedAttachment
+            {
+                Name = file.Name,
+                MimeType = file.MimeType,
+                Size = file.Data.LongLength,
+                CompressedSize = file.CompressedSize,
+                Description = file.Description,
+                Relationship = file.Relationship,
+                Created = file.Created,
+                Modified = file.Modified,
+                Source = file.Source,
+                PageNumber = file.PageNumber,
+                SkippedReason = file.SkippedReason,
+                Data = options.AttachEmbeddedFileBytes && file.SkippedReason is null ? file.Data : null,
+            };
+            attachments.Add(attachment);
+            if (file.SkippedReason is not null || file.Data.Length == 0) continue;
+
+            string? mime = ChildMime(file);
+            if (mime is null || mime == Mime.OctetStream) continue;
+            var entry = ArchiveDocument.TryExtractChild(
+                file.Name, file.Data, mime, config, "pdf_embedded_files", doc.ProcessingWarnings);
+            if (entry is not null) children.Add(entry);
+            else attachment.SkippedReason ??= "not extracted (see processing warnings)";
+        }
+        doc.Attachments = attachments;
+        if (children.Count > 0) (doc.Children ??= new List<ArchiveEntry>()).AddRange(children);
+    }
+
+    /// <summary>
+    /// The type to extract an attachment as: what its bytes say when that is specific, else the
+    /// filespec's own claim, else its name.
+    /// </summary>
+    private static string? ChildMime(PdfEmbeddedFile file)
+    {
+        string? sniffed = Mime.DetectMimeTypeFromBytes(file.Data);
+        bool specific = sniffed is not null && sniffed != Mime.OctetStream && sniffed != "text/plain";
+        if (specific) return sniffed;
+        if (file.MimeType is { Length: > 0 } declared && declared != Mime.OctetStream) return declared;
+        return sniffed ?? Mime.DetectMimeType(file.Name, checkExists: false);
     }
 
     /// <summary>
@@ -354,7 +509,7 @@ public sealed class PdfExtractor : IExtractor
                 tables.AddRange(
                     PdfSpatialTables.DetectPageRuledTables(pageWords[i], pagePaths[i], pageNumber, config));
             }
-            catch { }
+            catch (Exception) when (Cancel.NotCancelling) { }
         }
         return tables;
     }
@@ -585,7 +740,7 @@ public sealed class PdfExtractor : IExtractor
                 var formValues = CollectWidgetTextValues(pdf, i);
                 pageText = AppendMissingWidgetValues(pageText, formValues);
             }
-            catch { pageText = ""; segs = new(); words = new(); paths = new(); }
+            catch (Exception) when (Cancel.NotCancelling) { pageText = ""; segs = new(); words = new(); paths = new(); }
 
             pageSegments.Add(segs);
             pageWords.Add(words);

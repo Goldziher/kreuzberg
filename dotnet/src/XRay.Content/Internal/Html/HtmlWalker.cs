@@ -1213,7 +1213,7 @@ public sealed class HtmlWalker
         if (html5NumericTable && Html5NumericReplacements.TryGetValue(cp, out int replacement))
             cp = replacement;
         try { return char.ConvertFromUtf32(cp); }
-        catch { return null; }
+        catch (Exception) when (Cancel.NotCancelling) { return null; }
     }
 
     internal static string DecodeEntities(string s)
@@ -1264,7 +1264,7 @@ public sealed class HtmlWalker
                 else if (int.TryParse(num, out var d)) cp = d;
                 if (cp is not null && cp >= 0 && cp <= 0x10FFFF)
                 {
-                    try { outp.Append(char.ConvertFromUtf32(cp.Value)); continue; } catch { }
+                    try { outp.Append(char.ConvertFromUtf32(cp.Value)); continue; } catch (Exception) when (Cancel.NotCancelling) { }
                 }
             }
             // Unknown entity — preserve raw. Only re-emit the trailing ';' when the source

@@ -45,7 +45,7 @@ public sealed class OoxmlPackage : IDisposable
         var text = ReadString(partName);
         if (text is null) return null;
         try { return XDocument.Parse(text, LoadOptions.PreserveWhitespace); }
-        catch { return null; }
+        catch (Exception) when (Cancel.NotCancelling) { return null; }
     }
 
     /// <summary>All part names, in archive order.</summary>

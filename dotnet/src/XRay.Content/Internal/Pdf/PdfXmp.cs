@@ -28,8 +28,14 @@ internal sealed class XmpMetadata
     public string? PdfProducer;
     public string? PdfKeywords;
 
+    /// <summary>
+    /// Other single-valued properties worth keeping (rights, language, PDF/A conformance,
+    /// document ids), by their qualified name. Surfaced as <c>Metadata.Additional["xmp"]</c>.
+    /// </summary>
+    public SortedDictionary<string, string> Extra = new(StringComparer.Ordinal);
+
     /// <summary>Whether the packet parsed but carried nothing worth reporting.</summary>
-    public bool IsEmpty =>
+    public bool IsEmpty => Extra.Count == 0 &&
         DcTitle is null && DcCreator.Count == 0 && DcDescription is null && DcSubject.Count == 0
         && XmpCreatorTool is null && XmpCreateDate is null && XmpModifyDate is null
         && PdfProducer is null && PdfKeywords is null;
@@ -56,7 +62,7 @@ internal static class PdfXmp
             var xmp = Parse(DecodeXmlBytes(bytes));
             return xmp is null || xmp.IsEmpty ? null : xmp;
         }
-        catch (Exception)
+        catch (Exception) when (Cancel.NotCancelling)
         {
             // A malformed packet costs the fields it would have carried, nothing else.
             return null;
@@ -199,6 +205,14 @@ internal static class PdfXmp
             case "xmp:ModifyDate": m.XmpModifyDate = text; break;
             case "pdf:Producer": m.PdfProducer = text; break;
             case "pdf:Keywords": m.PdfKeywords = text; break;
+            case "dc:rights" or "dc:language" or "dc:publisher" or "dc:identifier" or "dc:format" or "dc:source"
+                or "xmp:MetadataDate" or "xmp:Label" or "xmp:Rating" or "xmp:BaseURL"
+                or "pdfaid:part" or "pdfaid:conformance" or "pdfaid:amd"
+                or "pdfx:GTS_PDFXVersion" or "pdf:PDFVersion" or "pdf:Trapped"
+                or "xmpMM:DocumentID" or "xmpMM:InstanceID" or "xmpMM:VersionID":
+                // First value wins, as for the single-valued properties above.
+                if (!m.Extra.ContainsKey(property)) m.Extra[property] = text;
+                break;
         }
     }
 }

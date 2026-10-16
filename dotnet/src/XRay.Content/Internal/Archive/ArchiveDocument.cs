@@ -28,42 +28,15 @@ internal static class ArchiveDocument
         var warnings = new List<ProcessingWarning>();
         if (_depth < MaxArchiveDepth && read.FileBytes.Count > 0)
         {
+            int entryIndex = 0;
             foreach (var (path, bytes) in read.FileBytes)
             {
+                Cancel.Every(entryIndex++, 0x07);
                 string? mime = DetectChildMime(path, bytes);
                 if (mime is null || mime == Mime.OctetStream) continue;
 
-                _depth++;
-                try
-                {
-                    var result = new Extractor().Extract(ExtractInput.FromBytes(bytes, mime, path), config);
-                    var childDoc = result.Results.FirstOrDefault();
-                    if (result.Errors.Count > 0 || childDoc is null)
-                    {
-                        string msg = result.Errors.Count > 0 ? result.Errors[0].Message : "no result";
-                        warnings.Add(new ProcessingWarning
-                        {
-                            Source = "archive_recursive_extraction",
-                            Message = $"Failed to extract '{path}': {msg}",
-                        });
-                    }
-                    else
-                    {
-                        children.Add(new ArchiveEntry { Path = path, MimeType = mime, Result = childDoc });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    warnings.Add(new ProcessingWarning
-                    {
-                        Source = "archive_recursive_extraction",
-                        Message = $"Failed to extract '{path}': {ex.Message}",
-                    });
-                }
-                finally
-                {
-                    _depth--;
-                }
+                if (TryExtractChild(path, bytes, mime, config, "archive_recursive_extraction", warnings) is { } entry)
+                    children.Add(entry);
             }
         }
 
@@ -110,7 +83,44 @@ internal static class ArchiveDocument
         return doc;
     }
 
-    private static string? DetectChildMime(string path, byte[] bytes)
+    /// <summary>
+    /// Extract one child document through the public pipeline, one archive level deeper. A child
+    /// that fails — or exceeds the recursion depth — becomes a warning on the parent and no entry;
+    /// a cancellation is never absorbed.
+    /// </summary>
+    /// <returns>The entry, or null when the child could not be extracted.</returns>
+    internal static ArchiveEntry? TryExtractChild(
+        string path, byte[] bytes, string mime, ExtractionConfig config, string warningSource,
+        List<ProcessingWarning> warnings)
+    {
+        if (_depth >= MaxArchiveDepth) return null;
+        Cancel.ThrowIfRequested();
+        _depth++;
+        try
+        {
+            var result = Extractor.Shared.Extract(ExtractInput.FromBytes(bytes, mime, path), config);
+            var childDoc = result.Results.FirstOrDefault();
+            if (result.Errors.Count > 0 || childDoc is null)
+            {
+                string msg = result.Errors.Count > 0 ? result.Errors[0].Message : "no result";
+                warnings.Add(new ProcessingWarning { Source = warningSource, Message = $"Failed to extract '{path}': {msg}" });
+                return null;
+            }
+            return new ArchiveEntry { Path = path, MimeType = mime, Result = childDoc };
+        }
+        catch (Exception ex) when (Cancel.NotCancelling)
+        {
+            warnings.Add(new ProcessingWarning { Source = warningSource, Message = $"Failed to extract '{path}': {ex.Message}" });
+            return null;
+        }
+        finally
+        {
+            _depth--;
+        }
+    }
+
+    /// <summary>The MIME type of a child: what its bytes say, else what its name says.</summary>
+    internal static string? DetectChildMime(string path, byte[] bytes)
     {
         string? detected = Mime.DetectMimeTypeFromBytes(bytes);
         if (detected is not null && detected != Mime.OctetStream) return detected;

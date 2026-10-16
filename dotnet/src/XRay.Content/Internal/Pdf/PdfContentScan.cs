@@ -32,7 +32,7 @@ internal static class PdfContentScan
             content = doc.GetPageContent(pageIndex);
             resources = doc.Resolve(doc.Pages[pageIndex].Get("Resources")).AsDict();
         }
-        catch { return walk; }
+        catch (Exception) when (Cancel.NotCancelling) { return walk; }
 
         Run(doc, walk, content, resources, Matrix.Identity, 0);
         return walk;
@@ -117,7 +117,7 @@ internal static class PdfContentScan
                         break;
                 }
             }
-            catch { /* detection is advisory; keep walking */ }
+            catch (Exception) when (Cancel.NotCancelling) { /* detection is advisory; keep walking */ }
 
             operands.Clear();
         }
@@ -154,7 +154,7 @@ internal static class PdfContentScan
             m = MatrixFrom(fm.Items, 0).Multiply(ctm);
 
         var formRes = doc.Resolve(st.Dict.Get("Resources")).AsDict();
-        try { Run(doc, walk, doc.DecodeStream(st), formRes, m, depth + 1); } catch { }
+        try { Run(doc, walk, doc.DecodeStream(st), formRes, m, depth + 1); } catch (Exception) when (Cancel.NotCancelling) { }
     }
 
     private static void InlineImage(PdfDocument doc, ScanWalk walk, PdfLexer lex, Matrix ctm)

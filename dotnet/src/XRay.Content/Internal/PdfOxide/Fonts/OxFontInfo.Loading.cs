@@ -42,7 +42,7 @@ internal sealed partial class OxFontInfo
         {
             return FromDictCore(fontDict, doc);
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             // A font that throws here would take the whole page's text with it.
             return new OxFontInfo

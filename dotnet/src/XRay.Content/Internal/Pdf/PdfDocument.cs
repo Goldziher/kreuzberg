@@ -28,17 +28,33 @@ public sealed class PdfDocument
 
     private PdfDocument(byte[] buf) => _buf = buf;
 
-    public static PdfDocument Open(byte[] bytes)
+    public static PdfDocument Open(byte[] bytes) => Open(bytes, null);
+
+    /// <summary>
+    /// Open a document, authenticating an encrypted one with the first of <paramref name="passwords"/>
+    /// that works (each tried as the user password, then as the owner password) and finally with the
+    /// empty password. A document that no password opens still loads: <see cref="IsEncrypted"/> is
+    /// true, <see cref="Decryptor"/> is null and <see cref="Encryption"/> says what it declares, so the
+    /// caller can tell "needs a password" from "corrupt".
+    /// </summary>
+    public static PdfDocument Open(byte[] bytes, IReadOnlyList<string>? passwords)
     {
         var doc = new PdfDocument(bytes);
         doc.ReadHeader();
         try { doc.ReadXref(); }
-        catch { /* fall through to brute-force */ }
+        catch (Exception) when (Cancel.NotCancelling) { /* fall through to brute-force */ }
         if (doc._xref.Count == 0 || doc.Trailer.Get("Root") == null || !doc.RootIsValid())
             doc.BruteForceScan();
-        doc.SetupDecryption();
+        doc.SetupDecryption(passwords);
         return doc;
     }
+
+    /// <summary>
+    /// What the <c>/Encrypt</c> dictionary declares (algorithm, key length, permissions) and how
+    /// the document authenticated; null when the document is not encrypted or the dictionary is
+    /// unreadable.
+    /// </summary>
+    public PdfEncryptionInfo? Encryption { get; private set; }
 
     private void ReadHeader()
     {
@@ -376,7 +392,7 @@ public sealed class PdfDocument
         int n = (int)(st.Dict.Get("N").AsLong() ?? 0);
         // Header data must be decoded; but header is in the decoded stream before First.
         byte[] data;
-        try { data = PdfFilters.Decode(st, this); } catch { return (nums, offsets); }
+        try { data = PdfFilters.Decode(st, this); } catch (Exception) when (Cancel.NotCancelling) { return (nums, offsets); }
         var lex = new PdfLexer(data, 0, ResolveRaw);
         for (int i = 0; i < n; i++)
         {
@@ -388,7 +404,7 @@ public sealed class PdfDocument
     }
 
     // ---- decryption setup ----
-    private void SetupDecryption()
+    private void SetupDecryption(IReadOnlyList<string>? passwords)
     {
         var enc = Trailer.Get("Encrypt");
         if (enc == null) return;
@@ -398,7 +414,17 @@ public sealed class PdfDocument
         byte[]? id = null;
         if (Trailer.Get("ID").AsArray() is PdfArray idArr && idArr.Items.Count > 0 && idArr.Items[0] is PdfString ids)
             id = ids.Bytes;
-        try { Decryptor = PdfDecryptor.TryCreate(encDict, id, this); } catch { Decryptor = null; }
+        try
+        {
+            Encryption = PdfDecryptor.Describe(encDict, this);
+            if (!Encryption.Supported) return;
+            Decryptor = PdfDecryptor.TryCreate(encDict, id, this, passwords, Encryption);
+            Encryption.RequiresPassword = Decryptor is null || Encryption.RequiresPassword;
+        }
+        catch (Exception) when (Cancel.NotCancelling) { Decryptor = null; }
+        // Anything parsed while the document was still locked was parsed from ciphertext.
+        _cache.Clear();
+        _objStmCache.Clear();
     }
 
     public bool IsEncrypted => Trailer.Get("Encrypt") != null;

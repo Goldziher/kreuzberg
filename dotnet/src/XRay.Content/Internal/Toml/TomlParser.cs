@@ -349,7 +349,7 @@ internal static class TomlParser
             if (s.StartsWith("0o", StringComparison.Ordinal)) { value = Convert.ToInt64(s.Substring(2), 8); return true; }
             if (s.StartsWith("0b", StringComparison.Ordinal)) { value = Convert.ToInt64(s.Substring(2), 2); return true; }
         }
-        catch { return false; }
+        catch (Exception) when (Cancel.NotCancelling) { return false; }
         return long.TryParse(s, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value);
     }
 

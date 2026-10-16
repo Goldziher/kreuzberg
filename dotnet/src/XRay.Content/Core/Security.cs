@@ -340,7 +340,7 @@ public static class ZipBombValidator
         {
             Validate(archive, limits ?? new SecurityLimits());
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             archive.Dispose();
             throw;
@@ -379,7 +379,7 @@ public static class ZipBombValidator
                 compressed = (ulong)entries[index].CompressedLength;
                 uncompressed = (ulong)entries[index].Length;
             }
-            catch (Exception e)
+            catch (Exception e) when (Cancel.NotCancelling)
             {
                 throw SecurityException.UnreadableEntry(index, e.Message);
             }

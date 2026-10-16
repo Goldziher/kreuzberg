@@ -73,7 +73,7 @@ public sealed class HwpxExtractor : IExtractor
 
         XDocument doc;
         try { doc = XDocument.Parse(hpf); }
-        catch { return m; }
+        catch (Exception) when (Cancel.NotCancelling) { return m; }
 
         string? title = null, creator = null, subject = null, date = null, modified = null, generator = null;
         var keywords = new List<string>();
@@ -121,7 +121,7 @@ public sealed class HwpxExtractor : IExtractor
 
         XDocument doc;
         try { doc = XDocument.Parse(headerXml); }
-        catch { return map; }
+        catch (Exception) when (Cancel.NotCancelling) { return map; }
 
         foreach (var el in doc.Descendants())
         {
@@ -262,7 +262,7 @@ public sealed class HwpxExtractor : IExtractor
                         && href.ToLowerInvariant().Contains("section"))
                         sections.Add(href);
             }
-            catch { /* fall through to scan */ }
+            catch (Exception) when (Cancel.NotCancelling) { /* fall through to scan */ }
         }
 
         if (sections.Count == 0)

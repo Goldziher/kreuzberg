@@ -129,7 +129,7 @@ internal static class OxPageExtractor
 
         List<OxTextChar> chars;
         try { chars = prepared.Value.Extractor.ExtractOwned(prepared.Value.Content); }
-        catch { return new List<OxTextChar>(); }
+        catch (Exception) when (Cancel.NotCancelling) { return new List<OxTextChar>(); }
 
         OxSpanCompare.SortStable(chars, (a, b) =>
         {
@@ -155,7 +155,7 @@ internal static class OxPageExtractor
             var spans = prepared.Value.Extractor.ExtractTextSpans(prepared.Value.Content);
             return (spans, prepared.Value.Extractor.TakeMcActualTextMcids());
         }
-        catch { return (new List<OxTextSpan>(), new HashSet<int>()); }
+        catch (Exception) when (Cancel.NotCancelling) { return (new List<OxTextSpan>(), new HashSet<int>()); }
     }
 
     /// <summary>
@@ -170,7 +170,7 @@ internal static class OxPageExtractor
 
         byte[] content;
         try { content = doc.GetPageContent(pageIndex); }
-        catch { return null; }
+        catch (Exception) when (Cancel.NotCancelling) { return null; }
         if (content.Length == 0 || !OxTextExtractor.MayContainText(content)) return null;
 
         var extractor = new OxTextExtractor();

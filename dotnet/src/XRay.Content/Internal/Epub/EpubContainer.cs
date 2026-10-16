@@ -36,7 +36,7 @@ internal static class EpubContainer
         {
             doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
         }
-        catch (Exception e)
+        catch (Exception e) when (Cancel.NotCancelling)
         {
             throw new EpubParseException($"Failed to parse container.xml: {e.Message}");
         }
@@ -79,7 +79,7 @@ internal static class EpubContainer
             stream.CopyTo(ms);
             return ms.ToArray();
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             return Array.Empty<byte>();
         }

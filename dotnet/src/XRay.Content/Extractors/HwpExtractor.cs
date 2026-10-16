@@ -265,9 +265,9 @@ public sealed class HwpExtractor : IExtractor
     {
         if (data.Length == 0) return Array.Empty<byte>();
         // Raw deflate (HWP standard).
-        try { return Inflate(data, 0); } catch { }
+        try { return Inflate(data, 0); } catch (Exception) when (Cancel.NotCancelling) { }
         // zlib (skip 2-byte header).
-        if (data.Length > 2) { try { return Inflate(data, 2); } catch { } }
+        if (data.Length > 2) { try { return Inflate(data, 2); } catch (Exception) when (Cancel.NotCancelling) { } }
         return data;
     }
 

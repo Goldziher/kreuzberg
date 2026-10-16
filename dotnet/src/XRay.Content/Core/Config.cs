@@ -143,6 +143,14 @@ public sealed class ExtractionConfig
     public OcrOptions? Ocr { get; set; }
 
     /// <summary>
+    /// PDF-specific settings: passwords for encrypted documents, annotation and embedded-file
+    /// extraction. Null takes the defaults of <see cref="PdfOptions"/>.
+    /// </summary>
+    [JsonPropertyName("pdf")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PdfOptions? Pdf { get; set; }
+
+    /// <summary>
     /// Whether anything in this configuration needs an extracted image's bytes, rather than just
     /// the fact that an image was there.
     /// </summary>

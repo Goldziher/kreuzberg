@@ -7,11 +7,22 @@ namespace XRay.Content.Internal.Pdf;
 public static class PdfFilters
 {
     /// <summary>Decode a stream's raw data by applying its /Filter chain.</summary>
-    public static byte[] Decode(PdfStream stream, PdfDocument doc)
+    public static byte[] Decode(PdfStream stream, PdfDocument doc) => Decode(stream, doc, long.MaxValue);
+
+    /// <summary>
+    /// Decode a stream, stopping with a <see cref="Core.SecurityException"/> as soon as a filter
+    /// would produce more than <paramref name="maxBytes"/>: the guard against a few kilobytes that
+    /// inflate to gigabytes.
+    /// </summary>
+    public static byte[] Decode(PdfStream stream, PdfDocument doc, long maxBytes)
     {
         byte[] data = stream.RawData;
         var filters = GetNameList(stream.Dict.Get("Filter") ?? stream.Dict.Get("F"), doc);
-        if (filters.Count == 0) return data;
+        if (filters.Count == 0)
+        {
+            if (data.LongLength > maxBytes) throw Core.SecurityException.ContentTooLarge(data.LongLength, maxBytes);
+            return data;
+        }
         var parms = GetDictList(stream.Dict.Get("DecodeParms") ?? stream.Dict.Get("DP"), doc, filters.Count);
 
         for (int i = 0; i < filters.Count; i++)
@@ -20,7 +31,7 @@ public static class PdfFilters
             PdfDict? parm = i < parms.Count ? parms[i] : null;
             data = f switch
             {
-                "FlateDecode" or "Fl" => ApplyPredictor(Inflate(data), parm, doc),
+                "FlateDecode" or "Fl" => ApplyPredictor(Inflate(data, maxBytes), parm, doc),
                 "LZWDecode" or "LZW" => ApplyPredictor(LzwDecode(data, EarlyChange(parm, doc)), parm, doc),
                 "ASCIIHexDecode" or "AHx" => AsciiHexDecode(data),
                 "ASCII85Decode" or "A85" => Ascii85Decode(data),
@@ -28,6 +39,8 @@ public static class PdfFilters
                 // Image filters (DCT/CCITT/JBIG2/JPX) are not decoded for text; return as-is.
                 _ => data,
             };
+            if (data.LongLength > maxBytes)
+                throw Core.SecurityException.ContentTooLarge(data.LongLength, maxBytes);
         }
         return data;
     }
@@ -61,7 +74,9 @@ public static class PdfFilters
         return ec != 0;
     }
 
-    public static byte[] Inflate(byte[] data)
+    public static byte[] Inflate(byte[] data) => Inflate(data, long.MaxValue);
+
+    public static byte[] Inflate(byte[] data, long maxBytes)
     {
         // zlib stream: skip 2-byte header if present.
         int offset = 0;
@@ -75,10 +90,10 @@ public static class PdfFilters
             using var input = new MemoryStream(data, offset, data.Length - offset);
             using var ds = new DeflateStream(input, CompressionMode.Decompress);
             using var outMs = new MemoryStream();
-            ds.CopyTo(outMs);
+            CopyBounded(ds, outMs, maxBytes);
             return outMs.ToArray();
         }
-        catch
+        catch (Exception e) when (Cancel.NotCancelling && e is not Core.SecurityException)
         {
             // Retry raw (no header skip) as a fallback.
             try
@@ -86,10 +101,28 @@ public static class PdfFilters
                 using var input = new MemoryStream(data);
                 using var ds = new DeflateStream(input, CompressionMode.Decompress);
                 using var outMs = new MemoryStream();
-                ds.CopyTo(outMs);
+                CopyBounded(ds, outMs, maxBytes);
                 return outMs.ToArray();
             }
-            catch { return Array.Empty<byte>(); }
+            catch (Exception e2) when (Cancel.NotCancelling && e2 is not Core.SecurityException) { return Array.Empty<byte>(); }
+        }
+    }
+
+    /// <summary>
+    /// <see cref="Stream.CopyTo(Stream)"/> that gives up past <paramref name="maxBytes"/> and
+    /// notices a cancellation between chunks, so inflating a huge stream is neither unbounded nor
+    /// uninterruptible.
+    /// </summary>
+    private static void CopyBounded(Stream source, MemoryStream destination, long maxBytes)
+    {
+        var buffer = new byte[81920];
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            Cancel.ThrowIfRequested();
+            destination.Write(buffer, 0, read);
+            if (destination.Length > maxBytes)
+                throw Core.SecurityException.ContentTooLarge(destination.Length, maxBytes);
         }
     }
 

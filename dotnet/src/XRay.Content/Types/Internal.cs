@@ -209,12 +209,16 @@ public sealed class InternalDocument
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ArchiveEntry>? Children { get; set; }
 
+    /// <summary>See <see cref="ExtractedDocument.Attachments"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ExtractedAttachment>? Attachments { get; set; }
+
     public string MimeType { get; set; } = "application/octet-stream";
 
     public List<ProcessingWarning> ProcessingWarnings { get; set; } = new();
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<object>? Annotations { get; set; }
+    public List<PdfAnnotation>? Annotations { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<PageContent>? PrebuiltPages { get; set; }
@@ -223,7 +227,7 @@ public sealed class InternalDocument
     public string? PreRenderedContent { get; set; }
 
     [JsonIgnore] public List<object>? Revisions { get; set; }
-    [JsonIgnore] public List<object> FormFields { get; set; } = new();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<PdfFormField>? FormFields { get; set; }
     [JsonIgnore] public List<object> Formulas { get; set; } = new();
 
     private const int MaxUris = 100_000;

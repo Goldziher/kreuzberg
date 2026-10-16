@@ -16,6 +16,9 @@ public static class HtmlRenderer
     public static string Render(InternalDocument doc)
     {
         var root = ComrakBridge.Build(doc);
-        return HtmlFormatter.Format(root);
+        string html = HtmlFormatter.Format(root);
+        if (doc.Annotations is { Count: > 0 } annotations)
+            html += RenderCommon.RenderAnnotationsHtml(annotations);
+        return html;
     }
 }

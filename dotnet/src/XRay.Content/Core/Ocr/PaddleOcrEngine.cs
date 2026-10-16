@@ -93,7 +93,7 @@ internal sealed class PaddleOcrEngine : IOcrEngine
         {
             page = ImageIO.Load(imageBytes);
         }
-        catch (Exception e) when (e is not OcrUnavailableException)
+        catch (Exception e) when (e is not OcrUnavailableException && Cancel.NotCancelling)
         {
             // An image this port could extract but the decoder cannot read is one image's
             // problem, not the document's: report nothing and let the caller carry on.

@@ -113,7 +113,7 @@ public sealed class ImageExtractor : IExtractor
 
         int frameCount;
         try { frameCount = Image.Identify(bytes).FrameMetadataCollection.Count; }
-        catch { return; }
+        catch (Exception) when (Cancel.NotCancelling) { return; }
 
         DocumentLimits.EnforcePageCount(frameCount, limits);
     }

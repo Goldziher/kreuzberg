@@ -11,11 +11,59 @@ public sealed class Extractor
 {
     private readonly Registry _registry;
 
+    /// <summary>
+    /// One default-registry extractor for the library's own recursive calls (archive members, PDF
+    /// attachments). Building a registry reflects over the assembly, which is not work to repeat
+    /// per archive entry.
+    /// </summary>
+    internal static Extractor Shared => SharedLazy.Value;
+
+    private static readonly Lazy<Extractor> SharedLazy = new(() => new Extractor(), isThreadSafe: true);
+
     public Extractor() : this(Registry.RegisterDefaults()) { }
 
     public Extractor(Registry registry) => _registry = registry;
 
-    public ExtractionResult Extract(ExtractInput input, ExtractionConfig config)
+    public ExtractionResult Extract(ExtractInput input, ExtractionConfig config) =>
+        Extract(input, config, CancellationToken.None);
+
+    /// <summary>
+    /// Extract one input, cooperatively cancellable.
+    /// </summary>
+    /// <remarks>
+    /// The token is polled by MIME detection, every extractor's page / part / record / entry loops,
+    /// the layout and ONNX stages, the OCR pass and the render stages, so a cancelled call returns
+    /// within a bounded slice of work rather than at the end of the document. Cancellation throws
+    /// <see cref="OperationCanceledException"/>; it is never folded into
+    /// <see cref="ExtractionResult.Errors"/> or a processing warning. A token that is already
+    /// cancelled throws before any input is read.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+    public ExtractionResult Extract(ExtractInput input, ExtractionConfig config, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var scope = Cancel.Begin(cancellationToken);
+        try
+        {
+            return ExtractCore(input, config);
+        }
+        catch (Exception ex) when (IsCancellation(ex, cancellationToken))
+        {
+            throw new OperationCanceledException(cancellationToken.IsCancellationRequested
+                ? cancellationToken
+                : Cancel.Token);
+        }
+    }
+
+    /// <summary>Whether <paramref name="ex"/> is a cancellation, however it was wrapped on the way out.</summary>
+    private static bool IsCancellation(Exception ex, CancellationToken token) =>
+        ex is OperationCanceledException
+        || token.IsCancellationRequested
+        || Cancel.Requested
+        || (ex is AggregateException agg && agg.InnerExceptions.Count > 0
+            && agg.InnerExceptions.All(inner => IsCancellation(inner, token)));
+
+    private ExtractionResult ExtractCore(ExtractInput input, ExtractionConfig config)
     {
         var result = new ExtractionResult();
         try
@@ -56,13 +104,15 @@ public sealed class Extractor
                 result.Results.Add(extracted);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (Cancel.NotCancelling && ex is not OperationCanceledException)
         {
             // Upstream's `extraction_error_type` / `extraction_error_code` taxonomy. Only the
             // variants this port can actually raise are distinguished; everything else lands on
             // the same catch-all upstream uses for the variants it does not name.
             var (errorType, code) = ex switch
             {
+                PdfPasswordRequiredException { PasswordWasSupplied: true } => ("invalid_password", 1011u),
+                PdfPasswordRequiredException => ("password_required", 1010u),
                 SecurityException => ("security", 1006u),
                 ValidationException => ("validation", 1002u),
                 IOException => ("io", 1001u),
@@ -88,7 +138,18 @@ public sealed class Extractor
     }
 
     public Task<ExtractionResult> ExtractAsync(ExtractInput input, ExtractionConfig config) =>
-        Task.FromResult(Extract(input, config));
+        ExtractAsync(input, config, CancellationToken.None);
+
+    /// <summary>
+    /// Run <see cref="Extract(ExtractInput, ExtractionConfig, CancellationToken)"/> on the thread
+    /// pool. A token cancelled before the work starts yields a cancelled task without running it.
+    /// </summary>
+    public Task<ExtractionResult> ExtractAsync(
+        ExtractInput input, ExtractionConfig config, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return Task.FromCanceled<ExtractionResult>(cancellationToken);
+        return Task.Run(() => Extract(input, config, cancellationToken), cancellationToken);
+    }
 
     private static (byte[] Bytes, string MimeType) Resolve(ExtractInput input, ExtractionConfig config)
     {

@@ -93,7 +93,7 @@ public sealed class OdsExtractor : IExtractor
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
             return XRay.Content.Internal.Odf.OdfMetadata.Extract(archive);
         }
-        catch
+        catch (Exception) when (Cancel.NotCancelling)
         {
             // A spreadsheet whose meta.xml is absent or malformed still has its sheets.
             return null;

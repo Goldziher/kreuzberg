@@ -74,7 +74,7 @@ internal static class HeaderDecoder
         if (enc == 'B')
         {
             try { bytes = ContentTransferDecoder.DecodeBase64(text); }
-            catch { return false; }
+            catch (Exception) when (Cancel.NotCancelling) { return false; }
         }
         else if (enc == 'Q')
         {

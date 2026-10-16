@@ -153,7 +153,7 @@ internal static class OxActualText
         if (cache.TreeLoaded) return cache.Tree;
         cache.TreeLoaded = true;
         try { cache.Tree = OxStructTree.Parse(doc); }
-        catch { cache.Tree = null; }
+        catch (Exception) when (Cancel.NotCancelling) { cache.Tree = null; }
         return cache.Tree;
     }
 

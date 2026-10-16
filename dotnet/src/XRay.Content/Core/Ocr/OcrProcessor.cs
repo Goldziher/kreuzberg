@@ -189,7 +189,7 @@ internal static class OcrProcessor
         {
             rendered = OcrPageRasterizer.Render(pdfBytes, pages, options.Dpi);
         }
-        catch (Exception e) when (e is not OcrUnavailableException)
+        catch (Exception e) when (e is not OcrUnavailableException && Cancel.NotCancelling)
         {
             Warn(doc, $"the scanned pages could not be rasterised for OCR: {e.Message}");
             return 0;
@@ -198,6 +198,7 @@ internal static class OcrProcessor
         int recognized = 0;
         foreach (var (page, png) in rendered)
         {
+            Cancel.ThrowIfRequested();
             if (!TryRecognize(doc, engine, png, options, $"page {page}", out var result)) break;
             if (!result.HasText) continue;
 
@@ -229,6 +230,7 @@ internal static class OcrProcessor
 
         foreach (int imageIndex in targets)
         {
+            Cancel.ThrowIfRequested();
             var image = doc.Images[imageIndex];
             if (!TryRecognize(doc, engine, image.Data, options, $"image {imageIndex}", out var result)) break;
             if (!result.HasText) continue;
@@ -323,7 +325,10 @@ internal static class OcrProcessor
         string what, out OcrImageResult result)
     {
         result = OcrImageResult.Empty;
-        using var timeout = new CancellationTokenSource(options.PerImageTimeout);
+        // Linked to the call's own token: the per-image budget abandons one image, the caller's
+        // cancellation abandons the whole extraction, and only the first becomes a warning.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Cancel.Token);
+        timeout.CancelAfter(options.PerImageTimeout);
         try
         {
             result = engine.Recognize(bytes, timeout.Token);
@@ -334,12 +339,12 @@ internal static class OcrProcessor
             Warn(doc, e.Message);
             return false;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (Cancel.NotCancelling)
         {
             Warn(doc, $"OCR of {what} exceeded {options.PerImageTimeout.TotalSeconds:0.#}s and was abandoned");
             return true;
         }
-        catch (Exception e)
+        catch (Exception e) when (Cancel.NotCancelling)
         {
             Warn(doc, $"OCR of {what} failed: {e.Message}");
             return true;

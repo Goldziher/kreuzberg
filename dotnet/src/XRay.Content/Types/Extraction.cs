@@ -235,10 +235,24 @@ public sealed class ExtractedDocument
     public List<ProcessingWarning> ProcessingWarnings { get; set; } = new();
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<object>? Annotations { get; set; }
+    public List<PdfAnnotation>? Annotations { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ArchiveEntry>? Children { get; set; }
+
+    /// <summary>
+    /// Files attached to the document (a PDF's embedded files, file-attachment annotations and
+    /// portfolio members): name, type, size and, when asked for, bytes. Null when there are none.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ExtractedAttachment>? Attachments { get; set; }
+
+    /// <summary>
+    /// The interactive form fields of a PDF (text, checkbox, radio, choice, button, signature)
+    /// with their values, options, page and rectangle. Null when the document has no AcroForm.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PdfFormField>? FormFields { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ExtractedUri>? Uris { get; set; }
