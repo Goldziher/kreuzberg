@@ -2963,7 +2963,7 @@ jobs:
           cargo-zigbuild-revision: "89c352ae6ff0bbafe17788da327764d9ef92240b"
           macos-dynamic-lookup: "false"
 
-      - uses: xberg-io/actions/build-swift-artifactbundle@v1
+      - uses: xberg-io/actions/build-swift-artifactbundle@7a65509ae3a6ebcee91745c0cbc1f8238d7b44dc
         id: libs
         with:
           crate-name: xberg-swift
@@ -2972,6 +2972,7 @@ jobs:
           include-ios-x86_64: "false"
           # Build-only: stages `<triple>/libxberg_swift.a` under libs-dir and assembles nothing.
           targets: ${{ matrix.target }}
+          zig-version: "0.17.0"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -3004,7 +3005,7 @@ jobs:
           merge-multiple: true
           path: swift-libs
 
-      - uses: xberg-io/actions/build-swift-artifactbundle@v1
+      - uses: xberg-io/actions/build-swift-artifactbundle@7a65509ae3a6ebcee91745c0cbc1f8238d7b44dc
         id: bundle
         with:
           crate-name: xberg-swift
