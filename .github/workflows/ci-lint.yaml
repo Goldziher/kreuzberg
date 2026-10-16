@@ -115,7 +115,7 @@ jobs:
           [ "${#wheels[@]}" -eq 1 ] && [ -f "${wheels[0]}" ]
           uvx --from twine==7.0.0 --with packaging==26.3 twine check --strict "${wheels[0]}"
       - name: Verify Hermes discovery and tool calls
-        run: uv run --no-project --python 3.11 --with mcp==1.28.1 --with PyYAML==6.0.3 python scripts/tests/test_hermes_plugin.py
+        run: uv run --no-project --python 3.11 --with mcp==2.3.0 --with PyYAML==6.0.3 python scripts/tests/test_hermes_plugin.py
 
       - name: Verify public skills and export ownership
         run: |
