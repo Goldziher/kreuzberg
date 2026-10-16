@@ -189,8 +189,8 @@ jobs:
           fi
         shell: bash
         env:
-          # ~keep Acknowledge Apple's debug unwind-size diagnostic while preserving unwind tables.
-          RUSTFLAGS: "${{ env.RUSTFLAGS }} ${{ runner.os == 'macOS' && '-C link-arg=-Wl,-no_warn_eh_frame_too_large' || '' }}"
+          # ~keep Optimize macOS tests to shrink __eh_frame below the compact-unwind table's 16 MB offset limit.
+          CARGO_PROFILE_TEST_OPT_LEVEL: "${{ runner.os == 'macOS' && '1' || '0' }}"
           LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH || '' }}
           DYLD_LIBRARY_PATH: ${{ env.DYLD_LIBRARY_PATH || '' }}
           DYLD_FALLBACK_LIBRARY_PATH: ${{ env.DYLD_FALLBACK_LIBRARY_PATH || '' }}
@@ -276,8 +276,8 @@ jobs:
           echo "Doctests passed in all crates."
         shell: bash
         env:
-          # ~keep Match the unit-test linker flags so doctests reuse its compiled dependencies.
-          RUSTFLAGS: "${{ env.RUSTFLAGS }} ${{ runner.os == 'macOS' && '-C link-arg=-Wl,-no_warn_eh_frame_too_large' || '' }}"
+          # ~keep Match the unit-test profile for consistent macOS code generation.
+          CARGO_PROFILE_TEST_OPT_LEVEL: "${{ runner.os == 'macOS' && '1' || '0' }}"
           LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH || '' }}
           DYLD_LIBRARY_PATH: ${{ env.DYLD_LIBRARY_PATH || '' }}
           DYLD_FALLBACK_LIBRARY_PATH: ${{ env.DYLD_FALLBACK_LIBRARY_PATH || '' }}
