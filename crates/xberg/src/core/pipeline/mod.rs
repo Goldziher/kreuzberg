@@ -703,6 +703,8 @@ async fn run_pipeline_impl(
                 crate::llm::usage::push_llm_usage(&mut result, usage);
             }
             Err(e) => {
+                let usage = crate::llm::usage::usage_from_error(&e);
+                crate::llm::usage::push_llm_usage(&mut result, usage);
                 tracing::warn!("Structured extraction failed: {e}");
                 result.processing_warnings.push(crate::types::ProcessingWarning {
                     source: std::borrow::Cow::Borrowed("structured_extraction"),

@@ -1800,6 +1800,10 @@ name = "structured_schema_validation"
 required-features = ["liter-llm", "tokio-runtime"]
 
 [[test]]
+name = "structured_failure_metadata"
+required-features = ["liter-llm", "tokio-runtime"]
+
+[[test]]
 name = "structured_pipeline"
 required-features = ["structured"]
 

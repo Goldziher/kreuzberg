@@ -29,6 +29,7 @@ use serde_json::Value;
 ///
 /// Returns an error if the LLM client cannot be constructed, the request fails,
 /// the response contains no content, or the response is not parseable JSON.
+/// Usage from a decoded response is available through [`super::usage::usage_from_error`].
 #[allow(clippy::field_reassign_with_default)]
 #[cfg_attr(alef, alef(skip))]
 pub async fn complete_with_json_schema(
@@ -72,20 +73,27 @@ pub async fn complete_with_json_schema(
         .first()
         .and_then(|c| c.message.content.as_ref().and_then(|m| m.as_text()))
         .ok_or_else(|| {
-            crate::XbergError::parsing(format!(
-                "LLM JSON-schema response ({source}) returned no content (model={}, {} choices)",
-                llm_config.model,
-                response.choices.len()
-            ))
+            super::usage::with_usage(
+                crate::XbergError::parsing(format!(
+                    "LLM JSON-schema response ({source}) returned no content (model={}, {} choices)",
+                    llm_config.model,
+                    response.choices.len()
+                )),
+                usage.clone(),
+            )
         })?;
 
     let cleaned = strip_markdown_fence(&text);
     let value = serde_json::from_str(cleaned).map_err(|e| {
-        crate::XbergError::parsing(format!(
-            "LLM JSON-schema response ({source}) returned invalid JSON (model={}): {e}\nRaw response: {}",
-            llm_config.model,
-            &text[..text.floor_char_boundary(text.len().min(200))]
-        ))
+        super::usage::with_usage(
+            crate::XbergError::parsing(format!(
+                "LLM JSON-schema response ({source}) returned invalid JSON (model={}) at line {}, column {}",
+                llm_config.model,
+                e.line(),
+                e.column()
+            )),
+            usage.clone(),
+        )
     })?;
 
     Ok((value, usage))
@@ -213,24 +221,32 @@ pub(crate) async fn extract_structured(
         .first()
         .and_then(|c| c.message.content.as_ref().and_then(|m| m.as_text()))
         .ok_or_else(|| {
-            crate::XbergError::parsing(format!(
-                "LLM structured extraction returned no content (model={}, {} choices)",
-                config.llm.model,
-                response.choices.len()
-            ))
+            super::usage::with_usage(
+                crate::XbergError::parsing(format!(
+                    "LLM structured extraction returned no content (model={}, {} choices)",
+                    config.llm.model,
+                    response.choices.len()
+                )),
+                usage.clone(),
+            )
         })?;
 
     let cleaned = strip_markdown_fence(&text);
 
     let value = serde_json::from_str(cleaned).map_err(|e| {
-        crate::XbergError::parsing(format!(
-            "LLM structured extraction returned invalid JSON at line {}, column {}",
-            e.line(),
-            e.column()
-        ))
+        super::usage::with_usage(
+            crate::XbergError::parsing(format!(
+                "LLM structured extraction returned invalid JSON at line {}, column {}",
+                e.line(),
+                e.column()
+            )),
+            usage.clone(),
+        )
     })?;
 
-    let value = validate_structured_output(value, validator).await?;
+    let value = validate_structured_output(value, validator)
+        .await
+        .map_err(|error| super::usage::with_usage(error, usage.clone()))?;
 
     Ok((value, usage))
 }
