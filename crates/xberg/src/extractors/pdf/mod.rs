@@ -1519,6 +1519,30 @@ mod formula_region_tests {
     }
 
     #[test]
+    fn matching_counts_find_a_complete_geometric_assignment_before_falling_back() {
+        let regions = [pt_box(10.0, 0.0, 25.0, 10.0), pt_box(5.0, 0.0, 15.0, 10.0)];
+        let slots = [Some(pt_box(10.0, 0.0, 20.0, 10.0)), Some(pt_box(20.0, 0.0, 30.0, 10.0))];
+        let assigned = super::assign_formula_slots(2, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(1), Some(0)]);
+    }
+
+    #[test]
+    fn matching_counts_complete_a_chain_of_contested_slots() {
+        let regions = [
+            pt_box(10.0, 0.0, 25.0, 10.0),
+            pt_box(20.0, 0.0, 35.0, 10.0),
+            pt_box(5.0, 0.0, 15.0, 10.0),
+        ];
+        let slots = [
+            Some(pt_box(10.0, 0.0, 20.0, 10.0)),
+            Some(pt_box(20.0, 0.0, 30.0, 10.0)),
+            Some(pt_box(30.0, 0.0, 40.0, 10.0)),
+        ];
+        let assigned = super::assign_formula_slots(3, &slots, Some(&regions));
+        assert_eq!(assigned, vec![Some(1), Some(2), Some(0)]);
+    }
+
+    #[test]
     fn mismatched_counts_give_a_contested_slot_to_the_best_overlap() {
         // Region 0 overlaps the slot by 0.6 (IoU 0.43); region 1 contains it (IoU 0.25).
         let regions = [pt_box(4.0, 0.0, 14.0, 10.0), pt_box(0.0, 0.0, 40.0, 10.0)];
@@ -1639,16 +1663,53 @@ fn bbox_iou(a: &crate::types::BoundingBox, b: &crate::types::BoundingBox) -> f64
 #[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
 const FORMULA_PAIR_MIN_OVERLAP: f64 = 0.5;
 
+#[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
+fn complete_formula_assignment(
+    start: usize,
+    choices: &[Vec<usize>],
+    assigned: &mut [Option<usize>],
+    slot_owners: &mut [Option<usize>],
+) -> bool {
+    let mut pending = std::collections::VecDeque::from([start]);
+    let mut visited_regions = vec![false; assigned.len()];
+    let mut predecessors = vec![None; slot_owners.len()];
+    visited_regions[start] = true;
+    while let Some(region) = pending.pop_front() {
+        for &slot in &choices[region] {
+            if predecessors[slot].is_some() {
+                continue;
+            }
+            predecessors[slot] = Some(region);
+            if let Some(owner) = slot_owners[slot] {
+                if !visited_regions[owner] {
+                    visited_regions[owner] = true;
+                    pending.push_back(owner);
+                }
+            } else {
+                let mut next_slot = slot;
+                while let Some(region) = predecessors[next_slot] {
+                    let previous_slot = assigned[region].replace(next_slot);
+                    slot_owners[next_slot] = Some(region);
+                    let Some(previous_slot) = previous_slot else { break };
+                    next_slot = previous_slot;
+                }
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Assign each detected region to at most one formula slot on one side
 /// (side-channel formulas or formula elements).
 ///
 /// With region geometry, region/slot pairs whose bounding boxes (both in PDF
-/// points) overlap enough are accepted best first, by overlap and then IoU,
-/// so an earlier region cannot take a slot a later region overlaps better.
-/// When the counts match, that matching is used only if it pairs every
-/// region. An incomplete matching means some slot box is missing or in
-/// another frame, so geometry is not trusted for the page and pairing is
-/// positional in reading order, as it is without geometry; the OCR side
+/// points) overlap enough are initially accepted best first, by overlap and
+/// then IoU, independently of region order.
+/// When the counts match, contested slots are reassigned along augmenting
+/// paths when needed to pair every region. If no complete matching exists,
+/// geometry is not trusted for the page and pairing is positional in reading
+/// order, as it is without geometry; the OCR side
 /// channel emits its formulas in the same sort (see
 /// [`formula_regions_in_reading_order`]). When the counts differ, unpaired
 /// regions stay unassigned, and without geometry nothing is assigned.
@@ -1683,14 +1744,30 @@ fn assign_formula_slots(
     });
     let mut assigned: Vec<Option<usize>> = vec![None; region_count];
     let mut slot_taken = vec![false; slot_bboxes.len()];
-    for (region_idx, slot_idx, _, _) in candidates {
+    for &(region_idx, slot_idx, _, _) in &candidates {
         if assigned[region_idx].is_none() && !slot_taken[slot_idx] {
             assigned[region_idx] = Some(slot_idx);
             slot_taken[slot_idx] = true;
         }
     }
     if counts_match && assigned.contains(&None) {
-        return positional();
+        let mut choices = vec![Vec::new(); region_count];
+        for (region_idx, slot_idx, _, _) in candidates {
+            choices[region_idx].push(slot_idx);
+        }
+        let mut slot_owners = vec![None; slot_bboxes.len()];
+        for (region, slot) in assigned.iter().enumerate() {
+            if let Some(slot) = slot {
+                slot_owners[*slot] = Some(region);
+            }
+        }
+        for region in 0..region_count {
+            if assigned[region].is_none()
+                && !complete_formula_assignment(region, &choices, &mut assigned, &mut slot_owners)
+            {
+                return positional();
+            }
+        }
     }
     assigned
 }
