@@ -44,6 +44,9 @@ jobs:
     if: github.repository == 'xberg-io/xberg' && github.actor != 'dependabot[bot]' && github.event.pull_request.draft != true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 360
+    env:
+      # ~keep Two ARM fat-LTO CLI builds lost their runners during the link tail; test ThinLTO for both artifacts.
+      CARGO_PROFILE_RELEASE_LTO: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'thin' || 'fat' }}
     strategy:
       fail-fast: false
       matrix:
@@ -88,13 +91,13 @@ jobs:
             crates/xberg-ffi/include/xberg.h
             crates/xberg-ffi/xberg-ffi.pc
             crates/xberg-ffi/cmake/
-          key: ffi-${{ matrix.target }}-${{ steps.ffi-hash.outputs.value }}-libheif-v1.23.0-cache-v2
+          key: ffi-${{ matrix.target }}-${{ steps.ffi-hash.outputs.value }}-libheif-v1.23.0-lto-${{ env.CARGO_PROFILE_RELEASE_LTO }}-cache-v2
 
       - name: Setup Rust
         if: steps.ffi-cache.outputs.cache-hit != 'true'
         uses: xberg-io/actions/setup-rust@v1
         with:
-          cache-key-prefix: build-ffi-${{ matrix.target }}
+          cache-key-prefix: build-ffi-${{ matrix.target }}-lto-${{ env.CARGO_PROFILE_RELEASE_LTO }}
           target: ${{ matrix.target }}
 
       - name: Install system dependencies
