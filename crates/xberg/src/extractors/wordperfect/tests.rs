@@ -201,6 +201,89 @@ fn test_build_document_footnote() {
     assert!(trailing.is_some(), "text after NoteEnd should form its own paragraph");
 }
 
+const NOTE_BODY: &str = "The determination coefficient R2 equals 0.87; café.";
+
+fn document_with_note(endnote: bool) -> InternalDocument {
+    build_wordperfect_internal_document(&WpdDocument {
+        events: vec![
+            WpdEvent::Text("Before the note.".to_string()),
+            WpdEvent::NoteStart { endnote },
+            WpdEvent::Text(NOTE_BODY.to_string()),
+            WpdEvent::NoteEnd,
+            WpdEvent::Text("After the note.".to_string()),
+            WpdEvent::ParagraphEnd,
+        ],
+        metadata: WpdMetadata::default(),
+    })
+}
+
+fn assert_note_body_is_rendered_once(content: &str) {
+    assert_eq!(
+        content.matches(NOTE_BODY).count(),
+        1,
+        "the complete note body must occur exactly once: {content:?}"
+    );
+    assert_eq!(content.matches("Before the note.").count(), 1);
+    assert_eq!(content.matches("After the note.").count(), 1);
+}
+
+fn assert_note_survives_final_rendering(output_format: crate::core::config::OutputFormat, endnote: bool) {
+    let plain = matches!(output_format, crate::core::config::OutputFormat::Plain);
+    let result = crate::extraction::derive::derive_extraction_result(document_with_note(endnote), false, output_format);
+    let content = if plain {
+        &result.content
+    } else {
+        result
+            .formatted_content
+            .as_deref()
+            .expect("requested format must render")
+    };
+    assert_note_body_is_rendered_once(content);
+}
+
+#[test]
+fn should_render_wordperfect_footnote_body_in_plain() {
+    assert_note_survives_final_rendering(crate::core::config::OutputFormat::Plain, false);
+}
+
+#[test]
+fn should_render_wordperfect_endnote_body_in_plain() {
+    assert_note_survives_final_rendering(crate::core::config::OutputFormat::Plain, true);
+}
+
+#[test]
+fn should_render_wordperfect_note_bodies_in_markdown() {
+    for endnote in [false, true] {
+        assert_note_survives_final_rendering(crate::core::config::OutputFormat::Markdown, endnote);
+    }
+}
+
+#[test]
+fn should_render_wordperfect_note_bodies_in_html() {
+    for endnote in [false, true] {
+        assert_note_survives_final_rendering(crate::core::config::OutputFormat::Html, endnote);
+    }
+}
+
+#[test]
+fn should_render_wordperfect_note_bodies_in_djot() {
+    for endnote in [false, true] {
+        assert_note_survives_final_rendering(crate::core::config::OutputFormat::Djot, endnote);
+    }
+}
+
+#[test]
+#[should_panic(expected = "the complete note body must occur exactly once")]
+fn should_reject_final_plain_output_with_a_missing_note_body() {
+    let mut document = document_with_note(false);
+    document
+        .elements
+        .retain(|element| element.kind != crate::types::internal::ElementKind::FootnoteDefinition);
+    let result =
+        crate::extraction::derive::derive_extraction_result(document, false, crate::core::config::OutputFormat::Plain);
+    assert_note_body_is_rendered_once(&result.content);
+}
+
 #[test]
 fn test_build_document_header_and_footer_are_bracketed() {
     let doc = WpdDocument {

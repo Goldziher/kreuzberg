@@ -479,7 +479,8 @@ impl<'a> WpdWalker<'a> {
                 }
             }
             DiversionKind::Note { key } => {
-                self.builder.push_footnote_definition(&text, &key, None);
+                let idx = self.builder.push_footnote_definition(&text, &key, None);
+                self.builder.set_layer(idx, ContentLayer::Footnote);
             }
             DiversionKind::InlineNote => {
                 // Fold the note body back into the surrounding text (the parent
