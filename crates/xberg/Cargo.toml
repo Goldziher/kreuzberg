@@ -193,7 +193,15 @@ archives = ["dep:zip", "dep:tar", "dep:sevenz-rust2", "dep:flate2"]
 sqlite = ["dep:rusqlite", "tokio-runtime"]
 mdx = []
 
-liter-llm = ["dep:liter-llm", "dep:minijinja", "dep:ureq", "dep:secrecy", "ocr-pipeline"]
+liter-llm = [
+    "dep:liter-llm",
+    "dep:minijinja",
+    "dep:ureq",
+    "dep:secrecy",
+    "dep:jsonschema",
+    "ocr-pipeline",
+    "tokio-runtime",
+]
 
 # ~keep Forward to liter-llm's `bedrock` feature (SigV4 request signing for
 # ~keep `bedrock/...` model routing — see BedrockProvider). Weak-optional (`?/`)
@@ -1786,6 +1794,10 @@ zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2
 [[test]]
 name = "captioning_smoke"
 required-features = ["captioning", "pdf"]
+
+[[test]]
+name = "structured_schema_validation"
+required-features = ["liter-llm", "tokio-runtime"]
 
 [[test]]
 name = "structured_pipeline"

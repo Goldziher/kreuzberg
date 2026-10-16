@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(llm): Strict structured extraction validates provider output against the original JSON schema.**
+  Invalid output leaves extracted text intact and reports a safe warning; schema references resolve offline. (#2136)
 - **(ocr): Tesseract honors the requested OCR engine mode, including when reusing pooled engines.**
   Modes unsupported by the installed language data report an error instead of silently using automatic mode. (#2135)
 - **(pdf): Consecutive-paragraph cleanup preserves repeated body text at distinct or unknown positions.**

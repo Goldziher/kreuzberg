@@ -137,7 +137,7 @@ fn strip_additional_properties(schema: &Value) -> Value {
 /// Extract structured data from document content using an LLM with JSON schema.
 ///
 /// Sends the document content to the configured LLM with a JSON schema constraint,
-/// returning structured data that conforms to the schema.
+/// validating the returned data locally when strict mode is enabled.
 ///
 /// # Arguments
 ///
@@ -146,7 +146,7 @@ fn strip_additional_properties(schema: &Value) -> Value {
 ///
 /// # Returns
 ///
-/// A `serde_json::Value` conforming to the provided JSON schema.
+/// A `serde_json::Value`, validated against the original schema in strict mode.
 ///
 /// # Errors
 ///
@@ -154,12 +154,15 @@ fn strip_additional_properties(schema: &Value) -> Value {
 /// - The LLM client cannot be created (invalid provider/credentials).
 /// - The LLM request fails (network, rate-limit, etc.).
 /// - The LLM response cannot be parsed as valid JSON.
+/// - In strict mode, the schema cannot be compiled offline or the output fails validation.
 #[allow(clippy::field_reassign_with_default)]
 pub(crate) async fn extract_structured(
     content: &str,
     config: &StructuredExtractionConfig,
 ) -> crate::Result<(serde_json::Value, Option<crate::types::LlmUsage>)> {
     use liter_llm::LlmClient;
+
+    let validator = compile_strict_schema(config).await?;
 
     let client = super::client::create_client(&config.llm)?;
 
@@ -217,23 +220,52 @@ pub(crate) async fn extract_structured(
             ))
         })?;
 
-    let cleaned = text
-        .trim()
-        .strip_prefix("```json")
-        .or_else(|| text.trim().strip_prefix("```"))
-        .and_then(|s| s.strip_suffix("```"))
-        .map(|s| s.trim())
-        .unwrap_or(text.trim());
+    let cleaned = strip_markdown_fence(&text);
 
     let value = serde_json::from_str(cleaned).map_err(|e| {
         crate::XbergError::parsing(format!(
-            "LLM structured extraction returned invalid JSON (model={}): {e}\nRaw response: {}",
-            config.llm.model,
-            &text[..text.floor_char_boundary(text.len().min(200))]
+            "LLM structured extraction returned invalid JSON at line {}, column {}",
+            e.line(),
+            e.column()
         ))
     })?;
 
+    let value = validate_structured_output(value, validator).await?;
+
     Ok((value, usage))
+}
+
+async fn compile_strict_schema(config: &StructuredExtractionConfig) -> crate::Result<Option<jsonschema::Validator>> {
+    if !config.strict {
+        return Ok(None);
+    }
+    let schema = config.schema.clone();
+    tokio::task::spawn_blocking(move || {
+        jsonschema::options()
+            .offline()
+            .build(&schema)
+            .map(Some)
+            .map_err(|_| crate::XbergError::validation("invalid structured extraction schema".to_owned()))
+    })
+    .await
+    .map_err(|_| crate::XbergError::parsing("Structured extraction schema compilation task failed".to_owned()))?
+}
+
+async fn validate_structured_output(value: Value, validator: Option<jsonschema::Validator>) -> crate::Result<Value> {
+    let Some(validator) = validator else {
+        return Ok(value);
+    };
+    tokio::task::spawn_blocking(move || {
+        if validator.is_valid(&value) {
+            Ok(value)
+        } else {
+            Err(crate::XbergError::parsing(
+                "LLM structured extraction schema validation failed".to_owned(),
+            ))
+        }
+    })
+    .await
+    .map_err(|_| crate::XbergError::parsing("Structured extraction schema validation task failed".to_owned()))?
 }
 
 #[cfg(test)]
