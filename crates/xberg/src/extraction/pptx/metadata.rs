@@ -205,10 +205,9 @@ pub(super) fn extract_metadata<R: Read + Seek>(
 
 /// Extract speaker notes for every slide, keyed by 1-indexed slide number.
 ///
-/// A slide with no `notesSlideN.xml` part is normal (most slides have no
-/// notes) and is skipped silently. A notes part that exists but fails to
-/// parse is a genuine degradation and is surfaced as a `ProcessingWarning`
-/// naming the slide, rather than silently dropping those notes (#238).
+/// Notes parts have independent numbering; each slide's relationship identifies
+/// its notes part (#2138). Missing notes are normal; parse failures retain the
+/// remaining slides' notes and surface a `ProcessingWarning` (#238). ~keep
 pub(super) fn extract_all_notes<R: Read + Seek>(
     container: &mut PptxContainer<R>,
     warnings: &mut Vec<ProcessingWarning>,
@@ -218,7 +217,22 @@ pub(super) fn extract_all_notes<R: Read + Seek>(
     let slide_paths: Vec<String> = container.slide_paths().to_vec();
 
     for (i, slide_path) in slide_paths.iter().enumerate() {
-        let notes_path = slide_path.replace("slides/slide", "notesSlides/notesSlide");
+        let notes_path = match resolve_notes_path(container, slide_path) {
+            Ok(Some(path)) => path,
+            Ok(None) => continue,
+            Err(error) => {
+                push_warning(
+                    warnings,
+                    "pptx",
+                    format!(
+                        "Could not resolve speaker notes for slide {}: {}; notes were not extracted",
+                        i + 1,
+                        error
+                    ),
+                );
+                continue;
+            }
+        };
         let notes_xml = match container.read_file(&notes_path) {
             Ok(data) => data,
             Err(_) => continue,
@@ -241,6 +255,23 @@ pub(super) fn extract_all_notes<R: Read + Seek>(
     }
 
     Ok(notes)
+}
+
+fn resolve_notes_path<R: Read + Seek>(container: &mut PptxContainer<R>, slide_path: &str) -> Result<Option<String>> {
+    let rels_path = container.get_slide_rels_path(slide_path);
+    if container.archive.index_for_name(&rels_path).is_none() {
+        return Ok(None);
+    }
+    let rels_data = container.read_file(&rels_path)?;
+    let Some(target) = super::parser::parse_slide_rels(&rels_data)?.notes_target else {
+        return Ok(None);
+    };
+    let base = slide_path.rsplit_once('/').map_or("", |(directory, _)| directory);
+    crate::extractors::security::resolve_container_entry(base, &target)
+        .map(Some)
+        .map_err(|error| {
+            crate::error::XbergError::parsing(format!("Invalid speaker notes relationship target: {error}"))
+        })
 }
 
 /// Build the slide-id -> 1-indexed-position map from the document's `<p:sldIdLst>`.

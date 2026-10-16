@@ -327,6 +327,15 @@ pub(crate) fn create_pptx_with_sections_and_notes(
         zip.write_all(slide_xml.as_bytes()).unwrap();
 
         if let Some(note_text) = notes {
+            let rels_xml = format!(
+                r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="notes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide"
+ Target="../notesSlides/notesSlide{}.xml"/></Relationships>"#,
+                i + 1
+            );
+            zip.start_file(format!("ppt/slides/_rels/slide{}.xml.rels", i + 1), opts)
+                .unwrap();
+            zip.write_all(rels_xml.as_bytes()).unwrap();
             let notes_xml = format!(
                 r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -1631,5 +1640,231 @@ fn test_issue_238_warns_on_corrupt_metadata_and_comments() {
             .any(|w| w.source == "pptx" && w.message.contains("comment1.xml")),
         "expected a warning naming the corrupt comment file, got: {:?}",
         warnings
+    );
+}
+
+fn create_pptx_with_note_relationships(relationships: &[(usize, &str, &str)], notes: &[(&str, &str)]) -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    use zip::write::{SimpleFileOptions, ZipWriter};
+
+    let bytes = create_pptx_with_sections_and_notes(&[("Slide 1", None), ("Slide 2", None), ("Slide 3", None)], &[]);
+    let mut zip = ZipWriter::new_append(Cursor::new(bytes)).unwrap();
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    for (slide, target, mode) in relationships {
+        let target_mode = if mode.is_empty() {
+            String::new()
+        } else {
+            format!(r#" TargetMode="{mode}""#)
+        };
+        let xml = format!(
+            r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="notes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide"
+ Target="{target}"{target_mode}/></Relationships>"#
+        );
+        zip.start_file(format!("ppt/slides/_rels/slide{slide}.xml.rels"), options)
+            .unwrap();
+        zip.write_all(xml.as_bytes()).unwrap();
+    }
+    for (path, text) in notes {
+        let xml = format!(
+            r#"<p:notes xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+ xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>{text}</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld>
+</p:notes>"#
+        );
+        zip.start_file(*path, options).unwrap();
+        zip.write_all(xml.as_bytes()).unwrap();
+    }
+    zip.finish().unwrap().into_inner()
+}
+
+fn extracted_speaker_notes(bytes: &[u8]) -> Vec<Option<String>> {
+    let result = extract_pptx_from_bytes(
+        bytes,
+        &PptxExtractionOptions {
+            extract_images: false,
+            page_config: Some(crate::core::config::PageConfig::default()),
+            ..Default::default()
+        },
+        &mut Vec::new(),
+    )
+    .unwrap();
+    let pages = result.page_contents.unwrap();
+    assert_eq!(pages.len(), 3);
+    assert_eq!(
+        pages.iter().map(|page| page.page_number).collect::<Vec<_>>(),
+        vec![1, 2, 3]
+    );
+    pages.into_iter().map(|page| page.speaker_notes).collect()
+}
+
+#[test]
+fn test_speaker_notes_follow_sparse_relationship() {
+    let bytes = create_pptx_with_note_relationships(
+        &[(2, "../notesSlides/notesSlide1.xml", "Internal")],
+        &[("ppt/notesSlides/notesSlide1.xml", "Note for slide 2")],
+    );
+    assert_eq!(
+        extracted_speaker_notes(&bytes),
+        vec![None, Some("Note for slide 2".to_string()), None]
+    );
+}
+
+#[test]
+fn test_speaker_notes_follow_shuffled_relationships() {
+    let bytes = create_pptx_with_note_relationships(
+        &[
+            (1, "../notesSlides/notesSlide9.xml", "Internal"),
+            (2, "../notesSlides/notesSlide4.xml", "Internal"),
+            (3, "../notesSlides/notesSlide1.xml", "Internal"),
+        ],
+        &[
+            ("ppt/notesSlides/notesSlide1.xml", "Third note"),
+            ("ppt/notesSlides/notesSlide9.xml", "First note"),
+            ("ppt/notesSlides/notesSlide4.xml", "Second note"),
+        ],
+    );
+    assert_eq!(
+        extracted_speaker_notes(&bytes),
+        vec![
+            Some("First note".into()),
+            Some("Second note".into()),
+            Some("Third note".into())
+        ]
+    );
+}
+
+#[test]
+fn test_speaker_notes_normalize_relationship_targets() {
+    let bytes = create_pptx_with_note_relationships(
+        &[
+            (1, "../notesSlides/./notesSlide8.xml", "Internal"),
+            (2, "/ppt/notesSlides/notesSlide7.xml", "Internal"),
+            (3, "../notesSlides/../notesSlides/notesSlide6.xml", "Internal"),
+        ],
+        &[
+            ("ppt/notesSlides/notesSlide8.xml", "First note"),
+            ("ppt/notesSlides/notesSlide7.xml", "Second note"),
+            ("ppt/notesSlides/notesSlide6.xml", "Third note"),
+        ],
+    );
+    assert_eq!(
+        extracted_speaker_notes(&bytes),
+        vec![
+            Some("First note".into()),
+            Some("Second note".into()),
+            Some("Third note".into())
+        ]
+    );
+}
+
+#[test]
+fn test_speaker_notes_ignore_unlinked_parts() {
+    let bytes = create_pptx_with_note_relationships(&[], &[("ppt/notesSlides/notesSlide1.xml", "Orphan note")]);
+    assert_eq!(extracted_speaker_notes(&bytes), vec![None, None, None]);
+}
+
+#[test]
+fn test_speaker_notes_ignore_missing_external_and_unsafe_targets() {
+    let bytes = create_pptx_with_note_relationships(
+        &[
+            (1, "../notesSlides/missing.xml", "Internal"),
+            (2, "../notesSlides/notesSlide2.xml", "External"),
+            (3, "../../../notesSlide3.xml", "Internal"),
+        ],
+        &[
+            ("ppt/notesSlides/notesSlide2.xml", "External decoy"),
+            ("notesSlide3.xml", "Traversal decoy"),
+        ],
+    );
+    assert_eq!(extracted_speaker_notes(&bytes), vec![None, None, None]);
+}
+
+#[test]
+fn test_speaker_notes_without_note_parts() {
+    let bytes = create_pptx_with_note_relationships(&[], &[]);
+    assert_eq!(extracted_speaker_notes(&bytes), vec![None, None, None]);
+}
+
+#[test]
+fn test_speaker_notes_default_relationship_mode_is_internal() {
+    let bytes = create_pptx_with_note_relationships(
+        &[(2, "../notesSlides/notesSlide9.xml", "")],
+        &[("ppt/notesSlides/notesSlide9.xml", "Default internal note")],
+    );
+    assert_eq!(
+        extracted_speaker_notes(&bytes),
+        vec![None, Some("Default internal note".into()), None]
+    );
+}
+
+#[test]
+fn test_speaker_notes_ignore_similar_relationship_types() {
+    let rels = r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="decoy" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlideExtra"
+ Target="../notesSlides/notesSlide1.xml"/></Relationships>"#;
+    let notes = br#"<notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<a:t>Wrong relationship type</a:t></notes>"#;
+    let bytes = build_single_slide_pptx("<slide/>", Some(rels), &[("ppt/notesSlides/notesSlide1.xml", notes)]);
+    let mut container =
+        PptxContainer::from_bytes(&bytes, &crate::extractors::security::SecurityLimits::default()).unwrap();
+    assert_eq!(
+        extract_all_notes(&mut container, &mut Vec::new()).unwrap(),
+        std::collections::HashMap::new()
+    );
+}
+
+#[test]
+fn test_speaker_notes_warn_on_relationship_read_failure_and_keep_other_notes() {
+    let mut bytes = create_pptx_with_note_relationships(
+        &[
+            (1, "../notesSlides/notesSlide1.xml", "Internal"),
+            (2, "../notesSlides/notesSlide2.xml", "Internal"),
+        ],
+        &[
+            ("ppt/notesSlides/notesSlide1.xml", "Retained note"),
+            ("ppt/notesSlides/notesSlide2.xml", "Unreadable relationship"),
+        ],
+    );
+    let rels_path = "ppt/slides/_rels/slide2.xml.rels";
+    let offset = {
+        let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).unwrap();
+        usize::try_from(archive.by_name(rels_path).unwrap().data_start().unwrap()).unwrap()
+    };
+    bytes[offset] ^= 1;
+    let mut container =
+        PptxContainer::from_bytes(&bytes, &crate::extractors::security::SecurityLimits::default()).unwrap();
+    let read_error = container.read_file(rels_path).unwrap_err();
+    assert!(
+        read_error.to_string().to_ascii_lowercase().contains("checksum"),
+        "{read_error}"
+    );
+    let mut warnings = Vec::new();
+    let notes = extract_all_notes(&mut container, &mut warnings).unwrap();
+    assert_eq!(
+        notes,
+        std::collections::HashMap::from([(1, "Retained note".to_string())])
+    );
+    assert!(
+        warnings.iter().any(|warning| warning.source == "pptx"
+            && warning.message.contains("speaker notes for slide 2")
+            && warning.message.to_ascii_lowercase().contains("checksum")),
+        "{warnings:?}"
+    );
+}
+
+#[test]
+fn test_speaker_notes_follow_strict_ooxml_relationship() {
+    let rels = r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="notes" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/notesSlide"
+ Target="../notesSlides/notesSlide1.xml"/></Relationships>"#;
+    let notes = br#"<notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<a:t>Strict notes relationship</a:t></notes>"#;
+    let bytes = build_single_slide_pptx("<slide/>", Some(rels), &[("ppt/notesSlides/notesSlide1.xml", notes)]);
+    let mut container =
+        PptxContainer::from_bytes(&bytes, &crate::extractors::security::SecurityLimits::default()).unwrap();
+    assert_eq!(
+        extract_all_notes(&mut container, &mut Vec::new()).unwrap(),
+        std::collections::HashMap::from([(1, "Strict notes relationship".to_string())])
     );
 }

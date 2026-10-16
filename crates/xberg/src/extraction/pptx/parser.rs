@@ -826,6 +826,7 @@ pub(super) fn extract_position(node: &Node) -> ElementPosition {
 
 /// Parsed relationships from a slide rels file.
 pub(super) struct SlideRels {
+    pub(super) notes_target: Option<String>,
     pub(super) images: Vec<ImageReference>,
     pub(super) hyperlinks: Vec<super::elements::HyperlinkReference>,
     /// Every relationship ID in the rels file mapped to its target, regardless
@@ -843,6 +844,7 @@ pub(super) fn parse_slide_rels(rels_data: &[u8]) -> Result<SlideRels> {
     let mut images = Vec::new();
     let mut hyperlinks = Vec::new();
     let mut targets = AHashMap::new();
+    let mut notes_target = None;
 
     for node in doc.descendants() {
         if node.has_tag_name("Relationship")
@@ -850,6 +852,14 @@ pub(super) fn parse_slide_rels(rels_data: &[u8]) -> Result<SlideRels> {
             && let (Some(id), Some(target)) = (node.attribute("Id"), node.attribute("Target"))
         {
             targets.insert(id.to_string(), target.to_string());
+            if matches!(
+                rel_type,
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide"
+                    | "http://purl.oclc.org/ooxml/officeDocument/relationships/notesSlide"
+            ) && node.attribute("TargetMode").is_none_or(|mode| mode == "Internal")
+            {
+                notes_target = Some(target.to_string());
+            }
 
             if rel_type.contains("image") {
                 images.push(ImageReference {
@@ -867,6 +877,7 @@ pub(super) fn parse_slide_rels(rels_data: &[u8]) -> Result<SlideRels> {
     }
 
     Ok(SlideRels {
+        notes_target,
         images,
         hyperlinks,
         targets,

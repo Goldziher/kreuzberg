@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pptx): Speaker notes follow each slide’s relationships instead of matching slide filenames.**
+  Sparse or independently numbered notes remain attached to the correct slide. (#2138)
 - **(packaging): GNU cross-builds use a pinned linker wrapper compatible with Rust 1.99 warnings.**
 - **(swift): iOS simulator release builds omit macOS extension-linker flags.**
 - **(llm): Strict structured extraction validates provider output against the original JSON schema.**
