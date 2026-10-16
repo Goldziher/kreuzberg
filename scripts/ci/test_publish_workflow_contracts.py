@@ -834,6 +834,16 @@ def test_system_dependency_changes_trigger_rust_and_e2e_ci() -> None:
     assert checked == 2
 
 
+def test_swift_static_library_builds_disable_host_extension_symbol_lookup() -> None:
+    workflow = WORKFLOW.read_text()
+    swift = job_block(workflow, "swift-target")
+    setup = re.search(r"(?ms)^      - uses: xberg-io/actions/setup-rust@[^\n]+\n(.*?)(?=^      - |\Z)", swift)
+    assert setup is not None
+    assert 'macos-dynamic-lookup: "false"' in setup[1]
+    assert "aarch64-apple-ios-sim" in swift
+    assert "targets: ${{ matrix.target }}" in swift
+
+
 if __name__ == "__main__":
     test_release_event_guards_cover_initial_actor_and_tag_policy()
     test_plugin_only_dispatch_skips_every_core_release_job()
@@ -871,5 +881,6 @@ if __name__ == "__main__":
     test_xberg_unit_artifacts_are_reclaimed_before_workspace_tests()
     test_rust_ci_enables_bundled_oem_regressions_on_every_platform()
     test_helm_publish_does_not_depend_on_the_cli_image_manifest()
+    test_swift_static_library_builds_disable_host_extension_symbol_lookup()
     test_publish_contracts_run_in_ci()
     test_system_dependency_changes_trigger_rust_and_e2e_ci()
