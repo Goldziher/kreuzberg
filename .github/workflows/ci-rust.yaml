@@ -210,9 +210,9 @@ jobs:
       # asm needs fullfp16). Keep the two in sync. ~keep
       - name: Run doctests
         run: |
-          features=full,formula-recognition
+          features=full,formula-recognition,bundle-tessdata-eng
           if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "aarch64" ]; then
-            features=full-no-heic,heic,formula-recognition
+            features=full-no-heic,heic,formula-recognition,bundle-tessdata-eng
           fi
           echo "xberg doctest features: ${features}"
 

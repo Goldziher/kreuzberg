@@ -755,6 +755,49 @@ def test_xberg_unit_artifacts_are_reclaimed_before_workspace_tests() -> None:
     assert re.search(r"(?m)^  cargo clean -p xberg \|\| exit$", between) is not None
 
 
+def test_rust_ci_enables_bundled_oem_regressions_on_every_platform() -> None:
+    root = WORKFLOW.parents[2]
+    regression = (root / "crates/xberg/tests/tesseract_engine_mode.rs").read_text()
+    assert '#![cfg(all(feature = "ocr", feature = "bundle-tessdata-eng"))]' in regression
+    assert len(re.findall(r"#\[tokio::test\]", regression)) == 4
+    sources = (
+        (RUST_UNIT_SCRIPT.read_text(), "xberg_test_features"),
+        ((WORKFLOW.parent / "ci-rust.yaml").read_text(), "features"),
+    )
+    checked = 0
+    for system, machine in (("Linux", "x86_64"), ("Linux", "aarch64"), ("Darwin", "arm64")):
+        selected = []
+        for source, variable in sources:
+            selection = re.search(
+                rf"(?m)^ +{variable}=full,[^\n]+\n +if .*?\n.*?^ +fi$",
+                source,
+                re.DOTALL,
+            )
+            assert selection is not None, variable
+            shell = (
+                ('uname() { if [ "$1" = "-s" ]; then printf "%s\\n" "$2"; else printf "%s\\n" "$3"; fi; }\n')
+                .replace('"$2"', f'"{system}"')
+                .replace('"$3"', f'"{machine}"')
+            )
+            result = run(
+                ["bash", "-euo", "pipefail", "-c", shell + selection[0] + f'\nprintf "%s\\n" "${{{variable}}}"'],
+                root,
+            )
+            assert result.returncode == 0, result.stderr
+            features = set(result.stdout.splitlines()[-1].split(","))
+            base = {"full-no-heic", "heic"} if (system, machine) == ("Linux", "aarch64") else {"full"}
+            assert features == base | {"formula-recognition", "bundle-tessdata-eng"}, (
+                system,
+                machine,
+                variable,
+                features,
+            )
+            selected.append(features)
+            checked += 1
+        assert selected[0] == selected[1], (system, machine, selected)
+    assert checked == 6
+
+
 def test_helm_publish_does_not_depend_on_the_cli_image_manifest() -> None:
     # The chart only references xberg:<version> and xberg:<version>-core. merge-docker is one
     # matrix job, so a cli leg that fails (cli/amd64 timing out leaves a single-arch digest,
@@ -826,6 +869,7 @@ if __name__ == "__main__":
     test_docker_preflight_checks_out_the_resolved_candidate()
     test_macos_unit_tests_reclaim_artifacts_before_libheif()
     test_xberg_unit_artifacts_are_reclaimed_before_workspace_tests()
+    test_rust_ci_enables_bundled_oem_regressions_on_every_platform()
     test_helm_publish_does_not_depend_on_the_cli_image_manifest()
     test_publish_contracts_run_in_ci()
     test_system_dependency_changes_trigger_rust_and_e2e_ci()

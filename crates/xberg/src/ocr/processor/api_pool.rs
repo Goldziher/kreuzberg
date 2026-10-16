@@ -28,6 +28,7 @@ pub(crate) fn tesseract_api_capacity() -> usize {
 struct ApiKey {
     tessdata_path: String,
     language: String,
+    oem: u8,
 }
 
 struct PoolState<K, V> {
@@ -248,17 +249,23 @@ impl TesseractApiPool {
         self: &Arc<Self>,
         tessdata_path: &str,
         language: &str,
+        oem: u8,
     ) -> Result<TesseractApiLease, OcrError> {
+        crate::core::config_validation::validate_tesseract_oem(i32::from(oem))
+            .map_err(|error| OcrError::InvalidConfiguration(error.to_string()))?;
         let key = ApiKey {
             tessdata_path: tessdata_path.to_string(),
             language: language.to_string(),
+            oem,
         };
         let lease = self.resources.checkout(key, || {
             let api = TesseractAPI::new().map_err(|error| {
                 OcrError::TesseractInitializationFailed(format!("Failed to allocate Tesseract engine: {error}"))
             })?;
-            api.init(tessdata_path, language).map_err(|error| {
-                OcrError::TesseractInitializationFailed(format!("Failed to initialize language '{language}': {error}"))
+            api.init_2(tessdata_path, language, i32::from(oem)).map_err(|error| {
+                OcrError::TesseractInitializationFailed(format!(
+                    "Failed to initialize language '{language}' with OCR engine mode {oem}: {error}"
+                ))
             })?;
             api.clear().map_err(|error| {
                 OcrError::ProcessingFailed(format!("Failed to clear newly initialized Tesseract API: {error}"))
@@ -301,6 +308,72 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::thread;
+
+    #[test]
+    fn should_keep_requested_engine_modes_separate_in_pool_keys() {
+        let pool = ResourcePool::new(1);
+        let key = |oem| ApiKey {
+            tessdata_path: "models".into(),
+            language: "eng".into(),
+            oem,
+        };
+        drop(pool.checkout::<(), _>(key(1), || Ok(1)).unwrap());
+        let reused = pool
+            .checkout::<(), _>(key(1), || panic!("matching mode must reuse its handle"))
+            .unwrap();
+        assert_eq!(*reused, 1);
+        drop(reused);
+        let automatic = pool.checkout::<(), _>(key(3), || Ok(3)).unwrap();
+        assert_eq!(*automatic, 3);
+        assert_eq!(pool.counts(), (1, 0));
+    }
+
+    #[cfg(feature = "bundle-tessdata-eng")]
+    fn bundled_tessdata() -> tempfile::TempDir {
+        let directory = tempfile::tempdir().expect("temporary native model directory");
+        std::fs::write(
+            directory.path().join("eng.traineddata"),
+            xberg_tesseract::bundled_eng_traineddata().expect("bundled English model"),
+        )
+        .expect("materialize bundled English model");
+        directory
+    }
+
+    #[test]
+    #[cfg(feature = "bundle-tessdata-eng")]
+    fn should_release_native_capacity_after_unavailable_engine_initialization() {
+        let directory = bundled_tessdata();
+        let path = directory.path().to_str().expect("UTF-8 native model path");
+        let pool = Arc::new(TesseractApiPool {
+            resources: ResourcePool::new(1),
+        });
+        for unavailable in [0, 2] {
+            let lstm = pool.checkout(path, "eng", 1).expect("LSTM mode initializes");
+            assert_eq!(lstm.get_int_variable("tessedit_ocr_engine_mode").unwrap(), 1);
+            drop(lstm);
+            assert_eq!(pool.resources.counts(), (0, 1));
+            assert!(pool.checkout(path, "eng", unavailable).is_err());
+            assert_eq!(pool.resources.counts(), (0, 0));
+        }
+        let automatic = pool
+            .checkout(path, "eng", 3)
+            .expect("default mode initializes after failure");
+        assert_eq!(automatic.get_int_variable("tessedit_ocr_engine_mode").unwrap(), 1);
+        drop(automatic);
+        assert_eq!(pool.resources.counts(), (0, 1));
+    }
+
+    #[test]
+    fn should_reject_invalid_engine_mode_before_native_initialization() {
+        let pool = Arc::new(TesseractApiPool {
+            resources: ResourcePool::new(1),
+        });
+        assert!(matches!(
+            pool.checkout("", "eng", 4),
+            Err(OcrError::InvalidConfiguration(_))
+        ));
+        assert_eq!(pool.resources.counts(), (0, 0));
+    }
 
     #[test]
     fn total_checked_out_and_idle_never_exceeds_capacity() {

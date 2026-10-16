@@ -107,10 +107,11 @@ if ! {
   # it here explicitly: its weight-free unit tests (preprocessing, decode helpers,
   # cache manifest) have no other CI leg. The end-to-end test that needs the
   # ~180 MB model download stays `#[ignore]`d. ~keep
-  xberg_test_features=full,formula-recognition
+  # The public OEM regression fixtures require bundled LSTM-only English tessdata. ~keep
+  xberg_test_features=full,formula-recognition,bundle-tessdata-eng
   if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "aarch64" ]; then
     echo "Linux aarch64: using full-no-heic,heic (full pulls candle -> gemm-f16 needs fullfp16)"
-    xberg_test_features=full-no-heic,heic,formula-recognition
+    xberg_test_features=full-no-heic,heic,formula-recognition,bundle-tessdata-eng
   fi
   RUST_BACKTRACE=full cargo test --locked --no-fail-fast -p xberg --features "$xberg_test_features" --all-targets --verbose || exit
 

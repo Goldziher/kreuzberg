@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(ocr): Tesseract honors the requested OCR engine mode, including when reusing pooled engines.**
+  Modes unsupported by the installed language data report an error instead of silently using automatic mode. (#2135)
 - **(pdf): Consecutive-paragraph cleanup preserves repeated body text at distinct or unknown positions.**
   Headings, lists, code, formulas, captions, and differences in capitalization are preserved; rendering duplicates
   are removed only when their text and valid bounding boxes coincide.

@@ -7,7 +7,7 @@ use crate::ocr::error::OcrError;
 use crate::ocr::types::TesseractConfig;
 use xberg_tesseract::TesseractAPI;
 
-const TESSERACT_RESULT_SCHEMA_VERSION: u8 = 14;
+const TESSERACT_RESULT_SCHEMA_VERSION: u8 = 15;
 
 /// Compute a deterministic hash of the OCR configuration.
 ///
@@ -406,12 +406,11 @@ mod tests {
 
         // ~keep This pins the CURRENT version, and the number is meant to move: every bump has to
         // come here and be justified, which is what stops a change to the cached computation from
-        // silently reusing entries computed the old way. Last moved to 14 when an entry began
-        // recording whether detected tables claimed all of the page text; an older entry lacks
-        // that record, so the PDF route would refill a page its tables emptied and print a
-        // full-page table twice.
+        // silently reusing entries computed the old way. Version 15 honors the requested OCR
+        // engine mode during native initialization; older entries may contain output from
+        // automatic mode even when the caller explicitly requested a different engine.
         assert_eq!(
-            TESSERACT_RESULT_SCHEMA_VERSION, 14,
+            TESSERACT_RESULT_SCHEMA_VERSION, 15,
             "a bump must be deliberate: state here which change made an old entry wrong"
         );
         assert_ne!(

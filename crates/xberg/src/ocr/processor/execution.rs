@@ -514,7 +514,8 @@ fn recover_blank_quantity_from_source(
     )?;
     let crop = image::imageops::crop_imm(&source, left, top, width, height).to_image();
     let api = TesseractAPI::new().ok()?;
-    api.init(tessdata_path, &config.language).ok()?;
+    api.init_2(tessdata_path, &config.language, i32::from(config.oem))
+        .ok()?;
     api.set_page_seg_mode(TessPageSegMode::PSM_SINGLE_LINE).ok()?;
     api.set_image(
         crop.as_raw(),
@@ -1887,7 +1888,7 @@ pub(super) fn perform_ocr(
 
     validate_language_and_traineddata(&config.language, &tessdata_path)?;
 
-    let api = api_pool.checkout(&tessdata_path, &config.language)?;
+    let api = api_pool.checkout(&tessdata_path, &config.language, config.oem)?;
 
     log_ci_debug(ci_debug_enabled, "init", || {
         format!("language={} datapath='{}'", config.language, tessdata_path)
@@ -2984,6 +2985,40 @@ mod tests {
                 .expect("native crop recovers the digit");
         assert_eq!(recovered.text, "5");
         assert!(recovered.confidence >= MIN_SOURCE_QUANTITY_RETRY_CONFIDENCE);
+
+        for oem in [0, 2] {
+            let unavailable = TesseractConfig { oem, ..config.clone() };
+            assert!(
+                recover_blank_quantity_from_source(
+                    source,
+                    &unavailable,
+                    &region,
+                    340,
+                    182,
+                    path,
+                    &SecurityLimits::default()
+                )
+                .is_none(),
+                "source retry must honor unavailable engine mode {oem}"
+            );
+        }
+        for oem in [1, 3] {
+            let supported = TesseractConfig { oem, ..config.clone() };
+            assert_eq!(
+                recover_blank_quantity_from_source(
+                    source,
+                    &supported,
+                    &region,
+                    340,
+                    182,
+                    path,
+                    &SecurityLimits::default()
+                )
+                .expect("supported source retry mode")
+                .text,
+                "5"
+            );
+        }
 
         let mut rotated_config = config.clone();
         rotated_config.preprocessing = Some(crate::types::ImagePreprocessingConfig {
