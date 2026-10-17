@@ -2483,9 +2483,11 @@ impl<R: Read + Seek> DocxParser<R> {
         let mut revision_id_counter: usize = 0;
         let mut in_del_text = false;
         // Depth of open `w:moveFrom` wrappers. A tracked move leaves the moved
-        // text at its old place in `w:moveFrom` runs, written with `w:t`, not
-        // `w:delText`, and copies it to the new place in `w:moveTo`. Word shows
-        // it only at the new place, so text inside `w:moveFrom` is not content.
+        // content at its old place inside `w:moveFrom` (text in `w:t`, not
+        // `w:delText`) and copies it to the new place inside `w:moveTo`. Word shows
+        // it only at the new place, so runs, drawings, text boxes and equations
+        // inside `w:moveFrom` are read but not kept. Revisions recorded inside it
+        // keep their text.
         let mut move_from_depth: usize = 0;
         let mut current_paragraph_index: usize = 0;
         let mut in_run_property_change = false;
@@ -2520,7 +2522,7 @@ impl<R: Read + Seek> DocxParser<R> {
                             }
                             current_run = Some(run);
                         }
-                        "w:t" if !in_field_instruction && move_from_depth == 0 => {
+                        "w:t" if !in_field_instruction => {
                             in_text = true;
                         }
                         "w:moveFrom" => {
@@ -2583,6 +2585,7 @@ impl<R: Read + Seek> DocxParser<R> {
                             // internally, so no manual `budget.leave()` is needed here. ~keep
                             let parsed = super::drawing::parse_vml_pict(reader, budget)?;
                             if mc_fallback_depth == 0
+                                && move_from_depth == 0
                                 && let Some(drawing) = parsed
                                 && drawing.text_box_content.is_some()
                             {
@@ -2594,7 +2597,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "m:oMathPara" => {
                             let latex = super::math::collect_and_convert_omath_para(reader, budget)?;
-                            if !latex.is_empty() {
+                            if !latex.is_empty() && move_from_depth == 0 {
                                 let run = Run {
                                     math_latex: Some((latex, true)),
                                     ..Default::default()
@@ -2605,7 +2608,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "m:oMath" => {
                             let latex = super::math::collect_and_convert_omath(reader, budget)?;
-                            if !latex.is_empty() {
+                            if !latex.is_empty() && move_from_depth == 0 {
                                 let run = Run {
                                     math_latex: Some((latex, false)),
                                     ..Default::default()
@@ -2706,10 +2709,12 @@ impl<R: Read + Seek> DocxParser<R> {
                             // own `</w:drawing>` end tag against the `enter()` above
                             // internally, so no manual `budget.leave()` is needed here. ~keep
                             let drawing = super::drawing::parse_drawing(reader, budget)?;
-                            let idx = out.drawings.len();
-                            out.drawings.push(drawing);
-                            out.elements.push(DocumentElement::Drawing(idx));
-                            page_breaks.text_since_break = true;
+                            if move_from_depth == 0 {
+                                let idx = out.drawings.len();
+                                out.drawings.push(drawing);
+                                out.elements.push(DocumentElement::Drawing(idx));
+                                page_breaks.text_since_break = true;
+                            }
                         }
                         "w:br" => {
                             apply_break(
@@ -2855,7 +2860,10 @@ impl<R: Read + Seek> DocxParser<R> {
                                         if id != "-1" && id != "0" {
                                             run.text.push_str(&format!("[^{}]", id));
                                             page_breaks.text_since_break = true;
-                                            if table_stack.is_empty() && current_paragraph.is_some() {
+                                            if table_stack.is_empty()
+                                                && current_paragraph.is_some()
+                                                && move_from_depth == 0
+                                            {
                                                 out.note_refs_by_paragraph
                                                     .entry(current_paragraph_index)
                                                     .or_default()
@@ -3018,7 +3026,9 @@ impl<R: Read + Seek> DocxParser<R> {
                                     &mut revision_id_counter,
                                 );
                             }
-                            if let Some(run) = current_run.take() {
+                            if let Some(run) = current_run.take()
+                                && move_from_depth == 0
+                            {
                                 push_run_to_current(&mut table_stack, &mut current_paragraph, run);
                             }
                         }
@@ -5365,6 +5375,20 @@ mod tests {
         );
         let doc = parse_xml(&xml);
         assert_eq!(doc.paragraphs[0].to_text(), "Hello World");
+    }
+
+    #[test]
+    fn should_not_record_a_note_reference_at_a_move_source() {
+        let xml = wrap_body(
+            r#"<w:p><w:moveFrom w:id="1" w:author="a"><w:r><w:t>Moved</w:t><w:footnoteReference w:id="2"/></w:r></w:moveFrom></w:p>
+               <w:p><w:moveTo w:id="3" w:author="a"><w:r><w:t>Moved</w:t><w:footnoteReference w:id="2"/></w:r></w:moveTo></w:p>"#,
+        );
+        let doc = parse_xml(&xml);
+
+        assert_eq!(doc.paragraphs[0].to_text(), "");
+        assert_eq!(doc.paragraphs[1].to_text(), "Moved[^2]");
+        let recorded: Vec<usize> = doc.note_refs_by_paragraph.keys().copied().collect();
+        assert_eq!(recorded, vec![1], "only the move destination references the note");
     }
 
     #[test]

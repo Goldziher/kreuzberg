@@ -85,3 +85,68 @@ fn moved_text_is_kept_once_at_its_new_place() {
         doc.content
     );
 }
+
+const VML_BOX: &str = r#"<w:pict><v:shape xmlns:v="urn:schemas-microsoft-com:vml"><v:textbox><w:txbxContent><w:p><w:r><w:t>VML BOX</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>"#;
+const DRAWINGML_BOX: &str = r#"<w:drawing><wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:txbx><w:txbxContent><w:p><w:r><w:t>DRAWINGML BOX</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></w:drawing>"#;
+const EQUATION: &str = r#"<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:r><m:t>qz</m:t></m:r></m:oMath>"#;
+const DISPLAY_EQUATION: &str = r#"<m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:oMath><m:r><m:t>wv</m:t></m:r></m:oMath></m:oMathPara>"#;
+
+/// Text boxes and equations are read by their own collectors, outside the run text, so a
+/// move source must hold them back as well.
+#[test]
+fn moved_text_boxes_and_equations_are_kept_once() {
+    let moved = format!("<w:r>{VML_BOX}</w:r><w:r>{DRAWINGML_BOX}</w:r>{EQUATION}{DISPLAY_EQUATION}");
+    let bytes = build_docx(&format!(
+        r#"<w:p><w:r><w:t xml:space="preserve">Old place: </w:t></w:r><w:moveFrom w:id="1" w:author="a">{moved}</w:moveFrom></w:p>
+<w:p><w:r><w:t xml:space="preserve">New place: </w:t></w:r><w:moveTo w:id="2" w:author="a">{moved}</w:moveTo></w:p>"#
+    ));
+    let config = ExtractionConfig {
+        use_cache: false,
+        ..Default::default()
+    };
+
+    let doc = extract_bytes_document_blocking(&bytes, WORD_MIME_TYPE, &config).expect("extraction must succeed");
+
+    for text in ["VML BOX", "DRAWINGML BOX", "qz", "wv"] {
+        assert_eq!(
+            doc.content.matches(text).count(),
+            1,
+            "{text:?} must appear once, from the move destination: {:?}",
+            doc.content
+        );
+    }
+}
+
+/// An insertion that was later moved keeps its revision text, though the move source
+/// stays out of the content.
+#[test]
+fn an_insertion_inside_a_move_source_keeps_its_revision_text() {
+    let bytes = build_docx(
+        r#"<w:p><w:moveFrom w:id="1" w:author="a"><w:ins w:id="7" w:author="b"><w:r><w:t>INSERTED THEN MOVED</w:t></w:r></w:ins></w:moveFrom></w:p>
+<w:p><w:moveTo w:id="2" w:author="a"><w:r><w:t>INSERTED THEN MOVED</w:t></w:r></w:moveTo></w:p>"#,
+    );
+    let config = ExtractionConfig {
+        use_cache: false,
+        ..Default::default()
+    };
+
+    let doc = extract_bytes_document_blocking(&bytes, WORD_MIME_TYPE, &config).expect("extraction must succeed");
+
+    assert_eq!(
+        doc.content.matches("INSERTED THEN MOVED").count(),
+        1,
+        "the move source must stay out of the content: {:?}",
+        doc.content
+    );
+    let revisions = doc.revisions.expect("the insertion must be recorded");
+    let insertion = revisions
+        .iter()
+        .find(|revision| revision.revision_id == "7")
+        .expect("the nested insertion must keep its revision");
+    assert_eq!(insertion.kind, xberg::RevisionKind::Insertion);
+    assert_eq!(insertion.author.as_deref(), Some("b"));
+    assert_eq!(
+        insertion.delta.content,
+        vec![xberg::DiffLine::Added("INSERTED THEN MOVED".to_string())]
+    );
+}
