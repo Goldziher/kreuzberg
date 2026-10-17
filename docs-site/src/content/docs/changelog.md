@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(docx): Text moved with Track Changes on appears once, at the place it was moved to.**
+  The copy Word keeps at the old place (`w:moveFrom`) is no longer extracted as content. (#2151)
 - **(llm): Failed structured output retains available model, token, and finish-reason metadata in `llm_usage`.**
   Extracted text and failure warnings remain available; JSON parse errors omit response content. (#2139)
 - **(pptx): Speaker notes follow each slide’s relationships instead of matching slide filenames.**
