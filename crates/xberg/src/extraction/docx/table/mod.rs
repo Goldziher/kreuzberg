@@ -118,6 +118,10 @@ pub struct RowProperties {
     pub is_header: bool,
     /// Whether this row may be split across a page break.
     pub cant_split: bool,
+    /// Grid columns left empty before the row's first cell (`w:gridBefore`).
+    pub grid_before: Option<u32>,
+    /// Grid columns left empty after the row's last cell (`w:gridAfter`).
+    pub grid_after: Option<u32>,
 }
 
 /// Cell-level properties from `<w:tcPr>`.
@@ -297,6 +301,8 @@ pub(crate) fn parse_row_properties(
                     "cantSplit" => {
                         props.cant_split = is_toggle_on(&e);
                     }
+                    "gridBefore" => props.grid_before = validate_grid_span(get_attribute_u32(&e, "val")),
+                    "gridAfter" => props.grid_after = validate_grid_span(get_attribute_u32(&e, "val")),
                     _ => {}
                 }
                 buf.clear();
@@ -314,6 +320,8 @@ pub(crate) fn parse_row_properties(
                     "cantSplit" => {
                         props.cant_split = is_toggle_on(&e);
                     }
+                    "gridBefore" => props.grid_before = validate_grid_span(get_attribute_u32(&e, "val")),
+                    "gridAfter" => props.grid_after = validate_grid_span(get_attribute_u32(&e, "val")),
                     _ => {}
                 }
                 buf.clear();
@@ -346,6 +354,7 @@ pub(crate) fn parse_row_properties(
 const MAX_CELL_GRID_SPAN: u32 = 1024;
 
 /// Reject a `w:gridSpan` value outside the plausible `1..=MAX_CELL_GRID_SPAN` range.
+/// A row's `w:gridBefore`/`w:gridAfter` column counts go through the same check.
 ///
 /// Rather than silently truncating a corrupt value down into range (which would
 /// fabricate a plausible-looking but wrong column count), an out-of-range span is

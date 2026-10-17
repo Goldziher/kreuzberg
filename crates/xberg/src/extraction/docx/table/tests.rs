@@ -75,6 +75,42 @@ fn test_parse_row_properties() {
     assert!(props.cant_split);
 }
 
+fn parse_row_properties_xml(xml: &str) -> RowProperties {
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(true);
+
+    let mut buf = Vec::new();
+    reader.read_event_into(&mut buf).unwrap();
+    buf.clear();
+
+    let mut budget = SecurityBudget::with_defaults();
+    parse_row_properties(&mut reader, &mut budget).unwrap()
+}
+
+#[test]
+fn test_parse_row_properties_grid_before_and_after() {
+    let props = parse_row_properties_xml(
+        r#"<w:trPr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:gridBefore w:val="2"/>
+        <w:gridAfter w:val="1"/>
+    </w:trPr>"#,
+    );
+
+    assert_eq!(props.grid_before, Some(2));
+    assert_eq!(props.grid_after, Some(1));
+}
+
+#[test]
+fn test_parse_row_properties_drops_an_implausible_grid_skip() {
+    let props = parse_row_properties_xml(
+        r#"<w:trPr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:gridBefore w:val="4294967295"/>
+    </w:trPr>"#,
+    );
+
+    assert_eq!(props.grid_before, None);
+}
+
 #[test]
 fn test_parse_cell_properties_merged() {
     let xml = r#"<w:tcPr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">

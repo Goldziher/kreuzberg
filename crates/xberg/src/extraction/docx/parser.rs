@@ -1020,6 +1020,19 @@ impl Run {
     }
 }
 
+impl TableRow {
+    /// The grid columns this row leaves empty before its first cell and after its last
+    /// (`w:gridBefore`/`w:gridAfter`), so its cells sit under the right grid columns.
+    fn grid_skips(&self) -> (usize, usize) {
+        let props = self.properties.as_ref();
+        let count = |value: Option<u32>| value.unwrap_or(0) as usize;
+        (
+            count(props.and_then(|p| p.grid_before)),
+            count(props.and_then(|p| p.grid_after)),
+        )
+    }
+}
+
 impl Table {
     pub(crate) fn new() -> Self {
         Self::default()
@@ -1036,7 +1049,8 @@ impl Table {
     pub(crate) fn to_cell_grid(&self, render: impl Fn(&Paragraph) -> String) -> Vec<Vec<String>> {
         let mut cells: Vec<Vec<String>> = Vec::new();
         for row in &self.rows {
-            let mut row_cells = Vec::new();
+            let (grid_before, grid_after) = row.grid_skips();
+            let mut row_cells = vec![String::new(); grid_before];
             for cell in &row.cells {
                 let is_vmerge_continue = cell
                     .properties
@@ -1061,6 +1075,7 @@ impl Table {
                     row_cells.push(String::new());
                 }
             }
+            row_cells.extend(std::iter::repeat_n(String::new(), grid_after));
             cells.push(row_cells);
         }
         cells
@@ -1080,7 +1095,8 @@ impl Table {
     pub(crate) fn to_cell_style_grid(&self) -> Vec<Vec<Option<String>>> {
         let mut styles: Vec<Vec<Option<String>>> = Vec::new();
         for row in &self.rows {
-            let mut row_styles = Vec::new();
+            let (grid_before, grid_after) = row.grid_skips();
+            let mut row_styles = vec![None; grid_before];
             for cell in &row.cells {
                 let is_vmerge_continue = cell
                     .properties
@@ -1099,6 +1115,7 @@ impl Table {
                     row_styles.push(None);
                 }
             }
+            row_styles.extend(std::iter::repeat_n(None, grid_after));
             styles.push(row_styles);
         }
         styles
@@ -4766,6 +4783,42 @@ mod tests {
     /// GH#1395: a single `w:tblPr` inside a table must not leave the depth counter
     /// above zero after parsing — `parse_table_properties` consumes its own
     /// `</w:tblPr>`, so the outer loop's `Event::End` arm never runs for it.
+
+    #[test]
+    fn test_grid_before_and_after_keep_cells_under_their_columns() {
+        let xml = wrap_body(
+            r#"<w:tbl>
+  <w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/></w:tblGrid>
+  <w:tr>
+    <w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>C</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:trPr><w:gridBefore w:val="1"/></w:trPr>
+    <w:tc><w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>b2</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>c2</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:trPr><w:gridAfter w:val="1"/></w:trPr>
+    <w:tc><w:p><w:r><w:t>a3</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>b3</w:t></w:r></w:p></w:tc>
+  </w:tr>
+</w:tbl>"#,
+        );
+        let doc = parse_xml(&xml);
+        let table = &doc.tables[0];
+
+        assert_eq!(
+            table.to_cell_grid(Paragraph::to_text),
+            vec![vec!["A", "B", "C"], vec!["", "b2", "c2"], vec!["a3", "b3", ""]],
+            "a row's cells must sit under the grid columns gridBefore/gridAfter leave them"
+        );
+
+        let styles = table.to_cell_style_grid();
+        assert_eq!(styles.iter().map(Vec::len).collect::<Vec<_>>(), vec![3, 3, 3]);
+        assert_eq!(styles[1][1].as_deref(), Some("Heading2"));
+    }
     #[test]
     fn should_reset_depth_counter_to_zero_after_parsing_tblpr() {
         let limits = crate::extractors::security::SecurityLimits {
