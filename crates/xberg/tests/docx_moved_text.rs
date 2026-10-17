@@ -150,3 +150,30 @@ fn an_insertion_inside_a_move_source_keeps_its_revision_text() {
         vec![xberg::DiffLine::Added("INSERTED THEN MOVED".to_string())]
     );
 }
+
+/// A move within one text box: the text box collector reads its paragraphs on its own,
+/// so it must hold back the move source as the body loop does.
+#[test]
+fn a_move_inside_a_text_box_is_kept_once() {
+    let box_paragraphs = r#"<w:p><w:r><w:t xml:space="preserve">Old: </w:t></w:r><w:moveFrom w:id="1" w:author="a"><w:r><w:t>MOVED &amp; BOXED</w:t><w:tab/></w:r></w:moveFrom></w:p><w:p><w:r><w:t xml:space="preserve">New: </w:t></w:r><w:moveTo w:id="2" w:author="a"><w:r><w:t>MOVED &amp; BOXED</w:t></w:r></w:moveTo></w:p>"#;
+    let vml = format!(
+        r#"<w:pict><v:shape xmlns:v="urn:schemas-microsoft-com:vml"><v:textbox><w:txbxContent>{box_paragraphs}</w:txbxContent></v:textbox></v:shape></w:pict>"#
+    );
+    let drawingml = format!(
+        r#"<w:drawing><wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:txbx><w:txbxContent>{box_paragraphs}</w:txbxContent></wps:txbx></wps:wsp></w:drawing>"#
+    );
+    let config = ExtractionConfig {
+        use_cache: false,
+        ..Default::default()
+    };
+
+    for (kind, text_box) in [("VML", vml), ("DrawingML", drawingml)] {
+        let bytes = build_docx(&format!("<w:p><w:r>{text_box}</w:r></w:p>"));
+        let doc = extract_bytes_document_blocking(&bytes, WORD_MIME_TYPE, &config).expect("extraction must succeed");
+
+        assert_eq!(
+            doc.content, "Old: \nNew: MOVED & BOXED",
+            "{kind}: the move source, its tab included, must leave only the text around it"
+        );
+    }
+}
