@@ -118,10 +118,15 @@ pub struct RowProperties {
     pub is_header: bool,
     /// Whether this row may be split across a page break.
     pub cant_split: bool,
-    /// Grid columns left empty before the row's first cell (`w:gridBefore`).
-    pub grid_before: Option<u32>,
-    /// Grid columns left empty after the row's last cell (`w:gridAfter`).
-    pub grid_after: Option<u32>,
+}
+
+/// Grid columns a row leaves empty before its first cell (`w:gridBefore`) and after its
+/// last (`w:gridAfter`). Kept out of [`RowProperties`] so its public shape stays as is;
+/// the parser turns these into padding cells.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub(crate) struct RowGridSkips {
+    pub(crate) before: u32,
+    pub(crate) after: u32,
 }
 
 /// Cell-level properties from `<w:tcPr>`.
@@ -271,7 +276,7 @@ pub(crate) fn parse_table_properties(
     Ok(props)
 }
 
-/// Parse row-level properties from streaming XML reader.
+/// Parse row-level properties from streaming XML reader, with the row's grid skips.
 ///
 /// Expects the reader to be positioned just after the `<w:trPr>` start tag.
 ///
@@ -280,8 +285,9 @@ pub(crate) fn parse_table_properties(
 pub(crate) fn parse_row_properties(
     reader: &mut Reader<&[u8]>,
     budget: &mut SecurityBudget,
-) -> Result<RowProperties, SecurityError> {
+) -> Result<(RowProperties, RowGridSkips), SecurityError> {
     let mut props = RowProperties::default();
+    let mut skips = RowGridSkips::default();
     let mut buf = Vec::new();
 
     loop {
@@ -301,8 +307,8 @@ pub(crate) fn parse_row_properties(
                     "cantSplit" => {
                         props.cant_split = is_toggle_on(&e);
                     }
-                    "gridBefore" => props.grid_before = validate_grid_span(get_attribute_u32(&e, "val")),
-                    "gridAfter" => props.grid_after = validate_grid_span(get_attribute_u32(&e, "val")),
+                    "gridBefore" => skips.before = validate_grid_span(get_attribute_u32(&e, "val")).unwrap_or(0),
+                    "gridAfter" => skips.after = validate_grid_span(get_attribute_u32(&e, "val")).unwrap_or(0),
                     _ => {}
                 }
                 buf.clear();
@@ -320,8 +326,8 @@ pub(crate) fn parse_row_properties(
                     "cantSplit" => {
                         props.cant_split = is_toggle_on(&e);
                     }
-                    "gridBefore" => props.grid_before = validate_grid_span(get_attribute_u32(&e, "val")),
-                    "gridAfter" => props.grid_after = validate_grid_span(get_attribute_u32(&e, "val")),
+                    "gridBefore" => skips.before = validate_grid_span(get_attribute_u32(&e, "val")).unwrap_or(0),
+                    "gridAfter" => skips.after = validate_grid_span(get_attribute_u32(&e, "val")).unwrap_or(0),
                     _ => {}
                 }
                 buf.clear();
@@ -340,7 +346,7 @@ pub(crate) fn parse_row_properties(
         }
     }
 
-    Ok(props)
+    Ok((props, skips))
 }
 
 /// Maximum plausible `w:gridSpan` value for a single table cell.

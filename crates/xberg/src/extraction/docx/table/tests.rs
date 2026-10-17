@@ -67,15 +67,16 @@ fn test_parse_row_properties() {
     buf.clear();
 
     let mut budget = SecurityBudget::with_defaults();
-    let props = parse_row_properties(&mut reader, &mut budget).unwrap();
+    let (props, skips) = parse_row_properties(&mut reader, &mut budget).unwrap();
 
+    assert_eq!(skips, RowGridSkips::default());
     assert_eq!(props.height, Some(720));
     assert_eq!(props.height_rule, Some("atLeast".to_string()));
     assert!(props.is_header);
     assert!(props.cant_split);
 }
 
-fn parse_row_properties_xml(xml: &str) -> RowProperties {
+fn parse_row_grid_skips(xml: &str) -> RowGridSkips {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(true);
 
@@ -84,31 +85,43 @@ fn parse_row_properties_xml(xml: &str) -> RowProperties {
     buf.clear();
 
     let mut budget = SecurityBudget::with_defaults();
-    parse_row_properties(&mut reader, &mut budget).unwrap()
+    parse_row_properties(&mut reader, &mut budget).unwrap().1
 }
 
 #[test]
 fn test_parse_row_properties_grid_before_and_after() {
-    let props = parse_row_properties_xml(
+    let skips = parse_row_grid_skips(
         r#"<w:trPr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
         <w:gridBefore w:val="2"/>
         <w:gridAfter w:val="1"/>
     </w:trPr>"#,
     );
 
-    assert_eq!(props.grid_before, Some(2));
-    assert_eq!(props.grid_after, Some(1));
+    assert_eq!(skips, RowGridSkips { before: 2, after: 1 });
 }
 
 #[test]
 fn test_parse_row_properties_drops_an_implausible_grid_skip() {
-    let props = parse_row_properties_xml(
+    let skips = parse_row_grid_skips(
         r#"<w:trPr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
         <w:gridBefore w:val="4294967295"/>
     </w:trPr>"#,
     );
 
-    assert_eq!(props.grid_before, None);
+    assert_eq!(skips.before, 0);
+}
+
+/// `RowProperties` is public, and callers may build it with an exhaustive literal. The grid
+/// skips live in `RowGridSkips` instead, so this literal must keep compiling.
+#[test]
+fn test_row_properties_keeps_its_public_fields() {
+    let props = RowProperties {
+        height: None,
+        height_rule: None,
+        is_header: false,
+        cant_split: false,
+    };
+    assert_eq!(props, RowProperties::default());
 }
 
 #[test]

@@ -1020,16 +1020,18 @@ impl Run {
     }
 }
 
-impl TableRow {
-    /// The grid columns this row leaves empty before its first cell and after its last
-    /// (`w:gridBefore`/`w:gridAfter`), so its cells sit under the right grid columns.
-    fn grid_skips(&self) -> (usize, usize) {
-        let props = self.properties.as_ref();
-        let count = |value: Option<u32>| value.unwrap_or(0) as usize;
-        (
-            count(props.and_then(|p| p.grid_before)),
-            count(props.and_then(|p| p.grid_after)),
-        )
+impl TableCell {
+    /// An empty cell spanning `columns` grid columns. It stands for the columns a row leaves
+    /// empty with `w:gridBefore`/`w:gridAfter`, so the row's real cells sit under the grid
+    /// columns they belong to wherever the row's cells are laid out by their spans.
+    fn grid_padding(columns: u32) -> Self {
+        Self {
+            paragraphs: Vec::new(),
+            properties: Some(super::table::CellProperties {
+                grid_span: Some(columns),
+                ..Default::default()
+            }),
+        }
     }
 }
 
@@ -1049,8 +1051,7 @@ impl Table {
     pub(crate) fn to_cell_grid(&self, render: impl Fn(&Paragraph) -> String) -> Vec<Vec<String>> {
         let mut cells: Vec<Vec<String>> = Vec::new();
         for row in &self.rows {
-            let (grid_before, grid_after) = row.grid_skips();
-            let mut row_cells = vec![String::new(); grid_before];
+            let mut row_cells = Vec::new();
             for cell in &row.cells {
                 let is_vmerge_continue = cell
                     .properties
@@ -1075,7 +1076,6 @@ impl Table {
                     row_cells.push(String::new());
                 }
             }
-            row_cells.extend(std::iter::repeat_n(String::new(), grid_after));
             cells.push(row_cells);
         }
         cells
@@ -1095,8 +1095,7 @@ impl Table {
     pub(crate) fn to_cell_style_grid(&self) -> Vec<Vec<Option<String>>> {
         let mut styles: Vec<Vec<Option<String>>> = Vec::new();
         for row in &self.rows {
-            let (grid_before, grid_after) = row.grid_skips();
-            let mut row_styles = vec![None; grid_before];
+            let mut row_styles = Vec::new();
             for cell in &row.cells {
                 let is_vmerge_continue = cell
                     .properties
@@ -1115,7 +1114,6 @@ impl Table {
                     row_styles.push(None);
                 }
             }
-            row_styles.extend(std::iter::repeat_n(None, grid_after));
             styles.push(row_styles);
         }
         styles
@@ -1220,6 +1218,8 @@ struct TableContext {
     /// whole table, not reset per row, so every cell instance gets a distinct id. See
     /// [`Self::row_ordinal`].
     cell_ordinal: u32,
+    /// `w:gridAfter` of the open row, padded in when the row closes.
+    pending_grid_after: u32,
 }
 
 impl TableContext {
@@ -1231,6 +1231,7 @@ impl TableContext {
             paragraph: None,
             row_ordinal: 0,
             cell_ordinal: 0,
+            pending_grid_after: 0,
         }
     }
 }
@@ -2649,7 +2650,15 @@ impl<R: Read + Seek> DocxParser<R> {
                             if let Some(ctx) = table_stack.last_mut()
                                 && let Some(ref mut row) = ctx.current_row
                             {
-                                row.properties = Some(super::table::parse_row_properties(reader, budget)?);
+                                let (properties, skips) = super::table::parse_row_properties(reader, budget)?;
+                                row.properties = Some(properties);
+                                // The skipped grid columns are cells of the table grid too, so
+                                // they count against the cell budget before any grid is built.
+                                if skips.before > 0 {
+                                    budget.add_cells(skips.before as usize)?;
+                                    row.cells.push(TableCell::grid_padding(skips.before));
+                                }
+                                ctx.pending_grid_after = skips.after;
                             }
                         }
                         "w:tc" => {
@@ -3058,8 +3067,13 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:tr" => {
                             if let Some(ctx) = table_stack.last_mut()
-                                && let Some(row) = ctx.current_row.take()
+                                && let Some(mut row) = ctx.current_row.take()
                             {
+                                let grid_after = std::mem::take(&mut ctx.pending_grid_after);
+                                if grid_after > 0 {
+                                    budget.add_cells(grid_after as usize)?;
+                                    row.cells.push(TableCell::grid_padding(grid_after));
+                                }
                                 ctx.table.rows.push(row);
                             }
                         }
@@ -4818,6 +4832,37 @@ mod tests {
         let styles = table.to_cell_style_grid();
         assert_eq!(styles.iter().map(Vec::len).collect::<Vec<_>>(), vec![3, 3, 3]);
         assert_eq!(styles[1][1].as_deref(), Some("Heading2"));
+    }
+
+    /// The skipped grid columns are cells too: they count against `max_table_cells` before
+    /// any grid is built, so padding cannot allocate past the limit.
+    #[test]
+    fn test_grid_padding_counts_against_the_cell_budget() {
+        let budget_for = |max_table_cells| {
+            SecurityBudget::from_limits(&crate::extractors::security::SecurityLimits {
+                max_table_cells,
+                ..Default::default()
+            })
+        };
+        // One physical cell between one skipped column on each side: three grid cells.
+        let one_cell = wrap_body(
+            r#"<w:tbl><w:tr><w:trPr><w:gridBefore w:val="1"/><w:gridAfter w:val="1"/></w:trPr><w:tc><w:p><w:r><w:t>x</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"#,
+        );
+        assert!(try_parse_xml_with_budget(&one_cell, &mut budget_for(3)).is_ok());
+        assert!(matches!(
+            try_parse_xml_with_budget(&one_cell, &mut budget_for(2)),
+            Err(DocxParseError::SecurityLimit(_))
+        ));
+
+        // A row with no cells at all still pays for the columns it skips.
+        let no_cells = wrap_body(
+            r#"<w:tbl><w:tr><w:trPr><w:gridBefore w:val="1024"/><w:gridAfter w:val="1024"/></w:trPr></w:tr></w:tbl>"#,
+        );
+        assert!(try_parse_xml_with_budget(&no_cells, &mut budget_for(2048)).is_ok());
+        assert!(matches!(
+            try_parse_xml_with_budget(&no_cells, &mut budget_for(2047)),
+            Err(DocxParseError::SecurityLimit(_))
+        ));
     }
     #[test]
     fn should_reset_depth_counter_to_zero_after_parsing_tblpr() {
