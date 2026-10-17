@@ -373,14 +373,25 @@ fn get_attr_bool(e: &BytesStart, key: &str) -> bool {
 /// Called with the reader positioned right after the `<w:txbxContent>` start tag;
 /// consumes events through the matching `</w:txbxContent>` end tag. Paragraphs are
 /// joined with newlines; `w:tab`/`w:ptab` and `w:br`/`w:cr` become `\t` and `\n` within
-/// a paragraph, matching how the main body loop renders inline breaks. A `w:tab` under
-/// `w:pPr/w:tabs` defines a tab stop and adds nothing.
+/// a paragraph ([`txbx_run_char`]), matching how the main body loop renders inline breaks.
 ///
 /// Threads `budget` through every event so nesting and iteration count inside
 /// `w:txbxContent` are measured against the caller's caps instead of passing through
 /// unaccounted (GH#1395/#384). The caller already performed `budget.enter()` for the
 /// opening `<w:txbxContent>` tag; this function balances that when it reaches its own
 /// matching `</w:txbxContent>` (depth 0).
+/// The character a run element adds to text box text, for either event form: `<w:cr/>` and
+/// `<w:cr></w:cr>` mean the same. A `w:tab` under `w:pPr/w:tabs` defines a tab stop and adds
+/// nothing.
+fn txbx_run_char(local_name: &str, in_tab_stops: bool) -> Option<char> {
+    match local_name {
+        "tab" if !in_tab_stops => Some('\t'),
+        "ptab" => Some('\t'),
+        "br" | "cr" => Some('\n'),
+        _ => None,
+    }
+}
+
 fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBudget) -> Result<String, SecurityError> {
     let mut buf = Vec::new();
     let mut depth = 1u32;
@@ -398,15 +409,18 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                     "txbxContent" => depth += 1,
                     "t" => in_text = true,
                     "tabs" => in_tab_stops = true,
-                    _ => {}
+                    name => {
+                        if let Some(c) = txbx_run_char(name, in_tab_stops) {
+                            current.push(c);
+                        }
+                    }
                 }
             }
-            Ok(Event::Empty(ref e)) => match e.local_name().as_ref() {
-                "tab" if !in_tab_stops => current.push('\t'),
-                "ptab" => current.push('\t'),
-                "br" | "cr" => current.push('\n'),
-                _ => {}
-            },
+            Ok(Event::Empty(ref e)) => {
+                if let Some(c) = txbx_run_char(e.local_name().as_ref(), in_tab_stops) {
+                    current.push(c);
+                }
+            }
             Ok(Event::Text(e)) if in_text => {
                 let text = e.xml10_content();
                 budget.check_entity(&text)?;

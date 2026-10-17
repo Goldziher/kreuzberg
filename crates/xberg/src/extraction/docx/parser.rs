@@ -2049,6 +2049,17 @@ fn apply_break(
     }
 }
 
+/// Handle a `w:tab` or `w:ptab` run element (`Event::Start` or `Event::Empty`): written
+/// self-closing or as a start/end pair, either one stands for a tab character. A `w:tab`
+/// that defines a tab stop under `w:pPr/w:tabs` comes before the paragraph's first run, so
+/// there is no run to add to.
+fn apply_tab(current_run: &mut Option<Run>, page_breaks: &mut PageBreakState) {
+    if let Some(run) = current_run {
+        run.text.push('\t');
+        page_breaks.text_since_break = true;
+    }
+}
+
 /// Handle a `<w:lastRenderedPageBreak/>` event (`Event::Start` or `Event::Empty`).
 ///
 /// Word writes this hint at the start of the first run on a page *it* rendered —
@@ -2714,6 +2725,7 @@ impl<R: Read + Seek> DocxParser<R> {
                                 &mut page_breaks,
                             );
                         }
+                        "w:tab" | "w:ptab" => apply_tab(&mut current_run, &mut page_breaks),
                         "w:lastRenderedPageBreak" => {
                             apply_last_rendered_page_break(
                                 &table_stack,
@@ -2811,12 +2823,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         // `w:ptab` is an absolute position tab, such as the one that moves a
                         // footer's page number to the right margin.
-                        "w:tab" | "w:ptab" => {
-                            if let Some(ref mut run) = current_run {
-                                run.text.push('\t');
-                                page_breaks.text_since_break = true;
-                            }
-                        }
+                        "w:tab" | "w:ptab" => apply_tab(&mut current_run, &mut page_breaks),
                         "w:noBreakHyphen" => {
                             if let Some(ref mut run) = current_run {
                                 run.text.push('\u{2011}');
@@ -5372,35 +5379,63 @@ mod tests {
 
     #[test]
     fn test_carriage_return_in_run_breaks_the_line() {
-        let xml = wrap_body(r#"<w:p><w:r><w:t>line one</w:t><w:cr/><w:t>line two</w:t></w:r></w:p>"#);
-        let doc = parse_xml(&xml);
-        assert_eq!(doc.paragraphs[0].to_text(), "line one\nline two");
+        for cr in ["<w:cr/>", "<w:cr></w:cr>"] {
+            let xml = wrap_body(&format!(
+                r#"<w:p><w:r><w:t>line one</w:t>{cr}<w:t>line two</w:t></w:r></w:p>"#
+            ));
+            let doc = parse_xml(&xml);
+            assert_eq!(doc.paragraphs[0].to_text(), "line one\nline two", "{cr}");
+        }
     }
 
     #[test]
     fn test_position_tab_in_run_separates_the_words() {
-        let xml = wrap_body(
-            r#"<w:p><w:r><w:t>Report</w:t><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/><w:t>Page 1</w:t></w:r></w:p>"#,
-        );
-        let doc = parse_xml(&xml);
-        assert_eq!(doc.paragraphs[0].to_text(), "Report\tPage 1");
+        for tab in [
+            r#"<w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/>"#,
+            r#"<w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"></w:ptab>"#,
+            "<w:tab></w:tab>",
+        ] {
+            let xml = wrap_body(&format!(
+                r#"<w:p><w:r><w:t>Report</w:t>{tab}<w:t>Page 1</w:t></w:r></w:p>"#
+            ));
+            let doc = parse_xml(&xml);
+            assert_eq!(doc.paragraphs[0].to_text(), "Report\tPage 1", "{tab}");
+        }
     }
 
+    /// The same text box with self-closing and with paired run elements, including a paired
+    /// tab stop definition, which must still add nothing.
     #[test]
     fn should_keep_breaks_and_tabs_but_not_tab_stops_in_textboxes() {
-        let xml = wrap_body(
-            r#"<w:p><w:r><w:pict><v:shape xmlns:v="urn:schemas-microsoft-com:vml"><v:textbox><w:txbxContent>
-                 <w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="720"/></w:tabs></w:pPr>
-                   <w:r><w:t>one</w:t><w:cr/><w:t>two</w:t><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/><w:t>three</w:t><w:tab/><w:t>four</w:t></w:r></w:p>
-               </w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>"#,
-        );
-        let doc = parse_xml(&xml);
-        let textboxes: Vec<&str> = doc
-            .drawings
-            .iter()
-            .filter_map(|drawing| drawing.text_box_content.as_deref())
-            .collect();
-        assert_eq!(textboxes, vec!["one\ntwo\tthree\tfour"]);
+        let self_closing = r#"<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="720"/></w:tabs></w:pPr>
+                   <w:r><w:t>one</w:t><w:cr/><w:t>two</w:t><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/><w:t>three</w:t><w:tab/><w:t>four</w:t></w:r></w:p>"#;
+        let paired = r#"<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="720"></w:tab></w:tabs></w:pPr>
+                   <w:r><w:t>one</w:t><w:cr></w:cr><w:t>two</w:t><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"></w:ptab><w:t>three</w:t><w:tab></w:tab><w:t>four</w:t></w:r></w:p>"#;
+        for content in [self_closing, paired] {
+            let xml = wrap_body(&format!(
+                r#"<w:p><w:r><w:pict><v:shape xmlns:v="urn:schemas-microsoft-com:vml"><v:textbox><w:txbxContent>
+                 {content}
+               </w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>"#
+            ));
+            let limits = crate::extractors::security::SecurityLimits {
+                max_nesting_depth: 64,
+                max_xml_depth: 64,
+                ..Default::default()
+            };
+            let mut budget = SecurityBudget::from_limits(&limits);
+            let doc = parse_xml_with_budget(&xml, &mut budget);
+            let textboxes: Vec<&str> = doc
+                .drawings
+                .iter()
+                .filter_map(|drawing| drawing.text_box_content.as_deref())
+                .collect();
+            assert_eq!(textboxes, vec!["one\ntwo\tthree\tfour"], "{content}");
+            assert_eq!(
+                probe_remaining_depth(&mut budget, 64),
+                64,
+                "paired run elements must not leak a depth level"
+            );
+        }
     }
 
     /// Word writes both `<w:br w:type="page"/>` (the author's break) and, at the
