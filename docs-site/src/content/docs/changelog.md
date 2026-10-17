@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(pdf): Consecutive-paragraph cleanup preserves repeated body text at distinct or unknown positions.**
   Headings, lists, code, formulas, captions, and differences in capitalization are preserved; rendering duplicates
   are removed only when their text and valid bounding boxes coincide.
+- **(docx): A carriage return (`w:cr`) breaks the line and a position tab (`w:ptab`) separates the words.**
+  Both were dropped, so the words around them ran together, in text boxes too. Tab stop definitions in a text
+  box no longer add a tab before its text. (#2152)
 
 ## [1.3.11] - 2026-10-16
 
