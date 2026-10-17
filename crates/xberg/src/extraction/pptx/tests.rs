@@ -1868,3 +1868,64 @@ fn test_speaker_notes_follow_strict_ooxml_relationship() {
         std::collections::HashMap::from([(1, "Strict notes relationship".to_string())])
     );
 }
+
+/// A graphic frame (table, chart, SmartArt) keeps its offset in its own `p:xfrm`, not in an
+/// `a:xfrm`, so its position used to read as (0, 0): a table in the middle of a slide was
+/// emitted before everything above it.
+#[test]
+fn test_graphic_frame_keeps_its_place_in_reading_order() {
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+    <p:cSld><p:spTree>
+        <p:sp>
+            <p:nvSpPr><p:cNvPr id="2" name="Title"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
+            <p:spPr><a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="914400"/></a:xfrm></p:spPr>
+            <p:txBody><a:bodyPr/><a:p><a:r><a:t>Quarterly report</a:t></a:r></a:p></p:txBody>
+        </p:sp>
+        <p:sp>
+            <p:nvSpPr><p:cNvPr id="3" name="Above"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+            <p:spPr><a:xfrm><a:off x="914400" y="1371600"/><a:ext cx="4572000" cy="457200"/></a:xfrm></p:spPr>
+            <p:txBody><a:bodyPr/><a:p><a:r><a:t>Text above the table</a:t></a:r></a:p></p:txBody>
+        </p:sp>
+        <p:graphicFrame>
+            <p:nvGraphicFramePr><p:cNvPr id="4" name="Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+            <p:xfrm><a:off x="914400" y="2743200"/><a:ext cx="4572000" cy="740664"/></p:xfrm>
+            <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                <a:tbl><a:tblGrid><a:gridCol w="2286000"/><a:gridCol w="2286000"/></a:tblGrid>
+                    <a:tr h="370332"><a:tc><a:txBody><a:bodyPr/><a:p><a:r><a:t>Region</a:t></a:r></a:p></a:txBody></a:tc><a:tc><a:txBody><a:bodyPr/><a:p><a:r><a:t>Sales</a:t></a:r></a:p></a:txBody></a:tc></a:tr>
+                    <a:tr h="370332"><a:tc><a:txBody><a:bodyPr/><a:p><a:r><a:t>North</a:t></a:r></a:p></a:txBody></a:tc><a:tc><a:txBody><a:bodyPr/><a:p><a:r><a:t>42</a:t></a:r></a:p></a:txBody></a:tc></a:tr>
+                </a:tbl>
+            </a:graphicData></a:graphic>
+        </p:graphicFrame>
+        <p:sp>
+            <p:nvSpPr><p:cNvPr id="5" name="Below"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+            <p:spPr><a:xfrm><a:off x="914400" y="4572000"/><a:ext cx="4572000" cy="457200"/></a:xfrm></p:spPr>
+            <p:txBody><a:bodyPr/><a:p><a:r><a:t>Text below the table</a:t></a:r></a:p></p:txBody>
+        </p:sp>
+    </p:spTree></p:cSld>
+</p:sld>"#;
+
+    let pptx = build_single_slide_pptx(slide_xml, None, &[]);
+    let result = extract_pptx_from_bytes(
+        &pptx,
+        &PptxExtractionOptions {
+            extract_images: false,
+            ..Default::default()
+        },
+        &mut Vec::new(),
+    )
+    .unwrap();
+
+    let at = |needle: &str| {
+        result
+            .content
+            .find(needle)
+            .unwrap_or_else(|| panic!("{needle:?} missing from {:?}", result.content))
+    };
+    assert!(
+        at("Text above the table") < at("Region") && at("Region") < at("Text below the table"),
+        "the table must stay between the text above and below it: {:?}",
+        result.content
+    );
+}
