@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(packaging): GNU cross-builds use a pinned linker wrapper compatible with Rust 1.99 warnings.**
 - **(swift): iOS simulator release builds omit macOS extension-linker flags.**
 - **(swift): Linux library builds use a pinned cross-compiler compatible with strict Rust warning checks.**
+- **(pptx): Tables, charts and SmartArt keep their place in a slide's reading order.** Their position, stored in
+  `p:xfrm`, was read as the top-left corner, so they came out before the text above them. (#2155)
 - **(llm): Strict structured extraction validates provider output against the original JSON schema.**
   Invalid output leaves extracted text intact and reports a safe warning; schema references resolve offline. (#2136)
 - **(ocr): Tesseract honors the requested OCR engine mode, including when reusing pooled engines.**
