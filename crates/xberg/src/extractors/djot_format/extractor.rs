@@ -83,6 +83,17 @@ impl DjotExtractor {
         // pattern: an image followed immediately (no blank line) by text.
         let mut figure_image_index: Option<u32> = None;
         let mut figure_disqualified = false;
+        // A block is pushed when it closes, so a footnote reference pushed the moment it was
+        // read landed before the block that cites it. Renderers attach a `FootnoteRef` to the
+        // block it follows, and the marker showed up on the previous paragraph, list item or
+        // heading. References read inside a block wait here and are pushed right after it.
+        let mut pending_footnote_refs: Vec<String> = Vec::new();
+
+        fn flush_footnote_refs(builder: &mut InternalDocumentBuilder, pending: &mut Vec<String>) {
+            for name in pending.drain(..) {
+                builder.push_footnote_ref(&name, &name, None);
+            }
+        }
 
         let mut annotation_starts: Vec<(u8, u32, Option<String>)> = Vec::new();
 
@@ -106,6 +117,7 @@ impl DjotExtractor {
                             b.set_annotations(idx, annotations);
                         }
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     heading_text.clear();
                     heading_annotations.clear();
                 }
@@ -139,6 +151,7 @@ impl DjotExtractor {
                                 );
                             }
                         }
+                        flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                         paragraph_text.clear();
                         paragraph_annotations.clear();
                         figure_image_index = None;
@@ -374,6 +387,7 @@ impl DjotExtractor {
                     if !text.is_empty() {
                         b.push_definition_term(&text, None);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     description_term_text.clear();
                 }
                 Event::Start(Container::DescriptionDetails, _) => {
@@ -386,6 +400,7 @@ impl DjotExtractor {
                     if !text.is_empty() {
                         b.push_definition_description(&text, None);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     description_details_text.clear();
                 }
                 Event::Start(Container::List { kind, .. }, _) => {
@@ -411,6 +426,7 @@ impl DjotExtractor {
                             );
                             b.push_list_item(&text, ordered, annotations, None, None);
                         }
+                        flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                         list_item_text.clear();
                         list_item_annotations.clear();
                         annotation_starts.clear();
@@ -441,6 +457,7 @@ impl DjotExtractor {
                         );
                         b.push_list_item(&text, ordered, annotations, None, None);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     list_item_text.clear();
                     list_item_annotations.clear();
                 }
@@ -543,7 +560,17 @@ impl DjotExtractor {
                     footnote_label.clear();
                 }
                 Event::FootnoteReference(name) => {
-                    b.push_footnote_ref(name, name, None);
+                    let in_block = in_heading
+                        || in_paragraph
+                        || in_list_item > 0
+                        || in_table_cell
+                        || in_description_term
+                        || in_description_details;
+                    if in_block && !in_footnote {
+                        pending_footnote_refs.push(name.to_string());
+                    } else {
+                        b.push_footnote_ref(name, name, None);
+                    }
                 }
                 Event::Start(Container::Table, _) => {
                     table_rows.clear();
@@ -564,6 +591,7 @@ impl DjotExtractor {
                 }
                 Event::End(Container::Table) if !table_rows.is_empty() => {
                     b.push_table_from_cells(&std::mem::take(&mut table_rows), None, None);
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                 }
                 Event::Str(s) => {
                     if in_table_cell {

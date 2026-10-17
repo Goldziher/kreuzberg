@@ -189,6 +189,11 @@ impl MarkdownExtractor {
         let mut def_buf = String::new();
         let mut blockquote_stack: Vec<Option<u32>> = Vec::new();
         let mut pending_anchor: Option<String> = None;
+        // A block is pushed when it closes, so a footnote reference pushed the moment it was
+        // read landed before the block that cites it. Renderers attach a `FootnoteRef` to the
+        // block it follows, and the marker showed up on the previous paragraph, list item or
+        // heading. References read inside a block wait here and are pushed right after it.
+        let mut pending_footnote_refs: Vec<String> = Vec::new();
 
         let mut annotation_starts: Vec<AnnotationEntry> = Vec::new();
 
@@ -204,6 +209,12 @@ impl MarkdownExtractor {
         ) {
             if let Some(anchor) = pending_anchor.take() {
                 builder.set_anchor(index, anchor);
+            }
+        }
+
+        fn flush_footnote_refs(builder: &mut InternalDocumentBuilder, pending: &mut Vec<String>) {
+            for name in pending.drain(..) {
+                builder.push_footnote_ref(&name, &name, None);
             }
         }
 
@@ -238,6 +249,7 @@ impl MarkdownExtractor {
                             b.set_annotations(idx, annotations);
                         }
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     heading_text.clear();
                     heading_annotations.clear();
                 }
@@ -260,6 +272,7 @@ impl MarkdownExtractor {
                         let idx = b.push_paragraph(trimmed, annotations, None, None);
                         apply_pending_anchor(&mut b, &mut pending_anchor, idx);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     paragraph_text.clear();
                     paragraph_annotations.clear();
                 }
@@ -535,6 +548,7 @@ impl MarkdownExtractor {
                             );
                             b.push_list_item(trimmed, ordered, annotations, None, None);
                         }
+                        flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                         list_item_text.clear();
                         list_item_annotations.clear();
                         annotation_starts.clear();
@@ -565,6 +579,7 @@ impl MarkdownExtractor {
                         );
                         b.push_list_item(trimmed, ordered, annotations, None, None);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     list_item_text.clear();
                     list_item_annotations.clear();
                 }
@@ -584,6 +599,7 @@ impl MarkdownExtractor {
                         let idx = b.push_table(table, None, None);
                         apply_pending_anchor(&mut b, &mut pending_anchor, idx);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     table_rows.clear();
                 }
                 Event::Start(Tag::TableHead | Tag::TableRow) => {
@@ -672,6 +688,7 @@ impl MarkdownExtractor {
                     if !trimmed.is_empty() {
                         b.push_definition_term(trimmed, None);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     def_buf.clear();
                 }
                 Event::Start(Tag::DefinitionListDefinition) => {
@@ -684,6 +701,7 @@ impl MarkdownExtractor {
                     if !trimmed.is_empty() {
                         b.push_definition_description(trimmed, None);
                     }
+                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
                     def_buf.clear();
                 }
                 Event::Code(s) => {
@@ -800,7 +818,13 @@ impl MarkdownExtractor {
                     }
                 }
                 Event::FootnoteReference(name) => {
-                    b.push_footnote_ref(name, name, None);
+                    let in_block =
+                        in_heading || in_paragraph || in_list_item > 0 || in_table_cell || in_def_title || in_def_desc;
+                    if in_block && footnote_def_label.is_none() {
+                        pending_footnote_refs.push(name.to_string());
+                    } else {
+                        b.push_footnote_ref(name, name, None);
+                    }
                 }
                 Event::InlineHtml(s) => {
                     if let Some(target) = super::myst::myst_target_marker(s) {

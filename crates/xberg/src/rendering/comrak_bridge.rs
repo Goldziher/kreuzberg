@@ -930,8 +930,10 @@ pub(crate) fn build_comrak_ast<'a>(doc: &InternalDocument, arena: &'a comrak::Ar
                             ix: n,
                         })),
                     );
+                    // A reference follows the block that cites it, so it joins that block when
+                    // the block holds inline text.
                     let inline_parent = if let Some(last) = parent.last_child() {
-                        if matches!(last.data.borrow().value, NodeValue::Paragraph) {
+                        if matches!(last.data.borrow().value, NodeValue::Paragraph | NodeValue::Heading(_)) {
                             last
                         } else {
                             let p = mk(arena, NodeValue::Paragraph);
@@ -1405,6 +1407,18 @@ mod tests {
         let doc = b.build();
         let out = render(&doc);
         assert!(out.contains("footnote"), "should contain footnote marker, got: {}", out);
+    }
+
+    #[test]
+    fn test_footnote_ref_joins_the_heading_it_follows() {
+        let mut b = InternalDocumentBuilder::new("test");
+        b.push_heading(1, "Title", None, None);
+        b.push_footnote_ref("1", "fn1", None);
+        b.push_paragraph("Body", vec![], None, None);
+        let def_idx = b.push_footnote_definition("A note.", "fn1", None);
+        b.set_layer(def_idx, ContentLayer::Footnote);
+        let out = render(&b.build());
+        assert!(out.starts_with("# Title[^1]\n\nBody\n"), "got: {}", out);
     }
 
     /// Regression test for issue #762: image links must appear in markdown when image

@@ -17,6 +17,9 @@ pub(crate) fn render_djot(doc: &InternalDocument) -> String {
     let footnotes = FootnoteCollector::new(doc);
     let mut state = RenderState::default();
     let mut out = String::with_capacity(doc.elements.len() * 80);
+    // Where the text of the last block written ends, while that block can take an inline
+    // footnote marker. A `FootnoteRef` follows the block that cites it.
+    let mut inline_block_end: Option<usize> = None;
 
     for (i, elem) in doc.elements.iter().enumerate() {
         if !is_body_element(elem) {
@@ -154,9 +157,18 @@ pub(crate) fn render_djot(doc: &InternalDocument) -> String {
             }
             ElementKind::FootnoteRef => {
                 if let Some(n) = footnotes.ref_number(i as u32) {
-                    out.push_str("[^");
-                    out.push_str(&n.to_string());
-                    out.push(']');
+                    let marker = format!("[^{n}]");
+                    // Appended to the end of `out`, the marker started the next block instead.
+                    match inline_block_end {
+                        Some(end) => {
+                            out.insert_str(end, &marker);
+                            inline_block_end = Some(end + marker.len());
+                        }
+                        None => {
+                            push_with_bq(&mut out, &format!("{marker}\n\n"), bq_depth);
+                            inline_block_end = Some(block_text_end(&out, bq_depth));
+                        }
+                    }
                 }
             }
             ElementKind::FootnoteDefinition => {}
@@ -248,6 +260,28 @@ pub(crate) fn render_djot(doc: &InternalDocument) -> String {
             }
             ElementKind::GroupEnd => {}
         }
+
+        inline_block_end = match elem.kind {
+            ElementKind::Title
+            | ElementKind::Heading { .. }
+            | ElementKind::Paragraph
+            | ElementKind::ListItem { .. }
+            | ElementKind::DefinitionTerm
+            | ElementKind::DefinitionDescription
+            | ElementKind::OcrText { .. }
+                if !elem.text.is_empty() =>
+            {
+                Some(block_text_end(&out, bq_depth))
+            }
+            // Nothing of these is written in the flow, so the last block stays the last one.
+            ElementKind::FootnoteRef
+            | ElementKind::FootnoteDefinition
+            | ElementKind::CommentRef
+            | ElementKind::CommentDefinition
+            | ElementKind::Citation
+            | ElementKind::PageBreak => inline_block_end,
+            _ => None,
+        };
     }
 
     let defs = footnotes.definitions();
@@ -338,6 +372,23 @@ fn render_annotations_djot(annotations: &[PdfAnnotation]) -> String {
 /// Plain text segments and annotated spans are normalized (whitespace collapsed,
 /// newlines replaced, control characters stripped) to match the markdown renderer.
 /// Code spans are left un-normalized to preserve literal content.
+/// Byte offset just past the text of the last block in `out`: before the newlines that close
+/// it and, inside a blockquote, before the quoted blank line (`> `) that follows it.
+fn block_text_end(out: &str, bq_depth: usize) -> usize {
+    let mut end = out.trim_end_matches('\n').len();
+    if bq_depth == 0 {
+        return end;
+    }
+    let prefix = "> ".repeat(bq_depth);
+    loop {
+        let line_start = out[..end].rfind('\n').map_or(0, |i| i + 1);
+        if out[line_start..end] != prefix {
+            return end;
+        }
+        end = out[..line_start].trim_end_matches('\n').len();
+    }
+}
+
 fn render_djot_annotated(text: &str, annotations: &[crate::types::document_structure::TextAnnotation]) -> String {
     if annotations
         .iter()
@@ -841,6 +892,35 @@ mod tests {
         let out = render_djot(&doc);
         assert!(out.contains("[^1]"), "got: {}", out);
         assert!(out.contains("[^1]: A note."), "got: {}", out);
+    }
+
+    #[test]
+    fn test_render_djot_footnote_ref_joins_the_block_it_follows() {
+        let mut b = InternalDocumentBuilder::new("test");
+        b.push_heading(1, "Title", None, None);
+        b.push_footnote_ref("1", "fn1", None);
+        b.push_paragraph("See note", vec![], None, None);
+        b.push_footnote_ref("2", "fn2", None);
+        b.push_footnote_ref("3", "fn3", None);
+        b.push_quote_start();
+        b.push_paragraph("Quoted", vec![], None, None);
+        b.push_footnote_ref("4", "fn4", None);
+        b.push_quote_end();
+        b.push_table_from_cells(&[vec!["a".to_string(), "b".to_string()]], None, None);
+        b.push_footnote_ref("5", "fn5", None);
+        b.push_paragraph("Last", vec![], None, None);
+        for n in 1..=5 {
+            let def = b.push_footnote_definition("A note.", &format!("fn{n}"), None);
+            b.set_layer(def, ContentLayer::Footnote);
+        }
+        let out = render_djot(&b.build());
+        assert!(
+            out.starts_with("# Title[^1]\n\nSee note[^2][^3]\n\n> Quoted[^4]\n"),
+            "got: {}",
+            out
+        );
+        // A table cannot take an inline marker, so the reference becomes its own paragraph.
+        assert!(out.contains("|\n\n[^5]\n\nLast\n"), "got: {}", out);
     }
 
     #[test]
