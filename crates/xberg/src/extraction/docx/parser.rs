@@ -266,6 +266,19 @@ fn get_val_attr_string(e: &BytesStart) -> Option<String> {
     None
 }
 
+/// The list kind a `w:numFmt` value stands for. `bullet` is a bullet list, and `none`, a
+/// level that shows no marker, stays a bullet as before. Every other `ST_NumberFormat` value
+/// numbers the items: besides the Latin decimal, letter and roman forms, that includes the CJK
+/// counting forms (`chineseCounting`, `japaneseCounting`, `ideographTraditional`), the enclosed
+/// and full-width digits, `ordinal`, `cardinalText`, the Hebrew, Arabic, Hindi, Thai and Russian
+/// letters, and Word's `custom` format.
+fn list_type_for_num_fmt(fmt: Option<&str>) -> ListType {
+    match fmt {
+        None | Some("bullet") | Some("none") => ListType::Bullet,
+        Some(_) => ListType::Numbered,
+    }
+}
+
 /// Extract the target URL from a `HYPERLINK` field instruction (#88, #239).
 ///
 /// Matches instruction text such as `HYPERLINK "https://example.com"` or
@@ -3228,14 +3241,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:numFmt" => {
                             if let (Some(abstract_id), Some(lvl)) = (current_abstract_num_id, current_lvl) {
-                                let fmt = get_val_attr_string(e);
-                                let list_type = match fmt.as_deref() {
-                                    Some("decimal") | Some("decimalZero") | Some("lowerLetter")
-                                    | Some("upperLetter") | Some("lowerRoman") | Some("upperRoman") => {
-                                        ListType::Numbered
-                                    }
-                                    _ => ListType::Bullet,
-                                };
+                                let list_type = list_type_for_num_fmt(get_val_attr_string(e).as_deref());
                                 abstract_num_formats
                                     .entry(abstract_id)
                                     .or_default()
@@ -3255,12 +3261,7 @@ impl<R: Read + Seek> DocxParser<R> {
                     }
                     "w:numFmt" => {
                         if let (Some(abstract_id), Some(lvl)) = (current_abstract_num_id, current_lvl) {
-                            let fmt = get_val_attr_string(e);
-                            let list_type = match fmt.as_deref() {
-                                Some("decimal") | Some("decimalZero") | Some("lowerLetter") | Some("upperLetter")
-                                | Some("lowerRoman") | Some("upperRoman") => ListType::Numbered,
-                                _ => ListType::Bullet,
-                            };
+                            let list_type = list_type_for_num_fmt(get_val_attr_string(e).as_deref());
                             abstract_num_formats
                                 .entry(abstract_id)
                                 .or_default()
@@ -3833,6 +3834,65 @@ mod tests {
         defs.insert((2, 0), ListType::Numbered);
         let mut counters = AHashMap::new();
         assert_eq!(para.to_markdown(&defs, &mut counters, None), "1. Item");
+    }
+
+    /// Only `bullet` and `none` are not numbered. The CJK, enclosed, ordinal and other
+    /// non-Latin formats used to be read as bullets, so such a list lost its order.
+    #[test]
+    fn test_every_numbering_format_except_bullet_and_none_is_numbered() {
+        let formats = [
+            "decimal",
+            "upperRoman",
+            "chineseCounting",
+            "chineseCountingThousand",
+            "japaneseCounting",
+            "ideographTraditional",
+            "decimalEnclosedCircle",
+            "decimalFullWidth",
+            "koreanDigital",
+            "ordinal",
+            "cardinalText",
+            "hebrew1",
+            "russianLower",
+            "custom",
+            "bullet",
+            "none",
+        ];
+        // The last level writes its numFmt as a start/end pair instead of self-closing.
+        let mut levels: String = formats
+            .iter()
+            .enumerate()
+            .map(|(lvl, fmt)| format!(r#"<w:lvl w:ilvl="{lvl}"><w:numFmt w:val="{fmt}"/></w:lvl>"#))
+            .collect();
+        let paired = formats.len();
+        levels.push_str(&format!(
+            r#"<w:lvl w:ilvl="{paired}"><w:numFmt w:val="taiwaneseCounting"></w:numFmt></w:lvl>"#
+        ));
+        let xml = format!(
+            r#"<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0">{levels}</w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>"#
+        );
+        let parser = DocxParser {
+            archive: zip::ZipArchive::new(std::io::Cursor::new(create_minimal_zip())).unwrap(),
+            relationships: AHashMap::new(),
+            styles: None,
+            theme: None,
+        };
+        let mut budget = SecurityBudget::with_defaults();
+        let defs = parser.parse_numbering(&xml, &mut budget).unwrap();
+
+        for (lvl, fmt) in formats.iter().enumerate() {
+            let expected = if matches!(*fmt, "bullet" | "none") {
+                ListType::Bullet
+            } else {
+                ListType::Numbered
+            };
+            assert_eq!(defs.get(&(1, lvl as i64)), Some(&expected), "numFmt {fmt}");
+        }
+        assert_eq!(
+            defs.get(&(1, paired as i64)),
+            Some(&ListType::Numbered),
+            "paired numFmt"
+        );
     }
 
     #[test]
