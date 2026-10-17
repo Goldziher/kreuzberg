@@ -372,8 +372,9 @@ fn get_attr_bool(e: &BytesStart, key: &str) -> bool {
 ///
 /// Called with the reader positioned right after the `<w:txbxContent>` start tag;
 /// consumes events through the matching `</w:txbxContent>` end tag. Paragraphs are
-/// joined with newlines; `w:tab`/`w:br` become `\t`/`\n` within a paragraph, matching
-/// how the main body loop renders inline breaks.
+/// joined with newlines; `w:tab`/`w:ptab` and `w:br`/`w:cr` become `\t` and `\n` within
+/// a paragraph, matching how the main body loop renders inline breaks. A `w:tab` under
+/// `w:pPr/w:tabs` defines a tab stop and adds nothing.
 ///
 /// Threads `budget` through every event so nesting and iteration count inside
 /// `w:txbxContent` are measured against the caller's caps instead of passing through
@@ -386,6 +387,7 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
     let mut paragraphs: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut in_text = false;
+    let mut in_tab_stops = false;
 
     loop {
         budget.step()?;
@@ -395,12 +397,14 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 match e.local_name().as_ref() {
                     "txbxContent" => depth += 1,
                     "t" => in_text = true,
+                    "tabs" => in_tab_stops = true,
                     _ => {}
                 }
             }
             Ok(Event::Empty(ref e)) => match e.local_name().as_ref() {
-                "tab" => current.push('\t'),
-                "br" => current.push('\n'),
+                "tab" if !in_tab_stops => current.push('\t'),
+                "ptab" => current.push('\t'),
+                "br" | "cr" => current.push('\n'),
                 _ => {}
             },
             Ok(Event::Text(e)) if in_text => {
@@ -418,6 +422,7 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 budget.leave();
                 match e.local_name().as_ref() {
                     "t" => in_text = false,
+                    "tabs" => in_tab_stops = false,
                     "p" => paragraphs.push(std::mem::take(&mut current)),
                     "txbxContent" => {
                         depth -= 1;
