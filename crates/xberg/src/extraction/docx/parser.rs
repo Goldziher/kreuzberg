@@ -2482,6 +2482,11 @@ impl<R: Read + Seek> DocxParser<R> {
         let mut revision_text = String::new();
         let mut revision_id_counter: usize = 0;
         let mut in_del_text = false;
+        // Depth of open `w:moveFrom` wrappers. A tracked move leaves the moved
+        // text at its old place in `w:moveFrom` runs, written with `w:t`, not
+        // `w:delText`, and copies it to the new place in `w:moveTo`. Word shows
+        // it only at the new place, so text inside `w:moveFrom` is not content.
+        let mut move_from_depth: usize = 0;
         let mut current_paragraph_index: usize = 0;
         let mut in_run_property_change = false;
         let mut pending_format_revision_attrs: Option<(Option<String>, Option<String>, Option<String>)> = None;
@@ -2515,8 +2520,11 @@ impl<R: Read + Seek> DocxParser<R> {
                             }
                             current_run = Some(run);
                         }
-                        "w:t" if !in_field_instruction => {
+                        "w:t" if !in_field_instruction && move_from_depth == 0 => {
                             in_text = true;
+                        }
+                        "w:moveFrom" => {
+                            move_from_depth += 1;
                         }
                         "w:fldChar" => {
                             apply_fld_char(
@@ -2965,6 +2973,9 @@ impl<R: Read + Seek> DocxParser<R> {
                     match name.as_ref() {
                         "w:t" => {
                             in_text = false;
+                        }
+                        "w:moveFrom" => {
+                            move_from_depth = move_from_depth.saturating_sub(1);
                         }
                         "w:instrText" => {
                             in_instr_text = false;
