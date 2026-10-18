@@ -386,6 +386,9 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
     let mut paragraphs: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut in_text = false;
+    // Open `w:moveFrom` wrappers inside the text box. As in the body loop, a move
+    // source is read and accounted but is not part of the final text.
+    let mut move_from_depth = 0usize;
 
     loop {
         budget.step()?;
@@ -395,10 +398,11 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 match e.local_name().as_ref() {
                     "txbxContent" => depth += 1,
                     "t" => in_text = true,
+                    "moveFrom" => move_from_depth += 1,
                     _ => {}
                 }
             }
-            Ok(Event::Empty(ref e)) => match e.local_name().as_ref() {
+            Ok(Event::Empty(ref e)) if move_from_depth == 0 => match e.local_name().as_ref() {
                 "tab" => current.push('\t'),
                 "br" => current.push('\n'),
                 _ => {}
@@ -407,17 +411,22 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 let text = e.xml10_content();
                 budget.check_entity(&text)?;
                 budget.account_text(text.len())?;
-                current.push_str(&text);
+                if move_from_depth == 0 {
+                    current.push_str(&text);
+                }
             }
             Ok(Event::GeneralRef(ref e)) if in_text => {
                 let text = crate::utils::xml_utils::resolve_general_ref(e);
                 budget.account_text(text.len())?;
-                current.push_str(&text);
+                if move_from_depth == 0 {
+                    current.push_str(&text);
+                }
             }
             Ok(Event::End(ref e)) => {
                 budget.leave();
                 match e.local_name().as_ref() {
                     "t" => in_text = false,
+                    "moveFrom" => move_from_depth = move_from_depth.saturating_sub(1),
                     "p" => paragraphs.push(std::mem::take(&mut current)),
                     "txbxContent" => {
                         depth -= 1;
