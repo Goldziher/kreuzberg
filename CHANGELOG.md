@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A DOCX paragraph that holds only a note reference keeps it, a reference in a table cell is written after the table
   instead of as a bare source-id literal in the cell, and the per-page content numbers markers and definitions the
   same way, with a footnote and an endnote that share a Word id kept apart.
+- **(docx): The prompt of an empty content control is no longer extracted as text.** Word fills an unfilled
+  field with a prompt such as "Click or tap here to enter text." and marks it `w:showingPlcHdr`; forms and templates no
+  longer repeat that prompt in `content`, in the body, in table cells or in text boxes.
 - **(pdf): Explicit header and footer inclusion preserves geometric page numbers independently.** (#2150)
 - **(pdf): Native extraction preserves separate two-column bordered tables beside wider tables on the same page.**
 - **(ocr): Failed PDF OCR pages report the type chain of the underlying error.**
