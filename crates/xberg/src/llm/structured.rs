@@ -163,7 +163,6 @@ fn strip_additional_properties(schema: &Value) -> Value {
 /// - The LLM request fails (network, rate-limit, etc.).
 /// - The LLM response cannot be parsed as valid JSON.
 /// - In strict mode, the schema cannot be compiled offline or the output fails validation.
-#[allow(clippy::field_reassign_with_default)]
 pub(crate) async fn extract_structured(
     content: &str,
     config: &StructuredExtractionConfig,
@@ -174,40 +173,7 @@ pub(crate) async fn extract_structured(
 
     let client = super::client::create_client(&config.llm)?;
 
-    let template = config
-        .prompt
-        .as_deref()
-        .unwrap_or(super::prompts::STRUCTURED_EXTRACTION_TEMPLATE);
-
-    let schema_json = serde_json::to_string_pretty(&config.schema)
-        .map_err(|e| crate::XbergError::validation(format!("Failed to serialize schema for prompt: {e}")))?;
-
-    let ctx = minijinja::context! {
-        content => content,
-        schema => schema_json,
-        schema_name => &config.schema_name,
-        schema_description => config.schema_description.as_deref().unwrap_or(""),
-    };
-
-    let prompt = super::prompts::render_template(template, &ctx)?;
-
-    let sanitized_schema = sanitize_schema_for_provider(&config.schema, &config.llm.model);
-
-    let mut request = liter_llm::ChatCompletionRequest::default();
-    request.model = config.llm.model.clone();
-    request.messages = vec![liter_llm::Message::User(liter_llm::UserMessage {
-        content: liter_llm::UserContent::Text(prompt),
-        name: None,
-    })];
-    super::client::apply_request_time_params(&mut request, &config.llm)?;
-    request.response_format = Some(liter_llm::ResponseFormat::JsonSchema {
-        json_schema: liter_llm::JsonSchemaFormat {
-            name: config.schema_name.clone(),
-            description: config.schema_description.clone(),
-            schema: sanitized_schema,
-            strict: Some(config.strict),
-        },
-    });
+    let request = build_structured_request(content, config)?;
 
     let response = client
         .chat(request)
@@ -249,6 +215,49 @@ pub(crate) async fn extract_structured(
         .map_err(|error| super::usage::with_usage(error, usage.clone()))?;
 
     Ok((value, usage))
+}
+
+#[allow(clippy::field_reassign_with_default)]
+fn build_structured_request(
+    content: &str,
+    config: &StructuredExtractionConfig,
+) -> crate::Result<liter_llm::ChatCompletionRequest> {
+    let template = config
+        .prompt
+        .as_deref()
+        .unwrap_or(super::prompts::STRUCTURED_EXTRACTION_TEMPLATE);
+
+    let schema_json = serde_json::to_string_pretty(&config.schema)
+        .map_err(|e| crate::XbergError::validation(format!("Failed to serialize schema for prompt: {e}")))?;
+
+    let ctx = minijinja::context! {
+        content => content,
+        schema => schema_json,
+        schema_name => &config.schema_name,
+        schema_description => config.schema_description.as_deref().unwrap_or(""),
+    };
+
+    let prompt = super::prompts::render_template(template, &ctx)?;
+
+    let sanitized_schema = sanitize_schema_for_provider(&config.schema, &config.llm.model);
+
+    let mut request = liter_llm::ChatCompletionRequest::default();
+    request.model = config.llm.model.clone();
+    request.messages = vec![liter_llm::Message::User(liter_llm::UserMessage {
+        content: liter_llm::UserContent::Text(prompt),
+        name: None,
+    })];
+    super::client::apply_request_time_params(&mut request, &config.llm)?;
+    request.response_format = Some(liter_llm::ResponseFormat::JsonSchema {
+        json_schema: liter_llm::JsonSchemaFormat {
+            name: config.schema_name.clone(),
+            description: config.schema_description.clone(),
+            schema: sanitized_schema,
+            strict: Some(config.strict),
+        },
+    });
+
+    Ok(request)
 }
 
 async fn compile_strict_schema(config: &StructuredExtractionConfig) -> crate::Result<Option<jsonschema::Validator>> {
