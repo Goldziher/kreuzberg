@@ -1020,6 +1020,21 @@ impl Run {
     }
 }
 
+impl TableCell {
+    /// An empty cell spanning `columns` grid columns. It stands for the columns a row leaves
+    /// empty with `w:gridBefore`/`w:gridAfter`, so the row's real cells sit under the grid
+    /// columns they belong to wherever the row's cells are laid out by their spans.
+    fn grid_padding(columns: u32) -> Self {
+        Self {
+            paragraphs: Vec::new(),
+            properties: Some(super::table::CellProperties {
+                grid_span: Some(columns),
+                ..Default::default()
+            }),
+        }
+    }
+}
+
 impl Table {
     pub(crate) fn new() -> Self {
         Self::default()
@@ -1203,6 +1218,8 @@ struct TableContext {
     /// whole table, not reset per row, so every cell instance gets a distinct id. See
     /// [`Self::row_ordinal`].
     cell_ordinal: u32,
+    /// `w:gridAfter` of the open row, padded in when the row closes.
+    pending_grid_after: u32,
 }
 
 impl TableContext {
@@ -1214,6 +1231,7 @@ impl TableContext {
             paragraph: None,
             row_ordinal: 0,
             cell_ordinal: 0,
+            pending_grid_after: 0,
         }
     }
 }
@@ -2654,7 +2672,15 @@ impl<R: Read + Seek> DocxParser<R> {
                             if let Some(ctx) = table_stack.last_mut()
                                 && let Some(ref mut row) = ctx.current_row
                             {
-                                row.properties = Some(super::table::parse_row_properties(reader, budget)?);
+                                let (properties, skips) = super::table::parse_row_properties(reader, budget)?;
+                                row.properties = Some(properties);
+                                // The skipped grid columns are cells of the table grid too, so
+                                // they count against the cell budget before any grid is built.
+                                if skips.before > 0 {
+                                    budget.add_cells(skips.before as usize)?;
+                                    row.cells.push(TableCell::grid_padding(skips.before));
+                                }
+                                ctx.pending_grid_after = skips.after;
                             }
                         }
                         "w:tc" => {
@@ -3073,8 +3099,13 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:tr" => {
                             if let Some(ctx) = table_stack.last_mut()
-                                && let Some(row) = ctx.current_row.take()
+                                && let Some(mut row) = ctx.current_row.take()
                             {
+                                let grid_after = std::mem::take(&mut ctx.pending_grid_after);
+                                if grid_after > 0 {
+                                    budget.add_cells(grid_after as usize)?;
+                                    row.cells.push(TableCell::grid_padding(grid_after));
+                                }
                                 ctx.table.rows.push(row);
                             }
                         }
@@ -4798,6 +4829,73 @@ mod tests {
     /// GH#1395: a single `w:tblPr` inside a table must not leave the depth counter
     /// above zero after parsing — `parse_table_properties` consumes its own
     /// `</w:tblPr>`, so the outer loop's `Event::End` arm never runs for it.
+
+    #[test]
+    fn test_grid_before_and_after_keep_cells_under_their_columns() {
+        let xml = wrap_body(
+            r#"<w:tbl>
+  <w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/></w:tblGrid>
+  <w:tr>
+    <w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>C</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:trPr><w:gridBefore w:val="1"/></w:trPr>
+    <w:tc><w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>b2</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>c2</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:trPr><w:gridAfter w:val="1"/></w:trPr>
+    <w:tc><w:p><w:r><w:t>a3</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>b3</w:t></w:r></w:p></w:tc>
+  </w:tr>
+</w:tbl>"#,
+        );
+        let doc = parse_xml(&xml);
+        let table = &doc.tables[0];
+
+        assert_eq!(
+            table.to_cell_grid(Paragraph::to_text),
+            vec![vec!["A", "B", "C"], vec!["", "b2", "c2"], vec!["a3", "b3", ""]],
+            "a row's cells must sit under the grid columns gridBefore/gridAfter leave them"
+        );
+
+        let styles = table.to_cell_style_grid();
+        assert_eq!(styles.iter().map(Vec::len).collect::<Vec<_>>(), vec![3, 3, 3]);
+        assert_eq!(styles[1][1].as_deref(), Some("Heading2"));
+    }
+
+    /// The skipped grid columns are cells too: they count against `max_table_cells` before
+    /// any grid is built, so padding cannot allocate past the limit.
+    #[test]
+    fn test_grid_padding_counts_against_the_cell_budget() {
+        let budget_for = |max_table_cells| {
+            SecurityBudget::from_limits(&crate::extractors::security::SecurityLimits {
+                max_table_cells,
+                ..Default::default()
+            })
+        };
+        // One physical cell between one skipped column on each side: three grid cells.
+        let one_cell = wrap_body(
+            r#"<w:tbl><w:tr><w:trPr><w:gridBefore w:val="1"/><w:gridAfter w:val="1"/></w:trPr><w:tc><w:p><w:r><w:t>x</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"#,
+        );
+        assert!(try_parse_xml_with_budget(&one_cell, &mut budget_for(3)).is_ok());
+        assert!(matches!(
+            try_parse_xml_with_budget(&one_cell, &mut budget_for(2)),
+            Err(DocxParseError::SecurityLimit(_))
+        ));
+
+        // A row with no cells at all still pays for the columns it skips.
+        let no_cells = wrap_body(
+            r#"<w:tbl><w:tr><w:trPr><w:gridBefore w:val="1024"/><w:gridAfter w:val="1024"/></w:trPr></w:tr></w:tbl>"#,
+        );
+        assert!(try_parse_xml_with_budget(&no_cells, &mut budget_for(2048)).is_ok());
+        assert!(matches!(
+            try_parse_xml_with_budget(&no_cells, &mut budget_for(2047)),
+            Err(DocxParseError::SecurityLimit(_))
+        ));
+    }
     #[test]
     fn should_reset_depth_counter_to_zero_after_parsing_tblpr() {
         let limits = crate::extractors::security::SecurityLimits {
