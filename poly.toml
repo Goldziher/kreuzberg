@@ -1122,7 +1122,6 @@ root = "packages/elixir"
 "crates/xberg/src/types/extraction.rs" = ["file-too-long", "type-too-long"]
 "crates/xberg/src/types/internal_builder.rs" = ["file-too-long", "too-many-parameters"]
 "crates/xberg/src/types/metadata.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
-"crates/xberg/tests/pdf_image_extraction_tests.rs" = ["file-too-long"]
 "docs-site/src/content/docs/cli/usage.mdx" = ["file-too-long"]
 "docs-site/src/content/docs/guides/ocr.mdx" = ["file-too-long"]
 ".github/workflows/benchmarks.yaml" = ["file-too-long"]
