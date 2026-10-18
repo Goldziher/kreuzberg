@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(docx): The prompt of an empty content control is no longer extracted as text.** Word fills an unfilled
+  field with a prompt such as "Click or tap here to enter text." and marks it `w:showingPlcHdr`; forms and templates no
+  longer repeat that prompt in `content`, in the body, in table cells or in text boxes.
 - **(pdf): Explicit header and footer inclusion preserves geometric page numbers independently.** (#2150)
 - **(pdf): Native extraction preserves separate two-column bordered tables beside wider tables on the same page.**
 - **(ocr): Failed PDF OCR pages report the type chain of the underlying error.**
