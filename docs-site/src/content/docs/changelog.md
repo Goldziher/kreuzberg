@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(ocr): Tesseract runs with several languages no longer drop lines written in a language other than the first.**
+  With `rus+eng`, an English image came back empty, because the dictionary noise filter checked words against the first
+  language's dictionary only. A word is now valid when any configured language accepts it. (#2158)
 - **(rendering): A footnote reference stays on the block that cites it.** Markdown, Djot and LaTeX input placed it on
   the previous paragraph, list item or heading, and Djot output wrote it at the start of the next block (`[^1]# Heading`). (#2156)
 - **(docx, odt): Footnote and endnote references are written once, numbered like their definitions.** Markdown, HTML
@@ -29,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link a different note than its definition (an endnote 1 next to a footnote 1 linked the footnote). The marker now
   follows the paragraph that cites it, an ODT reference no longer follows the paragraph before it, and plain output
   writes the same `[^N]` markers and labels the matching definitions `[^N]:` for every format.
+  A DOCX paragraph that holds only a note reference keeps it, a reference in a table cell is written after the table
+  instead of as a bare source-id literal in the cell, and the per-page content numbers markers and definitions the
+  same way, with a footnote and an endnote that share a Word id kept apart.
 - **(pdf): Explicit header and footer inclusion preserves geometric page numbers independently.** (#2150)
 - **(pdf): Native extraction preserves separate two-column bordered tables beside wider tables on the same page.**
 - **(ocr): Failed PDF OCR pages report the type chain of the underlying error.**

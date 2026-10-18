@@ -7,6 +7,7 @@
 
 mod api_pool;
 mod config;
+mod dictionary;
 mod execution;
 pub(crate) mod validation;
 

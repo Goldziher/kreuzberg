@@ -5,6 +5,7 @@
 
 use super::api_pool::TesseractApiPool;
 use super::config::{apply_tesseract_variables, hash_config};
+use super::dictionary::WordDictionary;
 use super::validation::{
     resolve_all_installed_languages, resolve_tessdata_path, strip_control_characters, validate_language_and_traineddata,
 };
@@ -1390,13 +1391,8 @@ const MIN_DICT_CANDIDATES_FOR_RATIO: usize = 5;
 /// a ratio meaningful: a `0.0` here would read as "every word is valid" to a caller that
 /// cannot tell "no evidence" from "good evidence", and this signal is a veto input, so
 /// that conflation would suppress real content.
-fn dictionary_invalid_word_ratio(api: &TesseractAPI, words: &[xberg_tesseract::WordData]) -> Option<f64> {
-    invalid_word_ratio_from(words, |text| match api.is_valid_word(text) {
-        Ok(0) => Some(false),
-        Ok(_) => Some(true),
-        // Lookup failed (e.g. interior NUL byte); don't let it bias the ratio either way.
-        Err(_) => None,
-    })
+fn dictionary_invalid_word_ratio(dictionary: &WordDictionary<'_>, words: &[xberg_tesseract::WordData]) -> Option<f64> {
+    invalid_word_ratio_from(words, |text| dictionary.is_valid_word(text))
 }
 
 /// Pure core of [`dictionary_invalid_word_ratio`], taking dictionary lookup as an injected
@@ -1573,6 +1569,7 @@ fn find_token_sequence_end(haystack: &[&str], start: usize, needle: &[&str]) -> 
 /// TSV-based extraction with significantly richer metadata.
 fn extract_elements_via_iterator(
     api: &TesseractAPI,
+    dictionary: &WordDictionary<'_>,
     page_number: u32,
     min_confidence: f64,
     retained_text: Option<&str>,
@@ -1646,7 +1643,7 @@ fn extract_elements_via_iterator(
         );
     }
 
-    let dict_invalid_word_ratio = dictionary_invalid_word_ratio(api, &word_extraction.words);
+    let dict_invalid_word_ratio = dictionary_invalid_word_ratio(dictionary, &word_extraction.words);
     let retained_text_confidence_stats =
         retained_text.map(|content| retained_text_word_confidence_stats(content, &word_extraction.words));
 
@@ -1889,6 +1886,7 @@ pub(super) fn perform_ocr(
     validate_language_and_traineddata(&config.language, &tessdata_path)?;
 
     let api = api_pool.checkout(&tessdata_path, &config.language, config.oem)?;
+    let dictionary = WordDictionary::new(&api, &tessdata_path, &config.language, config.oem);
 
     log_ci_debug(ci_debug_enabled, "init", || {
         format!("language={} datapath='{}'", config.language, tessdata_path)
@@ -2132,11 +2130,7 @@ pub(super) fn perform_ocr(
             // before parsing, using `hocr_parser::DEFAULT_DICT_INVALID_LINE_RATIO` -- see
             // that constant's doc comment for why this is not yet a configurable
             // `OcrQualityThresholds` field.
-            let is_valid_word = |text: &str| match api.is_valid_word(text) {
-                Ok(0) => Some(false),
-                Ok(_) => Some(true),
-                Err(_) => None,
-            };
+            let is_valid_word = |text: &str| dictionary.is_valid_word(text);
             let dictionary_filter = DictionaryLineFilter {
                 is_valid_word: &is_valid_word,
                 max_invalid_ratio: crate::ocr::hocr_parser::DEFAULT_DICT_INVALID_LINE_RATIO,
@@ -2279,8 +2273,13 @@ pub(super) fn perform_ocr(
 
     let mut content = strip_control_characters(&raw_content).into_owned();
     let retained_text = (config.output_format == "text").then_some(content.as_str());
-    let iterator_extraction =
-        extract_elements_via_iterator(&api, config.page_number, config.min_confidence, retained_text);
+    let iterator_extraction = extract_elements_via_iterator(
+        &api,
+        &dictionary,
+        config.page_number,
+        config.min_confidence,
+        retained_text,
+    );
     let mut ocr_elements = None;
     if let Ok(extraction) = &iterator_extraction
         && let Some(stats) = extraction.retained_text_confidence_stats.as_ref()
@@ -4507,6 +4506,55 @@ mod tests {
         let mut bytes: Vec<u8> = Vec::new();
         img.write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png).unwrap();
         bytes
+    }
+
+    fn corpus_image(name: &str) -> Vec<u8> {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../test_documents/images")
+            .join(name);
+        std::fs::read(&path).unwrap_or_else(|e| panic!("corpus image {name}: {e}"))
+    }
+
+    fn ocr_markdown(language: &str, image: &str) -> OcrExtractionResult {
+        let config = TesseractConfig {
+            language: language.to_string(),
+            output_format: "markdown".to_string(),
+            enable_table_detection: false,
+            use_cache: false,
+            ..TesseractConfig::default()
+        };
+        let cache_dir = tempdir().unwrap();
+        let cache = OcrCache::new(Some(cache_dir.path().to_path_buf())).unwrap();
+        process_image_with_cache(&corpus_image(image), &config, &cache, &TesseractApiPool::new(), None)
+            .expect("OCR must succeed")
+    }
+
+    /// Lines OCR read in the secondary language of a `lang1+lang2` run must survive the
+    /// dictionary noise filter (#2158): `TessBaseAPIIsValidWord` only knows the first language.
+    #[test]
+    #[serial]
+    fn dictionary_filter_keeps_lines_in_every_configured_language() {
+        let cases = [
+            ("rus+eng", "english.png", "Reduce your risk of coronavirus infection"),
+            ("eng+rus", "cyrillic.png", "Привет мир"),
+            ("deu+eng", "english.png", "Thoroughly cook meat and eggs"),
+            ("eng", "english.png", "Thoroughly cook meat and eggs"),
+            ("rus+eng", "cyrillic.png", "Привет мир"),
+        ];
+        for (language, image, expected) in cases {
+            let result = ocr_markdown(language, image);
+            assert!(
+                result.content.contains(expected),
+                "{language} on {image} lost {expected:?}: {:?} (filtered lines: {:?})",
+                result.content,
+                result.metadata.get("dictionary_filtered_line_count"),
+            );
+            assert!(
+                result.metadata.get("dictionary_filtered_line_count").is_none(),
+                "{language} on {image} dropped lines: {:?}",
+                result.metadata.get("dictionary_filtered_line_count"),
+            );
+        }
     }
 
     /// Regression test for #687 PART 2: `TesseractConfig::use_cache = false` must be an
