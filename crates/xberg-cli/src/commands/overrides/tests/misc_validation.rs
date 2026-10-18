@@ -29,7 +29,10 @@ fn test_validate_target_dpi_valid() {
 #[test]
 fn test_validate_csv_delimiter_valid() {
     let overrides = ExtractionOverrides {
-        csv_delimiter: Some(";".to_string()),
+        format: FormatOverrides {
+            csv_delimiter: Some(";".to_string()),
+            ..Default::default()
+        },
         ..default_overrides()
     };
     assert!(overrides.validate().is_ok());
@@ -38,7 +41,10 @@ fn test_validate_csv_delimiter_valid() {
 #[test]
 fn test_validate_csv_delimiter_empty_rejected() {
     let overrides = ExtractionOverrides {
-        csv_delimiter: Some(String::new()),
+        format: FormatOverrides {
+            csv_delimiter: Some(String::new()),
+            ..Default::default()
+        },
         ..default_overrides()
     };
     let err = overrides.validate().unwrap_err();
@@ -51,7 +57,10 @@ fn test_validate_csv_delimiter_empty_rejected() {
 #[test]
 fn test_validate_csv_delimiter_multi_byte_rejected() {
     let overrides = ExtractionOverrides {
-        csv_delimiter: Some("::".to_string()),
+        format: FormatOverrides {
+            csv_delimiter: Some("::".to_string()),
+            ..Default::default()
+        },
         ..default_overrides()
     };
     let err = overrides.validate().unwrap_err();
@@ -65,8 +74,11 @@ fn test_validate_csv_delimiter_multi_byte_rejected() {
 fn test_apply_csv_delimiter_and_comment_prefixes() {
     let mut config = ExtractionConfig::default();
     let overrides = ExtractionOverrides {
-        csv_delimiter: Some(";".to_string()),
-        csv_comment_prefix: vec!["#".to_string(), "//".to_string()],
+        format: FormatOverrides {
+            csv_delimiter: Some(";".to_string()),
+            csv_comment_prefix: vec!["#".to_string(), "//".to_string()],
+            ..Default::default()
+        },
         ..default_overrides()
     };
     overrides.apply(&mut config);

@@ -11,7 +11,7 @@ impl ExtractionOverrides {
     /// Reject an unparsable or unsupported `--pdf-backend` value.
     #[cfg(feature = "pdf-surface")]
     pub(super) fn validate_pdf_backend(&self) -> Result<()> {
-        if let Some(ref backend) = self.pdf_backend {
+        if let Some(ref backend) = self.format.pdf_backend {
             match backend.parse::<PdfBackend>() {
                 Ok(PdfBackend::Native) => {}
                 #[cfg(feature = "pdf-pdfium-surface")]
@@ -40,7 +40,7 @@ impl ExtractionOverrides {
             || self.pdf_extract_tables.is_some()
             || self.pdf_extract_metadata.is_some()
             || !self.pdf_password.is_empty()
-            || self.pdf_backend.is_some();
+            || self.format.pdf_backend.is_some();
         #[cfg(feature = "ocr-surface")]
         let has_pdf_flag = has_pdf_flag || self.pdf_ocr_inline_images.is_some();
         if has_pdf_flag {
@@ -65,7 +65,7 @@ impl ExtractionOverrides {
             // value that fails to parse, so `unwrap_or_default()` here mirrors the
             // established --layout-strategy / --layout-table-model pattern: it is
             // unreachable in practice, never a silent behavior change.
-            if let Some(ref backend) = self.pdf_backend {
+            if let Some(ref backend) = self.format.pdf_backend {
                 pdf_opts.backend = backend.parse().unwrap_or_default();
             }
         }

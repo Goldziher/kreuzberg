@@ -59,7 +59,10 @@ fn test_token_reduction_applied() {
 fn test_msg_codepage_applied() {
     let mut config = ExtractionConfig::default();
     let overrides = ExtractionOverrides {
-        msg_codepage: Some(1251),
+        format: FormatOverrides {
+            msg_codepage: Some(1251),
+            ..Default::default()
+        },
         ..default_overrides()
     };
     overrides.apply(&mut config);

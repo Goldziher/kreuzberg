@@ -62,7 +62,7 @@ impl ExtractionOverrides {
 
     /// Reject an invalid `--csv-delimiter` value.
     pub(super) fn validate_csv(&self) -> Result<()> {
-        if let Some(ref delimiter) = self.csv_delimiter
+        if let Some(ref delimiter) = self.format.csv_delimiter
             && !(delimiter.len() == 1 && delimiter.is_ascii())
         {
             bail!(
@@ -124,7 +124,7 @@ impl ExtractionOverrides {
     }
 
     pub(super) fn apply_email(&self, config: &mut ExtractionConfig) {
-        if let Some(codepage) = self.msg_codepage {
+        if let Some(codepage) = self.format.msg_codepage {
             let email = config.email.get_or_insert_with(Default::default);
             email.msg_fallback_codepage = Some(codepage);
         }
@@ -143,14 +143,14 @@ impl ExtractionOverrides {
     }
 
     pub(super) fn apply_csv(&self, config: &mut ExtractionConfig) {
-        let has_flag = self.csv_delimiter.is_some() || !self.csv_comment_prefix.is_empty();
+        let has_flag = self.format.csv_delimiter.is_some() || !self.format.csv_comment_prefix.is_empty();
         if has_flag {
             let mut csv_cfg = config.csv.clone().unwrap_or_default();
-            if let Some(ref delimiter) = self.csv_delimiter {
+            if let Some(ref delimiter) = self.format.csv_delimiter {
                 csv_cfg.delimiter = Some(delimiter.clone());
             }
-            if !self.csv_comment_prefix.is_empty() {
-                csv_cfg.comment_prefixes = self.csv_comment_prefix.clone();
+            if !self.format.csv_comment_prefix.is_empty() {
+                csv_cfg.comment_prefixes = self.format.csv_comment_prefix.clone();
             }
             config.csv = Some(csv_cfg);
         }
