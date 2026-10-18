@@ -41,7 +41,7 @@ pub use error::{GlinerError, Result};
 pub use input::TextInput;
 pub use input::Token;
 #[cfg(feature = "ort-backend")]
-pub use session::{INPUT_NAMES, OUTPUT_NAMES};
+pub use session::{INPUT_NAMES, OUTPUT_NAMES, adopt_environment as adopt_ort_environment};
 #[cfg(feature = "ort-backend")]
 pub use v2::engine::Gliner2;
 #[cfg(feature = "ort-backend")]

@@ -661,6 +661,7 @@ ner-onnx = [
     # xberg-gliner ONNX backend with Hugging Face model download.
     "ner",
     "dep:xberg-gliner",
+    "dep:ort",
     "dep:hf-hub",
     "dep:reqwest",
     "dep:sha2",

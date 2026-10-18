@@ -200,7 +200,8 @@ pub mod doctor;
     feature = "onnx-runtime",
     feature = "layout-detection",
     feature = "auto-rotate",
-    feature = "transcription"
+    feature = "transcription",
+    feature = "ner-onnx"
 ))]
 pub mod ort_discovery;
 
