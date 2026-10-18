@@ -97,6 +97,10 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: ${{ env.ORT_VERSION }}
+          # xberg-ffi's build.rs already emits the @loader_path rpath; a second one from RUSTFLAGS
+          # makes ld warn and `build.warnings` turns that into a failed build. DYLD_LIBRARY_PATH and
+          # ORT_DYLIB_PATH, set by the action, locate the runtime for tests. ~keep
+          add-macos-rpath: "false"
 
       - name: Setup Tesseract cache
         uses: ./.github/actions/setup-tesseract-cache
