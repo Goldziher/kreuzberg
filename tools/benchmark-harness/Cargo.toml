@@ -61,7 +61,7 @@ dirs = "7"
 futures = { workspace = true }
 
 inferno = { version = "0.12.8", default-features = false, features = ["nameattr"], optional = true }
-jsonschema = "0.58"
+jsonschema = "0.59"
 libc = { workspace = true }
 num_cpus = { workspace = true }
 pprof = { version = "0.15", optional = true }
@@ -81,7 +81,7 @@ tikv-jemallocator = { version = "0.7", optional = true }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-unicode-normalization = "0.1.25"
+unicode-normalization = "0.1.26"
 url = { workspace = true }
 which = "8"
 xberg = { path = "../../crates/xberg", features = ["full"] }

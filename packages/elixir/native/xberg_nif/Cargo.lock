@@ -3930,18 +3930,12 @@ checksum = "e20f57f9918e5bd7bc58c22cdd70a6afc7375d4dd9683af5f2b34bd3d2bba619"
 
 [[package]]
 name = "lzma-rust2"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fde178a3caf126c440fa15628147772d8ee590a39477d711353fbe2e58a73a5b"
-dependencies = [
- "sha2",
-]
-
-[[package]]
-name = "lzma-rust2"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb"
+dependencies = [
+ "sha2",
+]
 
 [[package]]
 name = "macro_rules_attribute"
@@ -7063,7 +7057,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -7890,7 +7884,7 @@ dependencies = [
  "thiserror 2.0.21",
  "unicode-normalization",
  "unparser-shared",
- "zip 9.0.3",
+ "zip 9.0.5",
 ]
 
 [[package]]
@@ -7925,9 +7919,9 @@ checksum = "7d246cf599d5fae3c8d56e04b20eb519adb89a8af8d0b0fbcded369aa3647d65"
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.25"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
+checksum = "75cd3fb03d5288b3ba9a1ee103ac7e9cbb59f0b03d64f8ddfcc04dd42758a85d"
 dependencies = [
  "tinyvec",
 ]
@@ -8923,7 +8917,7 @@ dependencies = [
  "xberg-tesseract",
  "yaml_serde",
  "zeroize",
- "zip 9.0.3",
+ "zip 9.0.5",
 ]
 
 [[package]]
@@ -9073,7 +9067,7 @@ dependencies = [
  "sha2",
  "tempfile",
  "thiserror 2.0.21",
- "zip 9.0.3",
+ "zip 9.0.5",
 ]
 
 [[package]]
@@ -9397,16 +9391,16 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "9.0.3"
+version = "9.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2d98561b612a84ae525331a7a094429ef8a5772514ed507ff6db5f54badc971"
+checksum = "6e04976da629d3b04204ba8105b396a193af8ad2583b2c79bfb3ab8af580a11e"
 dependencies = [
  "bzip2",
  "crc32fast",
  "deflate64",
  "flate2",
  "indexmap",
- "lzma-rust2 0.21.0",
+ "lzma-rust2 0.22.0",
  "memchr",
  "nix",
  "ppmd-rust",
