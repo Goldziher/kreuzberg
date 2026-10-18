@@ -934,6 +934,18 @@ def test_swift_static_library_builds_disable_host_extension_symbol_lookup() -> N
     assert "targets: ${{ matrix.target }}" in swift
 
 
+def test_swift_ios_builds_pin_the_deployment_target_to_the_manifest_floor() -> None:
+    manifest = (Path(__file__).parents[2] / "Package.swift").read_text()
+    floor = re.search(r"\.iOS\(\.v(\d+)\)", manifest)
+    assert floor is not None, "Package.swift declares no iOS floor"
+    swift = job_block(WORKFLOW.read_text(), "swift-target")
+    build = re.search(r"(?ms)^      - uses: xberg-io/actions/build-swift-artifactbundle@[^\n]+\n(.*?)(?=^      - |\Z)", swift)
+    assert build is not None
+    pinned = re.search(r'(?m)^          IPHONEOS_DEPLOYMENT_TARGET: "([0-9.]+)"$', build[1])
+    assert pinned is not None, "swift-target build step does not set IPHONEOS_DEPLOYMENT_TARGET"
+    assert pinned[1] == f"{floor[1]}.0"
+
+
 def test_macos_onnx_action_forwards_rpath_option_only_to_macos() -> None:
     action = (WORKFLOW.parents[1] / "actions/setup-onnx-runtime/action.yml").read_text()
     option = re.findall(r'(?m)^  add-macos-rpath:\n((?:^    [^\n]*\n)+)', action)
