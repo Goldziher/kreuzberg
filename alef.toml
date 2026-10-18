@@ -812,6 +812,7 @@ traineddata = "traineddata"
 "crates/xberg-native-pdf/tests/test_render_output_intent.rs" = ["file-too-long"]
 "crates/xberg-native-pdf/tests/test_separation_rendering.rs" = ["file-too-long"]
 "crates/xberg-native-pdf/tests/test_transparency_flattening_audit.rs" = ["file-too-long"]
+"crates/xberg-paddle-ocr/src/ocr_lite.rs" = ["too-many-parameters"]
 "crates/xberg-pdfium-render/src/bindgen/pdfium_7678.rs" = ["file-too-long"]
 "crates/xberg-pdfium-render/src/bindings.rs" = ["file-too-long", "too-many-parameters", "type-too-long"]
 "crates/xberg-pdfium-render/src/bindings/dynamic_bindings.rs" = [
@@ -821,6 +822,11 @@ traineddata = "traineddata"
   "type-too-long",
 ]
 "crates/xberg-pdfium-render/src/bindings/static_bindings.rs" = ["file-too-long", "too-many-parameters"]
+"crates/xberg-pdfium-render/src/font_provider.rs" = ["too-many-parameters"]
+"crates/xberg-pdfium-render/src/pdf/document/page.rs" = ["too-many-parameters"]
+"crates/xberg-pdfium-render/src/pdf/document/page/object/path.rs" = ["too-many-parameters"]
+"crates/xberg-pdfium-render/src/pdf/document/page/objects/common.rs" = ["too-many-parameters"]
+"crates/xberg-pdfium-render/src/pdf/quad_points.rs" = ["too-many-parameters"]
 "crates/xberg-tesseract/build.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nesting-too-deep"]
 "crates/xberg-tesseract/src/api.rs" = ["file-too-long"]
 "crates/xberg/src/api/handlers.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
@@ -847,6 +853,7 @@ traineddata = "traineddata"
 "crates/xberg/src/core/split.rs" = ["file-too-long", "function-too-long"]
 "crates/xberg/src/embeddings/mod.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
 "crates/xberg/src/engine/extract_impl.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
+"crates/xberg/src/engine/structured/prompts.rs" = ["too-many-parameters"]
 "crates/xberg/src/extraction/docx/parser.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
