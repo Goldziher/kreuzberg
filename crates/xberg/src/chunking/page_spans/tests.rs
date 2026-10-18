@@ -775,8 +775,10 @@ fn bbox_population_scales_linearly_when_all_nodes_share_one_page() {
         populate_page_span_bboxes(&mut chunks, &structure);
         start.elapsed().as_secs_f64() * 1e3
     }
-    let small = time_for(1_000).max(0.05);
-    let large = time_for(8_000);
+    // ~keep Best of several runs: a single wall-clock sample flaked on loaded CI runners (macOS).
+    let best = |nodes: usize| (0..5).map(|_| time_for(nodes)).fold(f64::INFINITY, f64::min);
+    let small = best(1_000).max(0.05);
+    let large = best(8_000);
     assert!(
         large / small < 24.0,
         "8x nodes took {:.1}x as long ({small:.2}ms -> {large:.2}ms)",

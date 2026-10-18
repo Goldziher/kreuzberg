@@ -266,6 +266,19 @@ fn get_val_attr_string(e: &BytesStart) -> Option<String> {
     None
 }
 
+/// The list kind a `w:numFmt` value stands for. `bullet` is a bullet list, and `none`, a
+/// level that shows no marker, stays a bullet as before. Every other `ST_NumberFormat` value
+/// numbers the items: besides the Latin decimal, letter and roman forms, that includes the CJK
+/// counting forms (`chineseCounting`, `japaneseCounting`, `ideographTraditional`), the enclosed
+/// and full-width digits, `ordinal`, `cardinalText`, the Hebrew, Arabic, Hindi, Thai and Russian
+/// letters, and Word's `custom` format.
+fn list_type_for_num_fmt(fmt: Option<&str>) -> ListType {
+    match fmt {
+        None | Some("bullet") | Some("none") => ListType::Bullet,
+        Some(_) => ListType::Numbered,
+    }
+}
+
 /// Extract the target URL from a `HYPERLINK` field instruction (#88, #239).
 ///
 /// Matches instruction text such as `HYPERLINK "https://example.com"` or
@@ -1020,6 +1033,21 @@ impl Run {
     }
 }
 
+impl TableCell {
+    /// An empty cell spanning `columns` grid columns. It stands for the columns a row leaves
+    /// empty with `w:gridBefore`/`w:gridAfter`, so the row's real cells sit under the grid
+    /// columns they belong to wherever the row's cells are laid out by their spans.
+    fn grid_padding(columns: u32) -> Self {
+        Self {
+            paragraphs: Vec::new(),
+            properties: Some(super::table::CellProperties {
+                grid_span: Some(columns),
+                ..Default::default()
+            }),
+        }
+    }
+}
+
 impl Table {
     pub(crate) fn new() -> Self {
         Self::default()
@@ -1203,6 +1231,8 @@ struct TableContext {
     /// whole table, not reset per row, so every cell instance gets a distinct id. See
     /// [`Self::row_ordinal`].
     cell_ordinal: u32,
+    /// `w:gridAfter` of the open row, padded in when the row closes.
+    pending_grid_after: u32,
 }
 
 impl TableContext {
@@ -1214,6 +1244,7 @@ impl TableContext {
             paragraph: None,
             row_ordinal: 0,
             cell_ordinal: 0,
+            pending_grid_after: 0,
         }
     }
 }
@@ -2049,6 +2080,17 @@ fn apply_break(
     }
 }
 
+/// Handle a `w:tab` or `w:ptab` run element (`Event::Start` or `Event::Empty`): written
+/// self-closing or as a start/end pair, either one stands for a tab character. A `w:tab`
+/// that defines a tab stop under `w:pPr/w:tabs` comes before the paragraph's first run, so
+/// there is no run to add to.
+fn apply_tab(current_run: &mut Option<Run>, page_breaks: &mut PageBreakState) {
+    if let Some(run) = current_run {
+        run.text.push('\t');
+        page_breaks.text_since_break = true;
+    }
+}
+
 /// Handle a `<w:lastRenderedPageBreak/>` event (`Event::Start` or `Event::Empty`).
 ///
 /// Word writes this hint at the start of the first run on a page *it* rendered —
@@ -2482,6 +2524,13 @@ impl<R: Read + Seek> DocxParser<R> {
         let mut revision_text = String::new();
         let mut revision_id_counter: usize = 0;
         let mut in_del_text = false;
+        // Depth of open `w:moveFrom` wrappers. A tracked move leaves the moved
+        // content at its old place inside `w:moveFrom` (text in `w:t`, not
+        // `w:delText`) and copies it to the new place inside `w:moveTo`. Word shows
+        // it only at the new place, so runs, drawings, text boxes and equations
+        // inside `w:moveFrom` are read but not kept. Revisions recorded inside it
+        // keep their text.
+        let mut move_from_depth: usize = 0;
         let mut current_paragraph_index: usize = 0;
         let mut in_run_property_change = false;
         let mut pending_format_revision_attrs: Option<(Option<String>, Option<String>, Option<String>)> = None;
@@ -2517,6 +2566,9 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:t" if !in_field_instruction => {
                             in_text = true;
+                        }
+                        "w:moveFrom" => {
+                            move_from_depth += 1;
                         }
                         "w:fldChar" => {
                             apply_fld_char(
@@ -2575,6 +2627,7 @@ impl<R: Read + Seek> DocxParser<R> {
                             // internally, so no manual `budget.leave()` is needed here. ~keep
                             let parsed = super::drawing::parse_vml_pict(reader, budget)?;
                             if mc_fallback_depth == 0
+                                && move_from_depth == 0
                                 && let Some(drawing) = parsed
                                 && drawing.text_box_content.is_some()
                             {
@@ -2586,7 +2639,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "m:oMathPara" => {
                             let latex = super::math::collect_and_convert_omath_para(reader, budget)?;
-                            if !latex.is_empty() {
+                            if !latex.is_empty() && move_from_depth == 0 {
                                 let run = Run {
                                     math_latex: Some((latex, true)),
                                     ..Default::default()
@@ -2597,7 +2650,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "m:oMath" => {
                             let latex = super::math::collect_and_convert_omath(reader, budget)?;
-                            if !latex.is_empty() {
+                            if !latex.is_empty() && move_from_depth == 0 {
                                 let run = Run {
                                     math_latex: Some((latex, false)),
                                     ..Default::default()
@@ -2632,7 +2685,15 @@ impl<R: Read + Seek> DocxParser<R> {
                             if let Some(ctx) = table_stack.last_mut()
                                 && let Some(ref mut row) = ctx.current_row
                             {
-                                row.properties = Some(super::table::parse_row_properties(reader, budget)?);
+                                let (properties, skips) = super::table::parse_row_properties(reader, budget)?;
+                                row.properties = Some(properties);
+                                // The skipped grid columns are cells of the table grid too, so
+                                // they count against the cell budget before any grid is built.
+                                if skips.before > 0 {
+                                    budget.add_cells(skips.before as usize)?;
+                                    row.cells.push(TableCell::grid_padding(skips.before));
+                                }
+                                ctx.pending_grid_after = skips.after;
                             }
                         }
                         "w:tc" => {
@@ -2698,12 +2759,15 @@ impl<R: Read + Seek> DocxParser<R> {
                             // own `</w:drawing>` end tag against the `enter()` above
                             // internally, so no manual `budget.leave()` is needed here. ~keep
                             let drawing = super::drawing::parse_drawing(reader, budget)?;
-                            let idx = out.drawings.len();
-                            out.drawings.push(drawing);
-                            out.elements.push(DocumentElement::Drawing(idx));
-                            page_breaks.text_since_break = true;
+                            if move_from_depth == 0 {
+                                let idx = out.drawings.len();
+                                out.drawings.push(drawing);
+                                out.elements.push(DocumentElement::Drawing(idx));
+                                page_breaks.text_since_break = true;
+                            }
                         }
-                        "w:br" => {
+                        // `w:cr` is a carriage return inside a run, which Word shows as a line break.
+                        "w:br" | "w:cr" => {
                             apply_break(
                                 e,
                                 &table_stack,
@@ -2713,6 +2777,7 @@ impl<R: Read + Seek> DocxParser<R> {
                                 &mut page_breaks,
                             );
                         }
+                        "w:tab" | "w:ptab" => apply_tab(&mut current_run, &mut page_breaks),
                         "w:lastRenderedPageBreak" => {
                             apply_last_rendered_page_break(
                                 &table_stack,
@@ -2797,7 +2862,8 @@ impl<R: Read + Seek> DocxParser<R> {
                         "w:pStyle" | "w:ilvl" | "w:numId" => {
                             apply_paragraph_property(e, &mut table_stack, &mut current_paragraph);
                         }
-                        "w:br" => {
+                        // `w:cr` is a carriage return inside a run, which Word shows as a line break.
+                        "w:br" | "w:cr" => {
                             apply_break(
                                 e,
                                 &table_stack,
@@ -2807,12 +2873,9 @@ impl<R: Read + Seek> DocxParser<R> {
                                 &mut page_breaks,
                             );
                         }
-                        "w:tab" => {
-                            if let Some(ref mut run) = current_run {
-                                run.text.push('\t');
-                                page_breaks.text_since_break = true;
-                            }
-                        }
+                        // `w:ptab` is an absolute position tab, such as the one that moves a
+                        // footer's page number to the right margin.
+                        "w:tab" | "w:ptab" => apply_tab(&mut current_run, &mut page_breaks),
                         "w:noBreakHyphen" => {
                             if let Some(ref mut run) = current_run {
                                 run.text.push('\u{2011}');
@@ -2847,7 +2910,10 @@ impl<R: Read + Seek> DocxParser<R> {
                                         if id != "-1" && id != "0" {
                                             run.text.push_str(&format!("[^{}]", id));
                                             page_breaks.text_since_break = true;
-                                            if table_stack.is_empty() && current_paragraph.is_some() {
+                                            if table_stack.is_empty()
+                                                && current_paragraph.is_some()
+                                                && move_from_depth == 0
+                                            {
                                                 out.note_refs_by_paragraph
                                                     .entry(current_paragraph_index)
                                                     .or_default()
@@ -2966,6 +3032,9 @@ impl<R: Read + Seek> DocxParser<R> {
                         "w:t" => {
                             in_text = false;
                         }
+                        "w:moveFrom" => {
+                            move_from_depth = move_from_depth.saturating_sub(1);
+                        }
                         "w:instrText" => {
                             in_instr_text = false;
                         }
@@ -3007,7 +3076,9 @@ impl<R: Read + Seek> DocxParser<R> {
                                     &mut revision_id_counter,
                                 );
                             }
-                            if let Some(run) = current_run.take() {
+                            if let Some(run) = current_run.take()
+                                && move_from_depth == 0
+                            {
                                 push_run_to_current(&mut table_stack, &mut current_paragraph, run);
                             }
                         }
@@ -3041,8 +3112,13 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:tr" => {
                             if let Some(ctx) = table_stack.last_mut()
-                                && let Some(row) = ctx.current_row.take()
+                                && let Some(mut row) = ctx.current_row.take()
                             {
+                                let grid_after = std::mem::take(&mut ctx.pending_grid_after);
+                                if grid_after > 0 {
+                                    budget.add_cells(grid_after as usize)?;
+                                    row.cells.push(TableCell::grid_padding(grid_after));
+                                }
                                 ctx.table.rows.push(row);
                             }
                         }
@@ -3228,14 +3304,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:numFmt" => {
                             if let (Some(abstract_id), Some(lvl)) = (current_abstract_num_id, current_lvl) {
-                                let fmt = get_val_attr_string(e);
-                                let list_type = match fmt.as_deref() {
-                                    Some("decimal") | Some("decimalZero") | Some("lowerLetter")
-                                    | Some("upperLetter") | Some("lowerRoman") | Some("upperRoman") => {
-                                        ListType::Numbered
-                                    }
-                                    _ => ListType::Bullet,
-                                };
+                                let list_type = list_type_for_num_fmt(get_val_attr_string(e).as_deref());
                                 abstract_num_formats
                                     .entry(abstract_id)
                                     .or_default()
@@ -3255,12 +3324,7 @@ impl<R: Read + Seek> DocxParser<R> {
                     }
                     "w:numFmt" => {
                         if let (Some(abstract_id), Some(lvl)) = (current_abstract_num_id, current_lvl) {
-                            let fmt = get_val_attr_string(e);
-                            let list_type = match fmt.as_deref() {
-                                Some("decimal") | Some("decimalZero") | Some("lowerLetter") | Some("upperLetter")
-                                | Some("lowerRoman") | Some("upperRoman") => ListType::Numbered,
-                                _ => ListType::Bullet,
-                            };
+                            let list_type = list_type_for_num_fmt(get_val_attr_string(e).as_deref());
                             abstract_num_formats
                                 .entry(abstract_id)
                                 .or_default()
@@ -3833,6 +3897,65 @@ mod tests {
         defs.insert((2, 0), ListType::Numbered);
         let mut counters = AHashMap::new();
         assert_eq!(para.to_markdown(&defs, &mut counters, None), "1. Item");
+    }
+
+    /// Only `bullet` and `none` are not numbered. The CJK, enclosed, ordinal and other
+    /// non-Latin formats used to be read as bullets, so such a list lost its order.
+    #[test]
+    fn test_every_numbering_format_except_bullet_and_none_is_numbered() {
+        let formats = [
+            "decimal",
+            "upperRoman",
+            "chineseCounting",
+            "chineseCountingThousand",
+            "japaneseCounting",
+            "ideographTraditional",
+            "decimalEnclosedCircle",
+            "decimalFullWidth",
+            "koreanDigital",
+            "ordinal",
+            "cardinalText",
+            "hebrew1",
+            "russianLower",
+            "custom",
+            "bullet",
+            "none",
+        ];
+        // The last level writes its numFmt as a start/end pair instead of self-closing.
+        let mut levels: String = formats
+            .iter()
+            .enumerate()
+            .map(|(lvl, fmt)| format!(r#"<w:lvl w:ilvl="{lvl}"><w:numFmt w:val="{fmt}"/></w:lvl>"#))
+            .collect();
+        let paired = formats.len();
+        levels.push_str(&format!(
+            r#"<w:lvl w:ilvl="{paired}"><w:numFmt w:val="taiwaneseCounting"></w:numFmt></w:lvl>"#
+        ));
+        let xml = format!(
+            r#"<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0">{levels}</w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>"#
+        );
+        let parser = DocxParser {
+            archive: zip::ZipArchive::new(std::io::Cursor::new(create_minimal_zip())).unwrap(),
+            relationships: AHashMap::new(),
+            styles: None,
+            theme: None,
+        };
+        let mut budget = SecurityBudget::with_defaults();
+        let defs = parser.parse_numbering(&xml, &mut budget).unwrap();
+
+        for (lvl, fmt) in formats.iter().enumerate() {
+            let expected = if matches!(*fmt, "bullet" | "none") {
+                ListType::Bullet
+            } else {
+                ListType::Numbered
+            };
+            assert_eq!(defs.get(&(1, lvl as i64)), Some(&expected), "numFmt {fmt}");
+        }
+        assert_eq!(
+            defs.get(&(1, paired as i64)),
+            Some(&ListType::Numbered),
+            "paired numFmt"
+        );
     }
 
     #[test]
@@ -4766,6 +4889,73 @@ mod tests {
     /// GH#1395: a single `w:tblPr` inside a table must not leave the depth counter
     /// above zero after parsing — `parse_table_properties` consumes its own
     /// `</w:tblPr>`, so the outer loop's `Event::End` arm never runs for it.
+
+    #[test]
+    fn test_grid_before_and_after_keep_cells_under_their_columns() {
+        let xml = wrap_body(
+            r#"<w:tbl>
+  <w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/></w:tblGrid>
+  <w:tr>
+    <w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>C</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:trPr><w:gridBefore w:val="1"/></w:trPr>
+    <w:tc><w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>b2</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>c2</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:trPr><w:gridAfter w:val="1"/></w:trPr>
+    <w:tc><w:p><w:r><w:t>a3</w:t></w:r></w:p></w:tc>
+    <w:tc><w:p><w:r><w:t>b3</w:t></w:r></w:p></w:tc>
+  </w:tr>
+</w:tbl>"#,
+        );
+        let doc = parse_xml(&xml);
+        let table = &doc.tables[0];
+
+        assert_eq!(
+            table.to_cell_grid(Paragraph::to_text),
+            vec![vec!["A", "B", "C"], vec!["", "b2", "c2"], vec!["a3", "b3", ""]],
+            "a row's cells must sit under the grid columns gridBefore/gridAfter leave them"
+        );
+
+        let styles = table.to_cell_style_grid();
+        assert_eq!(styles.iter().map(Vec::len).collect::<Vec<_>>(), vec![3, 3, 3]);
+        assert_eq!(styles[1][1].as_deref(), Some("Heading2"));
+    }
+
+    /// The skipped grid columns are cells too: they count against `max_table_cells` before
+    /// any grid is built, so padding cannot allocate past the limit.
+    #[test]
+    fn test_grid_padding_counts_against_the_cell_budget() {
+        let budget_for = |max_table_cells| {
+            SecurityBudget::from_limits(&crate::extractors::security::SecurityLimits {
+                max_table_cells,
+                ..Default::default()
+            })
+        };
+        // One physical cell between one skipped column on each side: three grid cells.
+        let one_cell = wrap_body(
+            r#"<w:tbl><w:tr><w:trPr><w:gridBefore w:val="1"/><w:gridAfter w:val="1"/></w:trPr><w:tc><w:p><w:r><w:t>x</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"#,
+        );
+        assert!(try_parse_xml_with_budget(&one_cell, &mut budget_for(3)).is_ok());
+        assert!(matches!(
+            try_parse_xml_with_budget(&one_cell, &mut budget_for(2)),
+            Err(DocxParseError::SecurityLimit(_))
+        ));
+
+        // A row with no cells at all still pays for the columns it skips.
+        let no_cells = wrap_body(
+            r#"<w:tbl><w:tr><w:trPr><w:gridBefore w:val="1024"/><w:gridAfter w:val="1024"/></w:trPr></w:tr></w:tbl>"#,
+        );
+        assert!(try_parse_xml_with_budget(&no_cells, &mut budget_for(2048)).is_ok());
+        assert!(matches!(
+            try_parse_xml_with_budget(&no_cells, &mut budget_for(2047)),
+            Err(DocxParseError::SecurityLimit(_))
+        ));
+    }
     #[test]
     fn should_reset_depth_counter_to_zero_after_parsing_tblpr() {
         let limits = crate::extractors::security::SecurityLimits {
@@ -5357,6 +5547,20 @@ mod tests {
     }
 
     #[test]
+    fn should_not_record_a_note_reference_at_a_move_source() {
+        let xml = wrap_body(
+            r#"<w:p><w:moveFrom w:id="1" w:author="a"><w:r><w:t>Moved</w:t><w:footnoteReference w:id="2"/></w:r></w:moveFrom></w:p>
+               <w:p><w:moveTo w:id="3" w:author="a"><w:r><w:t>Moved</w:t><w:footnoteReference w:id="2"/></w:r></w:moveTo></w:p>"#,
+        );
+        let doc = parse_xml(&xml);
+
+        assert_eq!(doc.paragraphs[0].to_text(), "");
+        assert_eq!(doc.paragraphs[1].to_text(), "Moved[^2]");
+        let recorded: Vec<usize> = doc.note_refs_by_paragraph.keys().copied().collect();
+        assert_eq!(recorded, vec![1], "only the move destination references the note");
+    }
+
+    #[test]
     fn test_line_break_in_run() {
         let xml = wrap_body(r#"<w:p><w:r><w:t>Before</w:t><w:br/><w:t>After</w:t></w:r></w:p>"#);
         let doc = parse_xml(&xml);
@@ -5364,6 +5568,67 @@ mod tests {
         assert!(text.contains("Before"));
         assert!(text.contains("After"));
         assert!(text.contains('\n'));
+    }
+
+    #[test]
+    fn test_carriage_return_in_run_breaks_the_line() {
+        for cr in ["<w:cr/>", "<w:cr></w:cr>"] {
+            let xml = wrap_body(&format!(
+                r#"<w:p><w:r><w:t>line one</w:t>{cr}<w:t>line two</w:t></w:r></w:p>"#
+            ));
+            let doc = parse_xml(&xml);
+            assert_eq!(doc.paragraphs[0].to_text(), "line one\nline two", "{cr}");
+        }
+    }
+
+    #[test]
+    fn test_position_tab_in_run_separates_the_words() {
+        for tab in [
+            r#"<w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/>"#,
+            r#"<w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"></w:ptab>"#,
+            "<w:tab></w:tab>",
+        ] {
+            let xml = wrap_body(&format!(
+                r#"<w:p><w:r><w:t>Report</w:t>{tab}<w:t>Page 1</w:t></w:r></w:p>"#
+            ));
+            let doc = parse_xml(&xml);
+            assert_eq!(doc.paragraphs[0].to_text(), "Report\tPage 1", "{tab}");
+        }
+    }
+
+    /// The same text box with self-closing and with paired run elements, including a paired
+    /// tab stop definition, which must still add nothing.
+    #[test]
+    fn should_keep_breaks_and_tabs_but_not_tab_stops_in_textboxes() {
+        let self_closing = r#"<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="720"/></w:tabs></w:pPr>
+                   <w:r><w:t>one</w:t><w:cr/><w:t>two</w:t><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/><w:t>three</w:t><w:tab/><w:t>four</w:t></w:r></w:p>"#;
+        let paired = r#"<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="720"></w:tab></w:tabs></w:pPr>
+                   <w:r><w:t>one</w:t><w:cr></w:cr><w:t>two</w:t><w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"></w:ptab><w:t>three</w:t><w:tab></w:tab><w:t>four</w:t></w:r></w:p>"#;
+        for content in [self_closing, paired] {
+            let xml = wrap_body(&format!(
+                r#"<w:p><w:r><w:pict><v:shape xmlns:v="urn:schemas-microsoft-com:vml"><v:textbox><w:txbxContent>
+                 {content}
+               </w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>"#
+            ));
+            let limits = crate::extractors::security::SecurityLimits {
+                max_nesting_depth: 64,
+                max_xml_depth: 64,
+                ..Default::default()
+            };
+            let mut budget = SecurityBudget::from_limits(&limits);
+            let doc = parse_xml_with_budget(&xml, &mut budget);
+            let textboxes: Vec<&str> = doc
+                .drawings
+                .iter()
+                .filter_map(|drawing| drawing.text_box_content.as_deref())
+                .collect();
+            assert_eq!(textboxes, vec!["one\ntwo\tthree\tfour"], "{content}");
+            assert_eq!(
+                probe_remaining_depth(&mut budget, 64),
+                64,
+                "paired run elements must not leak a depth level"
+            );
+        }
     }
 
     /// Word writes both `<w:br w:type="page"/>` (the author's break) and, at the

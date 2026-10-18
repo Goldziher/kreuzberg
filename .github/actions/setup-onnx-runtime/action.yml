@@ -12,6 +12,10 @@ inputs:
     description: Override architecture (x64|arm64). Defaults to runner architecture.
     required: false
     default: ""
+  add-macos-rpath:
+    description: "Add a macOS loader rpath; disable when the package already emits it"
+    required: false
+    default: "true"
   strategy:
     description: "ORT linking strategy: 'system' (dynamic link, default) or 'bundled' (static link via ort-bundled cargo feature)"
     required: false
@@ -38,7 +42,7 @@ runs:
     - name: Prepare ONNX Runtime (macOS)
       if: runner.os == 'macOS'
       shell: bash
-      run: scripts/ci/actions/setup-onnx-runtime/macos.sh "${{ inputs.ort-version }}" "${{ inputs.dest-dir }}" "${{ inputs.arch-id }}" "${{ inputs.strategy }}"
+      run: scripts/ci/actions/setup-onnx-runtime/macos.sh "${{ inputs.ort-version }}" "${{ inputs.dest-dir }}" "${{ inputs.arch-id }}" "${{ inputs.strategy }}" "${{ inputs.add-macos-rpath }}"
 
     - name: Prepare ONNX Runtime (Windows)
       if: runner.os == 'Windows'

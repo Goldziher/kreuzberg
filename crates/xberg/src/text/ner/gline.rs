@@ -416,6 +416,10 @@ impl GlineBackend {
     fn new_with_thread_budget(model_name: Option<&str>, thread_budget: usize) -> Result<Self> {
         let requested = requested_model_name(model_name)?;
         let files = ensure_model(&requested, None)?;
+        crate::ort_discovery::ort_environment().map_err(|error| crate::XbergError::Plugin {
+            message: format!("Failed to initialise ONNX Runtime for GLiNER: {error}"),
+            plugin_name: "ner-gliner".to_string(),
+        })?;
         let parameters = Parameters::default();
         // `TokenizedInput::from` truncates the word stream at `max_length`, so this
         // is the hard ceiling a single inference call can actually see. ~keep

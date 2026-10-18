@@ -3,12 +3,44 @@ use crate::error::{Result, TesseractError};
 use crate::monitor::TessMonitor;
 use crate::page_iterator::{TessBaseAPIGetIterator, TessPageIteratorDelete};
 use crate::result_iterator::TessResultIteratorDelete;
+use crate::result_renderer::TessResultRenderer;
 use crate::{PageIterator, ResultIterator};
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_float, c_int, c_void};
 use std::path::Path;
 use std::sync::{Arc, Mutex, OnceLock};
+
+/// Unique temporary directory removed on drop; holds the text renderer's output for
+/// [`TesseractAPI::process_pages`].
+struct ScratchDir {
+    path: std::path::PathBuf,
+}
+
+impl ScratchDir {
+    /// Claims a fresh directory with `create_dir`, which fails on an existing name, so a
+    /// pre-planted path is skipped rather than reused. ~keep
+    fn create() -> Result<Self> {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        const MAX_ATTEMPTS: u32 = 1024;
+        for _ in 0..MAX_ATTEMPTS {
+            let unique = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!("xberg-tess-pages-{unique}"));
+            match std::fs::create_dir(&path) {
+                Ok(()) => return Ok(ScratchDir { path }),
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(_) => return Err(TesseractError::IoError),
+            }
+        }
+        Err(TesseractError::IoError)
+    }
+}
+
+impl Drop for ScratchDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.path);
+    }
+}
 
 /// Batch bounding box results from Tesseract layout analysis.
 ///
@@ -930,31 +962,31 @@ impl TesseractAPI {
     ///
     /// # Returns
     ///
-    /// Returns the processed text as a string.
+    /// Returns the text of every processed page as a string.
     pub fn process_pages(&self, filename: &str, retry_config: Option<&str>, timeout_millisec: i32) -> Result<String> {
         let filename = CString::new(filename).map_err(|_| TesseractError::NullByteInString)?;
         let retry_config_cstr = retry_config
             .map(|s| CString::new(s).map_err(|_| TesseractError::NullByteInString))
             .transpose()?;
         let retry_ptr = retry_config_cstr.as_ref().map_or(std::ptr::null(), |c| c.as_ptr());
+        let scratch = ScratchDir::create()?;
+        let output_base = scratch.path.join("pages");
+        let output_base = output_base.to_str().ok_or(TesseractError::IoError)?;
+        let renderer = TessResultRenderer::new_text_renderer(output_base)?;
+        let renderer_handle = renderer.raw_handle()?;
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
-        let result = unsafe {
-            TessBaseAPIProcessPages(
-                *handle,
-                filename.as_ptr(),
-                retry_ptr,
-                timeout_millisec,
-                std::ptr::null_mut(),
-            )
-        };
-        if result.is_null() {
-            Err(TesseractError::ProcessPagesError)
-        } else {
-            let c_str = unsafe { CStr::from_ptr(result) };
-            let output = c_str.to_str()?.to_owned();
-            unsafe { TessDeleteText(result) };
-            Ok(output)
+        // `TessBaseAPIProcessPages` returns a success flag; the text of every page is written
+        // by the renderer, so it is read back from the renderer's output file. ~keep
+        let succeeded = unsafe {
+            TessBaseAPIProcessPages(*handle, filename.as_ptr(), retry_ptr, timeout_millisec, renderer_handle)
+        } != 0;
+        drop(handle);
+        drop(renderer);
+        if !succeeded {
+            return Err(TesseractError::ProcessPagesError);
         }
+        let bytes = std::fs::read(scratch.path.join("pages.txt")).map_err(|_| TesseractError::IoError)?;
+        Ok(String::from_utf8(bytes).map_err(|e| e.utf8_error())?)
     }
 
     /// Gets the initial languages as a string.
@@ -1089,19 +1121,22 @@ impl TesseractAPI {
         Ok(unsafe { TessBaseAPIIsValidWord(*handle, word.as_ptr()) })
     }
 
-    /// Gets the text direction.
+    /// Gets the baseline direction of the first text line.
     ///
     /// # Returns
     ///
-    /// Returns a tuple containing the degrees and confidence.
+    /// Returns a tuple of the baseline offset in pixels and its slope. The pair is only returned
+    /// when Tesseract reports success; layout analysis failure is an error.
     pub fn get_text_direction(&self) -> Result<(i32, f32)> {
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
-        let mut out_degrees = 0;
-        let mut out_confidence = 0.0;
-        unsafe {
-            TessBaseAPIGetTextDirection(*handle, &mut out_degrees, &mut out_confidence);
+        let mut out_offset = 0;
+        let mut out_slope = 0.0;
+        let succeeded = unsafe { TessBaseAPIGetTextDirection(*handle, &mut out_offset, &mut out_slope) } != 0;
+        if succeeded {
+            Ok((out_offset, out_slope))
+        } else {
+            Err(TesseractError::AnalyseLayoutError)
         }
-        Ok((out_degrees, out_confidence))
     }
 
     /// Initializes the OCR engine.
@@ -1973,7 +2008,7 @@ ffi_extern! {
     fn TessBaseAPIClear(handle: *mut c_void);
     fn TessBaseAPIEnd(handle: *mut c_void);
     fn TessBaseAPIIsValidWord(handle: *mut c_void, word: *const c_char) -> c_int;
-    fn TessBaseAPIGetTextDirection(handle: *mut c_void, out_degrees: *mut c_int, out_confidence: *mut c_float);
+    fn TessBaseAPIGetTextDirection(handle: *mut c_void, out_offset: *mut c_int, out_slope: *mut c_float) -> c_int;
     pub fn TessDeleteText(text: *mut c_char);
 
     fn TessBaseAPIGetUnichar(handle: *mut c_void, unichar_id: c_int) -> *const c_char;
@@ -1984,7 +2019,7 @@ ffi_extern! {
         retry_config: *const c_char,
         timeout_millisec: c_int,
         renderer: *mut c_void,
-    ) -> *mut c_char;
+    ) -> c_int;
 
     fn TessBaseAPIGetInputName(handle: *mut c_void) -> *const c_char;
     fn TessBaseAPISetInputName(handle: *mut c_void, name: *const c_char);
@@ -2314,5 +2349,32 @@ mod boxa_count_tests {
     fn treats_negative_count_as_zero() {
         assert_eq!(boxa_count_to_usize(-1), 0);
         assert_eq!(boxa_count_to_usize(c_int::MIN), 0);
+    }
+}
+
+#[cfg(test)]
+mod native_signature_contract_tests {
+    use super::*;
+
+    #[test]
+    fn text_direction_returns_a_boolean_status() {
+        #[cfg(not(target_arch = "wasm32"))]
+        type NativeFunction = unsafe extern "C-unwind" fn(*mut c_void, *mut c_int, *mut c_float) -> c_int;
+        #[cfg(target_arch = "wasm32")]
+        type NativeFunction = unsafe extern "C" fn(*mut c_void, *mut c_int, *mut c_float) -> c_int;
+
+        let _: NativeFunction = super::TessBaseAPIGetTextDirection;
+    }
+
+    #[test]
+    fn process_pages_returns_a_boolean_status_instead_of_text() {
+        #[cfg(not(target_arch = "wasm32"))]
+        type NativeFunction =
+            unsafe extern "C-unwind" fn(*mut c_void, *const c_char, *const c_char, c_int, *mut c_void) -> c_int;
+        #[cfg(target_arch = "wasm32")]
+        type NativeFunction =
+            unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char, c_int, *mut c_void) -> c_int;
+
+        let _: NativeFunction = super::TessBaseAPIProcessPages;
     }
 }

@@ -815,6 +815,7 @@ impl PaddleOcrBackend {
     ) -> std::result::Result<(), xberg_paddle_ocr::OcrError> {
         let _acceleration_guard = PaddleAccelerationGuard::set(accel);
         crate::ort_discovery::ensure_ort_available();
+        crate::ort_discovery::ort_environment()?;
 
         let builder_fn: Option<
             fn(

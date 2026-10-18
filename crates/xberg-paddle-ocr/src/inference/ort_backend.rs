@@ -4,7 +4,7 @@
 //! rest of the crate speaks only in [`Tensor`]s; `ort` types are referenced only here
 //! and in [`crate::base_net`]'s session-builder customization hook.
 
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use ndarray::{ArrayD, IxDyn};
 use ort::session::Session;
@@ -13,6 +13,19 @@ use ort::value::Tensor as OrtTensor;
 
 use super::{ModelBackend, Tensor};
 use crate::ocr_error::OcrError;
+
+static ENVIRONMENT: OnceLock<ort::environment::Environment> = OnceLock::new();
+static ENVIRONMENT_INIT: Mutex<()> = Mutex::new(());
+
+/// Make this crate build its sessions under `environment` instead of creating its own.
+///
+/// ONNX Runtime permits one environment per process, so a host that also runs other `ort`
+/// consumers must hand them all the same one. Returns `false` when this crate already holds an
+/// environment (its own, or an earlier adoption), in which case `environment` is not used.
+/// Call before the first model load.
+pub fn adopt_environment(environment: &ort::environment::Environment) -> bool {
+    ENVIRONMENT.set(environment.clone()).is_ok()
+}
 
 /// ONNX Runtime session wrapper.
 ///
@@ -49,7 +62,12 @@ impl OrtBackend {
     }
 
     fn environment() -> Result<&'static ort::environment::Environment, OcrError> {
-        static ENVIRONMENT: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+        if let Some(environment) = ENVIRONMENT.get() {
+            return Ok(environment);
+        }
+        // ONNX Runtime allows one environment per process, so a second concurrent `build()`
+        // would fail rather than merely duplicate work; serialize the first creation. ~keep
+        let _init = ENVIRONMENT_INIT.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         if let Some(environment) = ENVIRONMENT.get() {
             return Ok(environment);
         }

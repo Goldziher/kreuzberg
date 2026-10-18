@@ -530,6 +530,83 @@ pub(crate) fn png_pixel_density_dpi(bytes: &[u8]) -> Option<f64> {
     None
 }
 
+/// Read the first IFD's `XResolution`/`YResolution`/`ResolutionUnit` from a classic TIFF and
+/// report it as DPI (GH#2143: a 300 DPI nonstandard-size TIFF was assumed 72 DPI and resampled).
+///
+/// Dependency-free and bounds-checked so it is available under `ocr-pipeline`, where the `tiff`
+/// crate is not. Returns `None` for non-TIFF or BigTIFF input, truncated structures, a missing or
+/// non-inch/centimetre unit, zero or non-finite rationals, and axes that disagree by more than 1%
+/// (a single scalar hint cannot represent anisotropic density).
+#[cfg(feature = "ocr-pipeline")]
+pub(crate) fn tiff_pixel_density_dpi(bytes: &[u8]) -> Option<f64> {
+    const TAG_X_RESOLUTION: u16 = 282;
+    const TAG_Y_RESOLUTION: u16 = 283;
+    const TAG_RESOLUTION_UNIT: u16 = 296;
+    const TYPE_SHORT: u16 = 3;
+    const TYPE_RATIONAL: u16 = 5;
+    const ENTRY_LEN: usize = 12;
+    const CM_PER_INCH: f64 = 2.54;
+    const AXIS_TOLERANCE: f64 = 0.01;
+
+    let little = match bytes.get(..2)? {
+        b"II" => true,
+        b"MM" => false,
+        _ => return None,
+    };
+    let u16_at = |at: usize| -> Option<u16> {
+        let raw: [u8; 2] = bytes.get(at..at.checked_add(2)?)?.try_into().ok()?;
+        Some(if little {
+            u16::from_le_bytes(raw)
+        } else {
+            u16::from_be_bytes(raw)
+        })
+    };
+    let u32_at = |at: usize| -> Option<u32> {
+        let raw: [u8; 4] = bytes.get(at..at.checked_add(4)?)?.try_into().ok()?;
+        Some(if little {
+            u32::from_le_bytes(raw)
+        } else {
+            u32::from_be_bytes(raw)
+        })
+    };
+    if u16_at(2)? != 42 {
+        return None;
+    }
+    let ifd = usize::try_from(u32_at(4)?).ok()?;
+    let entry_count = usize::from(u16_at(ifd)?);
+    let rational = |entry: usize| -> Option<f64> {
+        let offset = usize::try_from(u32_at(entry + 8)?).ok()?;
+        let (numerator, denominator) = (u32_at(offset)?, u32_at(offset.checked_add(4)?)?);
+        (numerator != 0 && denominator != 0).then(|| f64::from(numerator) / f64::from(denominator))
+    };
+
+    let (mut x, mut y, mut unit) = (None, None, None);
+    for index in 0..entry_count {
+        let entry = ifd.checked_add(2)?.checked_add(index.checked_mul(ENTRY_LEN)?)?;
+        let (tag, kind, count) = (u16_at(entry)?, u16_at(entry + 2)?, u32_at(entry + 4)?);
+        if count != 1 {
+            continue;
+        }
+        match (tag, kind) {
+            (TAG_X_RESOLUTION, TYPE_RATIONAL) => x = rational(entry),
+            (TAG_Y_RESOLUTION, TYPE_RATIONAL) => y = rational(entry),
+            (TAG_RESOLUTION_UNIT, TYPE_SHORT) => unit = u16_at(entry + 8),
+            _ => {}
+        }
+    }
+
+    let (x, y) = (x?, y?);
+    if (x - y).abs() / x.max(y) > AXIS_TOLERANCE {
+        return None;
+    }
+    let dpi = match unit? {
+        2 => x,
+        3 => x * CM_PER_INCH,
+        _ => return None,
+    };
+    (dpi.is_finite() && dpi > 0.0).then_some(dpi)
+}
+
 /// Read a caller-supplied source-resolution hint out of `OcrConfig.backend_options`, in DPI.
 ///
 /// Mirrors `ocr::tesseract_backend::TesseractBackend::source_dpi_from_backend_options` (which
@@ -623,8 +700,8 @@ fn infer_dpi_from_standard_page_size(width: u32, height: u32) -> Option<f64> {
 ///    [`explicit_source_dpi_from_ocr_config`] for the `OcrConfig.backend_options` reader; the PDF
 ///    OCR route supplies its own via `TesseractConfig::source_dpi` directly). A caller that
 ///    explicitly said "my source is 72 DPI" must not be overridden by embedded metadata.
-/// 2. The image's own embedded pixel-density metadata, when present (GH#1630; currently PNG
-///    `pHYs` only — see [`png_pixel_density_dpi`]).
+/// 2. The image's own embedded pixel-density metadata, when present (GH#1630; PNG
+///    `pHYs` and the first TIFF IFD — see [`png_pixel_density_dpi`], [`tiff_pixel_density_dpi`]).
 /// 3. A standard-page-size inference from the pixel dimensions themselves (#1788; see
 ///    [`infer_dpi_from_standard_page_size`]).
 /// 4. `None`, meaning the historical 72 DPI assumption applies further down the pipeline — the
@@ -642,6 +719,7 @@ pub(crate) fn resolve_known_source_dpi(
 ) -> Option<f64> {
     explicit_source_dpi
         .or_else(|| png_pixel_density_dpi(image_bytes))
+        .or_else(|| tiff_pixel_density_dpi(image_bytes))
         .or_else(|| infer_dpi_from_standard_page_size(width, height))
 }
 

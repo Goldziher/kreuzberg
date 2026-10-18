@@ -82,6 +82,8 @@ pub(crate) use pipeline::{
 mod failed_page_record_tests;
 #[cfg(all(test, any(feature = "ocr", feature = "ocr-pipeline")))]
 mod numeric_repair_tests;
+#[cfg(all(test, feature = "ocr", feature = "pdf"))]
+mod page_failure_cause_tests;
 #[cfg(all(test, any(feature = "ocr", feature = "ocr-pipeline")))]
 mod plausibility_tests;
 #[cfg(all(test, any(feature = "ocr", feature = "ocr-pipeline")))]

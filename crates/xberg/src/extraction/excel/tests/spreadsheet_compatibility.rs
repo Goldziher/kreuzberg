@@ -193,7 +193,7 @@ fn forge_zip_uncompressed_sizes(mut bytes: Vec<u8>, declared_size: u32) -> Vec<u
 }
 
 #[test]
-fn should_reject_actual_zip_contents_larger_than_aggregate_limit_during_rewrite() {
+fn should_reject_forged_zip_sizes_before_the_aggregate_gate_runs() {
     let entry = vec![b'x'; 700];
     let worksheet = br#"<?xml version="1.0" encoding="UTF-8"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -215,10 +215,12 @@ fn should_reject_actual_zip_contents_larger_than_aggregate_limit_during_rewrite(
         ..Default::default()
     };
 
+    // ~keep: forged central-directory sizes used to slip past the declared-size gate and only
+    // trip the actual-byte gate; the header consistency check now rejects them first.
     let error = read_excel_bytes(&bytes, ".xlsx", &limits)
-        .expect_err("retained actual ZIP contents must not exceed the aggregate archive limit");
+        .expect_err("a ZIP whose central directory lies about entry sizes must be rejected");
     assert!(
-        error.to_string().contains("Spreadsheet ZIP actual contents total") && error.to_string().contains("1024"),
-        "the actual-byte gate must identify the aggregate archive limit: {error}"
+        error.to_string().contains("header consistency"),
+        "the forged sizes must be caught by the header consistency check: {error}"
     );
 }

@@ -595,14 +595,13 @@ pub(crate) fn extract_all_from_native_document(
                         (Vec::new(), vec![table_stage_failure_warning("native", &e)])
                     });
                 warnings.extend(native_warnings);
-                let native_pages: std::collections::HashSet<u32> =
-                    extracted_tables.iter().map(|entry| entry.table.page_number).collect();
                 let (bordered, bordered_warnings) =
-                    crate::pdf::native::table::extract_tables_bordered(&mut doc, &native_pages).unwrap_or_else(|e| {
-                        tracing::warn!("xberg_native_pdf bordered table extraction failed, skipping tables: {e}");
-                        (Vec::new(), vec![table_stage_failure_warning("bordered", &e)])
-                    });
-                extracted_tables.extend(bordered);
+                    crate::pdf::native::table::extract_tables_bordered(&mut doc, &std::collections::HashSet::new())
+                        .unwrap_or_else(|e| {
+                            tracing::warn!("xberg_native_pdf bordered table extraction failed, skipping tables: {e}");
+                            (Vec::new(), vec![table_stage_failure_warning("bordered", &e)])
+                        });
+                crate::pdf::native::table::append_bordered_tables(&mut extracted_tables, bordered);
                 warnings.extend(bordered_warnings);
                 let (mut combined, mut native_grids): (Vec<_>, Vec<_>) = extracted_tables
                     .into_iter()

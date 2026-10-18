@@ -1,6 +1,10 @@
 //! Tests for the image extraction module, split out of `image.rs` to keep that file
 //! under the line-count limit.
 
+#[cfg(feature = "ocr")]
+#[path = "tests/tagged_tiff_source_dpi_tests.rs"]
+mod tagged_tiff_source_dpi_tests;
+
 use super::*;
 use image::{ImageBuffer, ImageFormat, Rgb, RgbImage};
 use std::io::Cursor;

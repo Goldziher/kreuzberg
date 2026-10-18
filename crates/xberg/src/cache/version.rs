@@ -88,7 +88,10 @@
 ///
 /// Bumped for plugin lifecycle generations: extraction cache entries now wrap the result with
 /// the post-processor and validator registry generations that produced it. ~keep
-pub(crate) const CACHE_SCHEMA_VERSION: u32 = 8;
+/// Invalidate cached false EXIF warnings in builds without a Git identity. ~keep
+/// Invalidate cached PDFs that omitted bordered tables beside strict tables. ~keep
+/// Invalidate cached PDFs that removed explicitly requested geometric headers or footers. ~keep
+pub(crate) const CACHE_SCHEMA_VERSION: u32 = 11;
 
 /// Number of hex characters in the cache version tag.
 const VERSION_TAG_HEX_LEN: usize = 8;

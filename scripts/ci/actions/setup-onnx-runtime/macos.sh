@@ -5,6 +5,15 @@ ort_version="${1:?ort-version required}"
 dest_dir="${2:-crates/xberg-node}"
 arch_id="${3:-}"
 strategy="${4:-system}"
+add_macos_rpath="${5-true}"
+
+case "$add_macos_rpath" in
+true | false) ;;
+*)
+  echo "add-macos-rpath must be true or false" >&2
+  exit 2
+  ;;
+esac
 
 extract_dir="$RUNNER_TEMP/onnxruntime"
 
@@ -64,11 +73,13 @@ dest="$GITHUB_WORKSPACE/$dest_dir"
 mkdir -p "$dest"
 cp -f "$ort_root/lib/"libonnxruntime*.dylib "$dest/"
 
-rpath_flag="-C link-arg=-Wl,-rpath,@loader_path"
 if [ -n "${RUSTFLAGS:-}" ]; then
-  rustflags="$RUSTFLAGS -L $ort_root/lib $rpath_flag"
+  rustflags="$RUSTFLAGS -L $ort_root/lib"
 else
-  rustflags="-L $ort_root/lib $rpath_flag"
+  rustflags="-L $ort_root/lib"
+fi
+if [ "$add_macos_rpath" = "true" ]; then
+  rustflags="$rustflags -C link-arg=-Wl,-rpath,@loader_path"
 fi
 
 if [ "$strategy" = "bundled" ]; then

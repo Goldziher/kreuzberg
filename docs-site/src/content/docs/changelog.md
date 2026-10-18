@@ -15,17 +15,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(llm): Rust exposes failed structured-response usage through `xberg::llm::usage::usage_from_error`.** (#2139)
 
+### Security
+
+- **(excel): ZIP-backed spreadsheets reject mismatched local headers, duplicate member names, and overlapping entries.**
+  Archive count, size, and compression-ratio limits are checked before header validation or payload reads.
+
 ### Fixed
 
 - **(rendering): A footnote reference stays on the block that cites it.** Markdown, Djot and LaTeX input placed it on
   the previous paragraph, list item or heading, and Djot output wrote it at the start of the next block (`[^1]# Heading`). (#2156)
+- **(pdf): Explicit header and footer inclusion preserves geometric page numbers independently.** (#2150)
+- **(pdf): Native extraction preserves separate two-column bordered tables beside wider tables on the same page.**
+- **(ocr): Failed PDF OCR pages report the type chain of the underlying error.**
+  The page warning, `OcrPageFailure.error`, and the run error name each error source without its message text. (#2149)
+- **(ocr): Tesseract C API declarations match the native return types.**
+  Fixes the WASM link failure and a crash in `process_pages`; borrowed text is no longer freed. (#2145)
+- **(ocr): Table reconstruction keeps columns that sit close together.**
+  A repeated column edge less than about one space width from its neighbour is no longer merged into the neighbouring cell. (#2140)
+- **(images): TIFF pixel density (`XResolution`, `YResolution`, `ResolutionUnit`) is used as the source DPI instead of assuming 72.** (#2143)
+- **(ocr): The standalone image OCR pipeline keeps the tables it returns.**
+  Tables embedded as GFM in a backend's text are rendered once. (#2144)
+- **(ocr): PaddleOCR, layout detection, and GLiNER share one ONNX Runtime environment.**
+  The second component to initialize no longer fails with "only one environment is allowed per process". (#2148)
+- **(csharp): macOS native-package builds avoid duplicate loader paths.**
+  Generated native libraries retain their sibling-library search path. (#2147)
+- **(images): Images without EXIF metadata no longer report a metadata extraction warning.** (#2141)
+- **(docx): Text moved with Track Changes on appears once, at the place it was moved to.**
+  The copy Word keeps at the old place (`w:moveFrom`) is no longer extracted as content. (#2151)
 - **(llm): Failed structured output retains available model, token, and finish-reason metadata in `llm_usage`.**
   Extracted text and failure warnings remain available; JSON parse errors omit response content. (#2139)
 - **(pptx): Speaker notes follow each slide’s relationships instead of matching slide filenames.**
   Sparse or independently numbered notes remain attached to the correct slide. (#2138)
+- **(docx): Table rows that start or end inside the table grid keep their cells under the right columns.**
+  `w:gridBefore` and `w:gridAfter` were ignored, so such a row's cells moved left. (#2153)
 - **(packaging): GNU cross-builds use a pinned linker wrapper compatible with Rust 1.99 warnings.**
 - **(swift): iOS simulator release builds omit macOS extension-linker flags.**
+- **(docx): Lists numbered in non-Latin formats stay numbered.** A Chinese 一、二、三 (`chineseCounting`),
+  an enclosed ①②③, an ordinal or a Cyrillic list was read as a bullet list. (#2154)
 - **(swift): Linux library builds use a pinned cross-compiler compatible with strict Rust warning checks.**
+- **(pptx): Tables, charts and SmartArt keep their place in a slide's reading order.** Their position, stored in
+  `p:xfrm`, was read as the top-left corner, so they came out before the text above them. (#2155)
 - **(llm): Strict structured extraction validates provider output against the original JSON schema.**
   Invalid output leaves extracted text intact and reports a safe warning; schema references resolve offline. (#2136)
 - **(ocr): Tesseract honors the requested OCR engine mode, including when reusing pooled engines.**
@@ -33,6 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(pdf): Consecutive-paragraph cleanup preserves repeated body text at distinct or unknown positions.**
   Headings, lists, code, formulas, captions, and differences in capitalization are preserved; rendering duplicates
   are removed only when their text and valid bounding boxes coincide.
+- **(docx): A carriage return (`w:cr`) breaks the line and a position tab (`w:ptab`) separates the words.**
+  Both were dropped, so the words around them ran together, in text boxes too. Tab stop definitions in a text
+  box no longer add a tab before its text. (#2152)
 
 ## [1.3.11] - 2026-10-16
 

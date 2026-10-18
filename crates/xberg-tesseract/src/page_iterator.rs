@@ -37,12 +37,12 @@ pub struct ParaInfo {
 /// exist but Tesseract declined to describe them" — both previously collapsed
 /// into an empty `Vec<ParaInfo>` with no signal, which silently stripped
 /// `is_crown`/`is_list_item`/`justification` from every OCR element on builds
-/// where `TessPageIteratorParagraphInfo` returns 0.
+/// where Tesseract has no paragraph model.
 #[derive(Debug, Clone, Default)]
 pub struct ParagraphExtractionOutcome {
     /// Successfully described paragraphs, in iterator order.
     pub paragraphs: Vec<ParaInfo>,
-    /// Count of paragraphs for which `TessPageIteratorParagraphInfo` returned 0.
+    /// Count of paragraphs that have no paragraph model.
     pub skipped_no_para_info: usize,
     /// Count of paragraphs that reported metadata but no bounding box, and so
     /// could not be matched to a word.
@@ -192,7 +192,7 @@ impl PageIterator {
         let mut textline_order = 0;
         let mut deskew_angle = 0.0;
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
-        let result = unsafe {
+        unsafe {
             TessPageIteratorOrientation(
                 *handle,
                 &mut orientation,
@@ -201,16 +201,12 @@ impl PageIterator {
                 &mut deskew_angle,
             )
         };
-        if result == 0 {
-            Err(TesseractError::InvalidParameterError)
-        } else {
-            Ok((
-                TessOrientation::from_int(orientation),
-                TessWritingDirection::from_int(writing_direction),
-                TessTextlineOrder::from_int(textline_order),
-                deskew_angle,
-            ))
-        }
+        Ok((
+            TessOrientation::from_int(orientation),
+            TessWritingDirection::from_int(writing_direction),
+            TessTextlineOrder::from_int(textline_order),
+            deskew_angle,
+        ))
     }
 
     /// Extracts all blocks from the page in a single mutex-locked pass.
@@ -279,23 +275,7 @@ impl PageIterator {
         unsafe { TessPageIteratorBegin(*handle) };
 
         loop {
-            let mut justification: c_int = 0;
-            let mut is_list_item_raw: c_int = 0;
-            let mut is_crown_raw: c_int = 0;
-            let mut first_line_indent: c_int = 0;
-
-            let para_ok = unsafe {
-                TessPageIteratorParagraphInfo(
-                    *handle,
-                    &mut justification,
-                    &mut is_list_item_raw,
-                    &mut is_crown_raw,
-                    &mut first_line_indent,
-                )
-            };
-
-            let is_list_item = is_list_item_raw != 0;
-            let is_crown = is_crown_raw != 0;
+            let paragraph = read_paragraph_info(*handle);
 
             let mut left: c_int = 0;
             let mut top: c_int = 0;
@@ -305,9 +285,10 @@ impl PageIterator {
             let bbox_ok =
                 unsafe { TessPageIteratorBoundingBox(*handle, level, &mut left, &mut top, &mut right, &mut bottom) };
 
-            if para_ok != 0 && bbox_ok != 0 {
+            if let (Some((justification, is_list_item, is_crown, first_line_indent)), true) = (paragraph, bbox_ok != 0)
+            {
                 paragraphs.push(ParaInfo {
-                    justification: TessParagraphJustification::from_int(justification),
+                    justification,
                     is_list_item,
                     is_crown,
                     first_line_indent,
@@ -316,7 +297,7 @@ impl PageIterator {
                     right,
                     bottom,
                 });
-            } else if para_ok == 0 {
+            } else if paragraph.is_none() {
                 skipped_no_para_info += 1;
             } else {
                 skipped_no_bbox += 1;
@@ -341,31 +322,53 @@ impl PageIterator {
     ///
     /// Returns the paragraph information as a tuple if successful, otherwise returns an error.
     pub fn paragraph_info(&self) -> Result<(TessParagraphJustification, bool, bool, i32)> {
-        let mut justification = 0;
-        let mut is_list_item_raw: c_int = 0;
-        let mut is_crown_raw: c_int = 0;
-        let mut first_line_indent = 0;
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
-        let result = unsafe {
-            TessPageIteratorParagraphInfo(
-                *handle,
-                &mut justification,
-                &mut is_list_item_raw,
-                &mut is_crown_raw,
-                &mut first_line_indent,
-            )
-        };
-        if result == 0 {
-            Err(TesseractError::InvalidParameterError)
-        } else {
-            Ok((
-                TessParagraphJustification::from_int(justification),
-                is_list_item_raw != 0,
-                is_crown_raw != 0,
-                first_line_indent,
-            ))
-        }
+        read_paragraph_info(*handle).ok_or(TesseractError::InvalidParameterError)
     }
+}
+
+/// Sentinel preloaded into `first_line_indent`. A paragraph with a model always overwrites it
+/// with `first_indent - body_indent`, a small page-geometry difference. ~keep
+const NO_PARAGRAPH_MODEL: c_int = c_int::MIN;
+
+/// Reads paragraph metadata for the iterator's current position.
+///
+/// `TessPageIteratorParagraphInfo` returns `void` and, when the paragraph has no model, writes
+/// only `justification`; its C wrapper then copies uninitialized `bool` locals into the list-item
+/// and crown outputs. The untouched indent sentinel is therefore the only signal that those
+/// outputs are meaningless, and `None` is returned instead of reading them. ~keep
+fn read_paragraph_info(handle: *mut c_void) -> Option<(TessParagraphJustification, bool, bool, i32)> {
+    let mut justification: c_int = 0;
+    let mut is_list_item_raw: c_int = 0;
+    let mut is_crown_raw: c_int = 0;
+    let mut first_line_indent: c_int = NO_PARAGRAPH_MODEL;
+    unsafe {
+        TessPageIteratorParagraphInfo(
+            handle,
+            &mut justification,
+            &mut is_list_item_raw,
+            &mut is_crown_raw,
+            &mut first_line_indent,
+        )
+    };
+    decode_paragraph_info(justification, is_list_item_raw, is_crown_raw, first_line_indent)
+}
+
+fn decode_paragraph_info(
+    justification: c_int,
+    is_list_item_raw: c_int,
+    is_crown_raw: c_int,
+    first_line_indent: c_int,
+) -> Option<(TessParagraphJustification, bool, bool, i32)> {
+    if first_line_indent == NO_PARAGRAPH_MODEL {
+        return None;
+    }
+    Some((
+        TessParagraphJustification::from_int(justification),
+        is_list_item_raw != 0,
+        is_crown_raw != 0,
+        first_line_indent,
+    ))
 }
 
 impl Drop for PageIterator {
@@ -405,7 +408,7 @@ ffi_extern! {
         writing_direction: *mut c_int,
         textline_order: *mut c_int,
         deskew_angle: *mut c_float,
-    ) -> c_int;
+    );
     pub fn TessBaseAPIGetIterator(handle: *mut c_void) -> *mut c_void;
     pub fn TessPageIteratorParagraphInfo(
         handle: *mut c_void,
@@ -413,5 +416,51 @@ ffi_extern! {
         is_list_item: *mut c_int,
         is_crown: *mut c_int,
         first_line_indent: *mut c_int,
-    ) -> c_int;
+    );
+}
+
+#[cfg(test)]
+mod native_signature_contract_tests {
+    use super::*;
+
+    #[test]
+    fn orientation_fills_outputs_without_returning_a_status() {
+        #[cfg(not(target_arch = "wasm32"))]
+        type NativeFunction =
+            unsafe extern "C-unwind" fn(*mut c_void, *mut c_int, *mut c_int, *mut c_int, *mut c_float);
+        #[cfg(target_arch = "wasm32")]
+        type NativeFunction = unsafe extern "C" fn(*mut c_void, *mut c_int, *mut c_int, *mut c_int, *mut c_float);
+
+        let _: NativeFunction = super::TessPageIteratorOrientation;
+    }
+
+    #[test]
+    fn paragraph_info_fills_outputs_without_returning_a_status() {
+        #[cfg(not(target_arch = "wasm32"))]
+        type NativeFunction = unsafe extern "C-unwind" fn(*mut c_void, *mut c_int, *mut c_int, *mut c_int, *mut c_int);
+        #[cfg(target_arch = "wasm32")]
+        type NativeFunction = unsafe extern "C" fn(*mut c_void, *mut c_int, *mut c_int, *mut c_int, *mut c_int);
+
+        let _: NativeFunction = super::TessPageIteratorParagraphInfo;
+    }
+}
+
+#[cfg(test)]
+mod paragraph_decoding_tests {
+    use super::*;
+
+    #[test]
+    fn untouched_indent_sentinel_means_no_paragraph_model() {
+        assert!(decode_paragraph_info(0, 1, 1, NO_PARAGRAPH_MODEL).is_none());
+    }
+
+    #[test]
+    fn written_indent_decodes_every_output() {
+        let (justification, is_list_item, is_crown, indent) =
+            decode_paragraph_info(1, 1, 0, -12).expect("paragraph with a model");
+        assert_eq!(justification, TessParagraphJustification::JUSTIFICATION_LEFT);
+        assert!(is_list_item);
+        assert!(!is_crown);
+        assert_eq!(indent, -12);
+    }
 }

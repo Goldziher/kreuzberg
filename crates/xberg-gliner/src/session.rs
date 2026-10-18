@@ -27,10 +27,28 @@ pub(crate) const TENSOR_SPAN_IDX: &str = "span_idx";
 pub(crate) const TENSOR_SPAN_MASK: &str = "span_mask";
 pub(crate) const TENSOR_LOGITS: &str = "logits";
 
+static ENVIRONMENT: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+static ENVIRONMENT_INIT: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Make this crate build its sessions under `environment` instead of creating its own.
+///
+/// ONNX Runtime permits one environment per process, so a host that also runs other `ort`
+/// consumers must hand them all the same one. Returns `false` when this crate already holds an
+/// environment (its own, or an earlier adoption), in which case `environment` is not used.
+/// Call before the first model load.
+pub fn adopt_environment(environment: &ort::environment::Environment) -> bool {
+    ENVIRONMENT.set(environment.clone()).is_ok()
+}
+
 /// ONNX Runtime must keep one environment alive for the life of every session (ort rc.14 takes
 /// it as an argument). ~keep
 fn environment() -> Result<&'static ort::environment::Environment> {
-    static ENVIRONMENT: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+    if let Some(environment) = ENVIRONMENT.get() {
+        return Ok(environment);
+    }
+    // A second concurrent `build()` fails ("only one environment is allowed per process")
+    // instead of duplicating work, so the first creation is serialized. ~keep
+    let _init = ENVIRONMENT_INIT.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     if let Some(environment) = ENVIRONMENT.get() {
         return Ok(environment);
     }

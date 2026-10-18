@@ -2288,6 +2288,7 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: "1.24.2"
+          add-macos-rpath: "false"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
@@ -2965,6 +2966,11 @@ jobs:
 
       - uses: xberg-io/actions/build-swift-artifactbundle@7a65509ae3a6ebcee91745c0cbc1f8238d7b44dc
         id: libs
+        # Must equal the `.iOS(.vN)` floor in Package.swift. Unset, rustc links at its iOS default
+        # (10.0) while cc/cmake compile for the runner SDK (18.5), and prebuilt ORT objects call
+        # ___chkstk_darwin, which libcompiler_rt hides from iOS 7.0-12.1 links (#2146). ~keep
+        env:
+          IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         with:
           crate-name: xberg-swift
           artifact-name: Xberg-rs

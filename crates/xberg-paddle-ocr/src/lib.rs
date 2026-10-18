@@ -43,6 +43,8 @@ pub mod scale_param;
 /// `inference::default_backend`'s compile-time choice, which always prefers `ort` when the
 /// `ort` feature is on and so makes `tract` unreachable in a dual-engine build.
 pub use inference::Backend as InferenceBackend;
+#[cfg(feature = "ort")]
+pub use inference::ort_backend::adopt_environment as adopt_ort_environment;
 pub use ocr_error::OcrError;
 pub use ocr_lite::PaddleOcrEngine;
 pub use ocr_result::{

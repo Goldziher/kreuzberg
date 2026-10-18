@@ -205,7 +205,9 @@ pub(crate) fn is_explicit_provider_request(
 }
 
 /// The process-wide ONNX Runtime environment every session builder in this crate shares; ort
-/// rc.14 takes it as an argument and ONNX Runtime requires it to outlive every session. ~keep
+/// rc.14 takes it as an argument and ONNX Runtime requires it to outlive every session.
+/// The `xberg-paddle-ocr` and `xberg-gliner` session builders are handed this same
+/// environment when it is created, so call this before they load a model. ~keep
 #[cfg(any(
     feature = "layout-detection",
     feature = "embeddings",
@@ -213,15 +215,32 @@ pub(crate) fn is_explicit_provider_request(
     feature = "auto-rotate",
     feature = "reranker",
     feature = "onnx-runtime",
-    feature = "transcription"
+    feature = "transcription",
+    feature = "ner-onnx"
 ))]
 pub(crate) fn ort_environment() -> Result<&'static ort::environment::Environment, ort::Error> {
     static ENVIRONMENT: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+    static INIT: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    if let Some(environment) = ENVIRONMENT.get() {
+        return Ok(environment);
+    }
+    // ONNX Runtime allows one environment per process, so a second concurrent `build()` fails
+    // rather than duplicating work: serialize the first creation. ~keep
+    let _init = INIT.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     if let Some(environment) = ENVIRONMENT.get() {
         return Ok(environment);
     }
     let environment = ort::init().build()?;
-    Ok(ENVIRONMENT.get_or_init(|| environment))
+    let environment = ENVIRONMENT.get_or_init(|| environment);
+    #[cfg(feature = "paddle-ocr-ort")]
+    if !xberg_paddle_ocr::adopt_ort_environment(environment) {
+        tracing::warn!("PaddleOCR already holds its own ONNX Runtime environment");
+    }
+    #[cfg(feature = "ner-onnx")]
+    if !xberg_gliner::adopt_ort_environment(environment) {
+        tracing::warn!("GLiNER already holds its own ONNX Runtime environment");
+    }
+    Ok(environment)
 }
 
 /// Apply execution providers to an ORT session builder based on [`AccelerationConfig`].
@@ -656,5 +675,87 @@ mod tests {
                 "value: {value:?}"
             );
         }
+    }
+}
+
+#[cfg(all(test, any(feature = "paddle-ocr-ort", feature = "ner-onnx")))]
+mod shared_environment_tests {
+    fn field(number: u8, payload: &[u8]) -> Vec<u8> {
+        let mut out = vec![(number << 3) | 2, payload.len() as u8];
+        out.extend_from_slice(payload);
+        out
+    }
+
+    fn varint_field(number: u8, value: u8) -> Vec<u8> {
+        vec![number << 3, value]
+    }
+
+    fn value_info(name: &str) -> Vec<u8> {
+        let dim = field(1, &varint_field(1, 1));
+        let tensor = [varint_field(1, 1), field(2, &dim)].concat();
+        let type_proto = field(1, &tensor);
+        [field(1, name.as_bytes()), field(2, &type_proto)].concat()
+    }
+
+    /// A one-node `Identity` ONNX model: loads under any ONNX Runtime without model assets.
+    fn identity_model() -> Vec<u8> {
+        let node = [field(1, b"x"), field(2, b"y"), field(4, b"Identity")].concat();
+        let graph = [
+            field(1, &node),
+            field(2, b"g"),
+            field(11, &value_info("x")),
+            field(12, &value_info("y")),
+        ]
+        .concat();
+        [varint_field(1, 8), field(7, &graph), field(8, &varint_field(2, 13))].concat()
+    }
+
+    #[test]
+    fn repeated_calls_return_the_same_environment() {
+        let first = super::ort_environment().expect("environment");
+        let second = super::ort_environment().expect("second call must not rebuild");
+        assert!(std::ptr::eq(first, second));
+    }
+
+    #[cfg(feature = "paddle-ocr-ort")]
+    #[test]
+    fn paddle_loads_under_the_shared_environment() {
+        use xberg_paddle_ocr::base_net::BaseNet;
+        super::ort_environment().expect("environment");
+        let mut net = xberg_paddle_ocr::db_net::DbNet::new();
+        // A PaddleOCR-created environment would fail here: ort allows one per process.
+        net.init_model_from_memory_with_ort_builder(&identity_model(), 1, None)
+            .expect("paddle must reuse the shared environment");
+        assert!(!xberg_paddle_ocr::adopt_ort_environment(
+            super::ort_environment().expect("environment")
+        ));
+    }
+
+    #[cfg(feature = "ner-onnx")]
+    #[test]
+    fn gliner_loads_under_the_shared_environment() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let tokenizer = dir.path().join("tokenizer.json");
+        std::fs::write(
+            &tokenizer,
+            r#"{"version":"1.0","model":{"type":"WordLevel","vocab":{"[UNK]":0},"unk_token":"[UNK]"}}"#,
+        )
+        .expect("write tokenizer");
+        let model = dir.path().join("model.onnx");
+        std::fs::write(&model, identity_model()).expect("write model");
+        super::ort_environment().expect("environment");
+        let result = xberg_gliner::Gliner::with_runtime(
+            xberg_gliner::Parameters::default(),
+            xberg_gliner::RuntimeConfig::default(),
+            &tokenizer,
+            &model,
+        );
+        // The identity model has no GLiNER inputs, so loading must get past session creation and
+        // stop at schema validation; an `Ort` error here means GLiNER built its own environment.
+        assert!(
+            matches!(result, Err(xberg_gliner::GlinerError::UnexpectedModelSchema { .. })),
+            "unexpected result: {:?}",
+            result.err()
+        );
     }
 }

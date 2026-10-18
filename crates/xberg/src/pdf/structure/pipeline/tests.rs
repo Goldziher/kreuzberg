@@ -5433,7 +5433,7 @@ fn should_not_delete_page_number_shape_in_the_page_body() {
         .map(|_| vec![positioned_para("1", 90.0, 400.0), positioned_para("body", 90.0, 380.0)])
         .collect();
     let page_heights = letter_page_heights(pages.len());
-    mark_validated_page_numbers(&mut pages, &page_heights);
+    mark_validated_page_numbers(&mut pages, &page_heights, false, false);
     assert!(
         pages.iter().all(|page| !page[0].is_page_furniture),
         "body-band page-number shapes must never be marked furniture"
@@ -5449,7 +5449,7 @@ fn should_not_delete_an_isolated_page_number_match() {
         .collect();
     pages[3].push(positioned_para("7", 300.0, 40.0));
     let page_heights = letter_page_heights(pages.len());
-    mark_validated_page_numbers(&mut pages, &page_heights);
+    mark_validated_page_numbers(&mut pages, &page_heights, false, false);
     assert!(
         !pages[3][1].is_page_furniture,
         "a single isolated match must never be deleted"
@@ -5467,7 +5467,7 @@ fn should_delete_a_consistent_running_footer_page_number() {
         })
         .collect();
     let page_heights = letter_page_heights(pages.len());
-    mark_validated_page_numbers(&mut pages, &page_heights);
+    mark_validated_page_numbers(&mut pages, &page_heights, false, false);
     assert!(
         pages.iter().all(|page| page[1].is_page_furniture),
         "an incrementing footer number in a fixed slot on every page is furniture"
@@ -5486,7 +5486,7 @@ fn should_leave_layout_classified_paragraphs_to_the_layout_path() {
         })
         .collect();
     let page_heights = letter_page_heights(pages.len());
-    mark_validated_page_numbers(&mut pages, &page_heights);
+    mark_validated_page_numbers(&mut pages, &page_heights, false, false);
     assert!(
         pages.iter().all(|page| !page[1].is_page_furniture),
         "layout-classified paragraphs must be left to the layout path"
@@ -7060,4 +7060,32 @@ fn blocks_to_paragraphs_merges_normally_without_a_column_corridor_gh1806() {
         1,
         "with no corridor, the two lines merge as before this fix"
     );
+}
+
+#[test]
+fn should_honor_header_and_footer_flags_independently_for_geometric_page_numbers() {
+    let cases = [(false, false), (true, false), (false, true), (true, true)];
+    assert_eq!(cases.len(), 4);
+    let mut verified = 0;
+    for (include_headers, include_footers) in cases {
+        let mut pages: Vec<Vec<PdfParagraph>> = (1..=8)
+            .map(|page| {
+                vec![
+                    positioned_para("Substantive body content stays intact in the document.", 90.0, 400.0),
+                    positioned_para(&format!("Page {page}"), 300.0, 750.0),
+                    positioned_para(&format!("Page {page} of 8"), 300.0, 40.0),
+                ]
+            })
+            .collect();
+        let heights = letter_page_heights(pages.len());
+        mark_validated_page_numbers(&mut pages, &heights, include_headers, include_footers);
+        assert_eq!(pages.len(), 8);
+        for page in pages {
+            assert!(!page[0].is_page_furniture);
+            assert_eq!(page[1].is_page_furniture, !include_headers);
+            assert_eq!(page[2].is_page_furniture, !include_footers);
+        }
+        verified += 1;
+    }
+    assert_eq!(verified, 4);
 }

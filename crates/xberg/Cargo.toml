@@ -661,6 +661,7 @@ ner-onnx = [
     # xberg-gliner ONNX backend with Hugging Face model download.
     "ner",
     "dep:xberg-gliner",
+    "dep:ort",
     "dep:hf-hub",
     "dep:reqwest",
     "dep:sha2",
@@ -1548,7 +1549,7 @@ xberg-native-pdf = { workspace = true, optional = true }
 xberg-tesseract = { path = "../xberg-tesseract", optional = true }
 yaml_serde = "0.10.7"
 zeroize = { version = "1", optional = true }
-zip = { version = "9.0.3", optional = true, default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.5", optional = true, default-features = false, features = ["deflate-flate2"] }
 
 # `tower` (GH#1381) unlocks the `cache`/`budget`/`rate_limit`/`cost_tracking`/`tracing`/
 # `cooldown_secs`/`health_check_secs` fields on liter-llm's `client::ClientConfigBuilder` —
@@ -1789,7 +1790,7 @@ tokio-test = "0.4"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = "1"
 wiremock = "0.6"
-zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2"] }
 
 [[test]]
 name = "captioning_smoke"

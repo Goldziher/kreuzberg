@@ -366,14 +366,26 @@ fn get_attr_bool(e: &BytesStart, key: &str) -> bool {
     get_attr(e, key).as_deref() == Some("1")
 }
 
+/// The character a run element adds to text box text, for either event form: `<w:cr/>` and
+/// `<w:cr></w:cr>` mean the same. A `w:tab` under `w:pPr/w:tabs` defines a tab stop and adds
+/// nothing.
+fn txbx_run_char(local_name: &str, in_tab_stops: bool) -> Option<char> {
+    match local_name {
+        "tab" if !in_tab_stops => Some('\t'),
+        "ptab" => Some('\t'),
+        "br" | "cr" => Some('\n'),
+        _ => None,
+    }
+}
+
 /// Collect visible text from a `<w:txbxContent>` subtree (#81): the paragraphs of a
 /// text box, reached either via the DrawingML `wps:txbx` path (from [`parse_drawing`])
 /// or the VML `v:textbox` fallback path (from [`parse_vml_pict`]).
 ///
 /// Called with the reader positioned right after the `<w:txbxContent>` start tag;
 /// consumes events through the matching `</w:txbxContent>` end tag. Paragraphs are
-/// joined with newlines; `w:tab`/`w:br` become `\t`/`\n` within a paragraph, matching
-/// how the main body loop renders inline breaks.
+/// joined with newlines; `w:tab`/`w:ptab` and `w:br`/`w:cr` become `\t` and `\n` within
+/// a paragraph ([`txbx_run_char`]), matching how the main body loop renders inline breaks.
 ///
 /// Threads `budget` through every event so nesting and iteration count inside
 /// `w:txbxContent` are measured against the caller's caps instead of passing through
@@ -386,6 +398,10 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
     let mut paragraphs: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut in_text = false;
+    let mut in_tab_stops = false;
+    // Open `w:moveFrom` wrappers inside the text box. As in the body loop, a move
+    // source is read and accounted but is not part of the final text.
+    let mut move_from_depth = 0usize;
 
     loop {
         budget.step()?;
@@ -395,29 +411,43 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 match e.local_name().as_ref() {
                     "txbxContent" => depth += 1,
                     "t" => in_text = true,
-                    _ => {}
+                    "moveFrom" => move_from_depth += 1,
+                    "tabs" => in_tab_stops = true,
+                    name => {
+                        if move_from_depth == 0
+                            && let Some(c) = txbx_run_char(name, in_tab_stops)
+                        {
+                            current.push(c);
+                        }
+                    }
                 }
             }
-            Ok(Event::Empty(ref e)) => match e.local_name().as_ref() {
-                "tab" => current.push('\t'),
-                "br" => current.push('\n'),
-                _ => {}
-            },
+            Ok(Event::Empty(ref e)) if move_from_depth == 0 => {
+                if let Some(c) = txbx_run_char(e.local_name().as_ref(), in_tab_stops) {
+                    current.push(c);
+                }
+            }
             Ok(Event::Text(e)) if in_text => {
                 let text = e.xml10_content();
                 budget.check_entity(&text)?;
                 budget.account_text(text.len())?;
-                current.push_str(&text);
+                if move_from_depth == 0 {
+                    current.push_str(&text);
+                }
             }
             Ok(Event::GeneralRef(ref e)) if in_text => {
                 let text = crate::utils::xml_utils::resolve_general_ref(e);
                 budget.account_text(text.len())?;
-                current.push_str(&text);
+                if move_from_depth == 0 {
+                    current.push_str(&text);
+                }
             }
             Ok(Event::End(ref e)) => {
                 budget.leave();
                 match e.local_name().as_ref() {
                     "t" => in_text = false,
+                    "moveFrom" => move_from_depth = move_from_depth.saturating_sub(1),
+                    "tabs" => in_tab_stops = false,
                     "p" => paragraphs.push(std::mem::take(&mut current)),
                     "txbxContent" => {
                         depth -= 1;

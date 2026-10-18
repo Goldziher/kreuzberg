@@ -245,6 +245,42 @@ fn repair_numeric_tokens_in_table(table: &mut crate::types::Table) {
     }
 }
 
+/// Page-failure text for `error`: its display plus the variant names of its `source()` chain.
+///
+/// Only leading identifiers of each source's `Debug` output are kept, so the typed cause stays
+/// distinguishable while source messages, paths and secrets never reach a warning, a failure
+/// record, the run error or a trace. ~keep
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+pub(crate) fn describe_page_failure(error: &crate::XbergError) -> String {
+    use std::error::Error as _;
+    const MAX_DEPTH: usize = 8;
+    const MAX_IDENT: usize = 64;
+    let mut causes: Vec<String> = Vec::new();
+    let mut current = error.source();
+    while let Some(source) = current {
+        if causes.len() == MAX_DEPTH {
+            break;
+        }
+        let debug = format!("{source:?}");
+        let ident: String = debug
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+            .take(MAX_IDENT)
+            .collect();
+        if ident.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
+            causes.push(ident);
+        } else {
+            causes.push("<unnamed>".to_string());
+        }
+        current = source.source();
+    }
+    if causes.is_empty() {
+        error.to_string()
+    } else {
+        format!("{error} [cause chain: {}]", causes.join(" > "))
+    }
+}
+
 #[cfg(all(any(feature = "ocr", feature = "ocr-pipeline"), feature = "pdf"))]
 fn push_mixed_ocr_page_failure_warning(
     warnings: &mut Vec<crate::types::ProcessingWarning>,
@@ -2893,12 +2929,13 @@ pub(super) async fn extract_with_ocr_for_page(
                 match ocr_result {
                     Ok(document) => batch_ocr_results[page_idx - batch_start] = Some(document),
                     Err(error) => {
+                        let described = describe_page_failure(&error);
                         tracing::warn!(
                             page = page_index_offset + page_idx + 1,
-                            error = %error,
+                            error = %described,
                             "OCR backend failed for page"
                         );
-                        batch_page_errors[page_idx - batch_start] = Some(error.to_string());
+                        batch_page_errors[page_idx - batch_start] = Some(described);
                         batch_ocr_results[page_idx - batch_start] = Some(crate::types::ExtractedDocument::default());
                     }
                 }
@@ -3021,12 +3058,13 @@ pub(super) async fn extract_with_ocr_for_page(
                 match ocr_result {
                     Ok(document) => batch_ocr_results[page_idx - batch_start] = Some(document),
                     Err(error) => {
+                        let described = describe_page_failure(&error);
                         tracing::warn!(
                             page = page_index_offset + page_idx + 1,
-                            error = %error,
+                            error = %described,
                             "OCR backend failed for page"
                         );
-                        batch_page_errors[page_idx - batch_start] = Some(error.to_string());
+                        batch_page_errors[page_idx - batch_start] = Some(described);
                         batch_ocr_results[page_idx - batch_start] = Some(crate::types::ExtractedDocument::default());
                     }
                 }
