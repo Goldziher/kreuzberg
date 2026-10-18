@@ -3172,7 +3172,7 @@ impl ImageExtractor {
 
         let (
             text,
-            _tables,
+            tables,
             ocr_elements,
             pipeline_doc,
             llm_usage,
@@ -3202,7 +3202,8 @@ impl ImageExtractor {
         // the pipeline's elements, formulas, usage, and — crucially — any processing
         // warnings, so a fallback backend that failed is visible to the caller
         // rather than silently swapped for the classical result (issue #1339).
-        let mut doc = build_image_internal_document(Some(&text), None);
+        let prose = strip_embedded_gfm_tables(&text, &tables);
+        let mut doc = build_image_internal_document(Some(&prose), None);
         Self::mark_ocr_extraction(&mut doc);
         if !ocr_elements.is_empty() {
             doc.prebuilt_ocr_elements = Some(ocr_elements);
@@ -3218,12 +3219,40 @@ impl ImageExtractor {
             doc.ocr_page_failures.extend(pipeline_doc.ocr_page_failures);
         }
 
-        let trimmed = text.trim().to_string();
-        if !trimmed.is_empty() {
+        let page_tables: Vec<std::sync::Arc<crate::types::Table>> = tables
+            .into_iter()
+            .map(|table| {
+                let bbox = table.bounding_box;
+                let table_index = doc.push_table(table.clone());
+                let mut element = crate::types::internal::InternalElement::text(
+                    crate::types::internal::ElementKind::Table { table_index },
+                    "",
+                    0,
+                );
+                element.bbox = bbox;
+                doc.push_element(element);
+                std::sync::Arc::new(table)
+            })
+            .collect();
+
+        if !page_tables.is_empty() {
+            // ~keep Page content is re-rendered from the elements tagged with its page number;
+            // untagged elements leave the page as plain text, which would omit the tables.
+            for element in doc
+                .elements
+                .iter_mut()
+                .filter(|element| !matches!(element.kind, crate::types::internal::ElementKind::Image { .. }))
+            {
+                element.page.get_or_insert(1);
+            }
+        }
+
+        let trimmed = prose.trim().to_string();
+        if !trimmed.is_empty() || !page_tables.is_empty() {
             doc.prebuilt_pages = Some(vec![crate::types::PageContent {
                 page_number: 1,
                 content: trimmed,
-                tables: vec![],
+                tables: page_tables,
                 image_indices: vec![],
                 image_preprocessing: None,
                 hierarchy: None,
@@ -3461,6 +3490,50 @@ fn build_image_internal_document(
         push_image_placeholder(&mut builder);
     }
     builder.build()
+}
+
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+fn gfm_row_cells(line: &str) -> Option<Vec<String>> {
+    let inner = line.trim().strip_prefix('|')?.strip_suffix('|')?;
+    Some(inner.split('|').map(|cell| cell.trim().to_owned()).collect())
+}
+
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+fn is_gfm_separator_row(cells: &[String]) -> bool {
+    cells
+        .iter()
+        .all(|cell| !cell.is_empty() && cell.trim_matches(':').chars().all(|c| c == '-'))
+}
+
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+/// Remove GFM table blocks from OCR text when `tables` already carries the same cells, so the
+/// structured table renders once instead of also surviving as a collapsed pipe paragraph.
+/// Blocks that match no returned table stay in the text untouched.
+fn strip_embedded_gfm_tables(text: &str, tables: &[crate::types::Table]) -> String {
+    if tables.is_empty() {
+        return text.to_owned();
+    }
+    let lines: Vec<&str> = text.lines().collect();
+    let mut kept: Vec<&str> = Vec::with_capacity(lines.len());
+    let mut index = 0;
+    while index < lines.len() {
+        let mut end = index;
+        let mut rows: Vec<Vec<String>> = Vec::new();
+        while end < lines.len() {
+            let Some(cells) = gfm_row_cells(lines[end]) else { break };
+            if !is_gfm_separator_row(&cells) {
+                rows.push(cells);
+            }
+            end += 1;
+        }
+        if !rows.is_empty() && tables.iter().any(|table| table.cells == rows) {
+            index = end;
+        } else {
+            kept.push(lines[index]);
+            index += 1;
+        }
+    }
+    kept.join("\n")
 }
 
 fn split_ocr_paragraphs(text: &str) -> Vec<String> {
