@@ -130,6 +130,9 @@ fn build_internal_document(
                         current_list_numbering_id = None;
                         open_list_count = 0;
                     }
+                    // A paragraph holding only note references has no text, but its references
+                    // are still the document's: they follow the block before it. ~keep
+                    push_note_refs(&mut builder, doc.note_refs_by_paragraph.get(idx), current_page);
                     continue;
                 }
 
@@ -276,12 +279,7 @@ fn build_internal_document(
                         }
                     }
 
-                    if let Some(note_refs) = doc.note_refs_by_paragraph.get(idx) {
-                        for note_ref in note_refs {
-                            let key = note_key(note_ref.note_type, &note_ref.id);
-                            builder.push_footnote_ref(&note_ref.id, &key, Some(current_page));
-                        }
-                    }
+                    push_note_refs(&mut builder, doc.note_refs_by_paragraph.get(idx), current_page);
 
                     // Comment reference markers (#82, #300). Structurally a comment is
                     // the same shape as a footnote (a marker in the body, a definition
@@ -303,6 +301,8 @@ fn build_internal_document(
                             break;
                         }
                     }
+                } else {
+                    push_note_refs(&mut builder, doc.note_refs_by_paragraph.get(idx), current_page);
                 }
             }
             crate::extraction::docx::parser::DocumentElement::Table(idx) => {
@@ -324,11 +324,17 @@ fn build_internal_document(
                 // columns/rows it covers, matching `Table::to_cell_grid` — the grid a
                 // consumer sees must not diverge from the one `Table::to_markdown` already
                 // renders correctly (xberg-io/xberg#1549). ~keep
-                let cells = table.to_cell_grid(crate::extraction::docx::parser::Paragraph::runs_to_markdown);
+                let table_note_refs = doc.note_refs_by_table.get(idx);
+                let cells = match table_note_refs {
+                    Some(_) => table_without_note_markers(table)
+                        .to_cell_grid(crate::extraction::docx::parser::Paragraph::runs_to_markdown),
+                    None => table.to_cell_grid(crate::extraction::docx::parser::Paragraph::runs_to_markdown),
+                };
                 if !cells.is_empty() {
                     let cell_styles = resolve_table_cell_styles(doc, table);
                     builder.push_table_from_cells_with_styles(&cells, &cell_styles, Some(current_page), None);
                 }
+                push_note_refs(&mut builder, table_note_refs, current_page);
             }
             crate::extraction::docx::parser::DocumentElement::Drawing(idx) => {
                 let drawing = &doc.drawings[*idx];
@@ -590,6 +596,39 @@ fn collect_run_annotations(
     merge_adjacent_annotations(&mut annotations);
 
     (text, annotations, math_formulas)
+}
+
+/// Push a `FootnoteRef` element for each note reference, in reading order.
+fn push_note_refs(
+    builder: &mut InternalDocumentBuilder,
+    note_refs: Option<&Vec<crate::extraction::docx::parser::NoteRef>>,
+    page: u32,
+) {
+    for note_ref in note_refs.into_iter().flatten() {
+        let key = note_key(note_ref.note_type, &note_ref.id);
+        builder.push_footnote_ref(&note_ref.id, &key, Some(page));
+    }
+}
+
+/// A copy of the table whose cells carry no `[^n]` note literals: the references of a table are
+/// emitted as `FootnoteRef` elements after it, and a cell cannot hold the element.
+fn table_without_note_markers(
+    table: &crate::extraction::docx::parser::Table,
+) -> crate::extraction::docx::parser::Table {
+    let mut table = table.clone();
+    for run in table
+        .rows
+        .iter_mut()
+        .flat_map(|row| row.cells.iter_mut())
+        .flat_map(|cell| cell.paragraphs.iter_mut())
+        .flat_map(|paragraph| paragraph.runs.iter_mut())
+    {
+        if !run.note_marker_ranges.is_empty() {
+            run.text = text_without_note_markers(run).into_owned();
+            run.note_marker_ranges.clear();
+        }
+    }
+    table
 }
 
 /// The run's text without its `[^id]` note literals, whose references are emitted as
@@ -4943,6 +4982,162 @@ mod tests {
         assert!(out.starts_with("Body text.[^1][^2]"), "{out:?}");
         assert!(out.contains("[^1]: THE FOOTNOTE"), "{out:?}");
         assert!(out.contains("[^2]: THE ENDNOTE"), "{out:?}");
+    }
+
+    const NOTE_A_B_FOOTNOTES: &str = r#"<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:footnote w:id="0" w:type="separator"><w:p><w:r><w:t>separator</w:t></w:r></w:p></w:footnote>
+<w:footnote w:id="1" w:type="continuationSeparator"><w:p><w:r><w:t>continuation</w:t></w:r></w:p></w:footnote>
+<w:footnote w:id="2"><w:p><w:r><w:t>Note A.</w:t></w:r></w:p></w:footnote>
+<w:footnote w:id="3"><w:p><w:r><w:t>Note B.</w:t></w:r></w:p></w:footnote>
+</w:footnotes>"#;
+
+    /// A paragraph that holds only a note reference has no text of its own; its reference
+    /// still has to be written, once, and its definition must not be left unreferenced.
+    #[tokio::test]
+    async fn should_keep_the_reference_of_a_paragraph_that_holds_only_a_note_reference() {
+        let document_xml = format!(
+            r#"<w:document xmlns:w="{NOTES_DOCUMENT_NS}"><w:body>
+<w:p><w:r><w:t>Before.</w:t></w:r></w:p>
+<w:p><w:r><w:footnoteReference w:id="2"/></w:r></w:p>
+<w:p><w:r><w:t>After.</w:t></w:r></w:p>
+</w:body></w:document>"#
+        );
+        use crate::core::config::OutputFormat as F;
+        for format in [F::Markdown, F::Plain, F::Djot] {
+            let out = render_docx_notes(&document_xml, Some(NOTE_A_B_FOOTNOTES), None, format.clone()).await;
+            assert!(out.starts_with("Before.[^1]\n\nAfter."), "{format:?}: {out:?}");
+            assert_eq!(out.matches("[^1]").count(), 2, "{format:?}: {out:?}");
+            assert!(out.contains("Note A."), "{format:?}: {out:?}");
+        }
+    }
+
+    /// A reference in a table cell is written after the table, numbered like its definition,
+    /// and its source-id literal stays out of the cell.
+    #[tokio::test]
+    async fn should_write_a_table_cell_note_reference_after_the_table_numbered_like_its_note() {
+        let document_xml = format!(
+            r#"<w:document xmlns:w="{NOTES_DOCUMENT_NS}"><w:body>
+<w:p><w:r><w:t>Intro</w:t></w:r><w:r><w:footnoteReference w:id="3"/></w:r></w:p>
+<w:tbl><w:tr>
+<w:tc><w:p><w:r><w:t>cell</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>plain</w:t></w:r></w:p></w:tc>
+</w:tr></w:tbl>
+<w:p><w:r><w:t>Tail.</w:t></w:r></w:p>
+</w:body></w:document>"#
+        );
+        use crate::core::config::OutputFormat as F;
+        for format in [F::Markdown, F::Djot] {
+            let out = render_docx_notes(&document_xml, Some(NOTE_A_B_FOOTNOTES), None, format.clone()).await;
+            assert!(out.starts_with("Intro[^1]\n\n"), "{format:?}: {out:?}");
+            assert!(
+                out.contains("| cell | plain |"),
+                "the cell must not carry the literal: {format:?}: {out:?}"
+            );
+            assert!(out.contains("[^2]\n\nTail."), "{format:?}: {out:?}");
+            assert_eq!(out.matches("[^1]").count(), 2, "{format:?}: {out:?}");
+            assert_eq!(out.matches("[^2]").count(), 2, "{format:?}: {out:?}");
+            assert!(out.find("Note B.") < out.find("Note A."), "{format:?}: {out:?}");
+        }
+    }
+
+    /// `pages[].content` is built on the parser's own text path; its markers and definitions
+    /// use the numbers the renderers use, and footnote 1 and endnote 1 stay apart.
+    #[tokio::test]
+    async fn should_number_page_content_notes_like_the_rendered_output() {
+        let document_xml = format!(
+            r#"<w:document xmlns:w="{NOTES_DOCUMENT_NS}"><w:body>
+<w:p><w:r><w:t>Body</w:t></w:r><w:r><w:footnoteReference w:id="3"/></w:r><w:r><w:t xml:space="preserve"> text</w:t></w:r><w:r><w:endnoteReference w:id="1"/></w:r><w:r><w:t>.</w:t></w:r></w:p>
+<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p></w:tc></w:tr></w:tbl>
+</w:body></w:document>"#
+        );
+        let endnotes_xml = format!(
+            r#"<w:endnotes xmlns:w="{NOTES_DOCUMENT_NS}"><w:endnote w:id="1"><w:p><w:r><w:t>THE ENDNOTE</w:t></w:r></w:p></w:endnote></w:endnotes>"#
+        );
+        let data = build_test_docx_with_parts(
+            &document_xml,
+            None,
+            Some(NOTE_A_B_FOOTNOTES),
+            Some(&endnotes_xml),
+            None,
+            None,
+            None,
+        );
+        let result = DocxExtractor::new()
+            .extract_content(
+                &data,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                &ExtractionConfig::default(),
+            )
+            .await
+            .unwrap();
+        let result =
+            crate::extraction::derive::derive_extraction_result(result, true, crate::core::config::OutputFormat::Plain);
+        let page = &result.pages.as_ref().expect("page content")[0].content;
+        assert!(page.contains("Body[^1] text[^2]."), "{page:?}");
+        assert!(page.contains("cell[^3]"), "{page:?}");
+        assert!(page.contains("1: Note B."), "{page:?}");
+        assert!(page.contains("2: THE ENDNOTE"), "{page:?}");
+        assert!(page.contains("3: Note A."), "{page:?}");
+    }
+
+    async fn docx_page_content(document_xml: &str, footnotes_xml: &str, endnotes_xml: Option<&str>) -> String {
+        let data = build_test_docx_with_parts(document_xml, None, Some(footnotes_xml), endnotes_xml, None, None, None);
+        let result = DocxExtractor::new()
+            .extract_content(
+                &data,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                &ExtractionConfig::default(),
+            )
+            .await
+            .unwrap();
+        let result =
+            crate::extraction::derive::derive_extraction_result(result, true, crate::core::config::OutputFormat::Plain);
+        result.pages.as_ref().expect("page content")[0].content.clone()
+    }
+
+    /// Footnote 1 and endnote 1 share a Word id; in page content they must not share a label.
+    #[tokio::test]
+    async fn should_keep_a_footnote_and_an_endnote_with_the_same_word_id_apart_in_page_content() {
+        let document_xml = format!(
+            r#"<w:document xmlns:w="{NOTES_DOCUMENT_NS}"><w:body>
+<w:p><w:r><w:t>Body</w:t></w:r><w:r><w:footnoteReference w:id="1"/></w:r><w:r><w:endnoteReference w:id="1"/></w:r></w:p>
+</w:body></w:document>"#
+        );
+        let footnotes_xml = format!(
+            r#"<w:footnotes xmlns:w="{NOTES_DOCUMENT_NS}"><w:footnote w:id="1"><w:p><w:r><w:t>THE FOOTNOTE</w:t></w:r></w:p></w:footnote></w:footnotes>"#
+        );
+        let endnotes_xml = format!(
+            r#"<w:endnotes xmlns:w="{NOTES_DOCUMENT_NS}"><w:endnote w:id="1"><w:p><w:r><w:t>THE ENDNOTE</w:t></w:r></w:p></w:endnote></w:endnotes>"#
+        );
+        let page = docx_page_content(&document_xml, &footnotes_xml, Some(&endnotes_xml)).await;
+        assert!(page.starts_with("Body[^1][^2]"), "{page:?}");
+        assert!(page.contains("1: THE FOOTNOTE"), "{page:?}");
+        assert!(page.contains("2: THE ENDNOTE"), "{page:?}");
+    }
+
+    /// A reference in a table nested in a cell belongs to the outer table: it is written after it.
+    #[tokio::test]
+    async fn should_write_a_nested_table_note_reference_after_the_outer_table() {
+        let document_xml = format!(
+            r#"<w:document xmlns:w="{NOTES_DOCUMENT_NS}"><w:body>
+<w:tbl><w:tr><w:tc>
+<w:p><w:r><w:t>outer</w:t></w:r></w:p>
+<w:tbl><w:tr><w:tc><w:p><w:r><w:t>inner</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p></w:tc></w:tr></w:tbl>
+<w:p/>
+</w:tc></w:tr></w:tbl>
+<w:p><w:r><w:t>Tail.</w:t></w:r></w:p>
+</w:body></w:document>"#
+        );
+        let out = render_docx_notes(
+            &document_xml,
+            Some(NOTE_A_B_FOOTNOTES),
+            None,
+            crate::core::config::OutputFormat::Djot,
+        )
+        .await;
+        assert!(!out.contains("inner[^"), "{out:?}");
+        assert!(out.contains("[^1]\n\nTail."), "{out:?}");
+        assert_eq!(out.matches("[^1]").count(), 2, "{out:?}");
     }
 
     #[test]

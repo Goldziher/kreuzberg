@@ -37,6 +37,9 @@ pub(crate) enum DocumentElement {
 pub(crate) struct Document {
     pub paragraphs: Vec<Paragraph>,
     pub note_refs_by_paragraph: AHashMap<usize, Vec<NoteRef>>,
+    /// The note references of each top-level table, in reading order, by index into `tables`.
+    pub(crate) note_refs_by_table: AHashMap<usize, Vec<NoteRef>>,
+    pub(crate) note_numbers: NoteNumbers,
     pub tables: Vec<Table>,
     pub headers: Vec<HeaderFooter>,
     pub footers: Vec<HeaderFooter>,
@@ -97,6 +100,52 @@ pub struct Paragraph {
 pub(crate) struct NoteRef {
     pub(crate) id: String,
     pub(crate) note_type: NoteType,
+}
+
+/// The number each referenced note carries in the output, in order of first reference.
+///
+/// Word numbers footnotes and endnotes separately and starts a LibreOffice document at
+/// `w:id="2"`, so a source id can neither be told apart across the two kinds nor be matched
+/// to the number the renderers give the note. The `[^n]` literal in the parser's own text and
+/// the definitions written under it use this numbering, which is the renderers' own: one
+/// sequence for footnotes and endnotes, in the order the references appear. ~keep
+#[derive(Debug, Clone, Default)]
+pub(crate) struct NoteNumbers {
+    by_note: AHashMap<(NoteType, String), u32>,
+}
+
+impl NoteNumbers {
+    /// The number of this note, assigning the next one on its first reference.
+    fn number(&mut self, note_type: NoteType, id: &str) -> u32 {
+        let next = self.by_note.len() as u32 + 1;
+        *self.by_note.entry((note_type, id.to_string())).or_insert(next)
+    }
+
+    /// The numbers of every note that has a definition to write, referenced or not.
+    /// Definitions nothing references follow the referenced ones, footnotes before endnotes.
+    fn with_unreferenced<'a>(&self, notes: impl IntoIterator<Item = &'a Note>) -> Self {
+        let mut numbers = self.clone();
+        for note in notes {
+            let text = note
+                .paragraphs
+                .iter()
+                .map(|p| p.runs_to_markdown())
+                .collect::<Vec<_>>()
+                .join(" ");
+            if !text.is_empty() {
+                numbers.number(note.note_type, &note.id);
+            }
+        }
+        numbers
+    }
+
+    /// The label a definition is written under: its number, or its source id when no
+    /// reference gave it one.
+    fn label(&self, note: &Note) -> String {
+        self.by_note
+            .get(&(note.note_type, note.id.clone()))
+            .map_or_else(|| note.id.clone(), |number| number.to_string())
+    }
 }
 
 /// A formatted text run within a DOCX paragraph.
@@ -215,7 +264,7 @@ pub struct Note {
 
 /// Distinguishes footnotes from endnotes in DOCX documents.
 #[cfg_attr(alef, alef(skip))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NoteType {
     /// Note appears at the bottom of the page.
     Footnote,
@@ -360,6 +409,12 @@ fn heading_level_from_style_name(style: &str) -> Option<u8> {
 impl Document {
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    /// The numbers the notes' definitions are written under in the parser's own text.
+    fn definition_numbers(&self) -> NoteNumbers {
+        self.note_numbers
+            .with_unreferenced(self.footnotes.iter().chain(self.endnotes.iter()))
     }
 
     /// Render the document and return both the text and accurate page boundaries.
@@ -612,6 +667,8 @@ impl Document {
             }
         }
 
+        let note_numbers = self.definition_numbers();
+
         if !self.footnotes.is_empty() {
             output.push_str("\n\n");
             for note in &self.footnotes {
@@ -622,7 +679,7 @@ impl Document {
                     .collect::<Vec<_>>()
                     .join(" ");
                 if !note_text.is_empty() {
-                    let _ = writeln!(output, "[^{}]: {}", note.id, note_text);
+                    let _ = writeln!(output, "[^{}]: {}", note_numbers.label(note), note_text);
                 }
             }
         }
@@ -637,7 +694,7 @@ impl Document {
                     .collect::<Vec<_>>()
                     .join(" ");
                 if !note_text.is_empty() {
-                    let _ = writeln!(output, "[^{}]: {}", note.id, note_text);
+                    let _ = writeln!(output, "[^{}]: {}", note_numbers.label(note), note_text);
                 }
             }
         }
@@ -702,6 +759,8 @@ impl Document {
             }
         }
 
+        let note_numbers = self.definition_numbers();
+
         if !self.footnotes.is_empty() {
             output.push_str("\n\n");
             for note in &self.footnotes {
@@ -712,7 +771,7 @@ impl Document {
                     .collect::<Vec<_>>()
                     .join(" ");
                 if !note_text.is_empty() {
-                    output.push_str(&note.id);
+                    output.push_str(&note_numbers.label(note));
                     output.push_str(": ");
                     output.push_str(&note_text);
                     output.push('\n');
@@ -730,7 +789,7 @@ impl Document {
                     .collect::<Vec<_>>()
                     .join(" ");
                 if !note_text.is_empty() {
-                    output.push_str(&note.id);
+                    output.push_str(&note_numbers.label(note));
                     output.push_str(": ");
                     output.push_str(&note_text);
                     output.push('\n');
@@ -1238,6 +1297,8 @@ struct TableContext {
     cell_ordinal: u32,
     /// `w:gridAfter` of the open row, padded in when the row closes.
     pending_grid_after: u32,
+    /// Note references read in this table's cells, in reading order.
+    note_refs: Vec<NoteRef>,
 }
 
 impl TableContext {
@@ -1250,6 +1311,7 @@ impl TableContext {
             row_ordinal: 0,
             cell_ordinal: 0,
             pending_grid_after: 0,
+            note_refs: Vec::new(),
         }
     }
 }
@@ -1265,6 +1327,8 @@ impl TableContext {
 struct BodyParseOutputs {
     paragraphs: Vec<Paragraph>,
     note_refs_by_paragraph: AHashMap<usize, Vec<NoteRef>>,
+    note_refs_by_table: AHashMap<usize, Vec<NoteRef>>,
+    note_numbers: NoteNumbers,
     tables: Vec<Table>,
     drawings: Vec<super::drawing::Drawing>,
     elements: Vec<DocumentElement>,
@@ -2462,6 +2526,8 @@ impl<R: Read + Seek> DocxParser<R> {
         );
         document.paragraphs = out.paragraphs;
         document.note_refs_by_paragraph = out.note_refs_by_paragraph;
+        document.note_refs_by_table = out.note_refs_by_table;
+        document.note_numbers = out.note_numbers;
         document.tables = out.tables;
         document.drawings = out.drawings;
         document.elements = out.elements;
@@ -2913,21 +2979,30 @@ impl<R: Read + Seek> DocxParser<R> {
                                         // A reference in the body always points at a real note;
                                         // id 1 is Word's first one (see `parse_notes`).
                                         if id != "-1" && id != "0" {
+                                            let recorded = move_from_depth == 0
+                                                && (!table_stack.is_empty() || current_paragraph.is_some());
+                                            let label = if recorded {
+                                                out.note_numbers.number(note_type, id).to_string()
+                                            } else {
+                                                id.to_string()
+                                            };
                                             let marker_start = run.text.len();
-                                            run.text.push_str(&format!("[^{}]", id));
+                                            run.text.push_str(&format!("[^{label}]"));
                                             page_breaks.text_since_break = true;
-                                            if table_stack.is_empty()
-                                                && current_paragraph.is_some()
-                                                && move_from_depth == 0
-                                            {
+                                            if recorded {
                                                 run.note_marker_ranges.push(marker_start..run.text.len());
-                                                out.note_refs_by_paragraph
-                                                    .entry(current_paragraph_index)
-                                                    .or_default()
-                                                    .push(NoteRef {
-                                                        id: id.to_string(),
-                                                        note_type,
-                                                    });
+                                                let note_ref = NoteRef {
+                                                    id: id.to_string(),
+                                                    note_type,
+                                                };
+                                                if let Some(ctx) = table_stack.last_mut() {
+                                                    ctx.note_refs.push(note_ref);
+                                                } else {
+                                                    out.note_refs_by_paragraph
+                                                        .entry(current_paragraph_index)
+                                                        .or_default()
+                                                        .push(note_ref);
+                                                }
                                             }
                                         }
                                     }
@@ -3132,7 +3207,9 @@ impl<R: Read + Seek> DocxParser<R> {
                         "w:tbl" => {
                             if let Some(completed_ctx) = table_stack.pop() {
                                 let completed_table = completed_ctx.table;
+                                let completed_note_refs = completed_ctx.note_refs;
                                 if let Some(parent_ctx) = table_stack.last_mut() {
+                                    parent_ctx.note_refs.extend(completed_note_refs);
                                     if let Some(ref mut cell) = parent_ctx.current_cell {
                                         for row in completed_table.rows {
                                             for table_cell in row.cells {
@@ -3144,6 +3221,9 @@ impl<R: Read + Seek> DocxParser<R> {
                                     }
                                 } else {
                                     let idx = out.tables.len();
+                                    if !completed_note_refs.is_empty() {
+                                        out.note_refs_by_table.insert(idx, completed_note_refs);
+                                    }
                                     out.tables.push(completed_table);
                                     out.elements.push(DocumentElement::Table(idx));
                                     // The outermost table close is the only point that flushes
@@ -4153,8 +4233,8 @@ mod tests {
         assert_eq!(document.paragraphs.len(), 1);
         let full_text = document.paragraphs[0].to_text();
         assert!(
-            full_text.contains("[^2]"),
-            "Should contain footnote reference [^2], got: {}",
+            full_text.contains("[^1]"),
+            "Should contain the first reference's number [^1], got: {}",
             full_text
         );
     }
@@ -5562,7 +5642,7 @@ mod tests {
         let doc = parse_xml(&xml);
 
         assert_eq!(doc.paragraphs[0].to_text(), "");
-        assert_eq!(doc.paragraphs[1].to_text(), "Moved[^2]");
+        assert_eq!(doc.paragraphs[1].to_text(), "Moved[^1]");
         let recorded: Vec<usize> = doc.note_refs_by_paragraph.keys().copied().collect();
         assert_eq!(recorded, vec![1], "only the move destination references the note");
     }
@@ -6846,7 +6926,11 @@ mod tests {
         );
         let doc = parse_xml(&xml);
         let text = doc.paragraphs[0].to_text();
-        assert!(text.contains("[^2]"), "Should contain footnote marker: {}", text);
+        assert!(
+            text.contains("[^1]"),
+            "the marker carries the note's number, not its source id 2: {}",
+            text
+        );
     }
 
     #[test]
