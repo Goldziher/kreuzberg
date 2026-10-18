@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rendering): A footnote reference stays on the block that cites it.** Markdown, Djot and LaTeX input placed it on
+  the previous paragraph, list item or heading, and Djot output wrote it at the start of the next block (`[^1]# Heading`). (#2156)
 - **(pdf): Explicit header and footer inclusion preserves geometric page numbers independently.** (#2150)
 - **(pdf): Native extraction preserves separate two-column bordered tables beside wider tables on the same page.**
 - **(ocr): Failed PDF OCR pages report the type chain of the underlying error.**

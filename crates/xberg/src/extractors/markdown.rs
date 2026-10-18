@@ -15,6 +15,7 @@ use super::annotation_utils::adjust_annotations_for_trim;
 use super::frontmatter_utils::{
     extract_frontmatter_with_warning, extract_metadata_from_yaml, extract_title_from_content,
 };
+use super::markdown_utils::{FootnoteRefHolder, PendingFootnoteRefs};
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extractors::security::SecurityBudget;
@@ -189,6 +190,7 @@ impl MarkdownExtractor {
         let mut def_buf = String::new();
         let mut blockquote_stack: Vec<Option<u32>> = Vec::new();
         let mut pending_anchor: Option<String> = None;
+        let mut pending_footnote_refs = PendingFootnoteRefs::default();
 
         let mut annotation_starts: Vec<AnnotationEntry> = Vec::new();
 
@@ -238,6 +240,7 @@ impl MarkdownExtractor {
                             b.set_annotations(idx, annotations);
                         }
                     }
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Heading);
                     heading_text.clear();
                     heading_annotations.clear();
                 }
@@ -260,6 +263,7 @@ impl MarkdownExtractor {
                         let idx = b.push_paragraph(trimmed, annotations, None, None);
                         apply_pending_anchor(&mut b, &mut pending_anchor, idx);
                     }
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Paragraph);
                     paragraph_text.clear();
                     paragraph_annotations.clear();
                 }
@@ -535,6 +539,7 @@ impl MarkdownExtractor {
                             );
                             b.push_list_item(trimmed, ordered, annotations, None, None);
                         }
+                        pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(in_list_item));
                         list_item_text.clear();
                         list_item_annotations.clear();
                         annotation_starts.clear();
@@ -553,6 +558,7 @@ impl MarkdownExtractor {
                     in_list_item += 1;
                 }
                 Event::End(TagEnd::Item) => {
+                    let item_depth = in_list_item;
                     in_list_item = in_list_item.saturating_sub(1);
                     let trimmed = list_item_text.trim();
                     if let Some(ordered) = list_stack.last().copied()
@@ -565,6 +571,7 @@ impl MarkdownExtractor {
                         );
                         b.push_list_item(trimmed, ordered, annotations, None, None);
                     }
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(item_depth));
                     list_item_text.clear();
                     list_item_annotations.clear();
                 }
@@ -584,6 +591,7 @@ impl MarkdownExtractor {
                         let idx = b.push_table(table, None, None);
                         apply_pending_anchor(&mut b, &mut pending_anchor, idx);
                     }
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Table);
                     table_rows.clear();
                 }
                 Event::Start(Tag::TableHead | Tag::TableRow) => {
@@ -672,6 +680,7 @@ impl MarkdownExtractor {
                     if !trimmed.is_empty() {
                         b.push_definition_term(trimmed, None);
                     }
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::DefinitionTerm);
                     def_buf.clear();
                 }
                 Event::Start(Tag::DefinitionListDefinition) => {
@@ -684,6 +693,7 @@ impl MarkdownExtractor {
                     if !trimmed.is_empty() {
                         b.push_definition_description(trimmed, None);
                     }
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::DefinitionDescription);
                     def_buf.clear();
                 }
                 Event::Code(s) => {
@@ -800,7 +810,31 @@ impl MarkdownExtractor {
                     }
                 }
                 Event::FootnoteReference(name) => {
-                    b.push_footnote_ref(name, name, None);
+                    // The holder is the block whose buffer takes the text around the
+                    // reference, in the same order as the `Event::Text` arm.
+                    let holder = if in_heading {
+                        Some(FootnoteRefHolder::Heading)
+                    } else if in_table_cell {
+                        Some(FootnoteRefHolder::Table)
+                    } else if in_list_item > 0 {
+                        Some(FootnoteRefHolder::ListItem(in_list_item))
+                    } else if footnote_def_label.is_some() {
+                        None
+                    } else if in_def_title {
+                        Some(FootnoteRefHolder::DefinitionTerm)
+                    } else if in_def_desc {
+                        Some(FootnoteRefHolder::DefinitionDescription)
+                    } else if in_paragraph {
+                        Some(FootnoteRefHolder::Paragraph)
+                    } else {
+                        None
+                    };
+                    match holder {
+                        Some(holder) => pending_footnote_refs.hold(holder, name),
+                        None => {
+                            b.push_footnote_ref(name, name, None);
+                        }
+                    }
                 }
                 Event::InlineHtml(s) => {
                     if let Some(target) = super::myst::myst_target_marker(s) {
@@ -855,6 +889,7 @@ impl MarkdownExtractor {
                 _ => {}
             }
         }
+        pending_footnote_refs.flush_all(&mut b);
 
         b.build()
     }
@@ -1003,6 +1038,7 @@ impl InternalDocumentExtractor for MarkdownExtractor {
 mod tests {
     use super::super::frontmatter_utils::{cells_to_markdown, extract_frontmatter, extract_metadata_from_yaml};
     use super::*;
+    use crate::types::internal::ElementKind;
     use yaml_serde::Value as YamlValue;
 
     #[test]
@@ -1019,6 +1055,50 @@ mod tests {
         assert!(mime_types.contains(&"text/x-pandoc"));
         assert!(mime_types.contains(&"text/x-quarto"));
         assert!(mime_types.contains(&"text/x-r-markdown"));
+    }
+
+    /// For each footnote reference, the kind and text of the element it follows.
+    fn blocks_cited_by_footnote_refs(doc: &InternalDocument) -> Vec<(String, ElementKind, String)> {
+        let mut cited = Vec::new();
+        let mut last: Option<(ElementKind, String)> = None;
+        for element in &doc.elements {
+            if element.kind == ElementKind::FootnoteRef {
+                let (kind, text) = last.clone().expect("a reference follows a block");
+                cited.push((element.text.clone(), kind, text));
+            } else {
+                last = Some((element.kind, element.text.clone()));
+            }
+        }
+        cited
+    }
+
+    #[tokio::test]
+    async fn test_footnote_ref_follows_its_own_block_when_a_nested_block_closes_first() {
+        // A list item and a definition push their text when they close, after the heading,
+        // table and blockquote nested in them. Their references still follow them.
+        let content = b"- parent[^a]\n\n  # Nested heading\n\n  | x | y |\n  |---|---|\n  | 1 | 2 |\n\n  > quoted\n\n- second[^b]\n\nTerm\n: definition[^c]\n\n    # Definition heading\n\n[^a]: Note a.\n[^b]: Note b.\n[^c]: Note c.\n";
+        let doc = MarkdownExtractor::new()
+            .extract_content(content, "text/markdown", &ExtractionConfig::default())
+            .await
+            .expect("extraction should succeed");
+
+        let cited = blocks_cited_by_footnote_refs(&doc);
+        assert_eq!(cited.len(), 3, "{cited:?}");
+        let (ref name, kind, ref text) = cited[0];
+        assert!(
+            name == "a" && matches!(kind, ElementKind::ListItem { .. }) && text.starts_with("parent"),
+            "{cited:?}"
+        );
+        let (ref name, kind, ref text) = cited[1];
+        assert!(
+            name == "b" && matches!(kind, ElementKind::ListItem { .. }) && text == "second",
+            "{cited:?}"
+        );
+        let (ref name, kind, ref text) = cited[2];
+        assert!(
+            name == "c" && kind == ElementKind::DefinitionDescription && text == "definition",
+            "{cited:?}"
+        );
     }
 
     /// Render a document through the same path the extractor's callers use.

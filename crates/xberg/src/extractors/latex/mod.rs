@@ -955,14 +955,16 @@ impl LatexExtractor {
         }
 
         let mut line_text = trimmed.to_string();
+        // Pushed after the line's paragraph: renderers attach a `FootnoteRef` to the block it
+        // follows, so a reference pushed first showed up on the previous paragraph.
+        let mut notes: Vec<(String, String)> = Vec::new();
         while let Some(fn_start) = line_text.find("\\footnote{") {
             let after = &line_text[fn_start + "\\footnote{".len()..];
             if let Some((fn_text, consumed)) = Self::read_braced_content(after) {
                 let fn_stripped = utilities::clean_text(&fn_text);
                 if !fn_stripped.is_empty() {
                     let fn_key = format!("fn:{}", fn_stripped.chars().take(20).collect::<String>());
-                    b.push_footnote_ref(&fn_stripped, &fn_key, None);
-                    b.push_footnote_definition(&fn_stripped, &fn_key, None);
+                    notes.push((fn_stripped, fn_key));
                 }
                 let end = fn_start + "\\footnote{".len() + consumed;
                 line_text = format!("{}{}", &line_text[..fn_start], &line_text[end..]);
@@ -989,6 +991,11 @@ impl LatexExtractor {
                     b.set_anchor(idx, &lbl);
                 }
             }
+        }
+
+        for (note, key) in &notes {
+            b.push_footnote_ref(note, key, None);
+            b.push_footnote_definition(note, key, None);
         }
     }
 
