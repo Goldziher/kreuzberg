@@ -565,7 +565,8 @@ impl GlineBackend {
             plugin_name: "ner-gliner".to_string(),
         })??;
 
-        Ok(offsets::merge_windowed_entities(&window_offsets, per_window))
+        let entities = offsets::merge_windowed_entities(&window_offsets, per_window);
+        Ok(super::validation::drop_unanchored_emails(text, entities))
     }
 }
 

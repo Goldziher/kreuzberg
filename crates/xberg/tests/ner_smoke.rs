@@ -102,3 +102,28 @@ async fn custom_labels_route_through_backend() {
         Err(other) => panic!("unexpected error: {other:?}"),
     }
 }
+
+#[tokio::test]
+#[ignore = "downloads ~100MB GLiNER model from HuggingFace; runs inference"]
+async fn invoice_identifier_is_not_reported_as_an_email() {
+    use xberg::text::ner::NerBackend;
+    use xberg::text::ner::gline::GlineBackend;
+    use xberg::types::entity::EntityCategory;
+
+    let backend = GlineBackend::new(None).expect("backend construction");
+    let text = "Marie Curie visited Paris. Photosynthesis converts sunlight into chemical energy. Photosynthesis feeds plants.Invoice number SYN-004. Total amount due is USD 125.50. Please pay this invoice.";
+
+    let entities = backend.detect(text, &[]).await.expect("entity detection succeeds");
+
+    let emails: Vec<_> = entities
+        .iter()
+        .filter(|entity| entity.category == EntityCategory::Email)
+        .collect();
+    assert!(emails.is_empty(), "no address in the text, got {emails:?}");
+    assert!(entities.iter().any(|entity| entity.category == EntityCategory::Person));
+    assert!(
+        entities
+            .iter()
+            .any(|entity| entity.category == EntityCategory::Location)
+    );
+}

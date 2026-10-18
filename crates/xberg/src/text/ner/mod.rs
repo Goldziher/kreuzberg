@@ -35,6 +35,7 @@ pub mod gline;
 ))]
 pub mod llm;
 pub mod offsets;
+pub mod validation;
 
 pub use backend::NerBackend;
 

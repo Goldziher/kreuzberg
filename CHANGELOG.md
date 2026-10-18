@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(ner): The default GLiNER model no longer reports an identifier as an email address.** `SYN-004` and `INV-2026-0042`
+  came back as `email` entities. An `email` entity with no address cue in or near its span (an `@`, a bracketed `[at]`,
+  or `at` with `dot`) is now dropped; spans that carry a cue, including fragments of an address, are kept. (#2133)
 - **(ocr): Tesseract runs with several languages no longer drop lines written in a language other than the first.**
   With `rus+eng`, an English image came back empty, because the dictionary noise filter checked words against the first
   language's dictionary only. A word is now valid when any configured language accepts it. (#2158)
