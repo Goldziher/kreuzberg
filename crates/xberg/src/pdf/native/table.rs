@@ -13,8 +13,9 @@
 //!   misses (e.g. invoice line items, financial tables without ruling lines).
 //!
 //! The default extraction flow in `extractors::pdf::extraction` runs all three
-//! per-page in priority order (native → bordered → heuristic), where each tier
-//! only runs on pages where the previous tier found nothing.
+//! in priority order (native → bordered → heuristic). Bordered detections add
+//! regions not already represented by strict detections; heuristic detection
+//! runs only on pages with neither strict nor bordered tables.
 
 use super::NativeDocument;
 use crate::pdf::error::{PdfError, Result};
@@ -26,6 +27,29 @@ use std::collections::HashSet;
 pub(crate) struct NativeTable {
     pub table: Table,
     pub grid: Option<crate::types::TableGrid>,
+}
+
+// ~keep Exact finite ruling geometry avoids discarding neighboring or nested tables.
+fn table_region_key(table: &Table) -> Option<(u32, [u64; 4])> {
+    let bbox = table.bounding_box?;
+    let coordinates = [bbox.x0, bbox.y0, bbox.x1, bbox.y1];
+    if !coordinates.iter().all(|value| value.is_finite()) || bbox.x0 >= bbox.x1 || bbox.y0 >= bbox.y1 {
+        return None;
+    }
+    let bits = coordinates.map(|value| if value == 0.0 { 0 } else { value.to_bits() });
+    Some((table.page_number, bits))
+}
+
+pub(crate) fn append_bordered_tables(strict: &mut Vec<NativeTable>, bordered: Vec<NativeTable>) {
+    let strict_regions: HashSet<_> = strict
+        .iter()
+        .filter_map(|entry| table_region_key(&entry.table))
+        .collect();
+    strict.extend(
+        bordered
+            .into_iter()
+            .filter(|entry| table_region_key(&entry.table).is_none_or(|region| !strict_regions.contains(&region))),
+    );
 }
 
 /// Cap on candidate vertical regions per page. Real tables fit comfortably
@@ -5210,3 +5234,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod ruled_tier_tests;
