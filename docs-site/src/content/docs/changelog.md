@@ -15,8 +15,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(llm): Rust exposes failed structured-response usage through `xberg::llm::usage::usage_from_error`.** (#2139)
 
+### Security
+
+- **(excel): ZIP-backed spreadsheets reject mismatched local headers, duplicate member names, and overlapping entries.**
+  Archive count, size, and compression-ratio limits are checked before header validation or payload reads.
+
 ### Fixed
 
+- **(pdf): Explicit header and footer inclusion preserves geometric page numbers independently.** (#2150)
+- **(pdf): Native extraction preserves separate two-column bordered tables beside wider tables on the same page.**
+- **(ocr): Failed PDF OCR pages report the type chain of the underlying error.**
+  The page warning, `OcrPageFailure.error`, and the run error name each error source without its message text. (#2149)
+- **(ocr): Tesseract C API declarations match the native return types.**
+  Fixes the WASM link failure and a crash in `process_pages`; borrowed text is no longer freed. (#2145)
+- **(ocr): Table reconstruction keeps columns that sit close together.**
+  A repeated column edge less than about one space width from its neighbour is no longer merged into the neighbouring cell. (#2140)
+- **(images): TIFF pixel density (`XResolution`, `YResolution`, `ResolutionUnit`) is used as the source DPI instead of assuming 72.** (#2143)
+- **(ocr): The standalone image OCR pipeline keeps the tables it returns.**
+  Tables embedded as GFM in a backend's text are rendered once. (#2144)
+- **(ocr): PaddleOCR, layout detection, and GLiNER share one ONNX Runtime environment.**
+  The second component to initialize no longer fails with "only one environment is allowed per process". (#2148)
+- **(csharp): macOS native-package builds avoid duplicate loader paths.**
+  Generated native libraries retain their sibling-library search path. (#2147)
 - **(images): Images without EXIF metadata no longer report a metadata extraction warning.** (#2141)
 - **(llm): Failed structured output retains available model, token, and finish-reason metadata in `llm_usage`.**
   Extracted text and failure warnings remain available; JSON parse errors omit response content. (#2139)
