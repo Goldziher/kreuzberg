@@ -793,11 +793,20 @@ fn parse_run(r_node: &Node) -> Result<Run> {
     })
 }
 
+/// Read a shape's offset and size from its transform. A shape, picture or group carries
+/// it as `a:xfrm` in its properties; a graphic frame (a table, chart or SmartArt diagram)
+/// carries it as its own `p:xfrm`, with the same `a:off`/`a:ext` children.
 pub(super) fn extract_position(node: &Node) -> ElementPosition {
     let default = ElementPosition::default();
 
     node.descendants()
-        .find(|n| n.tag_name().namespace() == Some(DRAWINGML_NAMESPACE) && n.tag_name().name() == "xfrm")
+        .find(|n| {
+            n.tag_name().name() == "xfrm"
+                && matches!(
+                    n.tag_name().namespace(),
+                    Some(DRAWINGML_NAMESPACE) | Some(PRESENTATIONML_NAMESPACE)
+                )
+        })
         .and_then(|xfrm| {
             let x = xfrm
                 .children()
