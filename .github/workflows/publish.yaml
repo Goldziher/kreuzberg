@@ -2288,6 +2288,7 @@ jobs:
         uses: ./.github/actions/setup-onnx-runtime
         with:
           ort-version: "1.24.2"
+          add-macos-rpath: "false"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps
