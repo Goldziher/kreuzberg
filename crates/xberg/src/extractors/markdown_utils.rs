@@ -1,12 +1,59 @@
 //! Shared utilities for Markdown and MDX extractors.
 //!
 //! Provides the data-URI image decoding used by both the Markdown and MDX extractors while they
-//! build their `InternalDocument`.
+//! build their `InternalDocument`, and the footnote-reference queue they share with the Djot
+//! extractor.
 
 use crate::types::ExtractedImage;
+use crate::types::internal_builder::InternalDocumentBuilder;
 use base64::Engine;
 use bytes::Bytes;
 use std::borrow::Cow;
+
+/// The open block a footnote reference was read in: the block whose text surrounds it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FootnoteRefHolder {
+    Heading,
+    Paragraph,
+    /// A list item at this nesting depth, so a sublist item never takes its parent's references.
+    ListItem(usize),
+    Table,
+    DefinitionTerm,
+    DefinitionDescription,
+}
+
+/// Footnote references waiting for the block that holds them.
+///
+/// These extractors push a block when it closes, and renderers attach a `FootnoteRef` to the
+/// block it follows. A reference pushed the moment it was read therefore landed on the block
+/// before. Each reference waits for its own holder: a list item's reference still follows that
+/// item when a heading or a table nested in it closes first.
+#[derive(Debug, Default)]
+pub(crate) struct PendingFootnoteRefs(Vec<(FootnoteRefHolder, String)>);
+
+impl PendingFootnoteRefs {
+    pub(crate) fn hold(&mut self, holder: FootnoteRefHolder, name: &str) {
+        self.0.push((holder, name.to_string()));
+    }
+
+    /// Push the references read in `holder`, in reading order, once `holder` itself is pushed.
+    pub(crate) fn flush(&mut self, builder: &mut InternalDocumentBuilder, holder: FootnoteRefHolder) {
+        self.0.retain(|(owner, name)| {
+            if *owner != holder {
+                return true;
+            }
+            builder.push_footnote_ref(name, name, None);
+            false
+        });
+    }
+
+    /// Push every reference still waiting, so a holder that never closed loses none.
+    pub(crate) fn flush_all(&mut self, builder: &mut InternalDocumentBuilder) {
+        for (_, name) in self.0.drain(..) {
+            builder.push_footnote_ref(&name, &name, None);
+        }
+    }
+}
 
 /// Decode a data URI into an `ExtractedImage`.
 ///

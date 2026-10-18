@@ -3,6 +3,7 @@
 //! Implements the DocumentExtractor and Plugin traits for Djot markup files.
 
 use super::super::annotation_utils::adjust_annotations_for_trim;
+use super::super::markdown_utils::{FootnoteRefHolder, PendingFootnoteRefs};
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::plugins::{InternalDocumentExtractor, Plugin};
@@ -83,17 +84,7 @@ impl DjotExtractor {
         // pattern: an image followed immediately (no blank line) by text.
         let mut figure_image_index: Option<u32> = None;
         let mut figure_disqualified = false;
-        // A block is pushed when it closes, so a footnote reference pushed the moment it was
-        // read landed before the block that cites it. Renderers attach a `FootnoteRef` to the
-        // block it follows, and the marker showed up on the previous paragraph, list item or
-        // heading. References read inside a block wait here and are pushed right after it.
-        let mut pending_footnote_refs: Vec<String> = Vec::new();
-
-        fn flush_footnote_refs(builder: &mut InternalDocumentBuilder, pending: &mut Vec<String>) {
-            for name in pending.drain(..) {
-                builder.push_footnote_ref(&name, &name, None);
-            }
-        }
+        let mut pending_footnote_refs = PendingFootnoteRefs::default();
 
         let mut annotation_starts: Vec<(u8, u32, Option<String>)> = Vec::new();
 
@@ -117,7 +108,7 @@ impl DjotExtractor {
                             b.set_annotations(idx, annotations);
                         }
                     }
-                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Heading);
                     heading_text.clear();
                     heading_annotations.clear();
                 }
@@ -151,7 +142,7 @@ impl DjotExtractor {
                                 );
                             }
                         }
-                        flush_footnote_refs(&mut b, &mut pending_footnote_refs);
+                        pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Paragraph);
                         paragraph_text.clear();
                         paragraph_annotations.clear();
                         figure_image_index = None;
@@ -387,7 +378,7 @@ impl DjotExtractor {
                     if !text.is_empty() {
                         b.push_definition_term(&text, None);
                     }
-                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::DefinitionTerm);
                     description_term_text.clear();
                 }
                 Event::Start(Container::DescriptionDetails, _) => {
@@ -400,7 +391,7 @@ impl DjotExtractor {
                     if !text.is_empty() {
                         b.push_definition_description(&text, None);
                     }
-                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::DefinitionDescription);
                     description_details_text.clear();
                 }
                 Event::Start(Container::List { kind, .. }, _) => {
@@ -426,7 +417,7 @@ impl DjotExtractor {
                             );
                             b.push_list_item(&text, ordered, annotations, None, None);
                         }
-                        flush_footnote_refs(&mut b, &mut pending_footnote_refs);
+                        pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(in_list_item));
                         list_item_text.clear();
                         list_item_annotations.clear();
                         annotation_starts.clear();
@@ -445,6 +436,7 @@ impl DjotExtractor {
                     in_list_item += 1;
                 }
                 Event::End(Container::ListItem | Container::TaskListItem { .. }) => {
+                    let item_depth = in_list_item;
                     in_list_item = in_list_item.saturating_sub(1);
                     let text = list_item_text.trim().to_string();
                     if let Some(ordered) = list_stack.last().copied()
@@ -457,7 +449,7 @@ impl DjotExtractor {
                         );
                         b.push_list_item(&text, ordered, annotations, None, None);
                     }
-                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(item_depth));
                     list_item_text.clear();
                     list_item_annotations.clear();
                 }
@@ -560,16 +552,30 @@ impl DjotExtractor {
                     footnote_label.clear();
                 }
                 Event::FootnoteReference(name) => {
-                    let in_block = in_heading
-                        || in_paragraph
-                        || in_list_item > 0
-                        || in_table_cell
-                        || in_description_term
-                        || in_description_details;
-                    if in_block && !in_footnote {
-                        pending_footnote_refs.push(name.to_string());
+                    // The holder is the block whose buffer takes the text around the
+                    // reference, in the same order as the `Event::Str` arm.
+                    let holder = if in_table_cell {
+                        Some(FootnoteRefHolder::Table)
+                    } else if in_footnote {
+                        None
+                    } else if in_heading {
+                        Some(FootnoteRefHolder::Heading)
+                    } else if in_list_item > 0 {
+                        Some(FootnoteRefHolder::ListItem(in_list_item))
+                    } else if in_description_term {
+                        Some(FootnoteRefHolder::DefinitionTerm)
+                    } else if in_description_details {
+                        Some(FootnoteRefHolder::DefinitionDescription)
+                    } else if in_paragraph {
+                        Some(FootnoteRefHolder::Paragraph)
                     } else {
-                        b.push_footnote_ref(name, name, None);
+                        None
+                    };
+                    match holder {
+                        Some(holder) => pending_footnote_refs.hold(holder, name),
+                        None => {
+                            b.push_footnote_ref(name, name, None);
+                        }
                     }
                 }
                 Event::Start(Container::Table, _) => {
@@ -591,7 +597,7 @@ impl DjotExtractor {
                 }
                 Event::End(Container::Table) if !table_rows.is_empty() => {
                     b.push_table_from_cells(&std::mem::take(&mut table_rows), None, None);
-                    flush_footnote_refs(&mut b, &mut pending_footnote_refs);
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Table);
                 }
                 Event::Str(s) => {
                     if in_table_cell {
@@ -643,6 +649,7 @@ impl DjotExtractor {
                 _ => {}
             }
         }
+        pending_footnote_refs.flush_all(&mut b);
 
         b.build()
     }
@@ -749,6 +756,45 @@ impl InternalDocumentExtractor for DjotExtractor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::internal::ElementKind;
+
+    #[tokio::test]
+    async fn test_footnote_ref_follows_its_own_block_when_a_nested_block_closes_first() {
+        // A list item and a definition push their text when they close, after the heading,
+        // table and blockquote nested in them. Their references still follow them.
+        let content = b"- parent[^a]\n\n  # Nested heading\n\n  | x | y |\n  |---|---|\n  | 1 | 2 |\n\n  > quoted\n\n- second[^b]\n\n: Term\n\n  definition[^c]\n\n  # Definition heading\n\n[^a]: Note a.\n\n[^b]: Note b.\n\n[^c]: Note c.\n";
+        let doc = DjotExtractor::new()
+            .extract_content(content, "text/djot", &ExtractionConfig::default())
+            .await
+            .expect("extraction should succeed");
+
+        let mut cited = Vec::new();
+        let mut last = None;
+        for element in &doc.elements {
+            if element.kind == ElementKind::FootnoteRef {
+                let (kind, text): (ElementKind, String) = last.clone().expect("a reference follows a block");
+                cited.push((element.text.clone(), kind, text));
+            } else {
+                last = Some((element.kind, element.text.clone()));
+            }
+        }
+        assert_eq!(cited.len(), 3, "{cited:?}");
+        let (ref name, kind, ref text) = cited[0];
+        assert!(
+            name == "a" && matches!(kind, ElementKind::ListItem { .. }) && text.starts_with("parent"),
+            "{cited:?}"
+        );
+        let (ref name, kind, ref text) = cited[1];
+        assert!(
+            name == "b" && matches!(kind, ElementKind::ListItem { .. }) && text == "second",
+            "{cited:?}"
+        );
+        let (ref name, kind, ref text) = cited[2];
+        assert!(
+            name == "c" && kind == ElementKind::DefinitionDescription && text == "definition",
+            "{cited:?}"
+        );
+    }
 
     #[test]
     fn test_djot_extractor_creation() {
