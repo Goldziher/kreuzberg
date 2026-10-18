@@ -4551,7 +4551,7 @@ mod tests {
                 result.metadata.get("dictionary_filtered_line_count"),
             );
             assert!(
-                result.metadata.get("dictionary_filtered_line_count").is_none(),
+                !result.metadata.contains_key("dictionary_filtered_line_count"),
                 "{language} on {image} dropped lines: {:?}",
                 result.metadata.get("dictionary_filtered_line_count"),
             );

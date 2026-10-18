@@ -5150,7 +5150,7 @@ mod tests {
             Run {
                 text,
                 bold: true,
-                note_marker_ranges: vec![start..start + 4],
+                note_marker_ranges: std::iter::once(start..start + 4).collect(),
                 ..Default::default()
             },
             Run::new(" tail".into()),

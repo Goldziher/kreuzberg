@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn should_give_no_estimate_when_the_ink_covers_a_large_share_of_the_raster() {
         let mut rgb = raster_of_glyphs(400, 200, 26, 14, 20, 15);
-        for pixel in rgb.chunks_exact_mut(3).skip(30_000).step_by(2) {
+        for pixel in rgb.as_chunks_mut::<3>().0.iter_mut().skip(30_000).step_by(2) {
             pixel.fill(0);
         }
         assert_eq!(median_glyph_height(&rgb, 400, 200), None);
