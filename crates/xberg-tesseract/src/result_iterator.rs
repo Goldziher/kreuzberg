@@ -207,7 +207,7 @@ impl ResultIterator {
             )
         };
 
-        if result == 0 {
+        if result.is_null() {
             Err(TesseractError::InvalidParameterError)
         } else {
             Ok((
@@ -579,7 +579,8 @@ fn word_symbols_unlocked(raw: *mut c_void, text: String) -> Result<WordSymbols> 
 }
 
 /// The current word's font attributes, or `None` when Tesseract reports it has none (the C API
-/// signals this via a zero return, not a null pointer). Split out of
+/// signals this with a null font-name pointer, in which case the flag and `font_id` outputs are
+/// undefined and must not be read). Split out of
 /// [`extract_word_data_unlocked`] to keep that function under the workspace line-count limit. ~keep
 fn extract_word_font_attributes(raw: *mut c_void) -> Option<FontAttributes> {
     let mut is_bold = 0;
@@ -603,7 +604,7 @@ fn extract_word_font_attributes(raw: *mut c_void) -> Option<FontAttributes> {
             &mut font_id,
         )
     };
-    if result != 0 {
+    if !result.is_null() {
         Some(FontAttributes {
             is_bold: is_bold != 0,
             is_italic: is_italic != 0,
@@ -662,7 +663,7 @@ ffi_extern! {
         is_smallcaps: *mut c_int,
         pointsize: *mut c_int,
         font_id: *mut c_int,
-    ) -> c_int;
+    ) -> *const c_char;
     pub fn TessResultIteratorWordIsFromDictionary(handle: *mut c_void) -> c_int;
     pub fn TessResultIteratorWordIsNumeric(handle: *mut c_void) -> c_int;
     pub fn TessResultIteratorSymbolIsSuperscript(handle: *mut c_void) -> c_int;
@@ -853,5 +854,40 @@ mod tests {
         assert!(outcome.is_err());
         assert_eq!(skipped, 0, "unrecoverable errors must not be counted as skipped");
         assert!(words.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod native_signature_contract_tests {
+    use super::*;
+
+    #[test]
+    fn word_font_attributes_returns_a_borrowed_font_name() {
+        #[cfg(not(target_arch = "wasm32"))]
+        type NativeFunction = unsafe extern "C-unwind" fn(
+            *mut c_void,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+        ) -> *const c_char;
+        #[cfg(target_arch = "wasm32")]
+        type NativeFunction = unsafe extern "C" fn(
+            *mut c_void,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+            *mut c_int,
+        ) -> *const c_char;
+
+        let _: NativeFunction = super::TessResultIteratorWordFontAttributes;
     }
 }

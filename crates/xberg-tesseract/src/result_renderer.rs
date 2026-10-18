@@ -79,6 +79,10 @@ impl TessResultRenderer {
         }
     }
 
+    pub(crate) fn raw_handle(&self) -> Result<*mut c_void> {
+        Ok(*self.handle.lock().map_err(|_| TesseractError::MutexLockError)?)
+    }
+
     /// Begins a new document.
     ///
     /// # Arguments

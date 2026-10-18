@@ -102,7 +102,7 @@ impl MutableIterator {
             )
         };
 
-        if result == 0 {
+        if result.is_null() {
             Err(TesseractError::InvalidParameterError)
         } else {
             Ok((

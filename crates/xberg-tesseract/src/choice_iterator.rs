@@ -1,4 +1,3 @@
-use crate::api::TessDeleteText;
 use crate::error::{Result, TesseractError};
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_float, c_int, c_void};
@@ -40,14 +39,14 @@ impl ChoiceIterator {
     /// Returns the UTF-8 text as a `String` if successful, otherwise returns an error.
     pub fn get_utf8_text(&self) -> Result<String> {
         let handle = self.handle.lock().map_err(|_| TesseractError::MutexLockError)?;
+        // The returned pointer is owned by the iterator, so it must not be passed to
+        // `TessDeleteText`. ~keep
         let text_ptr = unsafe { TessChoiceIteratorGetUTF8Text(*handle) };
         if text_ptr.is_null() {
             return Err(TesseractError::NullPointerError);
         }
         let c_str = unsafe { CStr::from_ptr(text_ptr) };
-        let result = c_str.to_str()?.to_owned();
-        unsafe { TessDeleteText(text_ptr) };
-        Ok(result)
+        Ok(c_str.to_str()?.to_owned())
     }
 
     /// Gets the confidence of the current choice.
@@ -72,6 +71,21 @@ impl Drop for ChoiceIterator {
 ffi_extern! {
     fn TessChoiceIteratorDelete(handle: *mut c_void);
     fn TessChoiceIteratorNext(handle: *mut c_void) -> c_int;
-    fn TessChoiceIteratorGetUTF8Text(handle: *mut c_void) -> *mut c_char;
+    fn TessChoiceIteratorGetUTF8Text(handle: *mut c_void) -> *const c_char;
     fn TessChoiceIteratorConfidence(handle: *mut c_void) -> c_float;
+}
+
+#[cfg(test)]
+mod native_signature_contract_tests {
+    use super::*;
+
+    #[test]
+    fn choice_text_is_a_borrowed_const_pointer() {
+        #[cfg(not(target_arch = "wasm32"))]
+        type NativeFunction = unsafe extern "C-unwind" fn(*mut c_void) -> *const c_char;
+        #[cfg(target_arch = "wasm32")]
+        type NativeFunction = unsafe extern "C" fn(*mut c_void) -> *const c_char;
+
+        let _: NativeFunction = super::TessChoiceIteratorGetUTF8Text;
+    }
 }
