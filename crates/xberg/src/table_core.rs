@@ -6,6 +6,8 @@
 //!
 //! Originally adapted from the `hocr` module of `html-to-markdown-rs` (removed in v3).
 
+use std::collections::HashSet;
+
 /// Represents a word extracted from hOCR (or any source) with position and confidence information.
 #[cfg_attr(alef, alef(skip))]
 #[derive(Debug, Clone)]
@@ -702,13 +704,66 @@ fn group_words_into_cell_tokens<'a>(
         }
     }
 
-    let mut groups: Vec<(HocrWord, Vec<&HocrWord>)> = Vec::with_capacity(words.len());
-    for mut row_words in rows {
+    for row_words in &mut rows {
         row_words.sort_by_key(|w| w.left);
-        groups.extend(merge_row_into_cell_tokens(&row_words, merge_gap));
+    }
+    let column_edges = repeated_column_edge_words(&rows, median_height);
+
+    let mut groups: Vec<(HocrWord, Vec<&HocrWord>)> = Vec::with_capacity(words.len());
+    for row_words in rows {
+        groups.extend(merge_row_into_cell_tokens(&row_words, merge_gap, &column_edges));
     }
 
     groups
+}
+
+/// Minimum number of rows whose non-leading words share a left edge before that edge counts as
+/// a column boundary the cell merge must not cross (xberg-io/xberg#2140).
+const COLUMN_EDGE_MIN_ROWS: usize = 8;
+
+/// Words that start a column the cell merge must not swallow: the non-leading word's left edge
+/// (within a fifth of the median height) repeats across at least [`COLUMN_EDGE_MIN_ROWS`] rows,
+/// and both the word and its left neighbour vary from row to row in at least half of those rows.
+/// Without this, a column sitting closer than the merge gap to its neighbour (`ROW0004` then
+/// `21`, 10-16px apart in 32 rows) vanishes into one token and its cells come out empty.
+/// Requiring variation on both sides keeps repeated phrases ("Item 1", "12 Jan") merged. ~keep
+fn repeated_column_edge_words(rows: &[Vec<&HocrWord>], median_height: u32) -> HashSet<*const HocrWord> {
+    let tolerance = median_height / 5;
+    let mut candidates: Vec<(u32, usize, &HocrWord, &HocrWord)> = Vec::new();
+    for (row_index, row_words) in rows.iter().enumerate() {
+        for pair in row_words.windows(2) {
+            let (previous, word) = (pair[0], pair[1]);
+            if !is_pure_punctuation(&word.text) && !is_pure_punctuation(&previous.text) {
+                candidates.push((word.left, row_index, previous, word));
+            }
+        }
+    }
+    candidates.sort_by_key(|candidate| candidate.0);
+
+    let mut blocked = HashSet::new();
+    let mut start = 0;
+    while start < candidates.len() {
+        let mut end = start + 1;
+        while end < candidates.len() && candidates[end].0 - candidates[end - 1].0 <= tolerance {
+            end += 1;
+        }
+        let cluster = &candidates[start..end];
+        let row_count = cluster
+            .iter()
+            .map(|candidate| candidate.1)
+            .collect::<HashSet<_>>()
+            .len();
+        if row_count >= COLUMN_EDGE_MIN_ROWS {
+            let distinct = |texts: Vec<&str>| texts.into_iter().collect::<HashSet<_>>().len();
+            let varied_words = distinct(cluster.iter().map(|c| c.3.text.as_str()).collect());
+            let varied_neighbours = distinct(cluster.iter().map(|c| c.2.text.as_str()).collect());
+            if varied_words * 2 >= cluster.len() && varied_neighbours * 2 >= cluster.len() {
+                blocked.extend(cluster.iter().map(|c| std::ptr::from_ref(c.3)));
+            }
+        }
+        start = end;
+    }
+    blocked
 }
 
 /// Decide the maximum horizontal gap allowed for merging `word` into the token immediately
@@ -751,7 +806,11 @@ fn allowed_merge_gap(
 
 /// Merge one row's words (already sorted left-to-right) into cell-token clusters, applying
 /// [`allowed_merge_gap`]'s punctuation-connector rule.
-fn merge_row_into_cell_tokens<'a>(row_words: &[&'a HocrWord], merge_gap: f64) -> Vec<(HocrWord, Vec<&'a HocrWord>)> {
+fn merge_row_into_cell_tokens<'a>(
+    row_words: &[&'a HocrWord],
+    merge_gap: f64,
+    column_edges: &HashSet<*const HocrWord>,
+) -> Vec<(HocrWord, Vec<&'a HocrWord>)> {
     let mut groups: Vec<(HocrWord, Vec<&HocrWord>)> = Vec::new();
     let mut current: Option<(HocrWord, Vec<&HocrWord>)> = None;
     let mut previous_was_connector = false;
@@ -763,7 +822,7 @@ fn merge_row_into_cell_tokens<'a>(row_words: &[&'a HocrWord], merge_gap: f64) ->
             Some((mut token, mut members)) => {
                 let gap = word.left as f64 - (token.left + token.width) as f64;
                 let (allowed_gap, is_connector) = allowed_merge_gap(word, next_word, merge_gap, previous_was_connector);
-                if gap <= allowed_gap {
+                if gap <= allowed_gap && !column_edges.contains(&std::ptr::from_ref(word)) {
                     let new_right = (word.left + word.width).max(token.left + token.width);
                     let new_bottom = (word.top + word.height).max(token.top + token.height);
                     token.top = token.top.min(word.top);
@@ -3958,5 +4017,60 @@ mod tests {
                 vec!["C".to_string(), "40,218,965".to_string()],
             ]
         );
+    }
+    fn ledger_rows(
+        rows: u32,
+        gap: u32,
+        first: impl Fn(u32) -> String,
+        second: impl Fn(u32) -> String,
+    ) -> Vec<HocrWord> {
+        let mut words = Vec::new();
+        for i in 1..=rows {
+            let top = 100 + i * 60;
+            let first_text = first(i);
+            let first_width = 230;
+            words.push(word(&first_text, 100, top, first_width, 32));
+            words.push(word(&second(i), 100 + first_width + gap, top, 60, 32));
+            words.push(word(&format!("{}", 10000 + i * 37), 900, top, 130, 32));
+        }
+        words
+    }
+
+    #[test]
+    fn repeated_column_edge_within_merge_gap_stays_a_separate_column() {
+        for gap in [10u32, 16] {
+            let words = ledger_rows(32, gap, |i| format!("ROW{i:04}"), |i| format!("{}", (i * 7) % 90 + 10));
+            let table = reconstruct_table(&words, 20, 0.5);
+            assert_eq!(table.len(), 32, "gap {gap}");
+            for (index, row) in table.iter().enumerate() {
+                let i = index as u32 + 1;
+                assert_eq!(
+                    row,
+                    &vec![
+                        format!("ROW{i:04}"),
+                        format!("{}", (i * 7) % 90 + 10),
+                        format!("{}", 10000 + i * 37)
+                    ],
+                    "gap {gap} row {i}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn repeated_label_prefix_cell_still_merges() {
+        let words = ledger_rows(32, 10, |_| "Item".to_string(), |i| format!("{}", (i * 7) % 90 + 10));
+        let table = reconstruct_table(&words, 20, 0.5);
+        assert_eq!(table.len(), 32);
+        assert_eq!(table[0].len(), 2);
+        assert_eq!(table[0][0], format!("Item {}", 7 + 10));
+    }
+
+    #[test]
+    fn few_aligned_rows_are_not_column_evidence() {
+        let words = ledger_rows(4, 10, |i| format!("ROW{i:04}"), |i| format!("{}", (i * 7) % 90 + 10));
+        let table = reconstruct_table(&words, 20, 0.5);
+        assert_eq!(table[0].len(), 2);
+        assert!(table[0][0].starts_with("ROW0001 "));
     }
 }
