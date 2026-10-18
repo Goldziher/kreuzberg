@@ -828,7 +828,6 @@ traineddata = "traineddata"
 "crates/xberg-tesseract/src/api.rs" = ["file-too-long"]
 "crates/xberg/src/api/handlers.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/candle_ocr/glm_ocr_backend.rs" = ["function-too-long"]
-"crates/xberg/src/chunking/core.rs" = ["file-too-long"]
 "crates/xberg/src/core/config/concurrency.rs" = ["file-too-long", "nesting-too-deep"]
 "crates/xberg/src/core/config/extraction/core.rs" = [
   "cyclomatic-complexity",
