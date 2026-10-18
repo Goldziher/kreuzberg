@@ -3896,7 +3896,12 @@ pub(crate) fn extract_document_structure_from_segments(
     // Runs after heading recovery (so recovered headings are excluded) and
     // immediately before the deletion pass it feeds. It needs every page in
     // hand, which is why it cannot live in `process_single_page`.
-    mark_validated_page_numbers(&mut all_page_paragraphs, &page_heights);
+    mark_validated_page_numbers(
+        &mut all_page_paragraphs,
+        &page_heights,
+        include_headers,
+        include_footers,
+    );
     for page in &mut all_page_paragraphs {
         retain_page_furniture_safely(page);
     }
@@ -5511,8 +5516,13 @@ const FALLBACK_PAGE_HEIGHT_PTS: f32 = 792.0;
 ///   from the model, which counts as evidence against deletion.
 ///
 /// The single consequence of this rule is `layout_class_permits_page_number_deletion`.
-fn mark_validated_page_numbers(all_pages: &mut [Vec<PdfParagraph>], page_heights: &[f32]) {
-    use super::page_number::{PageNumberSequence, margin_band};
+fn mark_validated_page_numbers(
+    all_pages: &mut [Vec<PdfParagraph>],
+    page_heights: &[f32],
+    include_headers: bool,
+    include_footers: bool,
+) {
+    use super::page_number::{MarginBand, PageNumberSequence, margin_band};
 
     let page_width = document_content_width(all_pages);
     let mut sequence = PageNumberSequence::new();
@@ -5540,7 +5550,13 @@ fn mark_validated_page_numbers(all_pages: &mut [Vec<PdfParagraph>], page_heights
     let mut confirmed = 0_usize;
     for (page_index, paragraph_index, y_ratio, x_ratio) in observations {
         let band = margin_band(y_ratio);
-        if matches!(band, super::page_number::MarginBand::Body) {
+        // ~keep Geometric page numbers have a known region, unlike unpositioned tagged PageNumber artifacts.
+        let preserve_region = match band {
+            MarginBand::Top => include_headers,
+            MarginBand::Bottom => include_footers,
+            MarginBand::Body => true,
+        };
+        if preserve_region {
             continue;
         }
         if sequence.confidence_at(page_index, band, x_ratio) < PageNumberSequence::DELETION_THRESHOLD {
