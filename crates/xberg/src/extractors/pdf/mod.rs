@@ -2121,14 +2121,8 @@ impl PdfExtractor {
             && let Some(ref mut imgs) = extracted_images
             && !imgs.is_empty()
         {
-            let default_ocr_config;
-            let ocr_config = match config.ocr.as_ref() {
-                Some(c) => c,
-                None => {
-                    default_ocr_config = crate::core::config::OcrConfig::default();
-                    &default_ocr_config
-                }
-            };
+            let resolved_ocr_config = ocr::resolve_ocr_config(config);
+            let ocr_config = resolved_ocr_config.as_ref();
             crate::plugins::ensure_ocr_backends_initialized();
             let backend = {
                 let registry = crate::plugins::registry::get_ocr_backend_registry();

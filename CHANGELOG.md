@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **(pdf): disabling extraction caching also disables the built-in Tesseract result cache.**
+  The opt-out reaches mixed, full-page, pipeline and embedded-image OCR without changing native-text fallback routing.
+
 ### Security
 
 - **(excel): ZIP-backed spreadsheets reject mismatched local headers, duplicate member names, and overlapping entries.**
