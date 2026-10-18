@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(api): `/health`, `/info` and `/version` no longer queue behind the concurrency limit.** `XBERG_MAX_CONCURRENT_REQUESTS` now applies to the extraction routes only, so a saturated but healthy pod keeps passing orchestrator probes. (#2161)
+- **(pdf): disabling extraction caching also disables the built-in Tesseract result cache.**
+  The opt-out reaches mixed, full-page, pipeline and embedded-image OCR without changing native-text fallback routing.
 - **(ocr): An image with no resolution metadata is no longer upscaled by a fixed 4.2x.** The resample assumed 72 DPI,
   which made large text so big that Tesseract's default `eng` model misread it (`Cedar Analytics supplied 17 widgets`
   came back as `1/7`). The factor now follows the size of the text, up to the old one for small text, and an image

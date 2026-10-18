@@ -13,6 +13,11 @@
 //! unaffected by the split. Unit tests live in `tests.rs`, `recognition_noise_tests.rs`,
 //! `numeric_repair_tests.rs`, and `plausibility_tests.rs`, not inline here.
 
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+mod cache_policy;
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+pub(super) use cache_policy::resolve_ocr_config;
+
 mod document;
 mod pipeline;
 mod plausibility;
@@ -78,6 +83,8 @@ pub(crate) use pipeline::{
     numeric_repair_enabled, run_ocr_pipeline,
 };
 
+#[cfg(all(test, feature = "ocr"))]
+mod cache_policy_tests;
 #[cfg(all(test, feature = "ocr", feature = "pdf"))]
 mod failed_page_record_tests;
 #[cfg(all(test, any(feature = "ocr", feature = "ocr-pipeline")))]

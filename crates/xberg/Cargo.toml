@@ -1771,6 +1771,7 @@ optional = true
 criterion = { workspace = true }
 dotenvy = "0.15"
 filetime = "0.2"
+futures = { workspace = true }
 image = { workspace = true, default-features = false, features = ["png"] }
 # Test retrieval features prove runtime compilation stays offline under Cargo feature unification. ~keep
 jsonschema = { version = "0.58", default-features = false, features = ["resolve-file", "resolve-http", "tls-ring"] }
@@ -1787,7 +1788,6 @@ tar = "^0.4"
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "time"] }
 tokio-test = "0.4"
-futures = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = "1"
 wiremock = "0.6"

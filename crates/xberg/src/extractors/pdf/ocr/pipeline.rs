@@ -749,8 +749,7 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
     use std::io::Cursor;
     use std::sync::Arc;
 
-    let default_ocr_config = crate::core::config::OcrConfig::default();
-    let mut ocr_config_resolved = config.ocr.as_ref().unwrap_or(&default_ocr_config).clone();
+    let mut ocr_config_resolved = super::resolve_ocr_config(config).into_owned();
     if ocr_config_resolved.acceleration.is_none() {
         ocr_config_resolved.acceleration = config.acceleration.clone();
     }
@@ -2326,8 +2325,8 @@ pub(super) async fn extract_with_ocr_for_page(
     #[cfg(all(feature = "layout-detection", not(feature = "ocr"), not(feature = "ocr-wasm")))]
     let _ = points_per_pixel_override;
 
-    let default_ocr_config = crate::core::config::OcrConfig::default();
-    let base_ocr_config = config.ocr.as_ref().unwrap_or(&default_ocr_config);
+    let resolved_ocr_config = super::resolve_ocr_config(config);
+    let base_ocr_config = resolved_ocr_config.as_ref();
 
     let accel_ocr_config;
     let base_ocr_config = if (base_ocr_config.acceleration.is_none() && config.acceleration.is_some())
@@ -4782,8 +4781,8 @@ async fn run_ocr_pipeline_stages(
     // instead of falling back to (or re-using) the built-in defaults. ~keep
     crate::plugins::ensure_ocr_backends_initialized();
 
-    let default_ocr_config = crate::core::config::OcrConfig::default();
-    let ocr_config = config.ocr.as_ref().unwrap_or(&default_ocr_config);
+    let resolved_ocr_config = super::resolve_ocr_config(config);
+    let ocr_config = resolved_ocr_config.as_ref();
 
     // Best-effort selection policy is derived from the config that produced this pipeline
     // (a `vlm_fallback`-synthesised pipeline prefers its last non-empty stage; explicit and
