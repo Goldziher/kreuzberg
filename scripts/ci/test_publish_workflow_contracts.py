@@ -939,7 +939,9 @@ def test_swift_ios_builds_pin_the_deployment_target_to_the_manifest_floor() -> N
     floor = re.search(r"\.iOS\(\.v(\d+)\)", manifest)
     assert floor is not None, "Package.swift declares no iOS floor"
     swift = job_block(WORKFLOW.read_text(), "swift-target")
-    build = re.search(r"(?ms)^      - uses: xberg-io/actions/build-swift-artifactbundle@[^\n]+\n(.*?)(?=^      - |\Z)", swift)
+    build = re.search(
+        r"(?ms)^      - uses: xberg-io/actions/build-swift-artifactbundle@[^\n]+\n(.*?)(?=^      - |\Z)", swift
+    )
     assert build is not None
     pinned = re.search(r'(?m)^          IPHONEOS_DEPLOYMENT_TARGET: "([0-9.]+)"$', build[1])
     assert pinned is not None, "swift-target build step does not set IPHONEOS_DEPLOYMENT_TARGET"
@@ -948,36 +950,43 @@ def test_swift_ios_builds_pin_the_deployment_target_to_the_manifest_floor() -> N
 
 def test_macos_onnx_action_forwards_rpath_option_only_to_macos() -> None:
     action = (WORKFLOW.parents[1] / "actions/setup-onnx-runtime/action.yml").read_text()
-    option = re.findall(r'(?m)^  add-macos-rpath:\n((?:^    [^\n]*\n)+)', action)
+    option = re.findall(r"(?m)^  add-macos-rpath:\n((?:^    [^\n]*\n)+)", action)
     assert len(option) == 1, "one actual action input must exist"
     assert re.findall(r'(?m)^    default: "true"$', option[0]) == ['    default: "true"']
     macos = re.findall(
-        r'(?m)^    - name: Prepare ONNX Runtime \(macOS\)\n'
-        r'      if: runner.os == \'macOS\'\n'
-        r'      shell: bash\n'
-        r'      run: ([^\n]+)$', action,
+        r"(?m)^    - name: Prepare ONNX Runtime \(macOS\)\n"
+        r"      if: runner.os == \'macOS\'\n"
+        r"      shell: bash\n"
+        r"      run: ([^\n]+)$",
+        action,
     )
     assert len(macos) == 1, "one actual macOS action run step must be examined"
     arguments = re.findall(r'"(\$\{\{ inputs\.[a-z-]+ \}\})"', macos[0])
-    assert macos[0].startswith('scripts/ci/actions/setup-onnx-runtime/macos.sh ')
+    assert macos[0].startswith("scripts/ci/actions/setup-onnx-runtime/macos.sh ")
     expected_arguments = [
-        '${{ inputs.ort-version }}', '${{ inputs.dest-dir }}', '${{ inputs.arch-id }}',
-        '${{ inputs.strategy }}', '${{ inputs.add-macos-rpath }}',
+        "${{ inputs.ort-version }}",
+        "${{ inputs.dest-dir }}",
+        "${{ inputs.arch-id }}",
+        "${{ inputs.strategy }}",
+        "${{ inputs.add-macos-rpath }}",
     ]
     assert arguments == expected_arguments
-    assert macos[0] == ' '.join([
-        'scripts/ci/actions/setup-onnx-runtime/macos.sh',
-        *(f'"{argument}"' for argument in expected_arguments),
-    ])
-    assert len(re.findall(r'(?m)^      run: .*inputs\.add-macos-rpath', action)) == 1
+    assert macos[0] == " ".join(
+        [
+            "scripts/ci/actions/setup-onnx-runtime/macos.sh",
+            *(f'"{argument}"' for argument in expected_arguments),
+        ]
+    )
+    assert len(re.findall(r"(?m)^      run: .*inputs\.add-macos-rpath", action)) == 1
 
 
 def test_csharp_native_build_leaves_rpath_to_generated_ffi_package() -> None:
     csharp = job_block(WORKFLOW.read_text(), "csharp-natives")
     setup = re.findall(
-        r'(?m)^      - name: Setup ONNX Runtime\n'
-        r'        uses: \./\.github/actions/setup-onnx-runtime\n'
-        r'        with:\n((?:^          [^\n]*\n)+)', csharp,
+        r"(?m)^      - name: Setup ONNX Runtime\n"
+        r"        uses: \./\.github/actions/setup-onnx-runtime\n"
+        r"        with:\n((?:^          [^\n]*\n)+)",
+        csharp,
     )
     assert len(setup) == 1, "one actual C# setup action step must be examined"
     assert re.findall(r'(?m)^          add-macos-rpath: "false"$', setup[0]) == [
