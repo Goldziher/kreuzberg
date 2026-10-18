@@ -782,5 +782,6 @@ if __name__ == "__main__":
     test_zigbuild_wiring_gate_rejects_missing_wrong_and_early_installers()
     test_helm_publish_does_not_depend_on_the_cli_image_manifest()
     test_swift_static_library_builds_disable_host_extension_symbol_lookup()
+    test_swift_ios_builds_pin_the_deployment_target_to_the_manifest_floor()
     test_publish_contracts_run_in_ci()
     test_system_dependency_changes_trigger_rust_and_e2e_ci()
