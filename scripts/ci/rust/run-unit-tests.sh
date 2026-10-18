@@ -82,6 +82,59 @@ export RUST_MIN_STACK="${RUST_MIN_STACK:-16777216}"
 # surfaces exactly one problem per CI cycle. That cost three round-trips on 2026-09-02:
 # fixing a font test revealed an identical bug in a second binary, and fixing a pipeline
 # test revealed a libheif floor mismatch that had never had a chance to run. ~keep
+# ~keep The xberg leg links ~380 integration-test binaries, each carrying the statically
+# linked native stack of the `full` feature set. On ubuntu-latest (x86_64) that exhausted the
+# runner's free space: rust-lld died with SIGBUS and rustc reported "No space left on device".
+# Build and run the targets in chunks and delete each chunk's executables once it has run, so
+# the peak is bounded by one chunk. The free space after every chunk is printed, which turns
+# the next failure of this kind into a measurement. Used on Linux x86_64 only; the other legs
+# fit and keep the single invocation.
+run_xberg_tests_in_chunks() {
+  local features="$1"
+  local chunk_size="${XBERG_TEST_CHUNK_SIZE:-40}"
+  local metadata target_dir deps name stem status=0 rc=0
+  local -a tests=() chunk=() args=()
+
+  metadata="$(cargo metadata --no-deps --format-version 1)" || return 90
+  target_dir="$(printf '%s' "$metadata" | jq -r '.target_directory')"
+  [ -n "$target_dir" ] && [ -d "$target_dir" ] || return 90
+  deps="$target_dir/debug/deps"
+  while IFS= read -r name; do
+    [ -n "$name" ] && tests+=("$name")
+  done < <(printf '%s' "$metadata" | jq -r '.packages[] | select(.name == "xberg") | .targets[] | select(.kind | index("test")) | .name')
+  if [ "${#tests[@]}" -eq 0 ]; then
+    echo "ERROR: no integration-test targets found for xberg; refusing to run an empty suite" >&2
+    return 91
+  fi
+  echo "xberg integration-test targets: ${#tests[@]} (chunks of ${chunk_size})"
+
+  prune_test_binaries() {
+    for name in "$@"; do
+      stem="${name//-/_}"
+      find "$deps" -maxdepth 1 -type f -name "${stem}-[0-9a-f]*" ! -name '*.*' -delete
+    done
+  }
+
+  RUST_BACKTRACE=full cargo test --locked --no-fail-fast -p xberg --features "$features" \
+    --lib --benches --verbose || status=$?
+  df -h "$target_dir" | tail -1 | sed 's/^/disk after lib+benches: /'
+
+  local i=0
+  while [ "$i" -lt "${#tests[@]}" ]; do
+    chunk=("${tests[@]:i:chunk_size}")
+    args=()
+    for name in "${chunk[@]}"; do args+=(--test "$name"); done
+    rc=0
+    RUST_BACKTRACE=full cargo test --locked --no-fail-fast -p xberg --features "$features" \
+      "${args[@]}" --verbose || rc=$?
+    [ "$rc" -eq 0 ] || status=$rc
+    prune_test_binaries "${chunk[@]}"
+    df -h "$target_dir" | tail -1 | sed "s/^/disk after tests $((i + 1))-$((i + ${#chunk[@]})): /"
+    i=$((i + chunk_size))
+  done
+  return "$status"
+}
+
 echo "=== Starting cargo test ==="
 
 # NOTE: We intentionally avoid `--all-features` for the `xberg` crate because
@@ -113,7 +166,11 @@ if ! {
     echo "Linux aarch64: using full-no-heic,heic (full pulls candle -> gemm-f16 needs fullfp16)"
     xberg_test_features=full-no-heic,heic,formula-recognition,bundle-tessdata-eng
   fi
-  RUST_BACKTRACE=full cargo test --locked --no-fail-fast -p xberg --features "$xberg_test_features" --all-targets --verbose || exit
+  if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
+    run_xberg_tests_in_chunks "$xberg_test_features" || exit
+  else
+    RUST_BACKTRACE=full cargo test --locked --no-fail-fast -p xberg --features "$xberg_test_features" --all-targets --verbose || exit
+  fi
 
   # This leg links hundreds of integration-test binaries and benches. Keeping those completed
   # package outputs beside the different all-features workspace closure exhausted 109 GiB of
