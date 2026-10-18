@@ -194,10 +194,11 @@ fn build_cors_layer(server_config: &ServerConfig) -> CorsLayer {
     }
 }
 
-/// Outermost layer: cap how many requests process concurrently so a burst of
-/// large uploads applies backpressure instead of exhausting memory (#1368). ~keep
-fn apply_concurrency_limit(router: Router<ApiState>) -> Router<ApiState> {
-    let max_concurrent_requests = resolve_max_concurrent_requests();
+/// Cap how many extraction requests process concurrently so a burst of large
+/// uploads applies backpressure instead of exhausting memory (#1368). Applied to the
+/// extraction routes only: `/health`, `/info` and `/version` must keep answering while
+/// every slot is busy, or orchestrator probes fail on a saturated but healthy pod. ~keep
+fn apply_concurrency_limit(router: Router<ApiState>, max_concurrent_requests: usize) -> Router<ApiState> {
     if max_concurrent_requests > 0 {
         tracing::info!(
             max_concurrent_requests,
@@ -250,15 +251,32 @@ pub(crate) fn create_router_with_limits_and_server_config(
     limits: ApiSizeLimits,
     server_config: ServerConfig,
 ) -> Router {
+    build_router(config, limits, server_config, resolve_max_concurrent_requests())
+}
+
+fn build_router(
+    config: ExtractionConfig,
+    limits: ApiSizeLimits,
+    server_config: ServerConfig,
+    max_concurrent_requests: usize,
+) -> Router {
     let state = build_api_state(config, &server_config);
 
     let cors_layer = build_cors_layer(&server_config);
 
+    let limited_routes = apply_concurrency_limit(
+        Router::new()
+            .route("/extract", post(extract_handler))
+            .route("/extract-async", post(extract_async_handler))
+            .route("/detect", post(detect_handler))
+            .route("/process", put(openweb_external_handler))
+            .route("/v1/convert/file", post(openweb_docling_handler)),
+        max_concurrent_requests,
+    );
+
     let mut router = Router::new()
-        .route("/extract", post(extract_handler))
-        .route("/extract-async", post(extract_async_handler))
+        .merge(limited_routes)
         .route("/jobs/{job_id}", get(job_status_handler).delete(cancel_job_handler))
-        .route("/detect", post(detect_handler))
         .route("/formats", get(formats_handler))
         .route("/health", get(health_handler))
         .route("/info", get(info_handler))
@@ -267,8 +285,6 @@ pub(crate) fn create_router_with_limits_and_server_config(
         .route("/cache/clear", delete(cache_clear_handler))
         .route("/cache/manifest", get(cache_manifest_handler))
         .route("/cache/warm", post(cache_warm_handler))
-        .route("/process", put(openweb_external_handler))
-        .route("/v1/convert/file", post(openweb_docling_handler))
         .fallback(not_found_handler);
 
     #[cfg(feature = "api")]
@@ -299,8 +315,6 @@ pub(crate) fn create_router_with_limits_and_server_config(
                 .on_failure(DefaultOnFailure::new().level(tracing::Level::WARN)),
         );
 
-    let router = apply_concurrency_limit(router);
-
     router.with_state(state)
 }
 
@@ -321,6 +335,59 @@ async fn openapi_schema_handler() -> axum::Json<serde_json::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn probes_answer_while_every_extraction_slot_is_busy() {
+        use axum::{body::Body, http::Request};
+        use std::{convert::Infallible, time::Duration};
+        use tower::ServiceExt;
+
+        let router = build_router(
+            ExtractionConfig::default(),
+            ApiSizeLimits::default(),
+            ServerConfig::default(),
+            1,
+        );
+
+        let stalled_body = Body::from_stream(futures::stream::pending::<Result<Vec<u8>, Infallible>>());
+        let holder = router.clone().oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/extract")
+                .header("content-type", "multipart/form-data; boundary=x")
+                .body(stalled_body)
+                .unwrap(),
+        );
+        let holder = tokio::spawn(holder);
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        for uri in ["/health", "/info", "/version"] {
+            let response = tokio::time::timeout(
+                Duration::from_secs(2),
+                router
+                    .clone()
+                    .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap()),
+            )
+            .await
+            .unwrap_or_else(|_| panic!("{uri} queued behind the concurrency limit"))
+            .unwrap();
+            assert!(response.status().is_success(), "{uri}: {}", response.status());
+        }
+
+        let queued = tokio::time::timeout(
+            Duration::from_millis(300),
+            router.clone().oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/detect")
+                    .body(Body::empty())
+                    .unwrap(),
+            ),
+        )
+        .await;
+        assert!(queued.is_err(), "extraction routes must still queue behind the limit");
+        holder.abort();
+    }
 
     #[test]
     fn test_create_router() {
