@@ -17,10 +17,7 @@ use xberg::ExtractionConfig;
 fn test_pdf_backend_flag_alone_populates_pdf_options() {
     let mut config = ExtractionConfig::default();
     let overrides = ExtractionOverrides {
-        format: FormatOverrides {
-            pdf_backend: Some("native".to_string()),
-            ..Default::default()
-        },
+        pdf_backend: Some("native".to_string()),
         ..default_overrides()
     };
     overrides.apply(&mut config);
@@ -38,10 +35,7 @@ fn test_pdf_backend_flag_alone_populates_pdf_options() {
 fn test_pdf_backend_pdfium_applied() {
     let mut config = ExtractionConfig::default();
     let overrides = ExtractionOverrides {
-        format: FormatOverrides {
-            pdf_backend: Some("pdfium".to_string()),
-            ..Default::default()
-        },
+        pdf_backend: Some("pdfium".to_string()),
         ..default_overrides()
     };
     overrides.apply(&mut config);
@@ -55,10 +49,7 @@ fn test_pdf_backend_pdfium_applied() {
 fn test_pdf_backend_default_applied_is_native() {
     let mut config = ExtractionConfig::default();
     let overrides = ExtractionOverrides {
-        format: FormatOverrides {
-            pdf_backend: Some("native".to_string()),
-            ..Default::default()
-        },
+        pdf_backend: Some("native".to_string()),
         ..default_overrides()
     };
     overrides.apply(&mut config);
@@ -70,10 +61,7 @@ fn test_pdf_backend_default_applied_is_native() {
 #[test]
 fn test_pdf_backend_rejects_unknown_value() {
     let overrides = ExtractionOverrides {
-        format: FormatOverrides {
-            pdf_backend: Some("xyz".to_string()),
-            ..Default::default()
-        },
+        pdf_backend: Some("xyz".to_string()),
         ..default_overrides()
     };
     let error = overrides.validate().expect_err("unknown backend must fail");
@@ -93,10 +81,7 @@ fn test_pdf_backend_rejects_unknown_value() {
 #[test]
 fn test_pdf_backend_pdfium_rejected_without_feature_names_rebuild_hint() {
     let overrides = ExtractionOverrides {
-        format: FormatOverrides {
-            pdf_backend: Some("pdfium".to_string()),
-            ..Default::default()
-        },
+        pdf_backend: Some("pdfium".to_string()),
         ..default_overrides()
     };
     let error = overrides
@@ -112,10 +97,7 @@ fn test_pdf_backend_pdfium_rejected_without_feature_names_rebuild_hint() {
 #[test]
 fn test_pdf_backend_pdfium_accepted_with_feature() {
     let overrides = ExtractionOverrides {
-        format: FormatOverrides {
-            pdf_backend: Some("pdfium".to_string()),
-            ..Default::default()
-        },
+        pdf_backend: Some("pdfium".to_string()),
         ..default_overrides()
     };
     assert!(overrides.validate().is_ok());
