@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(rendering): A footnote reference stays on the block that cites it.** Markdown, Djot and LaTeX input placed it on
   the previous paragraph, list item or heading, and Djot output wrote it at the start of the next block (`[^1]# Heading`). (#2156)
+- **(docx, odt): Footnote and endnote references are written once, numbered like their definitions.** Markdown, HTML
+  and Djot output showed each DOCX or ODT reference twice, and the inline marker carried the source note id, so it could
+  link a different note than its definition (an endnote 1 next to a footnote 1 linked the footnote). The marker now
+  follows the paragraph that cites it, an ODT reference no longer follows the paragraph before it, and plain output
+  writes the same `[^N]` markers and labels the matching definitions `[^N]:` for every format.
 - **(pdf): Explicit header and footer inclusion preserves geometric page numbers independently.** (#2150)
 - **(pdf): Native extraction preserves separate two-column bordered tables beside wider tables on the same page.**
 - **(ocr): Failed PDF OCR pages report the type chain of the underlying error.**

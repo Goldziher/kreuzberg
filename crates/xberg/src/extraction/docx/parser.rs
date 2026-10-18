@@ -128,6 +128,11 @@ pub struct Run {
     /// LaTeX math content: (latex_source, is_display_math).
     /// When set, this run represents an equation and `text` is ignored.
     pub math_latex: Option<(String, bool)>,
+    /// Byte ranges of `text` holding the `[^id]` literal of a note reference that is also
+    /// recorded in `Document::note_refs_by_paragraph`; the element list drops these, because
+    /// a `FootnoteRef` element carries the marker there. ~keep
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_marker_ranges: Vec<std::ops::Range<usize>>,
 }
 
 /// A DOCX table parsed from `<w:tbl>`.
@@ -2908,12 +2913,14 @@ impl<R: Read + Seek> DocxParser<R> {
                                         // A reference in the body always points at a real note;
                                         // id 1 is Word's first one (see `parse_notes`).
                                         if id != "-1" && id != "0" {
+                                            let marker_start = run.text.len();
                                             run.text.push_str(&format!("[^{}]", id));
                                             page_breaks.text_since_break = true;
                                             if table_stack.is_empty()
                                                 && current_paragraph.is_some()
                                                 && move_from_depth == 0
                                             {
+                                                run.note_marker_ranges.push(marker_start..run.text.len());
                                                 out.note_refs_by_paragraph
                                                     .entry(current_paragraph_index)
                                                     .or_default()

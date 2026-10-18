@@ -540,12 +540,13 @@ fn collect_run_annotations(
             continue;
         }
 
-        if run.text.is_empty() {
+        let run_text = text_without_note_markers(run);
+        if run_text.is_empty() {
             continue;
         }
 
         let start = text.len() as u32;
-        text.push_str(&run.text);
+        text.push_str(&run_text);
         let end = text.len() as u32;
 
         if run.bold {
@@ -589,6 +590,22 @@ fn collect_run_annotations(
     merge_adjacent_annotations(&mut annotations);
 
     (text, annotations, math_formulas)
+}
+
+/// The run's text without its `[^id]` note literals, whose references are emitted as
+/// `FootnoteRef` elements: the renderers write the marker, numbered to match the definitions.
+fn text_without_note_markers(run: &crate::extraction::docx::parser::Run) -> std::borrow::Cow<'_, str> {
+    if run.note_marker_ranges.is_empty() {
+        return std::borrow::Cow::Borrowed(&run.text);
+    }
+    let mut kept = String::with_capacity(run.text.len());
+    let mut from = 0;
+    for range in &run.note_marker_ranges {
+        kept.push_str(&run.text[from..range.start]);
+        from = range.end;
+    }
+    kept.push_str(&run.text[from..]);
+    std::borrow::Cow::Owned(kept)
 }
 
 /// Merge adjacent or overlapping annotations of the same kind.
@@ -2020,7 +2037,7 @@ mod tests {
             crate::extraction::derive::derive_extraction_result(result, true, crate::core::config::OutputFormat::Plain);
 
         assert!(
-            result.content.contains("[^2]"),
+            result.content.contains("[^1]"),
             "Should have footnote ref: {}",
             result.content
         );
@@ -2834,7 +2851,7 @@ mod tests {
             crate::extraction::derive::derive_extraction_result(result, true, crate::core::config::OutputFormat::Plain);
 
         assert!(
-            result.content.contains("[^2]"),
+            result.content.contains("[^1]"),
             "Should have endnote ref: {}",
             result.content
         );
@@ -4839,5 +4856,115 @@ mod tests {
             .map(|annotation| &text[annotation.start as usize..annotation.end as usize])
             .collect();
         assert_eq!(spans, ["$x$", "$y$"]);
+    }
+
+    async fn render_docx_notes(
+        document_xml: &str,
+        footnotes_xml: Option<&str>,
+        endnotes_xml: Option<&str>,
+        output_format: crate::core::config::OutputFormat,
+    ) -> String {
+        let data = build_test_docx_with_parts(document_xml, None, footnotes_xml, endnotes_xml, None, None, None);
+        let config = ExtractionConfig {
+            output_format: output_format.clone(),
+            ..Default::default()
+        };
+        let result = DocxExtractor::new()
+            .extract_content(
+                &data,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                &config,
+            )
+            .await
+            .unwrap();
+        let result = crate::extraction::derive::derive_extraction_result(result, true, output_format);
+        result.formatted_content.unwrap_or(result.content)
+    }
+
+    const NOTES_DOCUMENT_NS: &str = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+
+    /// A LibreOffice document numbers its first footnote `w:id="2"` (0 and 1 are separators).
+    /// The marker written for the reference must be the number of its definition, once.
+    #[tokio::test]
+    async fn should_write_each_footnote_reference_once_numbered_like_its_definition() {
+        let document_xml = format!(
+            r#"<w:document xmlns:w="{NOTES_DOCUMENT_NS}"><w:body>
+<w:p><w:r><w:t>First claim</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r><w:r><w:t xml:space="preserve"> and second claim</w:t></w:r><w:r><w:footnoteReference w:id="3"/></w:r><w:r><w:t>.</w:t></w:r></w:p>
+<w:p><w:r><w:t>Next paragraph.</w:t></w:r></w:p>
+</w:body></w:document>"#
+        );
+        let footnotes_xml = format!(
+            r#"<w:footnotes xmlns:w="{NOTES_DOCUMENT_NS}">
+<w:footnote w:id="0" w:type="separator"><w:p><w:r><w:t>separator</w:t></w:r></w:p></w:footnote>
+<w:footnote w:id="1" w:type="continuationSeparator"><w:p><w:r><w:t>continuation</w:t></w:r></w:p></w:footnote>
+<w:footnote w:id="2"><w:p><w:r><w:t>Note A.</w:t></w:r></w:p></w:footnote>
+<w:footnote w:id="3"><w:p><w:r><w:t>Note B.</w:t></w:r></w:p></w:footnote>
+</w:footnotes>"#
+        );
+        use crate::core::config::OutputFormat as F;
+        for format in [F::Markdown, F::Plain, F::Djot] {
+            let out = render_docx_notes(&document_xml, Some(&footnotes_xml), None, format.clone()).await;
+            assert!(
+                out.starts_with("First claim and second claim.[^1][^2]\n\nNext paragraph."),
+                "{format:?}: {out:?}"
+            );
+            assert_eq!(out.matches("[^1]").count(), 2, "{format:?}: {out:?}");
+            assert_eq!(out.matches("[^2]").count(), 2, "{format:?}: {out:?}");
+            assert!(!out.contains("[^3]"), "{format:?}: {out:?}");
+        }
+
+        let html = render_docx_notes(&document_xml, Some(&footnotes_xml), None, F::Html).await;
+        assert_eq!(html.matches("data-footnote-ref>").count(), 2, "{html:?}");
+        assert!(html.contains("<p>First claim and second claim.<sup"), "{html:?}");
+    }
+
+    /// Word numbers footnotes and endnotes separately, so footnote 1 and endnote 1 share an id.
+    /// The renderers number them in one sequence, and the markers follow that sequence.
+    #[tokio::test]
+    async fn should_not_link_an_endnote_marker_to_the_footnote_with_the_same_word_id() {
+        let document_xml = format!(
+            r#"<w:document xmlns:w="{NOTES_DOCUMENT_NS}"><w:body>
+<w:p><w:r><w:t>Body</w:t></w:r><w:r><w:footnoteReference w:id="1"/></w:r><w:r><w:t xml:space="preserve"> text</w:t></w:r><w:r><w:endnoteReference w:id="1"/></w:r><w:r><w:t>.</w:t></w:r></w:p>
+</w:body></w:document>"#
+        );
+        let footnotes_xml = format!(
+            r#"<w:footnotes xmlns:w="{NOTES_DOCUMENT_NS}"><w:footnote w:id="1"><w:p><w:r><w:t>THE FOOTNOTE</w:t></w:r></w:p></w:footnote></w:footnotes>"#
+        );
+        let endnotes_xml = format!(
+            r#"<w:endnotes xmlns:w="{NOTES_DOCUMENT_NS}"><w:endnote w:id="1"><w:p><w:r><w:t>THE ENDNOTE</w:t></w:r></w:p></w:endnote></w:endnotes>"#
+        );
+        let out = render_docx_notes(
+            &document_xml,
+            Some(&footnotes_xml),
+            Some(&endnotes_xml),
+            crate::core::config::OutputFormat::Djot,
+        )
+        .await;
+        assert!(out.starts_with("Body text.[^1][^2]"), "{out:?}");
+        assert!(out.contains("[^1]: THE FOOTNOTE"), "{out:?}");
+        assert!(out.contains("[^2]: THE ENDNOTE"), "{out:?}");
+    }
+
+    #[test]
+    fn should_keep_the_note_literal_out_of_annotated_run_text() {
+        use crate::extraction::docx::parser::Run;
+        let mut text = String::from("claim");
+        let start = text.len();
+        text.push_str("[^2]");
+        let runs = vec![
+            Run {
+                text,
+                bold: true,
+                note_marker_ranges: vec![start..start + 4],
+                ..Default::default()
+            },
+            Run::new(" tail".into()),
+        ];
+        let (text, annotations, _) = collect_run_annotations(&runs);
+        assert_eq!(text, "claim tail");
+        assert!(
+            annotations.iter().all(|a| (a.start, a.end) == (0, 5)),
+            "the bold span must cover `claim` only: {annotations:?}"
+        );
     }
 }

@@ -11,22 +11,40 @@ use crate::types::document_structure::ContentLayer;
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
 
 use super::common::{
-    annotation_display_text, annotation_type_label, get_admonition_kind, get_admonition_title, image_ocr_text,
-    parse_metadata_entries, render_table_plain,
+    FootnoteCollector, annotation_display_text, annotation_type_label, get_admonition_kind, get_admonition_title,
+    image_ocr_text, parse_metadata_entries, render_table_plain,
 };
 
 /// Render an `InternalDocument` to plain text.
 pub(crate) fn render_plain(doc: &InternalDocument) -> String {
     let mut out = String::with_capacity(doc.elements.len() * 80);
     let mut last_heading_depth = None;
-    for elem in &doc.elements {
+    let footnotes = FootnoteCollector::new(doc);
+    let mut after_text_block = false;
+    for (i, elem) in doc.elements.iter().enumerate() {
         if elem.layer != ContentLayer::Body || elem.kind.is_container_start() || elem.kind.is_container_end() {
             continue;
         }
+        if elem.kind == ElementKind::FootnoteRef {
+            if let Some(n) = footnotes.ref_number(i as u32) {
+                append_footnote_marker(&mut out, n, after_text_block);
+                after_text_block = true;
+            }
+            continue;
+        }
         render_element_plain(doc, elem, &mut out, &mut last_heading_depth);
+        after_text_block = !elem.text.is_empty()
+            && matches!(
+                elem.kind,
+                ElementKind::Title
+                    | ElementKind::Heading { .. }
+                    | ElementKind::Paragraph
+                    | ElementKind::ListItem { .. }
+                    | ElementKind::DefinitionDescription
+            );
     }
-    append_definitions_plain(doc, ElementKind::FootnoteDefinition, &mut out);
-    append_definitions_plain(doc, ElementKind::CommentDefinition, &mut out);
+    append_definitions_plain(doc, ElementKind::FootnoteDefinition, Some(&footnotes), &mut out);
+    append_definitions_plain(doc, ElementKind::CommentDefinition, None, &mut out);
     if let Some(annotations) = doc.annotations.as_deref() {
         let block = render_annotations_plain(annotations);
         if !block.is_empty() {
@@ -209,7 +227,25 @@ fn render_metadata_plain(text: &str, out: &mut String) {
     }
 }
 
-fn append_definitions_plain(doc: &InternalDocument, kind: ElementKind, out: &mut String) {
+/// Write footnote marker `[^n]` at the end of the text block just rendered, or as a
+/// paragraph of its own after a block that cannot hold it (a table, a code block).
+fn append_footnote_marker(out: &mut String, number: u32, after_text_block: bool) {
+    let marker = format!("[^{number}]");
+    if after_text_block {
+        let end = out.trim_end_matches('\n').len();
+        out.insert_str(end, &marker);
+    } else {
+        out.push_str(&marker);
+        out.push_str("\n\n");
+    }
+}
+
+fn append_definitions_plain(
+    doc: &InternalDocument,
+    kind: ElementKind,
+    footnotes: Option<&FootnoteCollector>,
+    out: &mut String,
+) {
     let mut definitions = doc
         .elements
         .iter()
@@ -220,6 +256,12 @@ fn append_definitions_plain(doc: &InternalDocument, kind: ElementKind, out: &mut
     }
     out.push('\n');
     for elem in definitions {
+        let number = footnotes
+            .zip(elem.anchor.as_deref())
+            .and_then(|(footnotes, anchor)| footnotes.anchor_number(anchor));
+        if let Some(number) = number {
+            out.push_str(&format!("[^{number}]: "));
+        }
         append_block_plain(&elem.text, out);
     }
 }
@@ -575,6 +617,24 @@ mod tests {
         let out = render_plain(&doc);
         assert!(out.contains("Main text"), "got: {}", out);
         assert!(out.contains("A note."), "got: {}", out);
+    }
+
+    #[test]
+    fn should_write_footnote_markers_and_label_referenced_definitions_in_plain() {
+        let mut b = InternalDocumentBuilder::new("test");
+        b.push_paragraph("Main text", vec![], None, None);
+        b.push_footnote_ref("a", "fn-a", None);
+        b.push_footnote_ref("b", "fn-b", None);
+        b.push_paragraph("Next", vec![], None, None);
+        for (text, key) in [("Note a.", "fn-a"), ("Note b.", "fn-b"), ("Unreferenced.", "fn-c")] {
+            let def = b.push_footnote_definition(text, key, None);
+            b.set_layer(def, ContentLayer::Footnote);
+        }
+        let out = render_plain(&b.build());
+        assert_eq!(
+            out,
+            "Main text[^1][^2]\n\nNext\n\n\n[^1]: Note a.\n\n[^2]: Note b.\n\nUnreferenced."
+        );
     }
 
     #[test]

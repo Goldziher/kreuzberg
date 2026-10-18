@@ -21,12 +21,27 @@ fn first_footnote_and_endnote_of_a_word_document_are_kept() {
         .expect("extraction must succeed");
 
     assert!(
-        doc.content.contains("Body sentence[^1] continues[^2]"),
-        "the first footnote's marker is missing from {:?}",
+        doc.content.contains("Body sentence continues and ends.[^1][^2][^3]"),
+        "a note marker is missing or duplicated in {:?}",
         doc.content
     );
-    for note in ["FIRST FOOTNOTE", "SECOND FOOTNOTE", "FIRST ENDNOTE"] {
-        assert!(doc.content.contains(note), "{note:?} missing from {:?}", doc.content);
+    for (marker, note) in [
+        ("[^1]", "FIRST FOOTNOTE"),
+        ("[^2]", "SECOND FOOTNOTE"),
+        ("[^3]", "FIRST ENDNOTE"),
+    ] {
+        let definition = format!("{marker}: {note}");
+        assert!(
+            doc.content.contains(&definition),
+            "{definition:?} missing from {:?}",
+            doc.content
+        );
+        assert_eq!(
+            doc.content.matches(marker).count(),
+            2,
+            "{marker:?} in {:?}",
+            doc.content
+        );
     }
 }
 

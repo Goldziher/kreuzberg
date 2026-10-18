@@ -880,8 +880,7 @@ pub(crate) fn build_internal_elements(
                                     let key = note_id
                                         .map(|id| format!("{key_prefix}{id}"))
                                         .unwrap_or_else(|| format!("{key_prefix}{footnote_counter}"));
-                                    footnote_markers.push((citation_trimmed.to_string(), key.clone()));
-                                    builder.push_footnote_ref(citation_trimmed, &key, None);
+                                    footnote_markers.push((citation_trimmed.to_string(), key));
                                 }
                             }
                             if note_child.tag_name().name() == "note-body"
@@ -937,7 +936,7 @@ pub(crate) fn build_internal_elements(
                         .map(|name| format!("cmt{name}"))
                         .unwrap_or_else(|| format!("cmt{comment_counter}"));
                     let marker = creator.unwrap_or_else(|| format!("comment {comment_counter}"));
-                    builder.push_footnote_ref(&marker, &key, None);
+                    footnote_markers.push((marker, key.clone()));
                     let def_idx = builder.push_footnote_definition(&body, &key, None);
                     builder.set_layer(def_idx, ContentLayer::Footnote);
                 }
@@ -965,17 +964,15 @@ pub(crate) fn build_internal_elements(
                     }
                 }
 
-                for (citation, _key) in &footnote_markers {
-                    let marker = format!("[^{}]", citation);
-                    if !text.contains(&marker) {
-                        text.push_str(&marker);
-                    }
-                }
-
                 let trimmed = text.trim();
                 if !trimmed.is_empty() {
                     budget.account_text(trimmed.len())?;
                     builder.push_paragraph(trimmed, annotations, None, None);
+                }
+                // Renderers attach a `FootnoteRef` to the block it follows, so the references
+                // go after the paragraph that cites them, not before it. ~keep
+                for (marker, key) in &footnote_markers {
+                    builder.push_footnote_ref(marker, key, None);
                 }
                 paragraph_index += 1;
             }
@@ -2132,6 +2129,55 @@ mod tests {
             .filter(|w| w.source == ODT_WARNING_SOURCE)
             .map(|w| w.message.to_string())
             .collect()
+    }
+
+    /// A footnote reference is attached to the block it follows, so the reference of a note
+    /// in the second paragraph must not land on the first.
+    #[tokio::test]
+    async fn should_place_odt_footnote_references_after_their_own_paragraph() {
+        let content_xml = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content {CONTENT_XML_NAMESPACES}>
+  <office:body>
+    <office:text>
+      <text:p>Alpha paragraph.</text:p>
+      <text:p>Beta claim<text:note text:id="ftn1" text:note-class="footnote"><text:note-citation>1</text:note-citation><text:note-body><text:p>Note for beta.</text:p></text:note-body></text:note> continues.</text:p>
+      <text:p>Gamma paragraph.</text:p>
+    </office:text>
+  </office:body>
+</office:document-content>"#
+        );
+        let mut archive = build_odt_zip(&[("content.xml", &content_xml)]);
+        let mut budget = SecurityBudget::from_config(&ExtractionConfig::default());
+        let doc = build_internal_document(&mut archive, &mut budget).expect("extraction should succeed");
+
+        let mut previous = None;
+        let mut cited = None;
+        for element in &doc.elements {
+            if element.kind == crate::types::internal::ElementKind::FootnoteRef {
+                cited = previous.clone();
+            } else if element.kind == crate::types::internal::ElementKind::Paragraph {
+                previous = Some(element.text.clone());
+            }
+        }
+        let cited = cited.expect("the footnote reference must be present");
+        assert!(cited.starts_with("Beta claim"), "reference follows {cited:?}");
+
+        for format in [
+            crate::core::config::OutputFormat::Markdown,
+            crate::core::config::OutputFormat::Plain,
+            crate::core::config::OutputFormat::Djot,
+        ] {
+            let out = crate::extraction::derive::derive_extraction_result(doc.clone(), false, format.clone());
+            let out = out.formatted_content.unwrap_or(out.content);
+            let cited_line = out
+                .lines()
+                .find(|line| line.starts_with("Beta claim"))
+                .expect("beta paragraph");
+            assert!(cited_line.ends_with("[^1]"), "{format:?}: {out:?}");
+            assert_eq!(out.matches("[^1]").count(), 2, "{format:?}: {out:?}");
+            assert!(!out.contains("Alpha paragraph.[^"), "{format:?}: {out:?}");
+        }
     }
 
     /// #171: a `draw:image` referencing a path that was never pre-extracted from

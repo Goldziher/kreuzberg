@@ -279,6 +279,9 @@ pub(crate) struct FootnoteCollector {
     ref_numbers: ahash::AHashMap<u32, u32>,
     /// Ordered definitions.
     definitions: Vec<FootnoteEntry>,
+    /// Map from the anchor of a definition that a reference points at -> the number that
+    /// reference carries; an unreferenced definition has none.
+    anchor_numbers: ahash::AHashMap<String, u32>,
 }
 
 /// Maps each `FootnoteDefinition` element's anchor to its `(element index, text)`.
@@ -360,6 +363,8 @@ impl FootnoteCollector {
             }
         }
 
+        let referenced_numbers = anchor_to_number.clone();
+
         // A definition that no reference points at is still authored content.
         // `definitions` was previously populated only from inside the FootnoteRef
         // loop above, so an unreferenced definition never reached any renderer and
@@ -387,7 +392,13 @@ impl FootnoteCollector {
         Self {
             ref_numbers,
             definitions,
+            anchor_numbers: referenced_numbers,
         }
+    }
+
+    /// Get the footnote number of the definition with this anchor.
+    pub(crate) fn anchor_number(&self, anchor: &str) -> Option<u32> {
+        self.anchor_numbers.get(anchor).copied()
     }
 
     /// Get the footnote number for a FootnoteRef element at the given index.
