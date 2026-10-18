@@ -193,7 +193,7 @@ fn forge_zip_uncompressed_sizes(mut bytes: Vec<u8>, declared_size: u32) -> Vec<u
 }
 
 #[test]
-fn should_reject_actual_zip_contents_larger_than_aggregate_limit_during_rewrite() {
+fn should_reject_forged_zip_sizes_before_rewriting_contents() {
     let entry = vec![b'x'; 700];
     let worksheet = br#"<?xml version="1.0" encoding="UTF-8"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -216,9 +216,21 @@ fn should_reject_actual_zip_contents_larger_than_aggregate_limit_during_rewrite(
     };
 
     let error = read_excel_bytes(&bytes, ".xlsx", &limits)
-        .expect_err("retained actual ZIP contents must not exceed the aggregate archive limit");
-    assert!(
-        error.to_string().contains("Spreadsheet ZIP actual contents total") && error.to_string().contains("1024"),
-        "the actual-byte gate must identify the aggregate archive limit: {error}"
+        .expect_err("forged central-directory sizes must fail strict header validation");
+    let XbergError::Security {
+        message,
+        source: Some(source),
+    } = error
+    else {
+        panic!("expected a sourced ZIP security error, received {error}");
+    };
+    assert_eq!(
+        message,
+        "Invalid spreadsheet ZIP header consistency: invalid Zip archive: header inconsistency detected: \
+         uncompressed size mismatch (does not match central directory)"
     );
+    assert!(matches!(
+        source.downcast_ref::<zip::result::ZipError>(),
+        Some(zip::result::ZipError::InvalidArchive(_))
+    ));
 }

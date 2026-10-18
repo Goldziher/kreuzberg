@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(llm): Rust exposes failed structured-response usage through `xberg::llm::usage::usage_from_error`.** (#2139)
 
+### Security
+
+- **(excel): ZIP-backed spreadsheets reject mismatched local headers, duplicate member names, and overlapping entries.**
+  Archive count, size, and compression-ratio limits are checked before header validation or payload reads.
+
 ### Fixed
 
 - **(llm): Failed structured output retains available model, token, and finish-reason metadata in `llm_usage`.**

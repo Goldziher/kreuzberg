@@ -325,10 +325,9 @@ fn normalize_ods_row_whitespace(data: &[u8], limits: &SecurityLimits) -> Result<
 /// (`Reader::new` opens it and immediately reads workbook/style/shared-string parts
 /// before returning) and never expose the archive, an entry count, or per-entry
 /// sizes, so none of these limits can be enforced from inside calamine's read path.
-/// This reads the archive's central directory once, ahead of the calamine open,
-/// purely to enforce them — parsing the central directory does not decompress any
-/// entry, so this is not "after the bomb has already been expanded." Errors out
-/// rather than truncating, matching the DOCX/PPTX top-level containers
+/// This checks central-directory limits before validating local-header consistency
+/// and non-overlapping entries, ahead of the calamine open and without decompressing
+/// any payload. It errors out rather than truncating, matching the DOCX/PPTX top-level containers
 /// (`extraction::docx::parser::validate_archive_security`,
 /// `extraction::pptx::container::check_entry_count` +
 /// `extractors::security::ZipBombValidator`): a workbook depends on specific named
@@ -372,6 +371,9 @@ fn validate_zip_container<R: Read + Seek>(mut reader: R, file_extension: &str, l
         )));
     }
     crate::extractors::security::ZipBombValidator::new(limits.clone()).validate(&mut archive)?;
+    archive.validate_header_consistency().map_err(|error| {
+        XbergError::security_with_source(format!("Invalid spreadsheet ZIP header consistency: {error}"), error)
+    })?;
     Ok(())
 }
 
@@ -740,5 +742,286 @@ fn read_ods_file(
             let result = process_workbook(workbook, office_metadata, &mut warnings)?;
             Ok((result, warnings))
         }
+    }
+}
+
+#[cfg(all(test, any(feature = "excel", feature = "excel-wasm")))]
+mod zip_header_consistency_tests {
+    use super::validate_zip_container;
+    use crate::extractors::security::SecurityLimits;
+    use std::borrow::Cow;
+    use std::io::{Cursor, Write};
+
+    const LOCAL_HEADER_BYTES: usize = 30;
+    const CENTRAL_HEADER_BYTES: usize = 46;
+    const END_RECORD_BYTES: usize = 22;
+    const MAX_FIXTURE_BYTES: usize = 4096;
+
+    fn stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        for (name, contents) in entries {
+            writer.start_file(*name, options).expect("start synthetic ZIP entry");
+            writer.write_all(contents).expect("write synthetic ZIP payload");
+        }
+        let bytes = writer.finish().expect("finish synthetic ZIP").into_inner();
+        assert!(bytes.len() <= MAX_FIXTURE_BYTES, "synthetic archive exceeded its bound");
+        bytes
+    }
+
+    fn read_u16(bytes: &[u8], offset: usize) -> usize {
+        usize::from(u16::from_le_bytes(
+            bytes[offset..offset + 2].try_into().expect("ZIP u16 field"),
+        ))
+    }
+
+    fn read_u32(bytes: &[u8], offset: usize) -> usize {
+        usize::try_from(u32::from_le_bytes(
+            bytes[offset..offset + 4].try_into().expect("ZIP u32 field"),
+        ))
+        .expect("ZIP fixture offset fits usize")
+    }
+
+    fn write_u32(bytes: &mut [u8], offset: usize, value: u32) {
+        bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn entry_offsets(bytes: &[u8]) -> Vec<(usize, usize)> {
+        let end = bytes.len() - END_RECORD_BYTES;
+        assert_eq!(&bytes[end..end + 4], b"PK\x05\x06");
+        assert_eq!(read_u16(bytes, end + 20), 0);
+        let count = read_u16(bytes, end + 10);
+        let mut central = read_u32(bytes, end + 16);
+        let mut offsets = Vec::with_capacity(count);
+        for _ in 0..count {
+            assert_eq!(&bytes[central..central + 4], b"PK\x01\x02");
+            let local = read_u32(bytes, central + 42);
+            assert_eq!(&bytes[local..local + 4], b"PK\x03\x04");
+            assert_eq!(read_u16(bytes, local + 6) & 8, 0);
+            offsets.push((local, central));
+            central += CENTRAL_HEADER_BYTES
+                + read_u16(bytes, central + 28)
+                + read_u16(bytes, central + 30)
+                + read_u16(bytes, central + 32);
+        }
+        assert_eq!(central, end);
+        offsets
+    }
+
+    fn neighboring_entries() -> Vec<u8> {
+        stored_zip(&[("entry-a.txt", b"alpha"), ("entry-b.txt", b"beta")])
+    }
+
+    fn assert_rejected(bytes: &[u8], reason: &str, expected_entries: usize) {
+        let parsed = zip::ZipArchive::new(Cursor::new(bytes));
+        assert!(
+            parsed.is_ok(),
+            "fixture constructor rejected the archive before existing validation: {parsed:?}"
+        );
+        let mut archive = parsed.expect("constructor success checked above");
+        assert_eq!(archive.len(), expected_entries, "unexpected retained entry count");
+        for index in 0..archive.len() {
+            let entry = archive
+                .by_index_raw(index)
+                .expect("fixture raw entry must remain readable");
+            assert_eq!(
+                entry.compressed_size(),
+                entry.size(),
+                "fixture payload must remain Stored"
+            );
+        }
+        for (local, central) in entry_offsets(bytes) {
+            for (local_field, central_field) in [
+                (local + 14, central + 16),
+                (local + 18, central + 20),
+                (local + 22, central + 24),
+            ] {
+                assert_eq!(
+                    read_u32(bytes, local_field),
+                    read_u32(bytes, central_field),
+                    "fixture LFH/CDFH checksum and size metadata must match"
+                );
+            }
+        }
+        let error = validate_zip_container(Cursor::new(bytes), ".xlsx", &SecurityLimits::default())
+            .expect_err("constructor-readable inconsistent ZIP must be rejected before spreadsheet parsing");
+        assert!(
+            error.to_string().contains(reason),
+            "expected {reason:?}, received {error}"
+        );
+    }
+
+    #[test]
+    fn should_accept_consistent_zip_headers_for_utf8_and_cp437_names() {
+        let mut bytes = stored_zip(&[("a.txt", b"alpha"), ("données.txt", b"beta")]);
+        let offsets = entry_offsets(&bytes);
+        assert_eq!(offsets.len(), 2);
+        let (local, central) = offsets[0];
+        assert_eq!(read_u16(&bytes, local + 6) & (1 << 11), 0);
+        bytes[local + LOCAL_HEADER_BYTES] = 0x82;
+        bytes[central + CENTRAL_HEADER_BYTES] = 0x82;
+        let mut archive = zip::ZipArchive::new(Cursor::new(&bytes)).expect("open consistent neighbor");
+        {
+            let entry = archive.by_index(0).expect("read CP437 neighbor");
+            assert!(matches!(entry.name().expect("decode CP437 name"), Cow::Owned(name) if name == "é.txt"));
+        }
+        {
+            let entry = archive.by_index(1).expect("read UTF-8 neighbor");
+            assert!(matches!(
+                entry.name().expect("decode UTF-8 name"),
+                Cow::Borrowed("données.txt")
+            ));
+        }
+        validate_zip_container(Cursor::new(bytes), ".xlsx", &SecurityLimits::default())
+            .expect("matching local and central headers must pass existing spreadsheet validation");
+    }
+
+    #[test]
+    fn should_reject_mismatched_local_and_central_zip_names() {
+        let mut bytes = neighboring_entries();
+        let offsets = entry_offsets(&bytes);
+        assert_eq!(offsets.len(), 2);
+        let (local, central) = offsets[0];
+        assert_eq!(read_u16(&bytes, local + 26), b"entry-z.txt".len());
+        assert_eq!(read_u16(&bytes, central + 28), b"entry-a.txt".len());
+        bytes[local + LOCAL_HEADER_BYTES..local + LOCAL_HEADER_BYTES + b"entry-z.txt".len()]
+            .copy_from_slice(b"entry-z.txt");
+        assert_ne!(
+            &bytes[local + LOCAL_HEADER_BYTES..local + LOCAL_HEADER_BYTES + b"entry-z.txt".len()],
+            &bytes[central + CENTRAL_HEADER_BYTES..central + CENTRAL_HEADER_BYTES + b"entry-a.txt".len()]
+        );
+        assert_rejected(&bytes, "filename mismatch", 2);
+    }
+
+    #[test]
+    fn should_reject_duplicate_central_directory_names() {
+        let mut bytes = neighboring_entries();
+        let offsets = entry_offsets(&bytes);
+        assert_eq!(offsets.len(), 2);
+        let (local, central) = offsets[1];
+        assert_eq!(read_u16(&bytes, local + 26), b"entry-a.txt".len());
+        assert_eq!(read_u16(&bytes, central + 28), b"entry-a.txt".len());
+        bytes[local + LOCAL_HEADER_BYTES..local + LOCAL_HEADER_BYTES + b"entry-a.txt".len()]
+            .copy_from_slice(b"entry-a.txt");
+        bytes[central + CENTRAL_HEADER_BYTES..central + CENTRAL_HEADER_BYTES + b"entry-a.txt".len()]
+            .copy_from_slice(b"entry-a.txt");
+        let (_, first_central) = offsets[0];
+        assert_eq!(
+            &bytes[first_central + CENTRAL_HEADER_BYTES..first_central + CENTRAL_HEADER_BYTES + b"entry-a.txt".len()],
+            &bytes[central + CENTRAL_HEADER_BYTES..central + CENTRAL_HEADER_BYTES + b"entry-a.txt".len()]
+        );
+        assert_rejected(&bytes, "duplicate file names", 1);
+    }
+
+    #[test]
+    fn should_reject_overlapping_zip_entries_after_header_consistency() {
+        let mut bytes = neighboring_entries();
+        let offsets = entry_offsets(&bytes);
+        assert_eq!(offsets.len(), 2);
+        let (local, central) = offsets[0];
+        let data_start = local + LOCAL_HEADER_BYTES + read_u16(&bytes, local + 26) + read_u16(&bytes, local + 28);
+        let overlapping_payload = &bytes[data_start..offsets[1].0 + 1];
+        let size = u32::try_from(overlapping_payload.len()).expect("small overlap fixture");
+        let probe = stored_zip(&[("probe", overlapping_payload)]);
+        let archive = zip::ZipArchive::new(Cursor::new(probe)).expect("read probe checksum");
+        let crc = archive.by_index_data(0).expect("probe metadata").crc32();
+        // ~keep Both headers describe the actual overlapping payload, isolating overlap from CRC/size mismatch.
+        for (checksum, compressed, uncompressed) in [
+            (local + 14, local + 18, local + 22),
+            (central + 16, central + 20, central + 24),
+        ] {
+            write_u32(&mut bytes, checksum, crc);
+            write_u32(&mut bytes, compressed, size);
+            write_u32(&mut bytes, uncompressed, size);
+        }
+        assert_eq!(
+            data_start + usize::try_from(size).expect("small fixture size"),
+            offsets[1].0 + 1
+        );
+        assert_rejected(&bytes, "overlapping entries", 2);
+    }
+
+    #[test]
+    fn should_enforce_archive_limits_before_zip_header_consistency() {
+        let mut bytes = neighboring_entries();
+        let offsets = entry_offsets(&bytes);
+        assert_eq!(offsets.len(), 2);
+        let (local, central) = offsets[0];
+        let name = b"entry-z.txt";
+        assert_eq!(read_u16(&bytes, local + 26), name.len());
+        assert_eq!(read_u16(&bytes, central + 28), name.len());
+        bytes[local + LOCAL_HEADER_BYTES..local + LOCAL_HEADER_BYTES + name.len()].copy_from_slice(name);
+        assert_ne!(
+            &bytes[local + LOCAL_HEADER_BYTES..local + LOCAL_HEADER_BYTES + name.len()],
+            &bytes[central + CENTRAL_HEADER_BYTES..central + CENTRAL_HEADER_BYTES + name.len()]
+        );
+        let mut archive = zip::ZipArchive::new(Cursor::new(&bytes)).expect("read mismatched fixture");
+        assert_eq!(archive.len(), 2);
+        for (index, size) in [5, 4].into_iter().enumerate() {
+            let entry = archive.by_index_raw(index).expect("read mismatched fixture metadata");
+            assert_eq!((entry.compressed_size(), entry.size()), (size, size));
+        }
+        for (limits, expected) in [
+            (
+                SecurityLimits {
+                    max_files_in_archive: 1,
+                    ..Default::default()
+                },
+                "Spreadsheet ZIP archive declares 2 entries",
+            ),
+            (
+                SecurityLimits {
+                    max_archive_size: 1,
+                    ..Default::default()
+                },
+                "Archive too large: 5 bytes (max: 1 bytes)",
+            ),
+            (
+                SecurityLimits {
+                    max_compression_ratio: 0,
+                    ..Default::default()
+                },
+                "Potential ZIP bomb detected: compressed 9B -> uncompressed 9B (ratio: 1.0:1)",
+            ),
+        ] {
+            let error = validate_zip_container(Cursor::new(&bytes), ".xlsx", &limits)
+                .expect_err("configured limit must reject the inconsistent archive first");
+            assert!(
+                error.to_string().contains(expected),
+                "expected {expected:?}, received {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn should_enforce_actual_aggregate_limit_when_rewriting_consistent_headers() {
+        let entry = vec![b'x'; 700];
+        let bytes = stored_zip(&[("first.bin", &entry), ("second.bin", &entry)]);
+        let mut archive = zip::ZipArchive::new(Cursor::new(&bytes)).expect("open valid aggregate fixture");
+        archive
+            .validate_header_consistency()
+            .expect("aggregate fixture headers must be consistent");
+        assert_eq!(archive.len(), 2);
+        for index in 0..archive.len() {
+            assert_eq!(
+                archive
+                    .by_index_raw(index)
+                    .expect("read aggregate fixture entry")
+                    .size(),
+                700
+            );
+        }
+        let limits = SecurityLimits {
+            max_archive_size: 1024,
+            ..Default::default()
+        };
+        let error = super::rewrite_spreadsheet_zip(&bytes, &limits, |_, contents| Ok((contents.to_vec(), false)))
+            .expect_err("two individually permitted members must exceed the actual aggregate limit");
+        assert!(matches!(error, crate::XbergError::Validation { .. }));
+        assert_eq!(
+            error.to_string(),
+            "Validation error: Spreadsheet ZIP actual contents total 1400 bytes, which exceeds the configured \
+             aggregate limit of 1024 bytes (SecurityLimits::max_archive_size)"
+        );
     }
 }
