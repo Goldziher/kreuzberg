@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(images): Images without EXIF metadata no longer report a metadata extraction warning.** (#2141)
 - **(llm): Failed structured output retains available model, token, and finish-reason metadata in `llm_usage`.**
   Extracted text and failure warnings remain available; JSON parse errors omit response content. (#2139)
 - **(pptx): Speaker notes follow each slide’s relationships instead of matching slide filenames.**

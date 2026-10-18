@@ -233,11 +233,10 @@ fn exif_parse_failure_reason(bytes: &[u8]) -> Option<String> {
     };
 
     let mut parser = MediaParser::new();
-    if let Err(error) = parser.parse_exif(ms) {
-        return Some(format!("failed to parse EXIF block: {error}"));
+    match parser.parse_exif(ms) {
+        Ok(_) | Err(nom_exif::Error::ExifNotFound) => None,
+        Err(error) => Some(format!("failed to parse EXIF block: {error}")),
     }
-
-    None
 }
 
 /// Build a [`crate::types::ProcessingWarning`] describing degraded EXIF/image
@@ -379,6 +378,21 @@ fn extract_xmp_leaf_text(xml: &str, tag: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(any(feature = "ocr", feature = "ocr-wasm", feature = "heic"))]
+    #[test]
+    fn unreadable_media_retains_an_exif_processing_warning() {
+        for bytes in [b"".as_slice(), b"not image media".as_slice()] {
+            assert!(extract_exif_data(bytes).is_empty());
+            let warning = extract_exif_warning(bytes).expect("unreadable media must retain its diagnostic");
+            assert_eq!(warning.source, "exif");
+            assert!(
+                warning
+                    .message
+                    .starts_with("EXIF metadata extraction failed: failed to read media source:")
+            );
+        }
+    }
 
     #[test]
     fn returns_empty_map_for_non_image_bytes() {

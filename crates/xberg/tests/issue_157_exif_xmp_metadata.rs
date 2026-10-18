@@ -263,6 +263,41 @@ fn recognizes_artist_usercomment_and_xp_tag_family() {
 }
 
 #[test]
+fn valid_png_without_exif_has_no_metadata_degradation_warning() {
+    use image::{ImageBuffer, ImageFormat, Rgb, RgbImage};
+    use nom_exif::{MediaParser, MediaSource};
+    use std::io::Cursor;
+
+    let image: RgbImage = ImageBuffer::from_fn(2, 2, |_, _| Rgb([10, 20, 30]));
+    let mut png_bytes = Vec::new();
+    image
+        .write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png)
+        .expect("synthetic PNG encoding succeeds");
+    let source =
+        MediaSource::from_memory(bytes::Bytes::copy_from_slice(&png_bytes)).expect("synthetic PNG is readable media");
+    assert!(matches!(
+        MediaParser::new().parse_exif(source),
+        Err(nom_exif::Error::ExifNotFound)
+    ));
+
+    let result = extract_bytes_document_blocking(&png_bytes, "image/png", &extraction_config())
+        .expect("metadata-only public PNG extraction succeeds");
+    let Some(FormatMetadata::Image(metadata)) = result.metadata.format else {
+        panic!("PNG image metadata must be preserved");
+    };
+    assert_eq!((metadata.width, metadata.height), (2, 2));
+    assert!(metadata.exif.is_empty());
+    assert!(
+        result
+            .processing_warnings
+            .iter()
+            .all(|warning| warning.source != "exif"),
+        "absent EXIF is not degradation: {:?}",
+        result.processing_warnings
+    );
+}
+
+#[test]
 fn emits_processing_warning_when_exif_block_is_malformed() {
     // A well-formed PNG `eXIf` chunk whose TIFF payload is truncated mid-header
     // (magic bytes present, IFD0 offset points past the end of the buffer).
