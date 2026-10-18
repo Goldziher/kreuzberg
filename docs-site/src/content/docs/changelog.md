@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `w:gridBefore` and `w:gridAfter` were ignored, so such a row's cells moved left. (#2153)
 - **(packaging): GNU cross-builds use a pinned linker wrapper compatible with Rust 1.99 warnings.**
 - **(swift): iOS simulator release builds omit macOS extension-linker flags.**
+- **(docx): Lists numbered in non-Latin formats stay numbered.** A Chinese 一、二、三 (`chineseCounting`),
+  an enclosed ①②③, an ordinal or a Cyrillic list was read as a bullet list. (#2154)
 - **(swift): Linux library builds use a pinned cross-compiler compatible with strict Rust warning checks.**
 - **(llm): Strict structured extraction validates provider output against the original JSON schema.**
   Invalid output leaves extracted text intact and reports a safe warning; schema references resolve offline. (#2136)
