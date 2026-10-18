@@ -66,12 +66,14 @@ mod engine_cache_key_tests {
         acceleration: &AccelerationConfig,
     ) -> LateInteractionEngineCacheKey {
         LateInteractionEngineCacheKey::new(
-            "owner/model",
-            "model.onnx",
-            additional_files,
+            EngineModel {
+                repo_name: "owner/model",
+                model_file: "model.onnx",
+                additional_files,
+                max_length,
+                query_max_length,
+            },
             "revision",
-            max_length,
-            query_max_length,
             "cache-root".to_string(),
             crate::onnx::OnnxAccelerationCacheKey::from_resolved(acceleration.provider.clone(), acceleration.device_id),
         )
@@ -294,30 +296,32 @@ struct LateInteractionEngineCacheKey {
     acceleration: crate::onnx::OnnxAccelerationCacheKey,
 }
 
+/// The model files and token limits that identify one late-interaction engine.
+#[cfg(feature = "late-interaction")]
+#[derive(Clone, Copy)]
+struct EngineModel<'a> {
+    repo_name: &'a str,
+    model_file: &'a str,
+    additional_files: &'a [String],
+    max_length: usize,
+    query_max_length: usize,
+}
+
 #[cfg(feature = "late-interaction")]
 impl LateInteractionEngineCacheKey {
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "every argument is a distinct dimension of the cache key this constructor builds; \
-                  grouping any of them would just move the same fields behind another struct"
-    )]
     fn new(
-        repo_name: &str,
-        model_file: &str,
-        additional_files: &[String],
+        model: EngineModel<'_>,
         revision: &str,
-        max_length: usize,
-        query_max_length: usize,
         cache_root: String,
         acceleration: crate::onnx::OnnxAccelerationCacheKey,
     ) -> Self {
         Self {
-            repo_name: repo_name.to_string(),
-            model_file: model_file.to_string(),
-            additional_files: additional_files.to_vec(),
+            repo_name: model.repo_name.to_string(),
+            model_file: model.model_file.to_string(),
+            additional_files: model.additional_files.to_vec(),
             revision: revision.to_string(),
-            max_length,
-            query_max_length,
+            max_length: model.max_length,
+            query_max_length: model.query_max_length,
             cache_root,
             acceleration,
         }
@@ -389,25 +393,23 @@ fn resolve_model_info(
 
 /// Get or initialize a late-interaction engine from cache.
 #[cfg(feature = "late-interaction")]
-#[allow(clippy::too_many_arguments)]
 fn get_or_init_engine(
-    repo_name: &str,
-    model_file: &str,
-    additional_files: &[String],
-    max_length: usize,
-    query_max_length: usize,
+    model: EngineModel<'_>,
     cache_dir: Option<std::path::PathBuf>,
     progress: crate::core::config::DownloadProgress,
     accel: Option<crate::core::config::acceleration::AccelerationConfig>,
 ) -> crate::Result<Arc<LateInteractionEngine>> {
-    let revision = (repo_name == "xberg-io/late-interaction-models").then_some(LATE_INTERACTION_REVISION);
-    let engine_key = LateInteractionEngineCacheKey::new(
+    let EngineModel {
         repo_name,
         model_file,
         additional_files,
-        revision.unwrap_or("main"),
         max_length,
         query_max_length,
+    } = model;
+    let revision = (repo_name == "xberg-io/late-interaction-models").then_some(LATE_INTERACTION_REVISION);
+    let engine_key = LateInteractionEngineCacheKey::new(
+        model,
+        revision.unwrap_or("main"),
         crate::model_download::hf_cache_key(cache_dir.as_deref()),
         crate::onnx::OnnxAccelerationCacheKey::new(accel.as_ref()),
     );
@@ -546,11 +548,13 @@ pub fn embed_multi_vector<T: AsRef<str>>(
     let (repo, model_file, additional, max_len, query_max_len) =
         resolve_model_info(&config.model, config.max_length, config.query_max_length)?;
     let engine = get_or_init_engine(
-        &repo,
-        &model_file,
-        &additional,
-        max_len,
-        query_max_len,
+        EngineModel {
+            repo_name: &repo,
+            model_file: &model_file,
+            additional_files: &additional,
+            max_length: max_len,
+            query_max_length: query_max_len,
+        },
         config.cache_dir.clone(),
         config.into(),
         config.acceleration.clone(),

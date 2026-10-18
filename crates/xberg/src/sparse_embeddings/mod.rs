@@ -58,11 +58,13 @@ mod engine_cache_key_tests {
         acceleration: &AccelerationConfig,
     ) -> SparseEmbeddingEngineCacheKey {
         SparseEmbeddingEngineCacheKey::new(
-            "owner/model",
-            "model.onnx",
-            additional_files,
+            EngineModel {
+                repo_name: "owner/model",
+                model_file: "model.onnx",
+                additional_files,
+                max_length,
+            },
             "revision",
-            max_length,
             "cache-root".to_string(),
             crate::onnx::OnnxAccelerationCacheKey::from_resolved(acceleration.provider.clone(), acceleration.device_id),
         )
@@ -177,23 +179,30 @@ struct SparseEmbeddingEngineCacheKey {
     acceleration: crate::onnx::OnnxAccelerationCacheKey,
 }
 
+/// The model files and token limit that identify one sparse-embedding engine.
+#[cfg(feature = "sparse-embeddings")]
+#[derive(Clone, Copy)]
+struct EngineModel<'a> {
+    repo_name: &'a str,
+    model_file: &'a str,
+    additional_files: &'a [String],
+    max_length: usize,
+}
+
 #[cfg(feature = "sparse-embeddings")]
 impl SparseEmbeddingEngineCacheKey {
     fn new(
-        repo_name: &str,
-        model_file: &str,
-        additional_files: &[String],
+        model: EngineModel<'_>,
         revision: &str,
-        max_length: usize,
         cache_root: String,
         acceleration: crate::onnx::OnnxAccelerationCacheKey,
     ) -> Self {
         Self {
-            repo_name: repo_name.to_string(),
-            model_file: model_file.to_string(),
-            additional_files: additional_files.to_vec(),
+            repo_name: model.repo_name.to_string(),
+            model_file: model.model_file.to_string(),
+            additional_files: model.additional_files.to_vec(),
             revision: revision.to_string(),
-            max_length,
+            max_length: model.max_length,
             cache_root,
             acceleration,
         }
@@ -257,21 +266,21 @@ fn resolve_model_info(
 /// Get or initialize a sparse-embedding engine from cache.
 #[cfg(feature = "sparse-embeddings")]
 fn get_or_init_engine(
-    repo_name: &str,
-    model_file: &str,
-    additional_files: &[String],
-    max_length: usize,
+    model: EngineModel<'_>,
     cache_dir: Option<std::path::PathBuf>,
     progress: crate::core::config::DownloadProgress,
     accel: Option<crate::core::config::acceleration::AccelerationConfig>,
 ) -> crate::Result<Arc<SparseEmbeddingEngine>> {
-    let revision = (repo_name == "xberg-io/sparse-embeddings").then_some(SPARSE_EMBEDDING_REVISION);
-    let engine_key = SparseEmbeddingEngineCacheKey::new(
+    let EngineModel {
         repo_name,
         model_file,
         additional_files,
-        revision.unwrap_or("main"),
         max_length,
+    } = model;
+    let revision = (repo_name == "xberg-io/sparse-embeddings").then_some(SPARSE_EMBEDDING_REVISION);
+    let engine_key = SparseEmbeddingEngineCacheKey::new(
+        model,
+        revision.unwrap_or("main"),
         crate::model_download::hf_cache_key(cache_dir.as_deref()),
         crate::onnx::OnnxAccelerationCacheKey::new(accel.as_ref()),
     );
@@ -394,10 +403,12 @@ pub fn embed_sparse<T: AsRef<str>>(
 
     let (repo, model_file, additional, max_len) = resolve_model_info(&config.model, config.max_length)?;
     let engine = get_or_init_engine(
-        &repo,
-        &model_file,
-        &additional,
-        max_len,
+        EngineModel {
+            repo_name: &repo,
+            model_file: &model_file,
+            additional_files: &additional,
+            max_length: max_len,
+        },
         config.cache_dir.clone(),
         config.into(),
         config.acceleration.clone(),
