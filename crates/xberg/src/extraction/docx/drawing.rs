@@ -378,6 +378,43 @@ fn txbx_run_char(local_name: &str, in_tab_stops: bool) -> Option<char> {
     }
 }
 
+/// What a text box reads but does not keep. As in the body loop, that is a `w:moveFrom`
+/// source and the prompt of a content control that shows its placeholder.
+#[derive(Debug, Default)]
+struct TxbxHiddenContent {
+    move_from_depth: usize,
+    placeholder: super::parser::PlaceholderState,
+}
+
+impl TxbxHiddenContent {
+    fn visible(&self) -> bool {
+        self.move_from_depth == 0 && !self.placeholder.active()
+    }
+
+    /// Track an opening (`paired`) or self-closing tag, and return the tab or line break
+    /// it stands for when it is neither a tracked tag nor inside hidden content.
+    fn track(&mut self, local_name: &str, e: &BytesStart, paired: bool, in_tab_stops: bool) -> Option<char> {
+        match local_name {
+            "showingPlcHdr" => self.placeholder.apply_showing_placeholder(e),
+            "moveFrom" if paired => self.move_from_depth += 1,
+            "sdt" if paired => self.placeholder.open_sdt(),
+            "sdtContent" if paired => self.placeholder.open_content(),
+            name if self.visible() => return txbx_run_char(name, in_tab_stops),
+            _ => {}
+        }
+        None
+    }
+
+    fn close(&mut self, local_name: &str) {
+        match local_name {
+            "moveFrom" => self.move_from_depth = self.move_from_depth.saturating_sub(1),
+            "sdt" => self.placeholder.close_sdt(),
+            "sdtContent" => self.placeholder.close_content(),
+            _ => {}
+        }
+    }
+}
+
 /// Collect visible text from a `<w:txbxContent>` subtree (#81): the paragraphs of a
 /// text box, reached either via the DrawingML `wps:txbx` path (from [`parse_drawing`])
 /// or the VML `v:textbox` fallback path (from [`parse_vml_pict`]).
@@ -399,9 +436,7 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
     let mut current = String::new();
     let mut in_text = false;
     let mut in_tab_stops = false;
-    // Open `w:moveFrom` wrappers inside the text box. As in the body loop, a move
-    // source is read and accounted but is not part of the final text.
-    let mut move_from_depth = 0usize;
+    let mut hidden = TxbxHiddenContent::default();
 
     loop {
         budget.step()?;
@@ -411,19 +446,16 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 match e.local_name().as_ref() {
                     "txbxContent" => depth += 1,
                     "t" => in_text = true,
-                    "moveFrom" => move_from_depth += 1,
                     "tabs" => in_tab_stops = true,
                     name => {
-                        if move_from_depth == 0
-                            && let Some(c) = txbx_run_char(name, in_tab_stops)
-                        {
+                        if let Some(c) = hidden.track(name, e, true, in_tab_stops) {
                             current.push(c);
                         }
                     }
                 }
             }
-            Ok(Event::Empty(ref e)) if move_from_depth == 0 => {
-                if let Some(c) = txbx_run_char(e.local_name().as_ref(), in_tab_stops) {
+            Ok(Event::Empty(ref e)) => {
+                if let Some(c) = hidden.track(e.local_name().as_ref(), e, false, in_tab_stops) {
                     current.push(c);
                 }
             }
@@ -431,14 +463,14 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 let text = e.xml10_content();
                 budget.check_entity(&text)?;
                 budget.account_text(text.len())?;
-                if move_from_depth == 0 {
+                if hidden.visible() {
                     current.push_str(&text);
                 }
             }
             Ok(Event::GeneralRef(ref e)) if in_text => {
                 let text = crate::utils::xml_utils::resolve_general_ref(e);
                 budget.account_text(text.len())?;
-                if move_from_depth == 0 {
+                if hidden.visible() {
                     current.push_str(&text);
                 }
             }
@@ -446,7 +478,6 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                 budget.leave();
                 match e.local_name().as_ref() {
                     "t" => in_text = false,
-                    "moveFrom" => move_from_depth = move_from_depth.saturating_sub(1),
                     "tabs" => in_tab_stops = false,
                     "p" => paragraphs.push(std::mem::take(&mut current)),
                     "txbxContent" => {
@@ -455,7 +486,7 @@ fn collect_txbx_content_text(reader: &mut Reader<&[u8]>, budget: &mut SecurityBu
                             break;
                         }
                     }
-                    _ => {}
+                    name => hidden.close(name),
                 }
             }
             Ok(Event::Eof) | Err(_) => break,

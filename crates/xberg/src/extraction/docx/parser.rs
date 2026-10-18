@@ -1819,6 +1819,60 @@ impl TocState {
     }
 }
 
+/// Content controls (`w:sdt`) that still show their placeholder.
+///
+/// An empty content control holds Word's prompt ("Click or tap here to enter text.") and
+/// flags it with `w:sdtPr/w:showingPlcHdr`. The prompt is not document content, so what
+/// such a control's `w:sdtContent` holds is read but not kept, as for a `w:moveFrom`
+/// source. Shared with the text box collector in `drawing.rs`.
+#[derive(Debug, Default)]
+pub(super) struct PlaceholderState {
+    /// One entry per open `w:sdt`; `true` once its `w:sdtPr` holds `w:showingPlcHdr`.
+    sdt_stack: Vec<bool>,
+    /// One entry per open `w:sdtContent`; `true` when its control shows the placeholder.
+    content_stack: Vec<bool>,
+    /// Number of `true` entries in `content_stack`.
+    hidden_contents: usize,
+}
+
+impl PlaceholderState {
+    /// True while the content being read is a placeholder prompt.
+    pub(super) fn active(&self) -> bool {
+        self.hidden_contents > 0
+    }
+
+    pub(super) fn open_sdt(&mut self) {
+        self.sdt_stack.push(false);
+    }
+
+    pub(super) fn close_sdt(&mut self) {
+        self.sdt_stack.pop();
+    }
+
+    /// Apply a `w:showingPlcHdr` to the innermost open `w:sdt`. It is an on/off flag, so
+    /// `w:val` "false", "0" or "off" turns it off and an absent `w:val` means on.
+    pub(super) fn apply_showing_placeholder(&mut self, e: &BytesStart) {
+        let shown = !matches!(get_val_attr_string(e).as_deref(), Some("false" | "0" | "off"));
+        if shown && let Some(flag) = self.sdt_stack.last_mut() {
+            *flag = true;
+        }
+    }
+
+    pub(super) fn open_content(&mut self) {
+        let hidden = self.sdt_stack.last().copied().unwrap_or(false);
+        self.content_stack.push(hidden);
+        if hidden {
+            self.hidden_contents += 1;
+        }
+    }
+
+    pub(super) fn close_content(&mut self) {
+        if self.content_stack.pop() == Some(true) {
+            self.hidden_contents = self.hidden_contents.saturating_sub(1);
+        }
+    }
+}
+
 /// Resolve whichever paragraph is currently open — a table cell's or the top-level one —
 /// exactly as [`apply_paragraph_property`] does.
 fn current_paragraph_mut<'a>(
@@ -2507,6 +2561,7 @@ impl<R: Read + Seek> DocxParser<R> {
         let mut field_hyperlink_stack: Vec<Option<String>> = Vec::new();
         let mut current_hyperlink_url: Option<String> = None;
         let mut toc = TocState::default();
+        let mut placeholder = PlaceholderState::default();
         let mut table_stack: Vec<TableContext> = Vec::new();
         let mut mc_fallback_depth: u32 = 0;
         let mut stop_depth: u32 = if stop_tag.is_some() { 1 } else { 0 };
@@ -2585,6 +2640,13 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:sdt" => {
                             toc.open_sdt();
+                            placeholder.open_sdt();
+                        }
+                        "w:sdtContent" => {
+                            placeholder.open_content();
+                        }
+                        "w:showingPlcHdr" => {
+                            placeholder.apply_showing_placeholder(e);
                         }
                         "w:docPartGallery" => {
                             toc.apply_doc_part_gallery(e);
@@ -2628,6 +2690,7 @@ impl<R: Read + Seek> DocxParser<R> {
                             let parsed = super::drawing::parse_vml_pict(reader, budget)?;
                             if mc_fallback_depth == 0
                                 && move_from_depth == 0
+                                && !placeholder.active()
                                 && let Some(drawing) = parsed
                                 && drawing.text_box_content.is_some()
                             {
@@ -2639,7 +2702,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "m:oMathPara" => {
                             let latex = super::math::collect_and_convert_omath_para(reader, budget)?;
-                            if !latex.is_empty() && move_from_depth == 0 {
+                            if !latex.is_empty() && move_from_depth == 0 && !placeholder.active() {
                                 let run = Run {
                                     math_latex: Some((latex, true)),
                                     ..Default::default()
@@ -2650,7 +2713,7 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "m:oMath" => {
                             let latex = super::math::collect_and_convert_omath(reader, budget)?;
-                            if !latex.is_empty() && move_from_depth == 0 {
+                            if !latex.is_empty() && move_from_depth == 0 && !placeholder.active() {
                                 let run = Run {
                                     math_latex: Some((latex, false)),
                                     ..Default::default()
@@ -2759,7 +2822,7 @@ impl<R: Read + Seek> DocxParser<R> {
                             // own `</w:drawing>` end tag against the `enter()` above
                             // internally, so no manual `budget.leave()` is needed here. ~keep
                             let drawing = super::drawing::parse_drawing(reader, budget)?;
-                            if move_from_depth == 0 {
+                            if move_from_depth == 0 && !placeholder.active() {
                                 let idx = out.drawings.len();
                                 out.drawings.push(drawing);
                                 out.elements.push(DocumentElement::Drawing(idx));
@@ -2848,6 +2911,9 @@ impl<R: Read + Seek> DocxParser<R> {
                         "w:docPartGallery" => {
                             toc.apply_doc_part_gallery(e);
                         }
+                        "w:showingPlcHdr" => {
+                            placeholder.apply_showing_placeholder(e);
+                        }
                         "w:bookmarkStart" => {
                             apply_bookmark_start(e, &mut table_stack, &mut current_paragraph);
                         }
@@ -2913,6 +2979,7 @@ impl<R: Read + Seek> DocxParser<R> {
                                             if table_stack.is_empty()
                                                 && current_paragraph.is_some()
                                                 && move_from_depth == 0
+                                                && !placeholder.active()
                                             {
                                                 out.note_refs_by_paragraph
                                                     .entry(current_paragraph_index)
@@ -3040,6 +3107,10 @@ impl<R: Read + Seek> DocxParser<R> {
                         }
                         "w:sdt" => {
                             toc.close_sdt();
+                            placeholder.close_sdt();
+                        }
+                        "w:sdtContent" => {
+                            placeholder.close_content();
                         }
                         "w:fldSimple" => {
                             toc.close_fld_simple();
@@ -3078,6 +3149,7 @@ impl<R: Read + Seek> DocxParser<R> {
                             }
                             if let Some(run) = current_run.take()
                                 && move_from_depth == 0
+                                && !placeholder.active()
                             {
                                 push_run_to_current(&mut table_stack, &mut current_paragraph, run);
                             }
