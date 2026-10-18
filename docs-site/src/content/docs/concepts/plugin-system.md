@@ -149,6 +149,11 @@ Four friendly presets ship out of the box, aliasing an underlying catalog of ONN
 The catalog also exposes `bge-reranker-base` (278M params, English/Chinese) and
 `qwen3-reranker-0.6b` (generative reranker, multilingual) directly by name.
 
+`fast` is the most sensitive preset to keyword stuffing. In a small synthetic probe (one procedure against one
+distractor that repeats the query words, 6 query/repetition pairs), `fast` ranked the stuffed distractor first in 2 of 6
+pairs, both with a short topical query and three or more repetitions. `bge-reranker-base` and `quality` ranked the
+procedure first in all 6. Use one of those when the corpus can contain keyword-stuffed text.
+
 Custom backends can wrap HuggingFace models, LLM APIs (Cohere, Jina, Voyage), or domain-specific
 rerankers. Unlike extraction, reranking is not part of the extraction pipeline — it's a query-time
 operation for RAG workflows to reorder retrieved documents before LLM context.
