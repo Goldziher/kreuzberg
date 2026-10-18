@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **(excel): ZIP-backed spreadsheets reject mismatched local headers, duplicate member names, and overlapping entries.**
+  Archive count, size, and compression-ratio limits are checked before header validation or payload reads.
+
 ## [1.3.10] - 2026-10-13
 
 ### Fixed
