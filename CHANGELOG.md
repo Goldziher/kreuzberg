@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(reranker): The default `balanced` reranker works on macOS again.** With the default acceleration, every call to
+  the `balanced` preset (`ettin-reranker-150m`) failed inside CoreML ("Unable to compute the prediction using a neural
+  network model"). That model now runs on the CPU when the provider is left on `auto`. An explicit `coreml` request is
+  unchanged, and every other preset keeps CoreML. (#2159)
 - **(ner): The default GLiNER model no longer reports an identifier as an email address.** `SYN-004` and `INV-2026-0042`
   came back as `email` entities. An `email` entity with no address cue in or near its span (an `@`, a bracketed `[at]`,
   or `at` with `dot`) is now dropped; spans that carry a cue, including fragments of an address, are kept. (#2133)

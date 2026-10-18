@@ -222,6 +222,39 @@ pub(crate) const RERANKER_SHA256_MANIFEST: &str = include_str!("presets.sha256su
 #[cfg(feature = "reranker")]
 const RERANKER_MODEL_REVISION: &str = "3d655b40f2e1e087460434a143b11afac4947318";
 
+/// Hosted models whose graph the CoreML execution provider cannot run: ONNX Runtime accepts the
+/// session, then every inference fails with "Unable to compute the prediction using a neural
+/// network model" (#2159). The failure is independent of CoreML's model format, compute units,
+/// static-shape and subgraph options and of the graph optimization level, so these models stay
+/// off CoreML until the cause is found. ~keep
+#[cfg(feature = "reranker")]
+const COREML_INCOMPATIBLE_MODELS: &[(&str, &str)] = &[("xberg-io/reranker-models", "ettin-reranker-150m/model.onnx")];
+
+/// Keep a CoreML-incompatible model off CoreML when the provider was left to `Auto`.
+///
+/// An explicit `coreml` request is returned unchanged, so a caller who asked for it still gets
+/// the real error. Other platforms are returned unchanged too: `Auto` does not pick CoreML there.
+#[cfg(feature = "reranker")]
+fn auto_acceleration_for_model(
+    repo_name: &str,
+    model_file: &str,
+    accel: Option<crate::core::config::acceleration::AccelerationConfig>,
+    on_macos: bool,
+) -> Option<crate::core::config::acceleration::AccelerationConfig> {
+    use crate::core::config::acceleration::{AccelerationConfig, ExecutionProviderType};
+
+    let incompatible = COREML_INCOMPATIBLE_MODELS.contains(&(repo_name, model_file));
+    let is_auto = accel.as_ref().is_none_or(|a| a.provider == ExecutionProviderType::Auto);
+    if on_macos && incompatible && is_auto {
+        tracing::debug!(model = model_file, "reranker: CoreML cannot run this model, using CPU");
+        return Some(AccelerationConfig {
+            provider: ExecutionProviderType::Cpu,
+            device_id: accel.map_or(0, |a| a.device_id),
+        });
+    }
+    accel
+}
+
 pub static RERANKER_PRESETS: LazyLock<Vec<RerankerPreset>> = LazyLock::new(|| {
     vec![
         RerankerPreset {
@@ -413,6 +446,7 @@ fn get_or_init_engine(
     accel: Option<crate::core::config::acceleration::AccelerationConfig>,
     head: crate::core::config::reranker::RerankerHead,
 ) -> crate::Result<Arc<RerankerEngine>> {
+    let accel = auto_acceleration_for_model(repo_name, model_file, accel, cfg!(target_os = "macos"));
     let revision = (repo_name == "xberg-io/reranker-models").then_some(RERANKER_MODEL_REVISION);
     let engine_key = RerankerEngineCacheKey::new(
         repo_name,
@@ -901,6 +935,56 @@ pub async fn rerank_async(
 
     let config = std::sync::Arc::new(config.clone());
     rerank_holding_permit(RERANK_SEMAPHORE.clone(), move || rerank(query, documents, &config)).await
+}
+
+#[cfg(all(test, feature = "reranker"))]
+mod coreml_pin_tests {
+    use super::*;
+    use crate::core::config::acceleration::{AccelerationConfig, ExecutionProviderType};
+
+    const REPO: &str = "xberg-io/reranker-models";
+    const ETTIN: &str = "ettin-reranker-150m/model.onnx";
+
+    fn provider(accel: Option<AccelerationConfig>) -> ExecutionProviderType {
+        accel.map(|a| a.provider).unwrap_or(ExecutionProviderType::Auto)
+    }
+
+    #[test]
+    fn auto_acceleration_moves_an_incompatible_model_to_cpu_on_macos() {
+        assert_eq!(
+            provider(auto_acceleration_for_model(REPO, ETTIN, None, true)),
+            ExecutionProviderType::Cpu
+        );
+        let auto = AccelerationConfig::default();
+        assert_eq!(
+            provider(auto_acceleration_for_model(REPO, ETTIN, Some(auto), true)),
+            ExecutionProviderType::Cpu
+        );
+    }
+
+    #[test]
+    fn an_explicit_provider_request_is_left_alone() {
+        for requested in [ExecutionProviderType::CoreMl, ExecutionProviderType::Cpu] {
+            let accel = AccelerationConfig {
+                provider: requested.clone(),
+                device_id: 0,
+            };
+            assert_eq!(
+                auto_acceleration_for_model(REPO, ETTIN, Some(accel.clone()), true),
+                Some(accel)
+            );
+        }
+    }
+
+    #[test]
+    fn other_models_and_other_platforms_keep_auto() {
+        assert_eq!(
+            auto_acceleration_for_model(REPO, "bge-reranker-base/model.onnx", None, true),
+            None
+        );
+        assert_eq!(auto_acceleration_for_model("owner/ettin", ETTIN, None, true), None);
+        assert_eq!(auto_acceleration_for_model(REPO, ETTIN, None, false), None);
+    }
 }
 
 #[cfg(all(test, feature = "reranker", feature = "tokio-runtime", not(target_arch = "wasm32")))]
