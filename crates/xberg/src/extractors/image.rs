@@ -4086,7 +4086,15 @@ mod tests {
                     true
                 }
                 async fn process_image(&self, _: &[u8], config: &OcrConfig) -> crate::Result<ExtractedDocument> {
-                    *self.config.lock().unwrap() = Some(config.clone());
+                    // ~keep: the stub holds the global `tesseract` slot, so a parallel test running real OCR lands on it too; only calls carrying this stage's probe are recorded.
+                    let probed = config
+                        .backend_options
+                        .as_ref()
+                        .and_then(|options| options.get("hint_probe"))
+                        .is_some_and(|probe| probe == "standalone_image_pipeline");
+                    if probed {
+                        *self.config.lock().unwrap() = Some(config.clone());
+                    }
                     Ok(ExtractedDocument {
                         content: "standalone image text".to_string(),
                         ..Default::default()
@@ -4124,7 +4132,7 @@ mod tests {
                     paddle_ocr_config: None,
                     paddle_ocr_settings: None,
                     vlm_config: None,
-                    backend_options: None,
+                    backend_options: Some(serde_json::json!({ "hint_probe": "standalone_image_pipeline" })),
                 }],
                 quality_thresholds: OcrQualityThresholds {
                     pipeline_min_quality: 0.0,
