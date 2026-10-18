@@ -63,6 +63,7 @@ tasks:
     desc: "Verify release workflow and packaging contracts"
     cmds:
       - python3 scripts/ci/test_publish_workflow_contracts.py
+      - python3 scripts/ci/test_php_release_contracts.py
 
   default:
     desc: "List available tasks"
