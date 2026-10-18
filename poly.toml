@@ -702,7 +702,6 @@ root = "packages/elixir"
   "too-many-parameters",
 ]
 "crates/xberg-candle-ocr/src/models/paddleocr_vl/model.rs" = ["file-too-long", "function-too-long", "nesting-too-deep"]
-"crates/xberg-cli/src/commands/overrides/mod.rs" = ["type-too-long"]
 "crates/xberg-cli/src/main.rs" = ["file-too-long", "function-too-long", "type-too-long"]
 "crates/xberg-native-pdf/src/content/operators.rs" = ["file-too-long", "type-too-long"]
 "crates/xberg-native-pdf/src/content/parser.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
@@ -877,11 +876,6 @@ root = "packages/elixir"
   "type-too-long",
 ]
 "crates/xberg-pdfium-render/src/bindings/static_bindings.rs" = ["file-too-long", "too-many-parameters"]
-"crates/xberg-pdfium-render/src/font_provider.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/document/page.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/document/page/object/path.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/document/page/objects/common.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/quad_points.rs" = ["too-many-parameters"]
 "crates/xberg-tesseract/build.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nesting-too-deep"]
 "crates/xberg-tesseract/src/api.rs" = ["file-too-long"]
 "crates/xberg/src/api/handlers.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
@@ -908,7 +902,6 @@ root = "packages/elixir"
 "crates/xberg/src/core/split.rs" = ["file-too-long", "function-too-long"]
 "crates/xberg/src/embeddings/mod.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
 "crates/xberg/src/engine/extract_impl.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
-"crates/xberg/src/engine/structured/prompts.rs" = ["too-many-parameters"]
 "crates/xberg/src/extraction/docx/parser.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -1130,15 +1123,11 @@ root = "packages/elixir"
 "crates/xberg/src/types/internal_builder.rs" = ["file-too-long", "too-many-parameters"]
 "crates/xberg/src/types/metadata.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/tests/pdf_image_extraction_tests.rs" = ["file-too-long"]
-"crates/xberg/tests/pdf_markdown_regression.rs" = ["file-too-long"]
 "docs-site/src/content/docs/cli/usage.mdx" = ["file-too-long"]
 "docs-site/src/content/docs/guides/ocr.mdx" = ["file-too-long"]
 ".github/workflows/benchmarks.yaml" = ["file-too-long"]
 ".github/workflows/profiling.yaml" = ["file-too-long"]
 ".github/workflows/publish.yaml" = ["file-too-long"]
-"crates/xberg-paddle-ocr/src/ocr_lite.rs" = ["too-many-parameters"]
-"crates/xberg/src/late_interaction/mod.rs" = ["too-many-parameters"]
-"crates/xberg/src/sparse_embeddings/mod.rs" = ["too-many-parameters"]
 "crates/xberg/src/transcription/engine.rs" = ["file-too-long", "function-too-long"]
 
 [hooks]

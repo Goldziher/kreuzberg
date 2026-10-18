@@ -647,7 +647,6 @@ traineddata = "traineddata"
   "too-many-parameters",
 ]
 "crates/xberg-candle-ocr/src/models/paddleocr_vl/model.rs" = ["file-too-long", "function-too-long", "nesting-too-deep"]
-"crates/xberg-cli/src/commands/overrides/mod.rs" = ["type-too-long"]
 "crates/xberg-cli/src/main.rs" = ["file-too-long", "function-too-long", "type-too-long"]
 "crates/xberg-native-pdf/src/content/operators.rs" = ["file-too-long", "type-too-long"]
 "crates/xberg-native-pdf/src/content/parser.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
@@ -813,7 +812,6 @@ traineddata = "traineddata"
 "crates/xberg-native-pdf/tests/test_render_output_intent.rs" = ["file-too-long"]
 "crates/xberg-native-pdf/tests/test_separation_rendering.rs" = ["file-too-long"]
 "crates/xberg-native-pdf/tests/test_transparency_flattening_audit.rs" = ["file-too-long"]
-"crates/xberg-paddle-ocr/src/ocr_lite.rs" = ["too-many-parameters"]
 "crates/xberg-pdfium-render/src/bindgen/pdfium_7678.rs" = ["file-too-long"]
 "crates/xberg-pdfium-render/src/bindings.rs" = ["file-too-long", "too-many-parameters", "type-too-long"]
 "crates/xberg-pdfium-render/src/bindings/dynamic_bindings.rs" = [
@@ -823,11 +821,6 @@ traineddata = "traineddata"
   "type-too-long",
 ]
 "crates/xberg-pdfium-render/src/bindings/static_bindings.rs" = ["file-too-long", "too-many-parameters"]
-"crates/xberg-pdfium-render/src/font_provider.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/document/page.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/document/page/object/path.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/document/page/objects/common.rs" = ["too-many-parameters"]
-"crates/xberg-pdfium-render/src/pdf/quad_points.rs" = ["too-many-parameters"]
 "crates/xberg-tesseract/build.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nesting-too-deep"]
 "crates/xberg-tesseract/src/api.rs" = ["file-too-long"]
 "crates/xberg/src/api/handlers.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
@@ -854,7 +847,6 @@ traineddata = "traineddata"
 "crates/xberg/src/core/split.rs" = ["file-too-long", "function-too-long"]
 "crates/xberg/src/embeddings/mod.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
 "crates/xberg/src/engine/extract_impl.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
-"crates/xberg/src/engine/structured/prompts.rs" = ["too-many-parameters"]
 "crates/xberg/src/extraction/docx/parser.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -992,7 +984,6 @@ traineddata = "traineddata"
   "function-too-long",
   "nesting-too-deep",
 ]
-"crates/xberg/src/late_interaction/mod.rs" = ["too-many-parameters"]
 "crates/xberg/src/layout/models/slanet.rs" = ["cyclomatic-complexity", "function-too-long"]
 "crates/xberg/src/layout/models/tatr.rs" = ["function-too-long"]
 "crates/xberg/src/layout/models/yolo.rs" = ["function-too-long"]
@@ -1071,7 +1062,6 @@ traineddata = "traineddata"
 "crates/xberg/src/rendering/djot.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/reranking/mod.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
 "crates/xberg/src/sceptre_ocr/mod.rs" = ["file-too-long"]
-"crates/xberg/src/sparse_embeddings/mod.rs" = ["too-many-parameters"]
 "crates/xberg/src/table_core.rs" = ["file-too-long", "function-too-long"]
 "crates/xberg/src/text/redaction/engine.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/transcription/engine.rs" = ["function-too-long"]
@@ -1079,7 +1069,6 @@ traineddata = "traineddata"
 "crates/xberg/src/types/internal_builder.rs" = ["file-too-long", "too-many-parameters"]
 "crates/xberg/src/types/metadata.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/tests/pdf_image_extraction_tests.rs" = ["file-too-long"]
-"crates/xberg/tests/pdf_markdown_regression.rs" = ["file-too-long"]
 "docs-site/src/content/docs/cli/usage.mdx" = ["file-too-long"]
 "docs-site/src/content/docs/guides/ocr.mdx" = ["file-too-long"]
 # --- end quality-debt baseline ---
