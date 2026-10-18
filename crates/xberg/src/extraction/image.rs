@@ -704,7 +704,8 @@ fn infer_dpi_from_standard_page_size(width: u32, height: u32) -> Option<f64> {
 ///    `pHYs` and the first TIFF IFD — see [`png_pixel_density_dpi`], [`tiff_pixel_density_dpi`]).
 /// 3. A standard-page-size inference from the pixel dimensions themselves (#1788; see
 ///    [`infer_dpi_from_standard_page_size`]).
-/// 4. `None`, meaning the historical 72 DPI assumption applies further down the pipeline — the
+/// 4. `None`, meaning the resolution is unknown and the resample is sized from the raster's own
+///    text height further down the pipeline (72 DPI where none can be measured) — the
 ///    pixel dimensions matched no standard page size, so no DPI is invented for them.
 ///
 /// Shared by both consumers — `ocr::processor::execution::perform_ocr` and

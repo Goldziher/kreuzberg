@@ -9,6 +9,9 @@ pub mod preprocessing;
 /// Image resize helpers used before OCR to normalize resolution.
 #[cfg(feature = "ocr-pipeline")]
 pub mod resize;
+/// Text-size estimate used to pick a resample factor for a raster of unknown resolution.
+#[cfg(feature = "ocr-pipeline")]
+pub(crate) mod text_height;
 
 // Re-exported only for the Tesseract processor (`ocr::processor::execution`); the
 // standalone-image path calls `preprocessing::normalize_image_dpi_owned` by full path,

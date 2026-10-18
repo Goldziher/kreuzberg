@@ -2558,7 +2558,7 @@ fn normalize_image_bytes_for_ocr(
     let (width, height) = rgb.dimensions();
     let dpi_config = crate::types::ImageDpiConfig::from(images_config);
     // GH#1630: an explicit `OcrConfig.backend_options["source_dpi"]` hint wins, then embedded
-    // PNG `pHYs` density, then `None` (the historical 72 DPI assumption). Shared with
+    // PNG `pHYs` density, then `None` (a resolution guessed from the text size). Shared with
     // `ocr::processor::execution::perform_ocr` (GH#1621: no second density scanner).
     let explicit_source_dpi = crate::extraction::image::explicit_source_dpi_from_ocr_config(ocr_config);
     let known_source_dpi =

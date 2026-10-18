@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(ocr): An image with no resolution metadata is no longer upscaled by a fixed 4.2x.** The resample assumed 72 DPI,
+  which made large text so big that Tesseract's default `eng` model misread it (`Cedar Analytics supplied 17 widgets`
+  came back as `1/7`). The factor now follows the size of the text, up to the old one for small text, and an image
+  that is not clean text (a photo or receipt) keeps the old behaviour. On 176 synthetic images it gained 27 of 2464
+  tokens (numeric tokens 692 to 698) and on 48 rendered pages it was neutral (+3 of 16018). Output for such images
+  can change; cached results are invalidated. (#2127)
 - **(reranker): The default `balanced` reranker works on macOS again.** With the default acceleration, every call to
   the `balanced` preset (`ettin-reranker-150m`) failed inside CoreML ("Unable to compute the prediction using a neural
   network model"). That model now runs on the CPU when the provider is left on `auto`. An explicit `coreml` request is

@@ -532,7 +532,8 @@ pub struct OcrPipelineStage {
 /// rendered the page itself and can divide the raster's pixel width by the MediaBox width (see
 /// `crate::pdf::render::rendered_page_dpi`). Deliberately absent for callers that genuinely do
 /// not know the resolution of the bytes they hold — the standalone image extractor, plugin
-/// callers passing arbitrary user images — so those keep defaulting to 72 DPI.
+/// callers passing arbitrary user images — so those have the resample sized from the text in the
+/// raster (`image::preprocessing::unknown_raster_dpi`), and 72 DPI where no text can be measured.
 ///
 /// This is per *page*, not per document: the OCR route clones the config for each page (the
 /// same mechanism `page_rotation_degrees` uses), so a document mixing page sizes, or one page

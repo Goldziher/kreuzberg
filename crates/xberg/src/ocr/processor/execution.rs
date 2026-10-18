@@ -1288,7 +1288,8 @@ fn prepare_preprocessed_ocr_image(
         },
     };
     // `known_source_dpi` is the whole point of this parameter: passing `None` here makes
-    // `normalize_image_dpi_owned` assume 72 DPI, which on a page rendered at 150 inflates the
+    // `normalize_image_dpi_owned` guess the resolution from the text size (72 DPI when it finds
+    // none), which on a page rendered at 150 inflates the
     // scale factor to `target_dpi / 72` and drives a Letter page into the `max_image_dimension`
     // clamp — 6x the pixels of the correct resize, carrying no more information, and reported to
     // Tesseract as roughly half the raster's real `scan_res`.

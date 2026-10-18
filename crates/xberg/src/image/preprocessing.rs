@@ -6,6 +6,17 @@ use super::resize::resize_rgb;
 
 const PDF_POINTS_PER_INCH: f64 = 72.0;
 const MAX_NORMALIZE_MEMORY_MB: f64 = 2048.0;
+/// Median glyph height, in pixels, that a raster of unknown resolution is resampled towards.
+///
+/// Assuming 72 DPI grew every such image by `target_dpi / 72` (4.2x at 300), which `eng` fast
+/// misread on large text (`17` became `1/7`, #2127). A constant is no remedy: assuming 150
+/// gained 23 of 2464 tokens on 176 synthetic images but lost 201 of 16018 on 48 dense pages
+/// rendered at 100 and 150 DPI, whose 6-14px glyphs need the full upscale. Sizing the raster by
+/// its glyphs keeps 72 on small text and reads the `17`: end to end it gained 27 of 2464 tokens
+/// on the synthetic images (26 better, 4 worse; numeric tokens 692 to 698) and was neutral on
+/// the pages (+3 of 16018; the per-page change is a few tokens either way, Tesseract's output
+/// moves with a pixel of resize). 36 beat 24, 30 and 44 in aggregate. ~keep
+const TARGET_GLYPH_HEIGHT_PX: f64 = 36.0;
 
 /// Build the internal DPI/dimension config this module consumes from the public,
 /// user-facing `ImageExtractionConfig` (issue #209: `target_dpi`, `max_image_dimension`,
@@ -100,7 +111,7 @@ pub(crate) fn normalize_image_dpi_owned(
         return Err((error, rgb_data));
     }
 
-    let current_dpi = current_dpi.unwrap_or(PDF_POINTS_PER_INCH);
+    let current_dpi = current_dpi.unwrap_or_else(|| unknown_raster_dpi(&rgb_data, width, height, config.target_dpi));
     let original_dpi = (current_dpi, current_dpi);
     let (target_dpi, auto_adjusted, calculated_dpi) = calculate_target_dpi(
         width as u32,
@@ -159,6 +170,23 @@ pub(crate) fn normalized_image_dimensions(
     }
     let (new_width, new_height, _, _) = calculate_new_dimensions(width, height, scale_factor, config);
     (new_width, new_height)
+}
+
+/// The resolution to assume for a raster whose own is unknown, chosen so that its glyphs reach
+/// [`TARGET_GLYPH_HEIGHT_PX`] at `target_dpi`.
+///
+/// Never more than the historical 72 DPI assumption would have scaled (so small text keeps its
+/// full upscale) and never a shrink. Falls back to 72 when no glyph height can be measured.
+fn unknown_raster_dpi(rgb_data: &[u8], width: usize, height: usize, target_dpi: i32) -> f64 {
+    let max_scale = f64::from(target_dpi) / PDF_POINTS_PER_INCH;
+    if max_scale <= 1.0 {
+        return PDF_POINTS_PER_INCH;
+    }
+    let Some(glyph_height) = super::text_height::median_glyph_height(rgb_data, width, height) else {
+        return PDF_POINTS_PER_INCH;
+    };
+    let scale = (TARGET_GLYPH_HEIGHT_PX / glyph_height).clamp(1.0, max_scale);
+    f64::from(target_dpi) / scale
 }
 
 /// The DPI decision both outcomes of `normalize_image_dpi_owned` record in their metadata.
@@ -373,6 +401,83 @@ mod tests {
         assert_eq!(normalized.rgb_data.as_ptr(), original_ptr);
         assert_eq!(normalized.rgb_data.capacity(), original_capacity);
         assert!(normalized.metadata.skipped_resize);
+    }
+
+    /// A white raster with `count` black blocks standing in for letters of `glyph_height` pixels.
+    fn raster_of_glyphs(width: usize, height: usize, glyph_height: usize, count: usize) -> Vec<u8> {
+        let mut rgb = vec![255u8; width * height * 3];
+        for glyph in 0..count {
+            let left = 10 + glyph * 20;
+            for y in 10..10 + glyph_height {
+                for x in left..left + 12 {
+                    let index = (y * width + x) * 3;
+                    rgb[index..index + 3].fill(0);
+                }
+            }
+        }
+        rgb
+    }
+
+    fn normalize_unknown(glyph_height: usize, config: &ExtractionConfig) -> NormalizeResult {
+        let rgb = raster_of_glyphs(400, 200, glyph_height, 15);
+        normalize_image_dpi_owned(rgb, 400, 200, config, None).unwrap_or_else(|(error, _)| panic!("{error}"))
+    }
+
+    /// #2127: 26px text on an untagged raster was grown 4.2x by the 72 DPI assumption.
+    #[test]
+    fn should_size_a_raster_of_unknown_resolution_by_its_glyphs() {
+        let normalized = normalize_unknown(26, &ExtractionConfig::default());
+
+        let expected_scale = TARGET_GLYPH_HEIGHT_PX / 26.0;
+        assert!((normalized.metadata.scale_factor - expected_scale).abs() < 1e-9);
+        assert_eq!(normalized.dimensions, (554, 277));
+        assert!((normalized.metadata.original_dpi.horizontal - 300.0 / expected_scale).abs() < 1e-9);
+    }
+
+    #[test]
+    fn should_keep_the_full_upscale_for_small_text_of_unknown_resolution() {
+        let normalized = normalize_unknown(7, &ExtractionConfig::default());
+
+        assert!((normalized.metadata.scale_factor - 300.0 / 72.0).abs() < 1e-9);
+        assert!((normalized.metadata.original_dpi.horizontal - 72.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn should_not_resample_text_of_unknown_resolution_that_is_already_large() {
+        let normalized = normalize_unknown(40, &ExtractionConfig::default());
+
+        assert!(normalized.metadata.skipped_resize);
+        assert_eq!(normalized.dimensions, (400, 200));
+    }
+
+    #[test]
+    fn should_assume_72_dpi_for_a_raster_of_unknown_resolution_without_text() {
+        let blank = vec![255u8; 400 * 200 * 3];
+        let normalized = normalize_image_dpi_owned(blank, 400, 200, &ExtractionConfig::default(), None)
+            .unwrap_or_else(|(error, _)| panic!("{error}"));
+
+        assert!((normalized.metadata.original_dpi.horizontal - 72.0).abs() < 1e-9);
+        assert!((normalized.metadata.scale_factor - 300.0 / 72.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn should_not_measure_glyphs_when_the_resolution_is_known() {
+        let rgb = raster_of_glyphs(400, 200, 26, 15);
+        let normalized = normalize_image_dpi_owned(rgb, 400, 200, &ExtractionConfig::default(), Some(300.0))
+            .unwrap_or_else(|(error, _)| panic!("{error}"));
+
+        assert!(normalized.metadata.skipped_resize);
+    }
+
+    #[test]
+    fn should_keep_72_dpi_for_unknown_resolution_when_the_target_is_not_above_it() {
+        let config = ExtractionConfig {
+            target_dpi: 50,
+            ..ExtractionConfig::default()
+        };
+        let normalized = normalize_unknown(26, &config);
+
+        assert!((normalized.metadata.original_dpi.horizontal - 72.0).abs() < 1e-9);
     }
 
     #[test]
