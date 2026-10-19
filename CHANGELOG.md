@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(ocr): Tesseract now reads display-rotated PDF pages upright regardless of `auto_rotate`.** A `/Rotate`d page was sent to Tesseract sideways, so a landscape bid table came back as garbage (page confidence 0.35) unless `auto_rotate` was on; it is now rotated upright first and the recognised boxes are mapped back to the page (0.87 on the same page). Cached results for such pages are not reused. (#2172)
 - **(pdf): With layout detection, item numbers are no longer deleted because their digits occur inside other table cells.** A table region suppressed any text whose digits appeared anywhere in its concatenated cells, so item numbers such as `0001` vanished from a bid schedule when a table model missed that column. Short runs now have to match a whole cell word; only long runs may span neighbouring cells of one row. (#2171)
 - **(pdf): `extraction_confidence.text_coverage` counts a known empty page whether or not page output is requested.** A three-page PDF with an empty middle page scored `1.0` by default and `0.67` with `extract_pages`; both now report `0.67`. (#2170)
 - **(pdf): A ruled table record whose cells wrap onto different numbers of lines is no longer split into one row per line.** A subcontractor disclosure entry (name, address, certification, work, amount) came back as five rows; bands where each line fills the same columns as the previous one are still subdivided. (#2169)

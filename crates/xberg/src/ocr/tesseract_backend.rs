@@ -662,10 +662,12 @@ impl OcrBackend for TesseractBackend {
         crate::plugins::ConfidenceSemantics::Legibility { scale_max: 100.0 }
     }
 
-    /// Measured on a `/Rotate 270` scanned ordinance: Tesseract reconstructs correct reading
-    /// order on the sideways raster outright, with no upright-render step required.
+    /// The raster the pipeline hands a backend is in the page's raw MediaBox axes, which for a
+    /// `/Rotate`d page is sideways. Default PSM 3 does not compensate for that (a display-rotated
+    /// bid table scored 0.35 page confidence sideways and 0.87 upright, #2172), and the
+    /// `auto_rotate` detector is optional, so the upright-raster route must always apply. ~keep
     fn page_orientation_handling(&self) -> crate::plugins::PageOrientationHandling {
-        crate::plugins::PageOrientationHandling::SelfCorrecting
+        crate::plugins::PageOrientationHandling::RequiresUpright
     }
 
     #[cfg_attr(alef, alef(skip))]

@@ -5408,10 +5408,10 @@ pub(super) fn rendered_page_source_dpi(
 /// `180`, `270`) that must later be undone on any pixel-space geometry the backend returns.
 ///
 /// `normalize_rendered_page_for_ocr` deliberately hands every backend a raster in the page's
-/// raw MediaBox orientation rather than its display orientation (#530), which Tesseract
-/// (`SelfCorrecting`) reads fine and PaddleOCR (`RecognisesRotatedText`) recognises correctly
+/// raw MediaBox orientation rather than its display orientation (#530), which PaddleOCR
+/// (`RecognisesRotatedText`) recognises correctly
 /// (only its block order needs fixing, see `ocr_config_with_page_rotation_hint`). A backend
-/// that declares `RequiresUpright` (currently sceptre) produces character garbage on that same
+/// that declares `RequiresUpright` (sceptre, and Tesseract since #2172) produces character garbage on that same
 /// sideways raster instead — measured this session on `/Rotate 270` scanned pages, and
 /// confirmed by feeding the same page through an upright render. This is the backend-local
 /// fix: re-apply the page's original `/Rotate` value on top of the already-corrected raster,
@@ -5421,7 +5421,7 @@ pub(super) fn rendered_page_source_dpi(
 /// A no-op — returns `data` unchanged and a correction of `0` — when `page_rotation_degrees ==
 /// 0` or `orientation_handling` is not `RequiresUpright`. In particular, `SelfCorrecting` and
 /// `RecognisesRotatedText` backends never pay a re-encode and never see a different raster than
-/// they do today: Tesseract's input is untouched by this function under every input.
+/// they do today.
 #[cfg(all(any(feature = "ocr", feature = "ocr-pipeline"), feature = "pdf"))]
 pub(super) fn upright_raster_for_backend(
     data: &std::sync::Arc<Vec<u8>>,
