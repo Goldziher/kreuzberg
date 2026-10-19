@@ -868,10 +868,13 @@ fn dedupe_redrawn_segments(segments: Vec<SegmentData>) -> Vec<SegmentData> {
         if let Some(prev) = kept[window_start..].iter_mut().find(|prev| {
             let dx_tol = (prev.width.min(seg.width) * 0.5).max(REDRAWN_MIN_TOLERANCE_PTS);
             let dy_tol = (prev.height.min(seg.height) * 0.5).max(REDRAWN_MIN_TOLERANCE_PTS);
-            prev.has_same_rotation(&seg)
-                && prev.text == seg.text
-                && (prev.x - seg.x).abs() <= dx_tol
-                && (prev.y - seg.y).abs() <= dy_tol
+            if !prev.has_same_rotation(&seg) || prev.text != seg.text {
+                return false;
+            }
+            // ~keep width/height are measured along the text's own axes, so the offsets must be taken in that frame too
+            let (prev_advance, prev_cross) = prev.upright_origin();
+            let (seg_advance, seg_cross) = seg.upright_origin();
+            (prev_advance - seg_advance).abs() <= dx_tol && (prev_cross - seg_cross).abs() <= dy_tol
         }) {
             prev.is_bold |= seg.is_bold;
             prev.is_italic |= seg.is_italic;
@@ -2065,6 +2068,28 @@ mod tests {
             seg("b", 72.0, 700.0, 10.0, false),
         ]);
         assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn should_keep_repeated_prices_in_separate_rotated_rows() {
+        for rotation in [90.0_f32, 270.0, 80.0] {
+            let mut first = seg("50,000.00", 300.0, 200.0, 10.0, false);
+            first.rotation_degrees = rotation;
+            let mut second = first.clone();
+            let (sin, cos) = rotation.to_radians().sin_cos();
+            // second row: one 12pt line pitch along the cross axis (-sin, cos)
+            second.x += -sin * 12.0;
+            second.y += cos * 12.0;
+
+            let out = super::dedupe_redrawn_segments(vec![first.clone(), second]);
+            assert_eq!(out.len(), 2, "rotation {rotation}: distinct rows must both survive");
+
+            let mut overlay = first.clone();
+            overlay.x += 0.4;
+            overlay.y += 0.3;
+            let out = super::dedupe_redrawn_segments(vec![first, overlay]);
+            assert_eq!(out.len(), 1, "rotation {rotation}: a real overlay still collapses");
+        }
     }
 
     #[test]

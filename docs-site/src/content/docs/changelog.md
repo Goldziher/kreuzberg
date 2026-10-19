@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Repeated prices in separate rows of rotated tables are no longer dropped as redrawn duplicates.** Duplicate detection now compares positions in the text's own reading frame. (#2164)
+- **(pdf): Splitting multiline table rows preserves merged columns, keeping bidder names aligned with their IDs and prices.** (#2165)
+- **(pdf): Native PDF page tables now reflect the final global table selection, order, IDs and columns.** (#2167)
 - **(api): `/health`, `/info` and `/version` no longer queue behind the concurrency limit.** `XBERG_MAX_CONCURRENT_REQUESTS` now applies to the extraction routes only, so a saturated but healthy pod keeps passing orchestrator probes. (#2161)
 - **(pdf): disabling extraction caching also disables the built-in Tesseract result cache.**
   The opt-out reaches mixed, full-page, pipeline and embedded-image OCR without changing native-text fallback routing.
