@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Crop VLM regions from the detected pixel box.**
+  The crop was cut from the layout hint's PDF-point box read as pixels, so at the default 150 dpi the region came out
+  at about half its size and shifted down the page: one at the top of a Letter page was cut from below the middle. It
+  is now cut from the pixel-space layout detection the hint was converted from.
 - **(toml): Print a date or time as its TOML text instead of under a `$__toml_private_datetime` key.**
   The TOML value went through `serde_json::to_value`, which turned every datetime into
   `{"$__toml_private_datetime": "2025-02-05"}`, so the text read `created_date` and then

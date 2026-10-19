@@ -230,12 +230,14 @@ impl BBox {
     /// is empty.
     ///
     /// The gate is the union of the callers' gates: `encode_layout_region`
-    /// (`layout-detection` + an OCR backend) and the image/PDF formula crop
-    /// paths (`formula-recognition`; the PDF one needs `pdf`). This module
+    /// (`layout-detection` + an OCR backend), the image/PDF formula crop
+    /// paths (`formula-recognition`; the PDF one needs `pdf`) and the VLM
+    /// region crop (`liter-llm` + `layout-detection` + `pdf`). This module
     /// also compiles under `layout-tract`, which has no caller.
     #[cfg(any(
         all(feature = "layout-detection", any(feature = "ocr", feature = "ocr-wasm")),
-        all(feature = "formula-recognition", feature = "pdf")
+        all(feature = "formula-recognition", feature = "pdf"),
+        all(feature = "liter-llm", feature = "layout-detection", feature = "pdf")
     ))]
     pub(crate) fn clamp_to_image(&self, width: u32, height: u32) -> Option<(u32, u32, u32, u32)> {
         let x1 = (self.x1.max(0.0) as u32).min(width.saturating_sub(1));
@@ -337,7 +339,8 @@ impl DetectionResult {
     test,
     any(
         all(feature = "layout-detection", any(feature = "ocr", feature = "ocr-wasm")),
-        all(feature = "formula-recognition", feature = "pdf")
+        all(feature = "formula-recognition", feature = "pdf"),
+        all(feature = "liter-llm", feature = "layout-detection", feature = "pdf")
     )
 ))]
 mod clamp_tests {

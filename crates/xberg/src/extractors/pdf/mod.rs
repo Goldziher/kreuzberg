@@ -3465,8 +3465,11 @@ impl PdfExtractor {
                 .unwrap_or(false);
 
             if vlm_enabled
-                && let (Some(layout_images), Some(hints)) =
-                    (markdown_layout_images.as_deref(), markdown_layout_hints.as_deref())
+                && let (Some(layout_images), Some(hints), Some(detections)) = (
+                    markdown_layout_images.as_deref(),
+                    markdown_layout_hints.as_deref(),
+                    markdown_layout_detections.as_deref(),
+                )
             {
                 let vlm_cfg = config
                     .ocr
@@ -3474,7 +3477,7 @@ impl PdfExtractor {
                     .and_then(|o| o.vlm_config.as_ref())
                     .expect("vlm_config checked above");
 
-                let region_results = region_vlm::extract_vlm_regions(layout_images, hints, vlm_cfg).await;
+                let region_results = region_vlm::extract_vlm_regions(layout_images, hints, detections, vlm_cfg).await;
                 if !region_results.is_empty() {
                     tracing::debug!(
                         count = region_results.len(),

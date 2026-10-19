@@ -17,6 +17,7 @@ use image::{ExtendedColorType, ImageEncoder};
 
 use crate::RegionKind;
 use crate::core::config::LlmConfig;
+use crate::layout::{DetectionResult, LayoutDetection};
 use crate::llm::region_extractor::extract_region_with_vlm;
 use crate::pdf::structure::types::{LayoutHint, LayoutHintClass};
 
@@ -67,13 +68,15 @@ const fn region_kind_for_hint(class_name: LayoutHintClass) -> Option<RegionKind>
 ///
 /// Iterates the layout hints for each page. For hints whose class warrants VLM
 /// extraction ([`LayoutHintClass::Picture`] and, when requested, dense tables),
-/// crops the region from the page raster image, encodes it as PNG, and calls
+/// crops the region from the page raster at the hint's pixel-space detection in
+/// `layout_detections`, encodes it as PNG, and calls
 /// [`extract_region_with_vlm`]. Results from all pages are collected and returned.
 ///
 /// # Arguments
 ///
 /// * `layout_images` — One rasterised `RgbImage` per page (same order as `layout_hints`).
 /// * `layout_hints` — Per-page layout detection results, each a `Vec<LayoutHint>`.
+/// * `layout_detections` — The pixel-space detections each page's hints were converted from, one to one.
 /// * `llm_config` — LLM provider configuration for the VLM calls.
 ///
 /// # Returns
@@ -84,18 +87,22 @@ const fn region_kind_for_hint(class_name: LayoutHintClass) -> Option<RegionKind>
 pub(crate) async fn extract_vlm_regions(
     layout_images: &[image::RgbImage],
     layout_hints: &[Vec<LayoutHint>],
+    layout_detections: &[DetectionResult],
     llm_config: &LlmConfig,
 ) -> Vec<RegionVlmResult> {
     let mut results: Vec<RegionVlmResult> = Vec::new();
 
-    for (page_index, (page_image, hints)) in layout_images.iter().zip(layout_hints.iter()).enumerate() {
-        let img_width = page_image.width();
-        let img_height = page_image.height();
-
-        for hint in hints {
-            if let Some(result) =
-                extract_vlm_region(page_index, page_image, img_width, img_height, hint, llm_config).await
-            {
+    for (page_index, ((page_image, hints), detection)) in layout_images
+        .iter()
+        .zip(layout_hints.iter())
+        .zip(layout_detections.iter())
+        .enumerate()
+    {
+        let Some(detections) = paired_detections(page_index, hints, detection) else {
+            continue;
+        };
+        for (hint, det) in hints.iter().zip(detections) {
+            if let Some(result) = extract_vlm_region(page_index, page_image, hint, det, llm_config).await {
                 results.push(result);
             }
         }
@@ -104,32 +111,22 @@ pub(crate) async fn extract_vlm_regions(
     results
 }
 
-/// Converts a layout hint's PDF-space bounding box (y=0 at page bottom) to a pixel-space
-/// crop rectangle `(x_left, y_top, width, height)` clamped to the page raster's bounds.
-/// Split out of [`extract_vlm_region`] purely to shorten that function.
-fn hint_pixel_crop_rect(hint: &LayoutHint, img_width: u32, img_height: u32) -> (u32, u32, u32, u32) {
-    let pixel_y1 = (img_height as f32 - hint.top).max(0.0).min(img_height as f32) as u32;
-    let pixel_y2 = (img_height as f32 - hint.bottom).max(0.0).min(img_height as f32) as u32;
-    let pixel_x1 = hint.left.max(0.0).min(img_width as f32) as u32;
-    let pixel_x2 = hint.right.max(0.0).min(img_width as f32) as u32;
-
-    let (y_top, y_bot) = if pixel_y1 <= pixel_y2 {
-        (pixel_y1, pixel_y2)
-    } else {
-        (pixel_y2, pixel_y1)
-    };
-    let (x_left, x_right) = if pixel_x1 <= pixel_x2 {
-        (pixel_x1, pixel_x2)
-    } else {
-        (pixel_x2, pixel_x1)
-    };
-
-    (
-        x_left,
-        y_top,
-        x_right.saturating_sub(x_left),
-        y_bot.saturating_sub(y_top),
-    )
+/// Returns a page's layout detections only when they pair one to one with its hints.
+fn paired_detections<'a>(
+    page_index: usize,
+    hints: &[LayoutHint],
+    detection: &'a DetectionResult,
+) -> Option<&'a [LayoutDetection]> {
+    if hints.len() != detection.detections.len() {
+        tracing::warn!(
+            page = page_index,
+            hints = hints.len(),
+            detections = detection.detections.len(),
+            "layout hints and detections disagree; skipping VLM regions on this page"
+        );
+        return None;
+    }
+    Some(&detection.detections)
 }
 
 /// PNG-encodes a cropped region, logging and returning `None` on encode failure so a
@@ -154,25 +151,22 @@ fn encode_region_png(page_index: usize, crop: &image::RgbImage) -> Option<Vec<u8
     Some(png_buf.into_inner())
 }
 
-/// Extracts a single layout hint's region via VLM, or returns `None` if the hint is
-/// below confidence, ineligible for VLM handling, too small to crop, or the VLM call
-/// itself fails or returns empty markdown. Split out of [`extract_vlm_regions`] so a
-/// single page/hint iteration stays a plain loop body.
-async fn extract_vlm_region(
+/// Returns the region kind and the pixel crop `(x, y, w, h)` for `hint`, cut from its detection `det`,
+/// or `None` when the hint is below confidence or ineligible for VLM handling, or the crop is empty
+/// or under `MIN_REGION_PIXEL_AREA`.
+fn region_crop(
     page_index: usize,
     page_image: &image::RgbImage,
-    img_width: u32,
-    img_height: u32,
     hint: &LayoutHint,
-    llm_config: &LlmConfig,
-) -> Option<RegionVlmResult> {
+    det: &LayoutDetection,
+) -> Option<(RegionKind, (u32, u32, u32, u32))> {
     if hint.confidence < MIN_REGION_CONFIDENCE {
         return None;
     }
 
     let region_kind = region_kind_for_hint(hint.class_name)?;
 
-    let (x_left, y_top, crop_w, crop_h) = hint_pixel_crop_rect(hint, img_width, img_height);
+    let (x_left, y_top, crop_w, crop_h) = det.bbox.clamp_to_image(page_image.width(), page_image.height())?;
 
     if crop_w * crop_h < MIN_REGION_PIXEL_AREA {
         tracing::trace!(
@@ -183,6 +177,19 @@ async fn extract_vlm_region(
         );
         return None;
     }
+
+    Some((region_kind, (x_left, y_top, crop_w, crop_h)))
+}
+
+/// Extracts a single layout hint's region via VLM.
+async fn extract_vlm_region(
+    page_index: usize,
+    page_image: &image::RgbImage,
+    hint: &LayoutHint,
+    det: &LayoutDetection,
+    llm_config: &LlmConfig,
+) -> Option<RegionVlmResult> {
+    let (region_kind, (x_left, y_top, crop_w, crop_h)) = region_crop(page_index, page_image, hint, det)?;
 
     let crop = image::imageops::crop_imm(page_image, x_left, y_top, crop_w, crop_h).to_image();
     let crop_bytes = encode_region_png(page_index, &crop)?;
@@ -307,6 +314,7 @@ pub(crate) fn inject_region_results(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::layout::{BBox, LayoutClass};
     use crate::pdf::structure::types::LayoutHintClass;
 
     fn make_hint(class: LayoutHintClass, confidence: f32) -> LayoutHint {
@@ -371,6 +379,58 @@ mod tests {
     #[test]
     fn should_route_picture_hint_to_figure_region_kind() {
         assert_eq!(region_kind_for_hint(LayoutHintClass::Picture), Some(RegionKind::Figure));
+    }
+
+    #[test]
+    fn should_crop_the_pixel_detection_not_the_pdf_space_hint() {
+        // US Letter (612x792 pt) rendered at 150 dpi.
+        let page_image = image::RgbImage::new(1_275, 1_650);
+        let det = LayoutDetection::new(LayoutClass::Table, 0.9, BBox::new(100.0, 200.0, 700.0, 500.0));
+        let hint = LayoutHint {
+            class_name: LayoutHintClass::Table,
+            confidence: 0.9,
+            left: 48.0,
+            bottom: 552.0,
+            right: 336.0,
+            top: 696.0,
+        };
+
+        let (kind, rect) = region_crop(0, &page_image, &hint, &det).expect("confident table region should be cropped");
+        assert_eq!(kind, RegionKind::DenseTable);
+        assert_eq!(rect, (100, 200, 600, 300));
+    }
+
+    #[test]
+    fn should_skip_detection_boxes_that_clamp_to_nothing() {
+        let page_image = image::RgbImage::new(1_275, 1_650);
+        let hint = make_hint(LayoutHintClass::Table, 0.9);
+        for bbox in [
+            BBox::new(100.0, 200.0, 100.0, 500.0),
+            BBox::new(-500.0, -500.0, -100.0, -100.0),
+        ] {
+            let det = LayoutDetection::new(LayoutClass::Table, 0.9, bbox);
+            assert!(region_crop(0, &page_image, &hint, &det).is_none());
+        }
+    }
+
+    #[test]
+    fn should_skip_page_when_hint_and_detection_counts_disagree() {
+        let hints = [make_hint(LayoutHintClass::Table, 0.9)];
+        let det = LayoutDetection::new(LayoutClass::Table, 0.9, BBox::new(100.0, 200.0, 700.0, 500.0));
+
+        assert!(paired_detections(0, &hints, &DetectionResult::new(1_275, 1_650, vec![])).is_none());
+        assert!(
+            paired_detections(
+                0,
+                &hints,
+                &DetectionResult::new(1_275, 1_650, vec![det.clone(), det.clone()])
+            )
+            .is_none()
+        );
+        assert_eq!(
+            paired_detections(0, &hints, &DetectionResult::new(1_275, 1_650, vec![det])).map(<[_]>::len),
+            Some(1)
+        );
     }
 
     #[test]
