@@ -8,7 +8,7 @@ use crate::types::annotations::PdfAnnotation;
 use crate::types::internal::InternalDocument;
 
 use super::common::{annotation_display_text, annotation_type_label};
-use super::comrak_bridge::build_comrak_ast;
+use super::comrak_bridge::{build_comrak_ast, escape_math_holding_html};
 
 /// Single-pass replacement of multiple two-char escape sequences of the form `\X`
 /// where X is one of `_`, `[`, `]`, `(`, `)`.
@@ -132,6 +132,7 @@ pub(crate) fn render_markdown(doc: &InternalDocument) -> String {
     tracing::debug!(element_count = doc.elements.len(), "markdown rendering starting");
     let arena = Arena::new();
     let root = build_comrak_ast(doc, &arena);
+    escape_math_holding_html(root);
 
     if root.first_child().is_none() {
         tracing::debug!("markdown rendering: empty AST, returning empty string");

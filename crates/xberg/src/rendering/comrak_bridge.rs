@@ -16,7 +16,7 @@ use crate::types::document_structure::{AnnotationKind, ContentLayer, TextAnnotat
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement, list_item_source_label_from_attributes};
 
 use super::common::{
-    FootnoteCollector, NestingKind, RenderState, annotated_math, handle_container_end, is_body_element,
+    FootnoteCollector, NestingKind, RenderState, annotated_math, handle_container_end, holds_html_tag, is_body_element,
     is_container_end, parse_metadata_entries, sorted_inline_annotations, valid_math_annotation,
 };
 
@@ -62,6 +62,22 @@ fn normalize_text(text: &str) -> String {
         }
     }
     result
+}
+
+/// Turn each `Math` node whose TeX holds an HTML tag into `Text`, so the CommonMark writer escapes
+/// it. Only the Markdown output needs this: comrak's HTML writer escapes a Math literal itself.
+pub(crate) fn escape_math_holding_html<'a>(root: &'a AstNode<'a>) {
+    for node in root.descendants() {
+        let mut data = node.data.borrow_mut();
+        let text = match &data.value {
+            NodeValue::Math(math) if holds_html_tag(math.literal.as_bytes()) => {
+                let delimiter = if math.display_math { "$$" } else { "$" };
+                normalize_text(&format!("{delimiter}{}{delimiter}", math.literal))
+            }
+            _ => continue,
+        };
+        data.value = NodeValue::Text(Cow::Owned(text));
+    }
 }
 
 /// Check whether ALL annotations on an element cover the full text with the
@@ -2402,5 +2418,45 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[test]
+    fn should_escape_math_holding_an_html_tag_in_markdown_only() {
+        let text = "See $<img src=x>$, $<javascript:alert(1)>$ and $a<b$.";
+        let annotations = ["$<img src=x>$", "$<javascript:alert(1)>$", "$a<b$"]
+            .into_iter()
+            .map(|span| {
+                let start = text.find(span).unwrap() as u32;
+                TextAnnotation {
+                    start,
+                    end: start + span.len() as u32,
+                    kind: AnnotationKind::math(false),
+                }
+            })
+            .collect();
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph(text, annotations, None, None);
+        builder.push_formula("<script>x</script>", None, None);
+        let doc = builder.build();
+
+        let markdown = crate::rendering::render_markdown(&doc);
+        for span in [
+            r"$\<img src=x\>$",
+            r"$\<javascript:alert(1)\>$",
+            "$a<b$",
+            r"$$\<script\>x\</script\>$$",
+        ] {
+            assert!(markdown.contains(span), "{span} not in: {markdown}");
+        }
+
+        let html = crate::rendering::render_html(&doc);
+        for span in [
+            r#"<span data-math-style="inline">&lt;img src=x&gt;</span>"#,
+            r#"<span data-math-style="inline">&lt;javascript:alert(1)&gt;</span>"#,
+            r#"<span data-math-style="inline">a&lt;b</span>"#,
+            r#"<span data-math-style="display">&lt;script&gt;x&lt;/script&gt;</span>"#,
+        ] {
+            assert!(html.contains(span), "{span} not in: {html}");
+        }
     }
 }

@@ -35,6 +35,89 @@ pub(crate) fn valid_math_annotation(text: &str, annotation: &TextAnnotation) -> 
         .is_some()
 }
 
+/// Whether `tex` holds the start of CommonMark raw HTML (an open or closing tag, a comment, a
+/// processing instruction, a declaration or CDATA) or an autolink. comrak writes a Math literal
+/// unescaped, so such math is written to Markdown as text instead. An inequality such as
+/// `0<x/y<1` is not a tag, but an open tag's attributes are not parsed, so `<x>` or `f<g>` is
+/// read as one; escaping is the safe side.
+pub(crate) fn holds_html_tag(tex: &[u8]) -> bool {
+    tex.iter()
+        .enumerate()
+        .any(|(i, &c)| c == b'<' && (starts_raw_html(&tex[i + 1..]) || starts_autolink(&tex[i + 1..])))
+}
+
+fn starts_autolink(rest: &[u8]) -> bool {
+    let Some(end) = rest.iter().position(|&c| c == b'>') else {
+        return false;
+    };
+    let link = &rest[..end];
+    is_autolink_uri(link) || is_autolink_email(link)
+}
+
+fn is_autolink_uri(link: &[u8]) -> bool {
+    let Some(colon) = link.iter().position(|&c| c == b':') else {
+        return false;
+    };
+    let scheme = &link[..colon];
+    (2..=32).contains(&scheme.len())
+        && scheme[0].is_ascii_alphabetic()
+        && scheme
+            .iter()
+            .all(|&c| c.is_ascii_alphanumeric() || matches!(c, b'+' | b'.' | b'-'))
+        && link[colon + 1..]
+            .iter()
+            .all(|&c| !c.is_ascii_control() && c != b' ' && c != b'<')
+}
+
+fn is_autolink_email(link: &[u8]) -> bool {
+    let Some(at) = link.iter().position(|&c| c == b'@') else {
+        return false;
+    };
+    at > 0
+        && link[..at]
+            .iter()
+            .all(|&c| c.is_ascii_alphanumeric() || b".!#$%&'*+/=?^_`{|}~-".contains(&c))
+        && link[at + 1..].split(|&c| c == b'.').all(|label| {
+            (1..=63).contains(&label.len())
+                && label.iter().all(|&c| c.is_ascii_alphanumeric() || c == b'-')
+                && label[0] != b'-'
+                && label[label.len() - 1] != b'-'
+        })
+}
+
+fn starts_raw_html(rest: &[u8]) -> bool {
+    match rest {
+        [b'!', b'-', b'-', ..] | [b'?', ..] => true,
+        [b'!', b'[', ..] => rest[1..].starts_with(b"[CDATA["),
+        [b'!', next, ..] => next.is_ascii_alphabetic(),
+        [b'/', tail @ ..] => {
+            let name = tag_name_len(tail);
+            name > 0 && tail[name..].iter().find(|c| !c.is_ascii_whitespace()) == Some(&b'>')
+        }
+        _ => {
+            let name = tag_name_len(rest);
+            name > 0
+                && match rest.get(name) {
+                    Some(b'>') => true,
+                    Some(&next) if next == b'/' || next.is_ascii_whitespace() => rest[name..].contains(&b'>'),
+                    _ => false,
+                }
+        }
+    }
+}
+
+fn tag_name_len(s: &[u8]) -> usize {
+    match s.first() {
+        Some(c) if c.is_ascii_alphabetic() => {
+            1 + s[1..]
+                .iter()
+                .take_while(|c| c.is_ascii_alphanumeric() || **c == b'-')
+                .count()
+        }
+        _ => 0,
+    }
+}
+
 pub(crate) fn sorted_inline_annotations<'a>(text: &str, annotations: &'a [TextAnnotation]) -> Vec<&'a TextAnnotation> {
     let mut sorted: Vec<_> = annotations
         .iter()
