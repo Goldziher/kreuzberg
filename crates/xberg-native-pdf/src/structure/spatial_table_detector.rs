@@ -2931,7 +2931,8 @@ fn split_rows_by_text_positions(
                 new_row.cells.push(TableCell {
                     text: cell_text,
                     spans: cell_spans,
-                    colspan: 1,
+                    // Splitting vertically must preserve horizontal occupancy, even for empty cells.
+                    colspan: row.cells[ci].colspan,
                     rowspan: 1,
                     mcids,
                     bbox: cell_bbox,
@@ -9447,6 +9448,77 @@ mod tests {
         assert_eq!(table.rows[1].cells[1].text, "Versterking van het MKB-segment");
         assert_eq!(table.rows[3].cells[0].text, "3");
         assert_eq!(table.rows[3].cells[1].text, "Versterking van het MKB-segment");
+    }
+
+    fn merged_split_row(widths: &[u32], active: &[bool]) -> (TableRow, Vec<Vec<Vec<usize>>>, Vec<TextSpan>) {
+        let mut row = TableRow::new(false);
+        let mut indices = Vec::new();
+        let mut spans = Vec::new();
+        let mut x = 0.0;
+        for (ci, &width) in widths.iter().enumerate() {
+            let mut cell = prose_cell("");
+            cell.colspan = width;
+            cell.bbox = Some(Rect::new(x, 170.0, width as f32 * 40.0, 50.0));
+            let mut col_indices = Vec::new();
+            if active[ci] {
+                for (line, y) in [200.0, 180.0].into_iter().enumerate() {
+                    col_indices.push(spans.len());
+                    spans.push(create_test_span(&format!("C{ci}L{line}"), x + 5.0, y, 15.0, 0.0));
+                }
+            }
+            x += width as f32 * 40.0;
+            row.cells.push(cell);
+            indices.push(col_indices);
+        }
+        (row, vec![indices], spans)
+    }
+
+    #[test]
+    fn split_rows_by_text_positions_retains_merged_blank_leading_column() {
+        let widths = [2, 1, 1];
+        let (row, indices, spans) = merged_split_row(&widths, &[false, true, true]);
+        let out = split_rows_by_text_positions(vec![row], &indices, &spans, &TableDetectionConfig::strict());
+        assert_eq!(out.len(), 2, "genuine multi-row band must still split");
+        for r in &out {
+            assert_eq!(r.cells.iter().map(|c| c.colspan).collect::<Vec<_>>(), widths);
+            assert_eq!(r.cells.iter().map(|c| c.colspan).sum::<u32>(), 4);
+            assert!(r.cells[0].text.is_empty());
+        }
+        assert_eq!(out[0].cells[1].text, "C1L0");
+        assert_eq!(out[1].cells[2].text, "C2L1");
+    }
+
+    #[test]
+    fn split_rows_by_text_positions_retains_middle_merged_cell_and_blank_trailing_cell() {
+        let widths = [1, 3, 2];
+        let (row, indices, spans) = merged_split_row(&widths, &[true, true, false]);
+        let out = split_rows_by_text_positions(vec![row], &indices, &spans, &TableDetectionConfig::strict());
+        assert_eq!(out.len(), 2);
+        for r in &out {
+            assert_eq!(r.cells.iter().map(|c| c.colspan).collect::<Vec<_>>(), widths);
+            assert!(r.cells[2].text.is_empty());
+            assert!(r.cells.iter().all(|c| c.rowspan == 1));
+        }
+    }
+
+    #[test]
+    fn split_rows_by_text_positions_unmerged_band_control() {
+        let widths = [1, 1, 1];
+        let (row, indices, spans) = merged_split_row(&widths, &[true, true, false]);
+        let out = split_rows_by_text_positions(vec![row], &indices, &spans, &TableDetectionConfig::strict());
+        assert_eq!(out.len(), 2);
+        for r in &out {
+            assert_eq!(r.cells.iter().map(|c| c.colspan).collect::<Vec<_>>(), widths);
+        }
+    }
+
+    #[test]
+    fn split_rows_by_text_positions_keeps_unsplit_colspans() {
+        let widths = [2, 1, 1];
+        let (row, indices, spans) = merged_split_row(&widths, &[false, true, false]);
+        let out = split_rows_by_text_positions(vec![row], &indices, &spans, &TableDetectionConfig::strict());
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].cells.iter().map(|c| c.colspan).collect::<Vec<_>>(), widths);
     }
 
     /// The hybrid case `split_rows_by_text_positions` exists for: vertical
