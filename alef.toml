@@ -849,7 +849,7 @@ traineddata = "traineddata"
 ]
 "crates/xberg/src/extraction/ppt/mod.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/extraction/pptx/tests.rs" = ["file-too-long", "function-too-long"]
-"crates/xberg/src/extractors/archive.rs" = ["function-too-long", "too-many-parameters"]
+"crates/xberg/src/extractors/archive.rs" = ["function-too-long"]
 "crates/xberg/src/extractors/djot_format/extractor.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
