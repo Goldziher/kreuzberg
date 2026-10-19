@@ -15,35 +15,47 @@ pub(super) fn derive_pages(
 ) -> Option<Vec<PageContent>> {
     let raw_pages = doc.prebuilt_pages.take().or_else(|| build_pages(doc, content_is_plain));
     let pages = apply_page_content_format(raw_pages, doc, output_format);
-    if content_is_plain {
-        reconcile_page_boundaries(&mut doc.metadata, content, pages.as_deref());
+    if content_is_plain
+        && !reconcile_page_boundaries(&mut doc.metadata, content, pages.as_deref())
+        && drop_unusable_page_boundaries(&mut doc.metadata, content)
+    {
+        crate::core::diagnostics::push_warning(
+            &mut doc.processing_warnings,
+            "page_boundaries",
+            "Page byte ranges were measured on a different rendering of the text and could not be \
+             mapped onto the returned content, so they were omitted",
+        );
     }
     pages
 }
 
-pub(super) fn reconcile_page_boundaries(
+/// Re-point `metadata.pages.boundaries` at `content` by locating each page's text in it, in
+/// order. Returns `true` only when every page was located exactly and the boundaries were
+/// replaced; otherwise the boundaries are left as they were. A metadata with no boundaries
+/// returns `false`.
+pub(crate) fn reconcile_page_boundaries(
     metadata: &mut crate::types::Metadata,
     content: &str,
     pages: Option<&[PageContent]>,
-) {
+) -> bool {
     let Some(boundaries) = metadata
         .pages
         .as_mut()
         .and_then(|structure| structure.boundaries.as_mut())
     else {
-        return;
+        return false;
     };
     let Some(pages) = pages.filter(|pages| pages.len() == boundaries.len()) else {
-        return;
+        return false;
     };
     let mut reconciled = Vec::with_capacity(boundaries.len());
     let mut search_offset = 0;
     for (boundary, page) in boundaries.iter().zip(pages) {
         if boundary.page_number != page.page_number || page.content.is_empty() {
-            return;
+            return false;
         }
         let Some(relative_start) = content[search_offset..].find(&page.content) else {
-            return;
+            return false;
         };
         let byte_start = search_offset + relative_start;
         let byte_end = byte_start + page.content.len();
@@ -57,6 +69,28 @@ pub(super) fn reconcile_page_boundaries(
     // ~keep OCR boundaries can describe an intermediate rendering with different separators (#2128).
     // Replace only a complete exact match; unmatched pages retain their original extraction metadata.
     *boundaries = reconciled;
+    true
+}
+
+/// Remove `metadata.pages.boundaries` when they cannot index `content`.
+///
+/// The offsets were measured on another rendering of the document, so a range that falls
+/// outside `content` or inside a UTF-8 sequence is provably stale. Returns `true` when
+/// the boundaries were dropped.
+pub(crate) fn drop_unusable_page_boundaries(metadata: &mut crate::types::Metadata, content: &str) -> bool {
+    let Some(structure) = metadata.pages.as_mut() else {
+        return false;
+    };
+    let usable = structure.boundaries.as_ref().is_none_or(|boundaries| {
+        boundaries
+            .iter()
+            .all(|b| b.byte_start <= b.byte_end && content.get(b.byte_start..b.byte_end).is_some())
+    });
+    if usable {
+        return false;
+    }
+    structure.boundaries = None;
+    true
 }
 
 /// Build per-page `PageContent` from page-grouped elements.

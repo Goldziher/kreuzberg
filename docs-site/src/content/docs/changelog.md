@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): `metadata.pages.boundaries` now index the final Markdown, HTML and Djot content instead of the earlier plain text.** Ranges are re-located in the rendered output; when that cannot be verified the ranges are omitted and a `page_boundaries` processing warning is added rather than returning wrong offsets. (#2166)
 - **(pdf): Repeated prices in separate rows of rotated tables are no longer dropped as redrawn duplicates.** Duplicate detection now compares positions in the text's own reading frame. (#2164)
 - **(pdf): Splitting multiline table rows preserves merged columns, keeping bidder names aligned with their IDs and prices.** (#2165)
 - **(pdf): Native PDF page tables now reflect the final global table selection, order, IDs and columns.** (#2167)

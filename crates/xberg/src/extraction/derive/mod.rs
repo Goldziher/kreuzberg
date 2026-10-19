@@ -25,6 +25,7 @@ use formulas::derive_formulas;
 pub(crate) use formulas::strip_math_delimiters;
 #[cfg(test)]
 use pages::build_pages;
+pub(crate) use pages::reconcile_page_boundaries;
 use pages::{build_ocr_elements, derive_pages};
 
 /// Cap on how many unresolvable keys a single warning names before it summarises
