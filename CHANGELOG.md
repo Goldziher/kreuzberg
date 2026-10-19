@@ -29,10 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(pdf): Repeated prices in separate rows of rotated tables are no longer dropped as redrawn duplicates.** Duplicate detection now compares positions in the text's own reading frame. (#2164)
 - **(pdf): Splitting multiline table rows preserves merged columns, keeping bidder names aligned with their IDs and prices.** (#2165)
 - **(pdf): Native PDF page tables now reflect the final global table selection, order, IDs and columns.** (#2167)
-- **(markdown): Math whose text holds an HTML tag or an autolink is written escaped.** An annotated math span or a
-  formula element was written to Markdown unescaped, so text such as `<img src=x>` or `<javascript:x>` inside it came
-  out as raw HTML or a link. In Markdown output such math is now written as text between its `$` or `$$` delimiters,
-  with its `<` escaped. Math without either, such as `$a<b$`, and the HTML output are unchanged.
+- **(markdown): Text inside code spans, code blocks and math can no longer turn into raw HTML in Markdown output.**
+  Math is now written as code math: `` $`...`$ `` inline, and a ```` ```math ```` block for display math standing
+  alone. Math holding a backtick or `$`, or in a block with code holding `$`, is written as a plain code span, and
+  a `$` in that block's prose as `\$`. An empty code span no longer panics the Markdown writer. HTML output is
+  unchanged.
 - **(api): `/health`, `/info` and `/version` no longer queue behind the concurrency limit.** `XBERG_MAX_CONCURRENT_REQUESTS` now applies to the extraction routes only, so a saturated but healthy pod keeps passing orchestrator probes. (#2161)
 - **(pdf): disabling extraction caching also disables the built-in Tesseract result cache.**
   The opt-out reaches mixed, full-page, pipeline and embedded-image OCR without changing native-text fallback routing.

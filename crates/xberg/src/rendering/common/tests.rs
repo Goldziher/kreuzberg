@@ -602,33 +602,3 @@ fn should_reject_issue_2123_unmatched_trailing_dollars() {
     );
     assert_eq!(annotated_math(r"$x\\$$", &AnnotationKind::math(false)), None);
 }
-
-#[test]
-fn test_holds_html_tag() {
-    for tex in [
-        "<img src=x>",
-        "<b>",
-        "x </script >",
-        "<!-- c -->",
-        "<?php",
-        "<!DOCTYPE html>",
-        "<![CDATA[x]]>",
-        "</script>",
-        "<?x?>",
-        "<javascript:alert(1)>",
-        "<http://e.com>",
-        "<a@b.c>",
-    ] {
-        assert!(holds_html_tag(tex.as_bytes()), "{tex}");
-    }
-    for tex in ["a<b", "0<F_{t}/F_{r}<0.35", "0<x/y<1", r"x < y \le z", "<x,y>", "p<.05"] {
-        assert!(!holds_html_tag(tex.as_bytes()), "{tex}");
-    }
-}
-
-#[test]
-fn test_holds_html_tag_reads_math_shaped_like_an_open_tag_as_one() {
-    for tex in ["<x>", "A<B> C", "f<g>"] {
-        assert!(holds_html_tag(tex.as_bytes()), "{tex}");
-    }
-}

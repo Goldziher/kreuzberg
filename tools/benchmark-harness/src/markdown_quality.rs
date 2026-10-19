@@ -76,6 +76,14 @@ pub(crate) fn md_parser_options() -> pulldown_cmark::Options {
     opts
 }
 
+/// The TeX of an `Event::InlineMath`: pulldown-cmark reads code math, `` $`x`$ ``, as inline
+/// math that keeps its backticks.
+pub(crate) fn inline_math_tex(text: &str) -> &str {
+    text.strip_prefix('`')
+        .and_then(|tex| tex.strip_suffix('`'))
+        .unwrap_or(text)
+}
+
 /// Parse a markdown string into a sequence of typed blocks using pulldown-cmark.
 ///
 /// This uses a proper CommonMark parser, so it correctly handles all markdown
@@ -107,6 +115,7 @@ struct BlockAccumulator {
     table_content: String,
     in_heading: Option<u8>,
     in_code_block: bool,
+    in_math_fence: bool,
     in_table: bool,
     in_list_item: bool,
 }
@@ -137,7 +146,7 @@ impl BlockAccumulator {
 
     /// Handle heading, code-block, list and image tags. Returns whether the event was consumed.
     fn handle_block_tag(&mut self, event: &pulldown_cmark::Event<'_>) -> bool {
-        use pulldown_cmark::{Event, Tag, TagEnd};
+        use pulldown_cmark::{CodeBlockKind, Event, Tag, TagEnd};
 
         match event {
             Event::Start(Tag::Heading { level, .. }) => {
@@ -145,9 +154,11 @@ impl BlockAccumulator {
                 self.in_heading = Some(*level as u8);
             }
             Event::End(TagEnd::Heading(_)) => self.end_heading(),
-            Event::Start(Tag::CodeBlock(_)) => {
+            Event::Start(Tag::CodeBlock(kind)) => {
                 self.flush_paragraph();
                 self.in_code_block = true;
+                self.in_math_fence =
+                    matches!(kind, CodeBlockKind::Fenced(info) if info.split_ascii_whitespace().next() == Some("math"));
             }
             Event::End(TagEnd::CodeBlock) => self.end_code_block(),
             Event::Start(Tag::List(_)) => self.flush_paragraph(),
@@ -202,7 +213,8 @@ impl BlockAccumulator {
         if content.trim().is_empty() {
             return;
         }
-        let block_type = if content.trim().starts_with("\\")
+        let block_type = if self.in_math_fence
+            || content.trim().starts_with("\\")
             || content.contains("\\frac")
             || content.contains("\\sum")
             || content.contains("\\int")
@@ -282,7 +294,7 @@ impl BlockAccumulator {
                 }
             }
             Event::HardBreak => self.current_text.push('\n'),
-            Event::InlineMath(text) => self.current_text.push_str(&text),
+            Event::InlineMath(text) => self.current_text.push_str(inline_math_tex(&text)),
             Event::DisplayMath(text) => {
                 self.flush_paragraph();
                 let trimmed = text.trim();
@@ -467,10 +479,19 @@ mod tests {
     }
 
     #[test]
+    fn parses_code_math_as_inline_math() {
+        let blocks = parse_markdown_blocks("$`x^2`$\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].content, "x^2");
+    }
+
+    #[test]
     fn parses_code_formula_table_lists_and_images() {
         let cases = [
             ("```rust\nfn main() {}\n```", MdBlockType::CodeBlock),
             ("$$\nE = mc^2\n$$", MdBlockType::Formula),
+            ("```math\nE = mc^2\n```", MdBlockType::Formula),
+            ("```math display\nE = mc^2\n```", MdBlockType::Formula),
             ("| Name | Age |\n|---|---|\n| Alice | 30 |", MdBlockType::Table),
             ("- Item one", MdBlockType::ListItem),
             ("![Alt text](image.png)", MdBlockType::Image),

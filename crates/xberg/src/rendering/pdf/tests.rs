@@ -182,6 +182,18 @@ fn should_draw_code_characters_courier_cannot_encode_in_dejavu_sans() {
 }
 
 #[test]
+fn should_set_code_math_as_text_rather_than_code() {
+    let markdown = "Let $`a<b`$ hold.\n\n```math\nx^2\n```\n";
+    assert!(all_runs(markdown).iter().all(|run| run.face == Face::Sans));
+    assert_eq!(text(markdown), "Let a<b hold. x^2");
+
+    let runs = all_runs("```math\nx^2\ny^2\n```\n");
+    let lines: Vec<(&str, Face)> = runs.iter().map(|run| (run.text.as_str(), run.face)).collect();
+    assert_eq!(lines, [("x^2", Face::Sans), ("y^2", Face::Sans)]);
+    assert_ne!(runs[0].y, runs[1].y, "each line of the fence is its own line");
+}
+
+#[test]
 fn should_draw_bold_and_italic_from_the_regular_face() {
     let runs = all_runs("**bold** *italic* plain\n");
     let flags: Vec<(&str, bool, bool)> = runs

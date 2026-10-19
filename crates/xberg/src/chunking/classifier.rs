@@ -46,6 +46,10 @@ pub(crate) fn classify_chunk(content: &str, heading_context: Option<&HeadingCont
         return ChunkType::Heading;
     }
 
+    if is_math_fence(trimmed) {
+        return ChunkType::Formula;
+    }
+
     if is_code_block(content) {
         return ChunkType::CodeBlock;
     }
@@ -110,6 +114,15 @@ fn is_code_block(content: &str) -> bool {
         }
     }
     false
+}
+
+/// A ```` ```math ```` fence anywhere in the chunk, the form the Markdown writer gives display math.
+fn is_math_fence(content: &str) -> bool {
+    content.lines().any(|line| {
+        let line = line.trim();
+        let info = line.trim_start_matches('`');
+        line.len() - info.len() >= 3 && info.split_ascii_whitespace().next() == Some("math")
+    })
 }
 
 fn is_table_like(content: &str) -> bool {
@@ -343,6 +356,11 @@ mod tests {
     fn test_formula_latex() {
         assert_eq!(classify(r"The result is $\frac{a}{b}$"), ChunkType::Formula);
         assert_eq!(classify(r"$$\sum_{i=0}^{n} x_i$$"), ChunkType::Formula);
+        assert_eq!(classify("```math\nx_i + y\n```"), ChunkType::Formula);
+        assert_eq!(classify("```math display\nx_i + y\n```"), ChunkType::Formula);
+        assert_eq!(classify("Intro.\n\n```math\nx_i + y\n```"), ChunkType::Formula);
+        assert_eq!(classify("````math\na ``` b\n````"), ChunkType::Formula);
+        assert_eq!(classify("```mathematica\nPlot[x]\n```"), ChunkType::CodeBlock);
     }
 
     #[test]

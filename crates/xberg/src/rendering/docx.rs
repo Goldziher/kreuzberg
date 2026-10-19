@@ -154,6 +154,9 @@ impl BodyWriter {
                 self.close_paragraph();
                 self.open_paragraph(ParagraphKind::Heading(heading.level.clamp(1, 6)));
             }
+            NodeValue::CodeBlock(block) if block.info.split_ascii_whitespace().next() == Some("math") => {
+                self.literal_block(&block.literal, ParagraphKind::Body)
+            }
             NodeValue::CodeBlock(block) => self.literal_block(&block.literal, ParagraphKind::Code),
             NodeValue::FrontMatter(text) => self.literal_block(text, ParagraphKind::Code),
             NodeValue::HtmlBlock(block) => self.literal_block(&block.literal, ParagraphKind::Body),
@@ -706,6 +709,14 @@ mod tests {
                 panic!("{name} is not well-formed XML: {error}\n{xml}");
             }
         }
+    }
+
+    #[test]
+    fn should_write_code_math_as_text_rather_than_code() {
+        let document = part("Let $`a<b`$ hold.\n\n```math\nx^2\n```\n", "word/document.xml");
+        assert_eq!(body_text(&document), "Let a<b hold.x^2");
+        assert!(!document.contains("Courier New"), "{document}");
+        assert!(!document.contains("SourceCode"), "{document}");
     }
 
     #[test]
