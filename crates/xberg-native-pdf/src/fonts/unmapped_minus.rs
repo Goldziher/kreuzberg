@@ -19,9 +19,9 @@ const MIN_ASPECT_RATIO: f32 = 6.0;
 pub(super) fn recover(info: &FontInfo, code: u32) -> Option<char> {
     if info.subtype != "Type1"
         || !matches!(code, 0..=8 | 11..=12 | 14..=31)
-        || !info
+        || info
             .flags
-            .is_some_and(|flags| flags & (SYMBOLIC_FLAG | NONSYMBOLIC_FLAG) == SYMBOLIC_FLAG)
+            .is_none_or(|flags| flags & (SYMBOLIC_FLAG | NONSYMBOLIC_FLAG) != SYMBOLIC_FLAG)
     {
         return None;
     }
