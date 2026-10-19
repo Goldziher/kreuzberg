@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Crop VLM regions from the detected pixel box.**
+  The crop was cut from the layout hint's PDF-point box read as pixels, so at the default 150 dpi the region came out
+  at about half its size and shifted down the page: one at the top of a Letter page was cut from below the middle. It
+  is now cut from the pixel-space layout detection the hint was converted from.
 - **(pdf): Give a VLM region on a page with no text layer its own page break.**
   A region answer for a scanned page with no elements was spliced next to a neighbouring page's content with no
   break between them, so page markers placed it, or the content after it, on the wrong page.
