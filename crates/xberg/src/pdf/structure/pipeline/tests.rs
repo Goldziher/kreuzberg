@@ -2454,8 +2454,112 @@ fn a_table_still_suppresses_the_prose_copy_of_its_own_cells() {
     );
 }
 
-fn table_cell_text(cells: &[&str]) -> String {
-    cells.iter().map(|cell| normalize_for_table_coverage(cell)).collect()
+#[test]
+fn table_coverage_preserves_substrings_and_fabricated_tokens() {
+    for (source, cells) in [
+        ("0001", vec!["1500000", "1500000", "090100"]),
+        ("AB12", vec!["XAB123"]),
+        ("0001", vec!["000", "1"]),
+        ("AB12", vec!["AB", "12"]),
+        ("0001", vec!["000 1"]),
+        ("0001", vec!["000.1"]),
+        ("AB12", vec!["AB 12"]),
+        ("Nee", vec!["Neen"]),
+    ] {
+        let tables = vec![crate::types::Table {
+            cells: vec![cells.into_iter().map(str::to_owned).collect()],
+            page_number: 1,
+            bounding_box: Some(crate::types::BoundingBox {
+                x0: 0.0,
+                y0: 0.0,
+                x1: 500.0,
+                y1: 500.0,
+            }),
+            ..Default::default()
+        }];
+        let coverage = table_bboxes_by_page(&tables);
+        let kept = filter_segments_by_table_bboxes(vec![column_seg(source, 50.0, 100.0, 350.0)], &coverage[&0]);
+        assert_eq!(
+            kept.len(),
+            1,
+            "unrepresented source token {source:?} must survive {:?}",
+            tables[0].cells
+        );
+    }
+}
+
+#[test]
+fn table_coverage_matches_complete_tokens_and_split_runs() {
+    for (source, cells) in [
+        ("AB 12", vec!["AB", "12"]),
+        ("000 1", vec!["000", "1"]),
+        ("0001", vec!["ID 0001 end"]),
+        ("alpha beta", vec!["alpha", "beta"]),
+        ("hyphenation", vec!["hyphen-\nation"]),
+        ("hyphen-\nation", vec!["hyphenation"]),
+        ("co-operate", vec!["cooperate"]),
+        ("$1,000.00", vec!["$1,000.00"]),
+        ("1.000,00", vec!["1.000,00"]),
+        ("ÉTÉ 東京", vec!["été", "東京"]),
+        ("İ", vec!["prefix", "İ"]),
+        ("AB12", vec!["XAB12", "AB12"]),
+        ("AB 12", vec!["", "AB", "", "12", ""]),
+    ] {
+        let coverage = table_cell_text(&cells);
+        assert!(coverage.represents(source), "must represent {source:?} in {cells:?}");
+        assert_eq!(
+            coverage.glyphs,
+            cells
+                .iter()
+                .map(|cell| normalize_for_table_coverage(cell))
+                .collect::<String>()
+        );
+    }
+    // A single word split across cells lacks evidence of source ownership. Keep
+    // it rather than fabricate an identifier out of unrelated whole cell values.
+    assert!(!table_cell_text(&["hyphen", "ation"]).represents("hyphenation"));
+    assert!(!table_cell_text(&["alpha beta"]).represents("alphabeta"));
+    assert!(!table_cell_text(&["anything"]).represents("..."));
+    assert!(!table_cell_text(&["anything"]).represents(""));
+}
+
+#[test]
+fn table_coverage_keeps_geometry_and_markdown_only_behavior() {
+    let table = crate::types::Table {
+        markdown: "| ID | Value |\n|---|---|\n| AB | 12 |\n| 0001 | 150.00 |".into(),
+        page_number: 1,
+        bounding_box: Some(crate::types::BoundingBox {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 500.0,
+            y1: 500.0,
+        }),
+        ..Default::default()
+    };
+    let coverage = table_bboxes_by_page(&[table]);
+    assert!(coverage[&0][0].cell_text.represents("AB 12"));
+    assert!(!coverage[&0][0].cell_text.represents("AB12"));
+    let segments = vec![
+        column_seg("0001", 10.0, 100.0, 100.0),
+        column_seg("0001", 10.0, 100.0, 200.0),
+        column_seg("0001", 600.0, 100.0, 200.0),
+        column_seg("0001", 10.0, 0.0, 100.0),
+        column_seg("...", 10.0, 100.0, 100.0),
+        column_seg("0001", 450.0, 100.0, 100.0),
+        column_seg("0001", 451.0, 100.0, 100.0),
+    ];
+    let kept = filter_segments_by_table_bboxes(segments, &coverage[&0]);
+    assert_eq!(kept.len(), 4);
+    assert_eq!(kept[0].x, 600.0);
+    assert_eq!(kept[1].width, 0.0);
+    assert_eq!(kept[2].text, "...");
+    assert_eq!(kept[3].x, 451.0);
+    // This remains a textual guard: identical complete text at two covered
+    // positions is indistinguishable without consumed-source provenance.
+}
+
+fn table_cell_text(cells: &[&str]) -> TableCoverageText {
+    TableCoverageText::from_cells(cells.iter().copied())
 }
 
 fn column_seg(text: &str, x: f32, width: f32, baseline_y: f32) -> SegmentData {
@@ -3836,7 +3940,7 @@ fn page_width_reaches_layout_reading_order_graph() {
                     x1: 50.0,
                     y1: 50.0,
                 },
-                cell_text: String::new(),
+                cell_text: table_cell_text(&[]),
             }],
             true,
         ),
@@ -4711,7 +4815,7 @@ fn table_coverage_with_text(page_index: usize, text: &str) -> ahash::AHashMap<us
                 x1: 1.0,
                 y1: 1.0,
             },
-            cell_text: normalize_for_table_coverage(text),
+            cell_text: table_cell_text(&[text]),
         }],
     );
     map

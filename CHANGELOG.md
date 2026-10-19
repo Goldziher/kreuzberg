@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): retain omitted native table text when it only matches substrings of unrelated cell values.**
+  Coverage matching respects token boundaries while still suppressing represented runs split across cells. (#2171)
+
 - **(api): `/health`, `/info` and `/version` no longer queue behind the concurrency limit.** `XBERG_MAX_CONCURRENT_REQUESTS` now applies to the extraction routes only, so a saturated but healthy pod keeps passing orchestrator probes. (#2161)
 - **(pdf): disabling extraction caching also disables the built-in Tesseract result cache.**
   The opt-out reaches mixed, full-page, pipeline and embedded-image OCR without changing native-text fallback routing.

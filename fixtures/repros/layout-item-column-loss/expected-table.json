@@ -1,0 +1,253 @@
+{
+  "cells": [
+    [
+      "Item Code",
+      "Item Description",
+      "Unit of Measure",
+      "Estimated Quantity",
+      "Bid",
+      "Amount"
+    ],
+    [
+      "070030",
+      "LEAD COMPLIANCE PLAN",
+      "LS",
+      "LUMP SUM",
+      "5,500.00",
+      "5,500.00"
+    ],
+    [
+      "080060",
+      "LEVEL 2 CRITICAL PATH METHOD SCHEDULE",
+      "LS",
+      "LUMP SUM",
+      "15,000.00",
+      "15,000.00"
+    ],
+    [
+      "090100",
+      "TIME-RELATED OVERHEAD (WDAY)",
+      "WDAY",
+      "100.0",
+      "5,000.00",
+      "500,000.00"
+    ],
+    [
+      "090205",
+      "DISPUTE RESOLUTION BOARD ON-SITE MEETING",
+      "EA",
+      "4.0",
+      "7,500.00",
+      "30,000.00"
+    ],
+    [
+      "090210",
+      "HOURLY OFF-SITE DISPUTE-RESOLUTION-BOARD-RELATED TASKS",
+      "HR",
+      "80.0",
+      "250.00",
+      "20,000.00"
+    ],
+    [
+      "000001",
+      "ITEM DELETED PER ADDENDUM",
+      "LS",
+      "LUMP SUM",
+      "0.00",
+      "0.00"
+    ],
+    [
+      "120090",
+      "CONSTRUCTION AREA SIGNS",
+      "LS",
+      "LUMP SUM",
+      "32,000.00",
+      "32,000.00"
+    ],
+    [
+      "120100",
+      "TRAFFIC CONTROL SYSTEM",
+      "LS",
+      "LUMP SUM",
+      "219,766.00",
+      "219,766.00"
+    ],
+    [
+      "120103",
+      "STATIONARY IMPACT ATTENUATOR VEHICLE",
+      "DAY",
+      "70.0",
+      "1,000.00",
+      "70,000.00"
+    ],
+    [
+      "120159",
+      "TEMPORARY TRAFFIC STRIPE (PAINT)",
+      "LF",
+      "4,790.0",
+      "1.60",
+      "7,664.00"
+    ],
+    [
+      "120165",
+      "CHANNELIZER (SURFACE MOUNTED)",
+      "EA",
+      "38.0",
+      "68.00",
+      "2,584.00"
+    ],
+    [
+      "120300",
+      "TEMPORARY PAVEMENT MARKER",
+      "EA",
+      "210.0",
+      "5.50",
+      "1,155.00"
+    ],
+    [
+      "120320",
+      "TEMPORARY BARRIER SYSTEM",
+      "LF",
+      "6,040.0",
+      "20.00",
+      "120,800.00"
+    ],
+    [
+      "128651",
+      "PORTABLE CHANGEABLE MESSAGE SIGN (EA)",
+      "EA",
+      "4.0",
+      "10,500.00",
+      "42,000.00"
+    ],
+    [
+      "129108",
+      "TEMPORARY CRASH CUSHION TL-3",
+      "EA",
+      "9.0",
+      "8,500.00",
+      "76,500.00"
+    ],
+    [
+      "129152",
+      "TEMPORARY RADAR SPEED FEEDBACK SIGN SYSTEM",
+      "EA",
+      "2.0",
+      "7,000.00",
+      "14,000.00"
+    ],
+    [
+      "130100",
+      "JOB SITE MANAGEMENT",
+      "LS",
+      "LUMP SUM",
+      "50,000.00",
+      "50,000.00"
+    ],
+    [
+      "130301",
+      "STORMWATER POLLUTION PREVENTION PLAN",
+      "LS",
+      "LUMP SUM",
+      "5,000.00",
+      "5,000.00"
+    ],
+    [
+      "130312",
+      "PRE-STORM EVENT INSPECTION REPORT",
+      "EA",
+      "34.0",
+      "500.00",
+      "17,000.00"
+    ],
+    [
+      "130323",
+      "DURING-AND POST-STORM EVENT INSPECTION REPORT",
+      "DAY",
+      "15.0",
+      "500.00",
+      "7,500.00"
+    ],
+    [
+      "130331",
+      "STORMWATER ANNUAL REPORT",
+      "EA",
+      "3.0",
+      "3,000.00",
+      "9,000.00"
+    ],
+    [
+      "130560",
+      "TEMPORARY SOIL BINDER",
+      "SQYD",
+      "17,000.0",
+      "0.20",
+      "3,400.00"
+    ],
+    [
+      "130570",
+      "TEMPORARY COVER",
+      "SQYD",
+      "1,000.0",
+      "2.00",
+      "2,000.00"
+    ],
+    [
+      "130640",
+      "TEMPORARY FIBER ROLL",
+      "LF",
+      "7,500.0",
+      "4.50",
+      "33,750.00"
+    ],
+    [
+      "0025 130650",
+      "TEMPORARY GRAVEL BAG BERM",
+      "LF",
+      "2,000.0",
+      "7.00",
+      "14,000.00"
+    ]
+  ],
+  "monetary_tokens": {
+    "0.00": 2,
+    "0.20": 1,
+    "1,000.00": 1,
+    "1,155.00": 1,
+    "1.60": 1,
+    "10,500.00": 1,
+    "120,800.00": 1,
+    "14,000.00": 2,
+    "15,000.00": 2,
+    "17,000.00": 1,
+    "2,000.00": 1,
+    "2,584.00": 1,
+    "2.00": 1,
+    "20,000.00": 1,
+    "20.00": 1,
+    "219,766.00": 2,
+    "250.00": 1,
+    "3,000.00": 1,
+    "3,400.00": 1,
+    "30,000.00": 1,
+    "32,000.00": 2,
+    "33,750.00": 1,
+    "4.50": 1,
+    "42,000.00": 1,
+    "5,000.00": 3,
+    "5,500.00": 2,
+    "5.50": 1,
+    "50,000.00": 2,
+    "500,000.00": 1,
+    "500.00": 2,
+    "68.00": 1,
+    "7,000.00": 1,
+    "7,500.00": 2,
+    "7,664.00": 1,
+    "7.00": 1,
+    "70,000.00": 1,
+    "76,500.00": 1,
+    "8,500.00": 1,
+    "9,000.00": 1
+  }
+}

@@ -4621,20 +4621,80 @@ fn deduplicate_identical_tables(tables: &mut Vec<crate::types::Table>) {
 #[derive(Clone)]
 struct TableCoverage {
     bbox: crate::types::BoundingBox,
-    /// Every cell's alphanumeric glyphs, lowercased and concatenated in row-major order.
-    /// Built once per table so the per-segment test is a substring search.
-    cell_text: String,
+    cell_text: TableCoverageText,
 }
 
-/// Reduce text to lowercase alphanumerics, dropping whitespace and punctuation entirely.
-///
-/// Cell assembly does not preserve a printed run's boundaries: one visual line commonly spans
-/// several cells, and a wrapped cell inserts separators a printed run does not have. GH#1616's
-/// first fix compared whitespace-collapsed text, so any run the grid split across cells failed to
-/// match and was emitted a second time as prose -- on `issue-912` that cost 81 of 263 words,
-/// dropping precision from 0.984 to 0.692 while recall stayed flat, which is the signature of
-/// duplication rather than loss. Concatenating glyphs makes the test indifferent to where the grid
-/// chose to put its boundaries, which is the only thing it was ever wrong about. ~keep
+/// Glyphs and token boundaries retained separately so a split printed run can match
+/// across cells without fabricating a token from unrelated neighboring values.
+#[derive(Clone)]
+struct TableCoverageText {
+    glyphs: String,
+    boundaries: std::collections::BTreeSet<usize>,
+}
+
+impl TableCoverageText {
+    fn from_cells<'a>(cells: impl IntoIterator<Item = &'a str>) -> Self {
+        let mut glyphs = String::new();
+        let mut boundaries = std::collections::BTreeSet::from([0]);
+        for cell in cells {
+            let (text, cell_boundaries) = coverage_glyphs_and_boundaries(cell);
+            boundaries.extend(cell_boundaries.into_iter().map(|offset| offset + glyphs.len()));
+            glyphs.push_str(&text);
+            // A cell edge is always a boundary, even for a hyphen-ending cell.
+            boundaries.insert(glyphs.len());
+        }
+        Self { glyphs, boundaries }
+    }
+
+    fn represents(&self, text: &str) -> bool {
+        let (glyphs, boundaries) = coverage_glyphs_and_boundaries(text);
+        if glyphs.is_empty() {
+            return false;
+        }
+        self.boundaries.iter().copied().any(|start| {
+            let end = start + glyphs.len();
+            self.glyphs[start..].starts_with(&glyphs)
+                && self.boundaries.contains(&end)
+                && self
+                    .boundaries
+                    .range(start..=end)
+                    .all(|offset| boundaries.contains(&(offset - start)))
+        })
+    }
+}
+
+/// Preserve boundaries lost by glyph normalization. Hyphenation between letters
+/// (including a line break after the hyphen) joins a word, but numeric punctuation
+/// remains a boundary: `000.1` cannot claim an omitted `0001` identifier.
+fn coverage_glyphs_and_boundaries(text: &str) -> (String, std::collections::BTreeSet<usize>) {
+    let mut glyphs = String::new();
+    let mut boundaries = std::collections::BTreeSet::from([0]);
+    let mut characters = text.chars().peekable();
+    let mut previous = None;
+    while let Some(character) = characters.next() {
+        if character.is_alphanumeric() {
+            glyphs.extend(character.to_lowercase());
+            previous = Some(character);
+            continue;
+        }
+        if matches!(character, '-' | '\u{ad}') && previous.is_some_and(char::is_alphabetic) {
+            let mut remainder = characters.clone();
+            while remainder.peek().is_some_and(|next| next.is_whitespace()) {
+                remainder.next();
+            }
+            if remainder.peek().is_some_and(|next| next.is_alphabetic()) {
+                characters = remainder;
+                continue;
+            }
+        }
+        boundaries.insert(glyphs.len());
+        previous = None;
+    }
+    boundaries.insert(glyphs.len());
+    (glyphs, boundaries)
+}
+
+/// Reduce text to lowercase alphanumerics for paragraph deduplication.
 fn normalize_for_table_coverage(text: &str) -> String {
     text.chars()
         .filter(|c| c.is_alphanumeric())
@@ -4652,14 +4712,11 @@ fn table_bboxes_by_page(tables: &[crate::types::Table]) -> ahash::AHashMap<usize
             // markdown keeps suppression working for those instead of silently
             // disabling it, which would emit their contents twice. ~keep
             let cell_text = if table.cells.iter().any(|row| !row.is_empty()) {
-                table
-                    .cells
-                    .iter()
-                    .flat_map(|row| row.iter())
-                    .map(|cell| normalize_for_table_coverage(cell))
-                    .collect::<String>()
+                TableCoverageText::from_cells(table.cells.iter().flatten().map(String::as_str))
             } else {
-                normalize_for_table_coverage(&table.markdown)
+                // Treat Markdown cell separators as boundaries as well. This also
+                // supports tables with only rendered Markdown and no cell grid.
+                TableCoverageText::from_cells(std::iter::once(table.markdown.as_str()))
             };
             coverage_by_page
                 .entry(table.page_number.saturating_sub(1) as usize)
@@ -4681,12 +4738,12 @@ fn table_bboxes_by_page(tables: &[crate::types::Table]) -> ahash::AHashMap<usize
 /// columns over a bbox spanning all four, and 26 words vanished across two pages.
 ///
 /// The text test restores the invariant that a bounding box cannot delete content the
-/// grid does not represent: a covered run is dropped only when some cell actually
-/// carries it. Matching is on [`normalize_for_table_coverage`]'s glyph concatenation, so
-/// it is indifferent to where cell assembly put its boundaries -- a printed run split
-/// across two cells, or a visual line spanning several, still matches. Requiring the
-/// grid's own whitespace instead suppressed almost nothing and re-emitted whole tables
-/// as prose (GH#1616 again, from the other side).
+/// grid does not represent: a covered run is dropped only when the grid carries
+/// its complete tokens. Glyph matching still permits a printed run to span cells,
+/// but table token/cell boundaries cannot occur inside a source token. Otherwise
+/// unrelated values such as `000` and `1` could claim the omitted identifier `0001`.
+/// This is textual evidence, not source provenance: identical complete text at a
+/// different position inside the same table remains indistinguishable.
 ///
 /// Segments with zero area or empty text are always kept. ~keep
 fn filter_segments_by_table_bboxes(segments: Vec<SegmentData>, tables: &[TableCoverage]) -> Vec<SegmentData> {
@@ -4701,7 +4758,6 @@ fn filter_segments_by_table_bboxes(segments: Vec<SegmentData>, tables: &[TableCo
             if seg_area <= 0.0 || seg_text.is_empty() {
                 return true;
             }
-            let normalized = normalize_for_table_coverage(seg_text);
             !tables.iter().any(|table| {
                 let bb = &table.bbox;
                 let inter_left = seg.x.max(bb.x0 as f32);
@@ -4712,7 +4768,7 @@ fn filter_segments_by_table_bboxes(segments: Vec<SegmentData>, tables: &[TableCo
                     return false;
                 }
                 let inter_area = (inter_right - inter_left) * (inter_top - inter_bottom);
-                inter_area / seg_area >= 0.5 && table.cell_text.contains(&normalized)
+                inter_area / seg_area >= 0.5 && table.cell_text.represents(seg_text)
             })
         })
         .collect()
@@ -6140,7 +6196,7 @@ fn deduplicate_paragraphs(
                 continue;
             }
             let glyphs = normalize_for_table_coverage(&text);
-            if glyphs.is_empty() || !page_tables.iter().any(|table| table.cell_text.contains(&glyphs)) {
+            if glyphs.is_empty() || !page_tables.iter().any(|table| table.cell_text.glyphs.contains(&glyphs)) {
                 continue;
             }
             if !seen.insert((para.layout_region_path, text)) {

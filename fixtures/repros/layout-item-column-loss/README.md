@@ -23,3 +23,14 @@ PDF SHA-256:
 ```text
 cc44309443a1e7bcaa3fc7c71cfc4f44b1749677fe9d6aa37b096c5b1d52e9e3  fixture.pdf
 ```
+
+## Regression expectations
+
+`expected-table.json` freezes the six-column table cells and document monetary-token
+counts from unmodified `66e637beef11d` with the layout configuration above. The fix
+retains all 25 item identifiers exactly once in page and document text without
+changing those cells or monetary counts. It does not reconstruct the missing column.
+
+The model-backed Rust regression is `pdf_layout_text_coverage`; run its ignored
+test explicitly with cached RT-DETR and TATR weights. Model-independent coverage
+regressions live in the PDF structure pipeline unit tests.
