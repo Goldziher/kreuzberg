@@ -259,7 +259,7 @@ Cee wwe we ee me wane e
 enerqnco mech)
 
 Product Price Quantity Total
-Apple 00 10 00
+Apple 50 10 00
 Banana 20 15 00
 Orange 00 8 00
 Total   00"#;
@@ -305,7 +305,7 @@ enerqnco mech)
 
 | Product | Price | Quantity | Total |
 | --- | --- | --- | --- |
-| Apple | 00 | 10 | 00 |
+| Apple | 50 | 10 | 00 |
 | Banana | 20 | 15 | 00 |
 | Orange | 00 | 8 | 00 |
 | Total |  |  | 00 |
@@ -353,13 +353,13 @@ fn test_ocr_embedded_image_retry_keeps_a_table_that_holds_all_of_its_text() {
     use xberg::core::config::OutputFormat;
 
     const EXPECTED_PLAIN: &str = r#"Product Price Quantity Total
-Apple 00 10 00
+Apple 50 10 00
 Banana 20 15 00
 Orange 00 8 00
 Total   00"#;
     const EXPECTED_MARKDOWN: &str = r#"| Product | Price | Quantity | Total |
 | --- | --- | --- | --- |
-| Apple | 00 | 10 | 00 |
+| Apple | 50 | 10 | 00 |
 | Banana | 20 | 15 | 00 |
 | Orange | 00 | 8 | 00 |
 | Total |  |  | 00 |
