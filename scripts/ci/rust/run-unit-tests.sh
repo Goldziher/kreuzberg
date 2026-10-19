@@ -97,7 +97,10 @@ run_xberg_tests_in_chunks() {
 
   metadata="$(cargo metadata --no-deps --format-version 1)" || return 90
   target_dir="$(printf '%s' "$metadata" | jq -r '.target_directory')"
-  [ -n "$target_dir" ] && [ -d "$target_dir" ] || return 90
+  if [ -z "$target_dir" ]; then
+    echo "ERROR: cargo metadata reported no target directory" >&2
+    return 90
+  fi
   deps="$target_dir/debug/deps"
   while IFS= read -r name; do
     [ -n "$name" ] && tests+=("$name")
@@ -111,6 +114,7 @@ run_xberg_tests_in_chunks() {
   prune_test_binaries() {
     for name in "$@"; do
       stem="${name//-/_}"
+      [ -d "$deps" ] || continue
       find "$deps" -maxdepth 1 -type f -name "${stem}-[0-9a-f]*" ! -name '*.*' -delete
     done
   }
