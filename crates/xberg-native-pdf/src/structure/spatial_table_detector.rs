@@ -2849,6 +2849,23 @@ fn split_rows_by_text_positions(
             continue;
         }
 
+        // ~keep Several cells wrapping in one band stagger their lines: each evidenced line then
+        // populates columns its evidenced neighbour does not (name+amount on one baseline,
+        // certification+work on the next). Genuine rows, and bands of repeated multi-line cells,
+        // reuse a column from one evidenced line to the next (#2169).
+        let evidenced_columns: Vec<&Vec<bool>> = cluster_columns
+            .iter()
+            .zip(&is_evidenced)
+            .filter_map(|(columns, &evidenced)| evidenced.then_some(columns))
+            .collect();
+        let staggered_wrapping = evidenced_columns
+            .windows(2)
+            .all(|pair| !pair[0].iter().zip(pair[1].iter()).any(|(&here, &next)| here && next));
+        if staggered_wrapping {
+            result.push(row);
+            continue;
+        }
+
         // Resolve a fold target for every deficient cluster: it folds into the cluster
         // directly above it (ascending index + 1, i.e. the next-larger y) only when doing so
         // introduces no column the cluster above didn't already have. Evidenced clusters never
@@ -9448,6 +9465,37 @@ mod tests {
         assert_eq!(table.rows[1].cells[1].text, "Versterking van het MKB-segment");
         assert_eq!(table.rows[3].cells[0].text, "3");
         assert_eq!(table.rows[3].cells[1].text, "Versterking van het MKB-segment");
+    }
+
+    /// #2169: one drawn band whose cells wrap onto different numbers of lines stays one record.
+    #[test]
+    fn split_rows_by_text_positions_keeps_a_record_whose_cells_wrap_on_staggered_baselines() {
+        let spans = vec![
+            create_test_span("BAYVIEW IRON WORKS", 10.0, 230.0, 80.0, 0.0),
+            create_test_span("YES; MBE,", 120.0, 220.0, 40.0, 0.0),
+            create_test_span("STRUCTURAL STEEL, METAL", 180.0, 220.0, 90.0, 0.0),
+            create_test_span("02", 0.0, 210.0, 8.0, 0.0),
+            create_test_span("1235 THOMAS AVE.", 10.0, 210.0, 70.0, 0.0),
+            create_test_span("$17,500", 290.0, 210.0, 30.0, 0.0),
+            create_test_span("MICRO", 120.0, 200.0, 30.0, 0.0),
+            create_test_span("FABRICATIONS", 180.0, 200.0, 50.0, 0.0),
+            create_test_span("SAN FRANCISCO, CA 94124", 10.0, 190.0, 90.0, 0.0),
+        ];
+        let row = TableRow {
+            cells: vec![
+                prose_cell("02"),
+                prose_cell("BAYVIEW IRON WORKS 1235 THOMAS AVE. SAN FRANCISCO, CA 94124"),
+                prose_cell("YES; MBE, MICRO"),
+                prose_cell("STRUCTURAL STEEL, METAL FABRICATIONS"),
+                prose_cell("$17,500"),
+            ],
+            is_header: false,
+        };
+        let indices = vec![vec![vec![3], vec![0, 4, 8], vec![1, 6], vec![2, 7], vec![5]]];
+
+        let out = split_rows_by_text_positions(vec![row], &indices, &spans, &TableDetectionConfig::strict());
+
+        assert_eq!(out.len(), 1, "one record must not be split into its wrapped lines");
     }
 
     fn merged_split_row(widths: &[u32], active: &[bool]) -> (TableRow, Vec<Vec<Vec<usize>>>, Vec<TextSpan>) {

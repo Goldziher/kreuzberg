@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): A ruled table record whose cells wrap onto different numbers of lines is no longer split into one row per line.** A subcontractor disclosure entry (name, address, certification, work, amount) came back as five rows; bands where each line fills the same columns as the previous one are still subdivided. (#2169)
 - **(pdf): Native extraction keeps an item schedule whose rows sit about two line heights apart as one table.** Rows at that pitch were split into single-row fragments and discarded, so a 25-item bid schedule produced no table although its text was extracted. Consecutive numeric rows with a repeating pitch and aligned outer edges are now rejoined; a detached total, a second table or double-spaced prose still stays separate. (#2168)
 - **(pdf): `metadata.pages.boundaries` now index the final Markdown, HTML and Djot content instead of the earlier plain text.** Ranges are re-located in the rendered output; when that cannot be verified the ranges are omitted and a `page_boundaries` processing warning is added rather than returning wrong offsets. (#2166)
 - **(pdf): Repeated prices in separate rows of rotated tables are no longer dropped as redrawn duplicates.** Duplicate detection now compares positions in the text's own reading frame. (#2164)
