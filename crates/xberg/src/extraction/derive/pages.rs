@@ -50,10 +50,20 @@ pub(crate) fn reconcile_page_boundaries(
     };
     let mut reconciled = Vec::with_capacity(boundaries.len());
     let mut search_offset = 0;
+    let mut located_any = false;
     for (boundary, page) in boundaries.iter().zip(pages) {
-        if boundary.page_number != page.page_number || page.content.is_empty() {
+        if boundary.page_number != page.page_number {
             return false;
         }
+        if page.content.is_empty() {
+            reconciled.push(crate::types::PageBoundary {
+                byte_start: search_offset,
+                byte_end: search_offset,
+                page_number: page.page_number,
+            });
+            continue;
+        }
+        located_any = true;
         let Some(relative_start) = content[search_offset..].find(&page.content) else {
             return false;
         };
@@ -65,6 +75,10 @@ pub(crate) fn reconcile_page_boundaries(
             page_number: page.page_number,
         });
         search_offset = byte_end;
+    }
+    // ~keep a blank page is an empty range, but only text actually located proves the mapping; all-blank pages prove nothing.
+    if !located_any {
+        return false;
     }
     // ~keep OCR boundaries can describe an intermediate rendering with different separators (#2128).
     // Replace only a complete exact match; unmatched pages retain their original extraction metadata.

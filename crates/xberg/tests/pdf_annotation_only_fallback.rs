@@ -444,7 +444,7 @@ async fn should_recover_annotation_into_its_exact_page_and_element() {
     assert_eq!(boundaries[1].page_number, 2);
     assert_eq!(
         (boundaries[1].byte_start, boundaries[1].byte_end),
-        (2, 2 + SECOND_PAGE_TEXT.len())
+        (0, SECOND_PAGE_TEXT.len())
     );
     let metadata_pages = page_structure
         .pages
