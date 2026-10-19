@@ -820,7 +820,6 @@ traineddata = "traineddata"
 "crates/xberg-tesseract/src/api.rs" = ["file-too-long"]
 "crates/xberg/src/api/handlers.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/candle_ocr/glm_ocr_backend.rs" = ["function-too-long"]
-"crates/xberg/src/core/config/concurrency.rs" = ["file-too-long", "nesting-too-deep"]
 "crates/xberg/src/core/config/extraction/core.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -915,7 +914,7 @@ traineddata = "traineddata"
   "function-too-long",
   "nesting-too-deep",
 ]
-"crates/xberg/src/extractors/myst.rs" = ["file-too-long", "too-many-parameters"]
+"crates/xberg/src/extractors/myst.rs" = ["too-many-parameters"]
 "crates/xberg/src/extractors/odp.rs" = [
   "cyclomatic-complexity",
   "function-too-long",
@@ -1046,7 +1045,7 @@ traineddata = "traineddata"
 ]
 "crates/xberg/src/pdf/structure/text_repair.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/pdf/table_reconstruct.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
-"crates/xberg/src/plugins/registry/extractor.rs" = ["file-too-long", "nesting-too-deep"]
+"crates/xberg/src/plugins/registry/extractor.rs" = ["nesting-too-deep"]
 "crates/xberg/src/rendering/comrak_bridge.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -1059,7 +1058,7 @@ traineddata = "traineddata"
 "crates/xberg/src/text/redaction/engine.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/transcription/engine.rs" = ["function-too-long"]
 "crates/xberg/src/types/extraction.rs" = ["file-too-long", "type-too-long"]
-"crates/xberg/src/types/internal_builder.rs" = ["file-too-long", "too-many-parameters"]
+"crates/xberg/src/types/internal_builder.rs" = ["too-many-parameters"]
 "crates/xberg/src/types/metadata.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "docs-site/src/content/docs/cli/usage.mdx" = ["file-too-long"]
 "docs-site/src/content/docs/guides/ocr.mdx" = ["file-too-long"]
