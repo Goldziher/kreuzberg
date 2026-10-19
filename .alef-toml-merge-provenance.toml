@@ -810,7 +810,7 @@ values = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/converters/text_post_processor.rs"
-values = ["file-too-long", "function-too-long", "nesting-too-deep"]
+values = ["function-too-long", "nesting-too-deep"]
 
 [[entries]]
 relative_path = "poly.toml"
@@ -885,12 +885,12 @@ values = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nestin
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/elements/path.rs"
-values = ["file-too-long", "too-many-parameters"]
+values = ["too-many-parameters"]
 
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/encryption/algorithms.rs"
-values = ["file-too-long", "too-many-parameters"]
+values = ["too-many-parameters"]
 
 [[entries]]
 relative_path = "poly.toml"
@@ -935,12 +935,12 @@ values = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nestin
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/functions/mod.rs"
-values = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nesting-too-deep"]
+values = ["cyclomatic-complexity", "function-too-long", "nesting-too-deep"]
 
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/parser.rs"
-values = ["file-too-long", "function-too-long", "nesting-too-deep"]
+values = ["function-too-long", "nesting-too-deep"]
 
 [[entries]]
 relative_path = "poly.toml"
@@ -1000,7 +1000,7 @@ values = ["file-too-long", "function-too-long"]
 [[entries]]
 relative_path = "poly.toml"
 key_path = "per-file-ignores.crates/xberg-native-pdf/src/text/bidi.rs"
-values = ["cyclomatic-complexity", "file-too-long"]
+values = ["cyclomatic-complexity"]
 
 [[entries]]
 relative_path = "poly.toml"

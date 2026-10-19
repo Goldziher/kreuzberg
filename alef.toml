@@ -651,11 +651,7 @@ traineddata = "traineddata"
 "crates/xberg-cli/src/main.rs" = ["file-too-long", "function-too-long", "type-too-long"]
 "crates/xberg-native-pdf/src/content/operators.rs" = ["file-too-long", "type-too-long"]
 "crates/xberg-native-pdf/src/content/parser.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
-"crates/xberg-native-pdf/src/converters/text_post_processor.rs" = [
-  "file-too-long",
-  "function-too-long",
-  "nesting-too-deep",
-]
+"crates/xberg-native-pdf/src/converters/text_post_processor.rs" = ["function-too-long", "nesting-too-deep"]
 "crates/xberg-native-pdf/src/document/annotations.rs" = [
   "cyclomatic-complexity",
   "function-too-long",
@@ -708,8 +704,8 @@ traineddata = "traineddata"
   "function-too-long",
   "nesting-too-deep",
 ]
-"crates/xberg-native-pdf/src/elements/path.rs" = ["file-too-long", "too-many-parameters"]
-"crates/xberg-native-pdf/src/encryption/algorithms.rs" = ["file-too-long", "too-many-parameters"]
+"crates/xberg-native-pdf/src/elements/path.rs" = ["too-many-parameters"]
+"crates/xberg-native-pdf/src/encryption/algorithms.rs" = ["too-many-parameters"]
 "crates/xberg-native-pdf/src/encryption/mod.rs" = ["function-too-long"]
 "crates/xberg-native-pdf/src/extractors/images.rs" = [
   "cyclomatic-complexity",
@@ -751,13 +747,8 @@ traineddata = "traineddata"
   "function-too-long",
   "nesting-too-deep",
 ]
-"crates/xberg-native-pdf/src/functions/mod.rs" = [
-  "cyclomatic-complexity",
-  "file-too-long",
-  "function-too-long",
-  "nesting-too-deep",
-]
-"crates/xberg-native-pdf/src/parser.rs" = ["file-too-long", "function-too-long", "nesting-too-deep"]
+"crates/xberg-native-pdf/src/functions/mod.rs" = ["cyclomatic-complexity", "function-too-long", "nesting-too-deep"]
+"crates/xberg-native-pdf/src/parser.rs" = ["function-too-long", "nesting-too-deep"]
 "crates/xberg-native-pdf/src/pipeline/reading_order/xycut.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -807,7 +798,7 @@ traineddata = "traineddata"
 ]
 "crates/xberg-native-pdf/src/structure/table_extractor.rs" = ["file-too-long", "function-too-long", "nesting-too-deep"]
 "crates/xberg-native-pdf/src/structure/traversal.rs" = ["file-too-long", "function-too-long"]
-"crates/xberg-native-pdf/src/text/bidi.rs" = ["cyclomatic-complexity", "file-too-long"]
+"crates/xberg-native-pdf/src/text/bidi.rs" = ["cyclomatic-complexity"]
 "crates/xberg-native-pdf/src/xfa/parser.rs" = ["cyclomatic-complexity", "function-too-long", "nesting-too-deep"]
 "crates/xberg-native-pdf/src/xref.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg-paddle-ocr/src/ocr_lite.rs" = ["too-many-parameters"]
