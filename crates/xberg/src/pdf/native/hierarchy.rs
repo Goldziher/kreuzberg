@@ -866,12 +866,16 @@ fn dedupe_redrawn_segments(segments: Vec<SegmentData>) -> Vec<SegmentData> {
     for seg in segments {
         let window_start = kept.len().saturating_sub(REDRAWN_LOOKBACK);
         if let Some(prev) = kept[window_start..].iter_mut().find(|prev| {
-            let dx_tol = (prev.width.min(seg.width) * 0.5).max(REDRAWN_MIN_TOLERANCE_PTS);
-            let dy_tol = (prev.height.min(seg.height) * 0.5).max(REDRAWN_MIN_TOLERANCE_PTS);
-            prev.has_same_rotation(&seg)
-                && prev.text == seg.text
-                && (prev.x - seg.x).abs() <= dx_tol
-                && (prev.y - seg.y).abs() <= dy_tol
+            if !prev.has_same_rotation(&seg) || prev.text != seg.text {
+                return false;
+            }
+            // Origins are in page space, but width/height follow the text run.
+            // Compare in that same reading frame, including non-cardinal rotations.
+            let (prev_advance, prev_cross) = prev.upright_origin();
+            let (advance, cross) = seg.upright_origin();
+            let advance_tol = (prev.width.min(seg.width) * 0.5).max(REDRAWN_MIN_TOLERANCE_PTS);
+            let cross_tol = (prev.height.min(seg.height) * 0.5).max(REDRAWN_MIN_TOLERANCE_PTS);
+            (prev_advance - advance).abs() <= advance_tol && (prev_cross - cross).abs() <= cross_tol
         }) {
             prev.is_bold |= seg.is_bold;
             prev.is_italic |= seg.is_italic;
@@ -2076,5 +2080,87 @@ mod tests {
         let out = super::dedupe_redrawn_segments(vec![upright, rotated]);
 
         assert_eq!(out.len(), 2);
+    }
+    fn rotated_price(angle: f32, advance: f32, cross: f32, scale: f32) -> SegmentData {
+        let (sin, cos) = angle.to_radians().sin_cos();
+        let mut value = seg(
+            "$  1,234,567.89  ",
+            300.0 + scale * (advance * cos - cross * sin),
+            300.0 + scale * (advance * sin + cross * cos),
+            6.0 * scale,
+            false,
+        );
+        value.rotation_degrees = angle;
+        value
+    }
+
+    #[test]
+    fn rotated_redraw_preserves_separate_rows_and_cells() {
+        for angle in [0.0, 30.0, 45.0, 60.0, 80.0, 90.0, 180.0, 270.0, -90.0] {
+            for scale in [0.5, 1.0, 2.0] {
+                let segments = (0..3)
+                    .flat_map(|row| {
+                        (0..3).map(move |col| rotated_price(angle, col as f32 * 65.0, row as f32 * 12.0, scale))
+                    })
+                    .collect();
+                let out = super::dedupe_redrawn_segments(segments);
+                assert_eq!(out.len(), 9, "angle={angle}, scale={scale}");
+            }
+        }
+    }
+
+    #[test]
+    fn rotated_redraw_collapses_shifted_overlays_and_absorbs_style() {
+        for angle in [0.0, 30.0, 80.0, 90.0, 180.0, 270.0, -90.0] {
+            for scale in [0.5, 1.0, 2.0] {
+                let first = rotated_price(angle, 0.0, 0.0, scale);
+                let mut redraw = rotated_price(angle, 3.0, 0.2, scale);
+                redraw.is_bold = true;
+                redraw.is_italic = true;
+                redraw.font_size += 1.0;
+                let out = super::dedupe_redrawn_segments(vec![first, redraw]);
+                assert_eq!(out.len(), 1, "angle={angle}, scale={scale}");
+                assert!(out[0].is_bold && out[0].is_italic);
+                assert_eq!(out[0].font_size, 6.0 * scale + 1.0);
+            }
+        }
+    }
+
+    #[test]
+    fn rotated_redraw_collapses_interleaved_three_point_overlays() {
+        // Native reading order groups three shifted rows before their originals.
+        // Each true redraw must collapse without absorbing the adjacent rows.
+        let mut segments = Vec::new();
+        for col in 0..3 {
+            for offset in [3.0, 0.0] {
+                for row in 0..3 {
+                    segments.push(rotated_price(90.0, col as f32 * 65.0 + offset, row as f32 * 12.0, 1.0));
+                }
+            }
+        }
+        assert_eq!(super::dedupe_redrawn_segments(segments).len(), 9);
+    }
+
+    #[test]
+    fn rotated_redraw_retains_lookback_and_minimum_tolerance_policy() {
+        for intervening in [7, 8] {
+            let mut segments = vec![rotated_price(80.0, 0.0, 0.0, 1.0)];
+            for index in 0..intervening {
+                let mut separator = rotated_price(80.0, 0.0, 0.0, 1.0);
+                separator.text = format!("separator {index}");
+                segments.push(separator);
+            }
+            segments.push(rotated_price(80.0, 0.0, 0.0, 1.0));
+            assert_eq!(
+                super::dedupe_redrawn_segments(segments).len(),
+                if intervening == 7 { 8 } else { 10 }
+            );
+        }
+        let mut tiny = rotated_price(80.0, 0.0, 0.0, 1.0);
+        tiny.width = 0.1;
+        tiny.height = 0.1;
+        let mut nearby = tiny.clone();
+        nearby.x += 0.5;
+        assert_eq!(super::dedupe_redrawn_segments(vec![tiny, nearby]).len(), 1);
     }
 }

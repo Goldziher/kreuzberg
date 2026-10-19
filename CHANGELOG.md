@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): repeated prices in separate rotated table rows are preserved.** Native redraw detection compares origins in the text reading frame while continuing to collapse genuine overlaid redraws. (#2164)
+
 - **(api): `/health`, `/info` and `/version` no longer queue behind the concurrency limit.** `XBERG_MAX_CONCURRENT_REQUESTS` now applies to the extraction routes only, so a saturated but healthy pod keeps passing orchestrator probes. (#2161)
 - **(pdf): disabling extraction caching also disables the built-in Tesseract result cache.**
   The opt-out reaches mixed, full-page, pipeline and embedded-image OCR without changing native-text fallback routing.
