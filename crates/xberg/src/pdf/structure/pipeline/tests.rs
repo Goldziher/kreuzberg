@@ -2354,18 +2354,18 @@ fn wrapped_prose_lines_without_a_terminator_stay_one_paragraph() {
 /// all four, x 48.00 .. 555.24.
 #[test]
 fn a_table_bbox_does_not_delete_text_its_grid_leaves_out() {
-    let coverage = vec![TableCoverage {
-        bbox: crate::types::BoundingBox {
+    let coverage = vec![TableCoverage::from_rows(
+        crate::types::BoundingBox {
             x0: 48.0,
             y0: 312.48,
             x1: 555.24,
             y1: 405.28,
         },
-        cell_text: table_cell_text(&[
+        [vec![
             "Ja  Ja",
             "Controleer de ontsteekpenafstand. Controleer de afstelling, zie § 7.10 Gas-luchtregeling.",
-        ]),
-    }];
+        ]],
+    )];
     let segments = vec![
         column_seg("Ja", 300.0, 12.0, 380.0),
         column_seg("Controleer de ontsteekpenafstand.", 340.0, 180.0, 380.0),
@@ -2399,15 +2399,15 @@ fn a_table_bbox_does_not_delete_text_its_grid_leaves_out() {
 /// two cells that split it mid-list and add a stray separator comma.
 #[test]
 fn should_suppress_a_printed_run_the_grid_split_across_two_cells() {
-    let coverage = vec![TableCoverage {
-        bbox: crate::types::BoundingBox {
+    let coverage = vec![TableCoverage::from_rows(
+        crate::types::BoundingBox {
             x0: 48.0,
             y0: 300.0,
             x1: 560.0,
             y1: 400.0,
         },
-        cell_text: table_cell_text(&["Chq. No. 085900 BILL NO.133, 132,", "139, ,138, 143, 140,"]),
-    }];
+        [vec!["Chq. No. 085900 BILL NO.133, 132,", "139, ,138, 143, 140,"]],
+    )];
     let segments = vec![
         column_seg(
             "Chq. No. 085900 BILL NO.133, 132, 139,138, 143, 140,",
@@ -2435,15 +2435,15 @@ fn should_suppress_a_printed_run_the_grid_split_across_two_cells() {
 /// table's contents are emitted twice.
 #[test]
 fn a_table_still_suppresses_the_prose_copy_of_its_own_cells() {
-    let coverage = vec![TableCoverage {
-        bbox: crate::types::BoundingBox {
+    let coverage = vec![TableCoverage::from_rows(
+        crate::types::BoundingBox {
             x0: 48.0,
             y0: 300.0,
             x1: 500.0,
             y1: 400.0,
         },
-        cell_text: table_cell_text(&["Mogelijke oorzaken:", "Oplossing:"]),
-    }];
+        [vec!["Mogelijke oorzaken:", "Oplossing:"]],
+    )];
     let segments = vec![
         column_seg("Mogelijke oorzaken:", 52.0, 100.0, 380.0),
         column_seg("Oplossing:", 300.0, 60.0, 380.0),
@@ -2454,8 +2454,36 @@ fn a_table_still_suppresses_the_prose_copy_of_its_own_cells() {
     );
 }
 
-fn table_cell_text(cells: &[&str]) -> String {
-    cells.iter().map(|cell| normalize_for_table_coverage(cell)).collect()
+/// #2171: an item number is a short digit run, and the same digits occur across the seam of
+/// two unrelated numeric cells (`15,000.00` + `10.00` -> `15000001000`). A concatenation
+/// search treated that as the grid carrying the number and deleted it from the prose.
+#[test]
+fn a_short_run_is_not_carried_by_digits_straddling_two_cells() {
+    let coverage = vec![TableCoverage::from_rows(
+        crate::types::BoundingBox {
+            x0: 30.0,
+            y0: 300.0,
+            x1: 560.0,
+            y1: 400.0,
+        },
+        [vec!["15,000.00", "10.00"], vec!["070030", "LEAD COMPLIANCE PLAN"]],
+    )];
+    let segments = vec![
+        column_seg("0001", 40.0, 20.0, 380.0),
+        column_seg("10.00", 300.0, 30.0, 380.0),
+        column_seg("LEAD COMPLIANCE PLAN", 120.0, 120.0, 360.0),
+    ];
+
+    let kept: Vec<String> = filter_segments_by_table_bboxes(segments, &coverage)
+        .into_iter()
+        .map(|seg| seg.text)
+        .collect();
+
+    assert_eq!(
+        kept,
+        vec!["0001".to_string()],
+        "only the number the grid does not hold survives; words it holds are still suppressed"
+    );
 }
 
 fn column_seg(text: &str, x: f32, width: f32, baseline_y: f32) -> SegmentData {
@@ -3829,15 +3857,15 @@ fn page_width_reaches_layout_reading_order_graph() {
     assert_eq!(
         process(
             Some(400.0),
-            vec![TableCoverage {
-                bbox: crate::types::BoundingBox {
+            vec![TableCoverage::from_rows(
+                crate::types::BoundingBox {
                     x0: 0.0,
                     y0: 0.0,
                     x1: 50.0,
                     y1: 50.0,
                 },
-                cell_text: String::new(),
-            }],
+                []
+            )],
             true,
         ),
         ["top-left", "top-right", "bottom-left", "bottom-right"],
@@ -4704,15 +4732,15 @@ fn table_coverage_with_text(page_index: usize, text: &str) -> ahash::AHashMap<us
     let mut map = ahash::AHashMap::new();
     map.insert(
         page_index,
-        vec![TableCoverage {
-            bbox: crate::types::BoundingBox {
+        vec![TableCoverage::from_rows(
+            crate::types::BoundingBox {
                 x0: 0.0,
                 y0: 0.0,
                 x1: 1.0,
                 y1: 1.0,
             },
-            cell_text: normalize_for_table_coverage(text),
-        }],
+            [vec![text]],
+        )],
     );
     map
 }

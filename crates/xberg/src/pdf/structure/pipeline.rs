@@ -4624,6 +4624,57 @@ struct TableCoverage {
     /// Every cell's alphanumeric glyphs, lowercased and concatenated in row-major order.
     /// Built once per table so the per-segment test is a substring search.
     cell_text: String,
+    /// One entry per table row: that row's cells' glyphs, concatenated.
+    rows: Vec<String>,
+    /// Every whitespace-separated word of every cell, normalized.
+    words: ahash::AHashSet<String>,
+}
+
+/// Shortest normalized run that may match across cell boundaries within one row. A shorter
+/// run (an item number, a price) is only ever carried by a whole cell word: its digits also
+/// occur, by accident, across the seam of two neighbouring numeric cells (#2171). ~keep
+const MIN_CROSS_CELL_RUN_GLYPHS: usize = 8;
+
+impl TableCoverage {
+    fn from_rows<'a>(bbox: crate::types::BoundingBox, rows: impl IntoIterator<Item = Vec<&'a str>>) -> Self {
+        let mut row_texts = Vec::new();
+        let mut words = ahash::AHashSet::new();
+        for row in rows {
+            row_texts.push(
+                row.iter()
+                    .map(|cell| normalize_for_table_coverage(cell))
+                    .collect::<String>(),
+            );
+            for cell in row {
+                words.extend(
+                    cell.split_whitespace()
+                        .map(normalize_for_table_coverage)
+                        .filter(|word| !word.is_empty()),
+                );
+            }
+        }
+        Self {
+            bbox,
+            cell_text: row_texts.concat(),
+            rows: row_texts,
+            words,
+        }
+    }
+
+    /// Whether the grid represents `text`: every word is a whole cell word, or a long run
+    /// sits inside one row's cells. A run is not matched against the whole table's
+    /// concatenated glyphs, which lets digits straddling unrelated cells stand in for it.
+    fn carries(&self, text: &str) -> bool {
+        let normalized = normalize_for_table_coverage(text);
+        if normalized.is_empty() {
+            return true;
+        }
+        text.split_whitespace()
+            .map(normalize_for_table_coverage)
+            .filter(|word| !word.is_empty())
+            .all(|word| self.words.contains(&word))
+            || (normalized.len() >= MIN_CROSS_CELL_RUN_GLYPHS && self.rows.iter().any(|row| row.contains(&normalized)))
+    }
 }
 
 /// Reduce text to lowercase alphanumerics, dropping whitespace and punctuation entirely.
@@ -4651,20 +4702,24 @@ fn table_bboxes_by_page(tables: &[crate::types::Table]) -> ahash::AHashMap<usize
             // overlap-preference merge, both produce that shape). Falling back to the
             // markdown keeps suppression working for those instead of silently
             // disabling it, which would emit their contents twice. ~keep
-            let cell_text = if table.cells.iter().any(|row| !row.is_empty()) {
-                table
-                    .cells
-                    .iter()
-                    .flat_map(|row| row.iter())
-                    .map(|cell| normalize_for_table_coverage(cell))
-                    .collect::<String>()
+            let coverage = if table.cells.iter().any(|row| !row.is_empty()) {
+                TableCoverage::from_rows(
+                    bbox,
+                    table.cells.iter().map(|row| row.iter().map(String::as_str).collect()),
+                )
             } else {
-                normalize_for_table_coverage(&table.markdown)
+                TableCoverage::from_rows(
+                    bbox,
+                    table
+                        .markdown
+                        .lines()
+                        .map(|line| line.split('|').collect::<Vec<&str>>()),
+                )
             };
             coverage_by_page
                 .entry(table.page_number.saturating_sub(1) as usize)
                 .or_default()
-                .push(TableCoverage { bbox, cell_text });
+                .push(coverage);
         }
     }
     coverage_by_page
@@ -4701,7 +4756,6 @@ fn filter_segments_by_table_bboxes(segments: Vec<SegmentData>, tables: &[TableCo
             if seg_area <= 0.0 || seg_text.is_empty() {
                 return true;
             }
-            let normalized = normalize_for_table_coverage(seg_text);
             !tables.iter().any(|table| {
                 let bb = &table.bbox;
                 let inter_left = seg.x.max(bb.x0 as f32);
@@ -4712,7 +4766,7 @@ fn filter_segments_by_table_bboxes(segments: Vec<SegmentData>, tables: &[TableCo
                     return false;
                 }
                 let inter_area = (inter_right - inter_left) * (inter_top - inter_bottom);
-                inter_area / seg_area >= 0.5 && table.cell_text.contains(&normalized)
+                inter_area / seg_area >= 0.5 && table.carries(seg_text)
             })
         })
         .collect()
