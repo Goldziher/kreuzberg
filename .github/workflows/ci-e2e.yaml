@@ -476,6 +476,13 @@ jobs:
         if: matrix.lang != 'swift'
         run: |
           if [ "${{ matrix.lang }}" = "kotlin-android" ]; then
+            # The runner is killed at ~69m before the post steps run, so the artifact never
+            # uploads; a heartbeat in the step's own stdout is the only evidence that survives. ~keep
+            ( while true; do
+                echo "[diag] $(date -u +%T) $(free -m | awk '/Mem:/{printf "avail=%sMB ", $7} /Swap:/{printf "swap_used=%sMB ", $3}') load=$(cut -d' ' -f1 /proc/loadavg) $(df -m / | awk 'NR==2{printf "disk_free=%sMB ", $4}') top=$(ps -eo rss,comm --sort=-rss | awk 'NR==2{printf "%s:%sKB", $2, $1}')"
+                sleep 60
+              done ) &
+            trap 'kill $!' EXIT
             timeout --signal=TERM --kill-after=60 100m task kotlin-android:e2e
           else
             task ${{ matrix.lang }}:e2e
