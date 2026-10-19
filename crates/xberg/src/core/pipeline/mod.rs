@@ -1015,13 +1015,18 @@ fn structured_extraction_compliance(
 /// (plain text, Markdown, HTML, …), coverage collapses to a binary full/empty signal:
 /// `1.0` when `result.content` has any non-whitespace text, `0.0` when it does not —
 /// a document that produced no text at all should not score as if it were fully
-/// covered.
+/// covered. Pages the source has but `result.pages` omits (it only lists pages that
+/// carry content when derived from elements) count as unusable, so the score does not
+/// depend on whether per-page output was requested.
 #[cfg(feature = "heuristics")]
 fn measure_text_coverage(result: &ExtractedDocument) -> f32 {
     match result.pages.as_deref() {
         Some(pages) if !pages.is_empty() => {
             let usable = pages.iter().filter(|page| !page.content.trim().is_empty()).count();
-            usable as f32 / pages.len() as f32
+            // ~keep the fallback page list is built from page-tagged elements, so a page with no text has no
+            // entry; the source page count restores it to the denominator regardless of page output (#2170).
+            let population = pages.len().max(result.counts.pages);
+            usable as f32 / population as f32
         }
         _ => {
             if result.content.trim().is_empty() {
@@ -1514,6 +1519,20 @@ mod issue_214_text_coverage_tests {
             ocr_confidence: None,
             native_content: None,
         }
+    }
+
+    #[test]
+    fn counts_source_pages_missing_from_the_page_list_as_unusable() {
+        let result = ExtractedDocument {
+            pages: Some(vec![page(1, "Real text here"), page(3, "More real text")]),
+            counts: crate::types::DocumentCounts {
+                pages: 3,
+                tables: 0,
+                images: 0,
+            },
+            ..Default::default()
+        };
+        assert!((measure_text_coverage(&result) - (2.0 / 3.0)).abs() < f32::EPSILON);
     }
 
     #[test]
