@@ -462,15 +462,38 @@ jobs:
         working-directory: packages/ruby
         run: bundle install && bundle exec rake compile
 
+      # The kotlin-android runner dies at ~1h50 with no log (#2163). Sample memory and
+      # processes so a failure leaves evidence, and cap the run below the death point so
+      # the post steps still execute. ~keep
+      - name: Start resource sampler (kotlin-android)
+        if: matrix.lang == 'kotlin-android'
+        shell: bash
+        run: |
+          mkdir -p /tmp/kotlin-diag
+          nohup bash -c 'while true; do { date -u +%FT%TZ; free -m; ps -eo pid,rss,etime,args --sort=-rss | head -8 | cut -c1-200; echo; } >> /tmp/kotlin-diag/sample.log; sleep 15; done' >/dev/null 2>&1 &
+
       - name: Run e2e tests
         if: matrix.lang != 'swift'
-        run: task ${{ matrix.lang }}:e2e
+        run: |
+          if [ "${{ matrix.lang }}" = "kotlin-android" ]; then
+            timeout --signal=TERM --kill-after=60 100m task kotlin-android:e2e
+          else
+            task ${{ matrix.lang }}:e2e
+          fi
         shell: bash
         env:
           PKG_CONFIG_PATH: ${{ env.PKG_CONFIG_PATH }}
           LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
           DYLD_LIBRARY_PATH: ${{ env.DYLD_LIBRARY_PATH || '' }}
           TESSDATA_PREFIX: "/usr/share/tesseract-ocr/5/tessdata"
+
+      - name: Upload kotlin-android diagnostics
+        if: ${{ always() && matrix.lang == 'kotlin-android' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: kotlin-android-diag
+          path: /tmp/kotlin-diag/**
+          if-no-files-found: warn
 
       - name: Run in-crate wasm engine tests (Node)
         if: matrix.lang == 'wasm'
