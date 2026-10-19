@@ -1384,6 +1384,8 @@ fn cluster_words_into_vertical_regions(
         regions.push(current);
     }
 
+    merge_regular_row_fragments(&mut regions, median_height, row_tolerance);
+
     split_regions_at_column_corridors(&mut regions, median_height);
 
     attach_aligned_numeric_headers(&mut regions, median_height, row_tolerance);
@@ -1405,6 +1407,98 @@ fn cluster_words_into_vertical_regions(
     });
 
     regions
+}
+
+/// Fewest consecutive single-row fragments that may be rejoined into one region.
+const FRAGMENT_RUN_MIN_ROWS: usize = 4;
+
+/// Largest row pitch, as a multiple of the page's median word height, that a run of
+/// fragments may span. The plain row-gap split already sits at 1.8x, so this bounds how
+/// far past it a regular grid may reach (an item schedule set at 2.0x pitch, #2168). ~keep
+const FRAGMENT_RUN_MAX_PITCH_HEIGHTS: f32 = 2.5;
+
+/// How far (points) a row pitch, or a row's outer edges, may drift from the run's first
+/// row. Matches the whole-unit rounding of `HocrWord::top` plus one unit of slack. ~keep
+const FRAGMENT_RUN_DRIFT: f32 = 2.0;
+
+/// Minimum numeric words a fragment needs to count as a data row rather than prose.
+const FRAGMENT_RUN_MIN_NUMERIC_WORDS: usize = 3;
+
+/// A single-row region as `(row centre, leftmost edge, rightmost edge)`, or `None` when
+/// the region has several rows or too few numeric words to be a data row.
+fn numeric_fragment_row(
+    region: &[crate::pdf::table_reconstruct::HocrWord],
+    row_tolerance: f32,
+) -> Option<(f32, u32, u32)> {
+    let centers = region.iter().map(row_center);
+    let low = centers.clone().fold(f32::INFINITY, f32::min);
+    let high = centers.fold(f32::NEG_INFINITY, f32::max);
+    if !low.is_finite() || high - low > row_tolerance {
+        return None;
+    }
+    if region.iter().filter(|word| is_numeric_word(&word.text)).count() < FRAGMENT_RUN_MIN_NUMERIC_WORDS {
+        return None;
+    }
+    let left = region.iter().map(|word| word.left).min()?;
+    let right = region.iter().map(|word| word.left.saturating_add(word.width)).max()?;
+    Some(((low + high) / 2.0, left, right))
+}
+
+/// Rejoin runs of single-row regions that form one regular grid.
+///
+/// A row pitch just above `ROW_GAP_SPLIT_HEIGHT_FACTOR` splits every row of a table into
+/// its own region, and each fragment then fails the three-row minimum, so the table is
+/// lost although its text survives (#2168). Raising the factor globally would also join
+/// unrelated blocks, so a run is rejoined only when several consecutive numeric rows
+/// repeat one pitch and keep the same outer left and right edges; a total, a heading or a
+/// second table breaks the pitch or the edges and stays separate. ~keep
+fn merge_regular_row_fragments(
+    regions: &mut Vec<Vec<crate::pdf::table_reconstruct::HocrWord>>,
+    median_height: u32,
+    row_tolerance: u32,
+) {
+    let max_pitch = median_height as f32 * FRAGMENT_RUN_MAX_PITCH_HEIGHTS;
+    let rows: Vec<Option<(f32, u32, u32)>> = regions
+        .iter()
+        .map(|region| numeric_fragment_row(region, row_tolerance as f32))
+        .collect();
+
+    let mut runs: Vec<(usize, usize)> = Vec::new();
+    let mut start = 0;
+    while start < rows.len() {
+        let Some((first_center, first_left, first_right)) = rows[start] else {
+            start += 1;
+            continue;
+        };
+        let mut end = start + 1;
+        let mut pitch: Option<f32> = None;
+        let mut previous_center = first_center;
+        while let Some(Some((center, left, right))) = rows.get(end) {
+            let gap = center - previous_center;
+            let reference_pitch = pitch.unwrap_or(gap);
+            if gap > max_pitch
+                || (gap - reference_pitch).abs() > FRAGMENT_RUN_DRIFT
+                || left.abs_diff(first_left) as f32 > FRAGMENT_RUN_DRIFT.max(REGION_X_TRACK_TOLERANCE as f32)
+                || right.abs_diff(first_right) as f32 > FRAGMENT_RUN_DRIFT.max(REGION_X_TRACK_TOLERANCE as f32)
+            {
+                break;
+            }
+            pitch = Some(reference_pitch);
+            previous_center = *center;
+            end += 1;
+        }
+        if end - start >= FRAGMENT_RUN_MIN_ROWS {
+            runs.push((start, end));
+            start = end;
+        } else {
+            start += 1;
+        }
+    }
+
+    for &(start, end) in runs.iter().rev() {
+        let merged: Vec<_> = regions.drain(start..end).flatten().collect();
+        regions.insert(start, merged);
+    }
 }
 
 /// Further split each y-clustered region on a dominant vertical corridor — a gap in x
@@ -5231,6 +5325,86 @@ mod tests {
         assert!(
             split_region_at_column_corridor(&region, height).is_some(),
             "a corridor 1.5x wider than the next-widest is dominant and must split the region"
+        );
+    }
+
+    /// One numeric schedule row: an ID, a description, and two right-aligned amounts.
+    fn schedule_row(index: usize, top: u32) -> Vec<crate::pdf::table_reconstruct::HocrWord> {
+        vec![
+            make_word(&format!("{index:04}"), 40, top, 20),
+            make_word("DESCRIPTION", 100, top, 80),
+            make_word("5,500.00", 300, top, 40),
+            make_word("5,500.00", 380, top, 40),
+        ]
+    }
+
+    fn schedule_rows(count: usize, first_top: u32, pitch: u32) -> Vec<crate::pdf::table_reconstruct::HocrWord> {
+        (0..count)
+            .flat_map(|row| schedule_row(row + 1, first_top + row as u32 * pitch))
+            .collect()
+    }
+
+    /// #2168: rows 2x the word height apart sit just over the row-gap split; a regular
+    /// numeric grid at that pitch must still reach reconstruction as one region.
+    #[test]
+    fn test_cluster_words_keeps_regular_double_pitch_schedule_together() {
+        let words = schedule_rows(8, 100, 20);
+
+        let regions = cluster_words_into_vertical_regions(&words);
+
+        assert_eq!(regions.len(), 1, "expected one region, got {} regions", regions.len());
+        assert_eq!(regions[0].len(), 32);
+    }
+
+    #[test]
+    fn test_cluster_words_does_not_absorb_a_total_set_off_a_regular_schedule() {
+        let mut words = schedule_rows(6, 100, 20);
+        words.extend(schedule_row(7, 100 + 5 * 20 + 45));
+
+        let regions = cluster_words_into_vertical_regions(&words);
+
+        assert_eq!(regions.len(), 1, "the detached total must not join the grid");
+        assert_eq!(regions[0].len(), 24);
+    }
+
+    #[test]
+    fn test_cluster_words_keeps_two_double_pitch_schedules_apart() {
+        let mut words = schedule_rows(5, 100, 20);
+        words.extend(schedule_rows(5, 100 + 4 * 20 + 70, 20));
+
+        let regions = cluster_words_into_vertical_regions(&words);
+
+        assert_eq!(regions.len(), 2, "a wide gap between schedules must keep them apart");
+        assert!(regions.iter().all(|region| region.len() == 20));
+    }
+
+    #[test]
+    fn test_cluster_words_ignores_double_spaced_prose_without_numbers() {
+        let words: Vec<_> = (0..6)
+            .flat_map(|row| {
+                let top = 100 + row * 20;
+                vec![
+                    make_word("The", 40, top, 20),
+                    make_word("quick", 100, top, 40),
+                    make_word("brown", 300, top, 40),
+                    make_word("fox", 380, top, 40),
+                ]
+            })
+            .collect();
+
+        assert!(cluster_words_into_vertical_regions(&words).is_empty());
+    }
+
+    #[test]
+    fn test_cluster_words_does_not_merge_rows_with_irregular_pitch() {
+        let mut words = Vec::new();
+        for (row, top) in [100_u32, 120, 150, 170, 205, 225].into_iter().enumerate() {
+            words.extend(schedule_row(row + 1, top));
+        }
+
+        assert!(
+            cluster_words_into_vertical_regions(&words).is_empty(),
+            "an uneven pitch is not evidence of one grid"
         );
     }
 }
