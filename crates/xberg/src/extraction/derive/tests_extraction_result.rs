@@ -795,6 +795,30 @@ fn page_content_prebuilt_pages_no_page_elements_unchanged() {
     );
 }
 
+/// Custom extractors may supply tables only on prebuilt pages, absent globally.
+#[test]
+fn page_content_prebuilt_page_only_tables_are_preserved() {
+    let mut doc = make_doc("custom");
+    let table = std::sync::Arc::new(crate::types::Table {
+        page_number: 7,
+        cells: vec![vec!["page-only value".to_string()]],
+        ..Default::default()
+    });
+    let page: crate::types::PageContent = serde_json::from_value(serde_json::json!({
+        "page_number": 7, "content": "Custom page", "tables": [table.as_ref()], "image_indices": []
+    }))
+    .unwrap();
+    doc.prebuilt_pages = Some(vec![page]);
+    let result = derive_extraction_result(doc, false, crate::core::config::OutputFormat::Plain);
+    assert!(result.tables.is_empty());
+    let pages = result.pages.unwrap();
+    assert_eq!(pages[0].page_number, 7);
+    assert_eq!(
+        serde_json::to_value(pages[0].tables[0].as_ref()).unwrap(),
+        serde_json::json!(table.as_ref())
+    );
+}
+
 /// A page whose page_number appears in prebuilt_pages but has no matching
 /// page-tagged elements must keep its original content unchanged. This covers the
 /// per-page early-return branch inside apply_page_content_format.

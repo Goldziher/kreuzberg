@@ -64,6 +64,22 @@ pub(crate) fn assign_hierarchy_to_pages(pages: &mut [PageContent], doc: &Interna
     }
 }
 
+/// Refresh native PDF snapshots after canonical table selection and metadata assignment.
+/// Keep extractor-owned page content, image associations, hierarchy and blank pages intact.
+pub(crate) fn reconcile_native_page_tables(pages: &mut [PageContent], tables: &[crate::types::Table]) {
+    let mut by_page: std::collections::HashMap<u32, Vec<std::sync::Arc<crate::types::Table>>> =
+        std::collections::HashMap::new();
+    for table in tables {
+        by_page
+            .entry(table.page_number)
+            .or_default()
+            .push(std::sync::Arc::new(table.clone()));
+    }
+    for page in pages {
+        page.tables = by_page.remove(&page.page_number).unwrap_or_default();
+    }
+}
+
 /// Helper function to assign tables and images to pages.
 ///
 /// If page_contents is None, returns None (no per-page tracking enabled).
@@ -137,6 +153,80 @@ mod tests {
             ocr_confidence: None,
             native_content: None,
         }
+    }
+
+    #[test]
+    fn reconcile_native_tables_preserves_every_other_page_field() {
+        let mut first = page(3);
+        first.content = "Native page content".into();
+        first.image_indices = vec![2, 4];
+        first.image_preprocessing = Some(
+            serde_json::from_value(serde_json::json!({
+                "original_dimensions": [100, 200], "original_dpi": [72.0, 72.0],
+                "target_dpi": 144, "scale_factor": 2.0, "auto_adjusted": false,
+                "final_dpi": 144, "new_dimensions": [200, 400], "resample_method": "LANCZOS3",
+                "dimension_clamped": false, "calculated_dpi": null, "skipped_resize": false,
+                "resize_error": null
+            }))
+            .unwrap(),
+        );
+        first.hierarchy = Some(PageHierarchy {
+            block_count: 0,
+            blocks: vec![],
+        });
+        first.is_blank = Some(false);
+        first.layout_regions = Some(vec![crate::types::LayoutRegion::default()]);
+        first.speaker_notes = Some("notes".into());
+        first.section_name = Some("section".into());
+        first.sheet_name = Some("sheet".into());
+        first.ocr_confidence = Some(crate::types::PageOcrConfidence::default());
+        first.native_content = Some("original text".into());
+        let stale = crate::types::Table {
+            page_number: 3,
+            markdown: "stale candidate".into(),
+            ..Default::default()
+        };
+        first.tables = vec![std::sync::Arc::new(stale)];
+        let mut blank = page(8);
+        blank.is_blank = Some(true);
+        let mut pages = vec![first, page(5), blank];
+        let mut before = serde_json::to_value(&pages).unwrap();
+        let tables = vec![
+            crate::types::Table {
+                page_number: 3,
+                table_id: Some("table-1".into()),
+                ..Default::default()
+            },
+            crate::types::Table {
+                page_number: 5,
+                table_id: Some("table-other-page".into()),
+                ..Default::default()
+            },
+            crate::types::Table {
+                page_number: 3,
+                table_id: Some("table-2".into()),
+                ..Default::default()
+            },
+        ];
+        reconcile_native_page_tables(&mut pages, &tables);
+        assert_eq!(
+            serde_json::to_value(&pages[0]).unwrap()["tables"],
+            serde_json::json!([tables[0], tables[2]])
+        );
+        assert_eq!(
+            serde_json::to_value(&pages[1]).unwrap()["tables"],
+            serde_json::json!([tables[1]])
+        );
+        assert!(pages[2].tables.is_empty());
+        let mut after = serde_json::to_value(&pages).unwrap();
+        for value in [&mut before, &mut after] {
+            for page in value.as_array_mut().unwrap() {
+                page.as_object_mut().unwrap().remove("tables");
+            }
+        }
+        assert_eq!(before, after);
+        reconcile_native_page_tables(&mut pages, &[]);
+        assert!(pages.iter().all(|page| page.tables.is_empty()));
     }
 
     #[test]

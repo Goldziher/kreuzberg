@@ -941,7 +941,7 @@ fn scanned_pages_to_ocr(
 
     if pages.is_empty() { None } else { Some(pages) }
 }
-use pages::{assign_hierarchy_to_pages, assign_tables_and_images_to_pages};
+use pages::{assign_hierarchy_to_pages, assign_tables_and_images_to_pages, reconcile_native_page_tables};
 
 #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
 fn replace_tables_with_ocr_output(tables: &mut Vec<crate::types::Table>, mut ocr_tables: Vec<crate::types::Table>) {
@@ -3409,6 +3409,13 @@ impl PdfExtractor {
             }
         }
 
+        // Native snapshots were captured before canonical filtering, ordering and IDs.
+        // Reconcile only tables here; OCR and custom extractor page ownership is separate.
+        if extraction_method == ExtractionMethod::Native
+            && let Some(ref mut pages) = final_pages
+        {
+            reconcile_native_page_tables(pages, &doc.tables);
+        }
         doc.prebuilt_pages = final_pages;
 
         #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]

@@ -1,0 +1,20 @@
+{
+  "use_cache": false,
+  "disable_ocr": true,
+  "enable_quality_processing": false,
+  "pages": {
+    "extract_pages": true,
+    "insert_page_markers": false
+  },
+  "pdf_options": {
+    "hierarchy": {
+      "enabled": false
+    }
+  },
+  "include_document_structure": true,
+  "output_format": "markdown",
+  "concurrency": {
+    "max_threads": 2
+  },
+  "extraction_timeout_secs": 90
+}
