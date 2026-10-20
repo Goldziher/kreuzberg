@@ -13,6 +13,7 @@
 //!   without breaking existing classifications.
 
 use crate::types::{ChunkType, HeadingContext};
+use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 
 /// Classify a single chunk based on its content and optional heading context.
 ///
@@ -46,7 +47,7 @@ pub(crate) fn classify_chunk(content: &str, heading_context: Option<&HeadingCont
         return ChunkType::Heading;
     }
 
-    if is_math_fence(trimmed) {
+    if is_math_fence(content) {
         return ChunkType::Formula;
     }
 
@@ -116,28 +117,20 @@ fn is_code_block(content: &str) -> bool {
     false
 }
 
-/// A ```` ```math ```` fence opened outside any other fence, the form the Markdown writer gives
-/// display math. Quote markers before a fence are skipped.
+/// A ```` ```math ```` fence anywhere in the chunk, the form the Markdown writer gives display
+/// math. Parsed as CommonMark so fences inside other fences or indented code do not count, while
+/// fences in block quotes and list items do.
 fn is_math_fence(content: &str) -> bool {
-    let mut open: Option<(char, usize)> = None;
-    for line in content.lines() {
-        let line = line.trim_start_matches(['>', ' ', '\t']).trim_end();
-        let Some(fence) = line.chars().next().filter(|c| *c == '`' || *c == '~') else {
-            continue;
-        };
-        let info = line.trim_start_matches(fence);
-        let run = line.len() - info.len();
-        if run < 3 {
-            continue;
-        }
-        match open {
-            Some((ch, len)) if ch == fence && run >= len && info.is_empty() => open = None,
-            Some(_) => {}
-            None if info.split_ascii_whitespace().next() == Some("math") => return true,
-            None => open = Some((fence, run)),
-        }
+    if !content.contains("math") {
+        return false;
     }
-    false
+    Parser::new_ext(content, Options::all()).any(|event| {
+        matches!(
+            event,
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info)))
+                if info.split_ascii_whitespace().next() == Some("math")
+        )
+    })
 }
 
 fn is_table_like(content: &str) -> bool {
@@ -378,6 +371,9 @@ mod tests {
         assert_eq!(classify("```mathematica\nPlot[x]\n```"), ChunkType::CodeBlock);
         assert_eq!(classify("````markdown\n```math\nx^2\n```\n````"), ChunkType::CodeBlock);
         assert_eq!(classify("> ```math\n> x^2\n> ```"), ChunkType::Formula);
+        assert_eq!(classify("    ```math\n    x^2\n    ```"), ChunkType::CodeBlock);
+        assert_eq!(classify("- ```math\n  x^2\n  ```"), ChunkType::Formula);
+        assert_eq!(classify("1. ```math\n   x^2\n   ```"), ChunkType::Formula);
     }
 
     #[test]
