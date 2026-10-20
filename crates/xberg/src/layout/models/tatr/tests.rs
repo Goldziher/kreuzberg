@@ -585,3 +585,89 @@ fn test_build_cell_grid_with_structure_reports_header_and_span() {
     assert_eq!(structure.header_row_count, 1);
     assert_eq!(structure.spans, vec![(0, 1, 0, 2)]);
 }
+
+fn query_outputs(classes: &[(usize, f32)], boxes: &[[f32; 4]]) -> Vec<TatrOutput> {
+    let logits = classes
+        .iter()
+        .flat_map(|&(class, score)| {
+            let mut values = [0.0; NUM_CLASSES];
+            values[class] = score;
+            values
+        })
+        .collect();
+    vec![
+        (vec![1, classes.len(), NUM_CLASSES], logits),
+        (vec![1, boxes.len(), 4], boxes.iter().flatten().copied().collect()),
+    ]
+}
+
+#[test]
+fn should_filter_background_and_low_confidence_spans_without_losing_rows() {
+    let outputs = query_outputs(&[(2, 20.0), (6, 20.0), (5, 1.0), (0, 20.0)], &[[0.5, 0.5, 0.5, 0.5]; 4]);
+    let result = decode_tatr_outputs(outputs, (200.0, 100.0), (1000, 500)).unwrap();
+    assert_eq!(result.rows.len(), 1);
+    assert_eq!(result.rows[0].bbox, [50.0, 25.0, 150.0, 75.0]);
+    assert_eq!(result.rows[0].class_name, TatrClass::Row);
+    assert_eq!(result.spanning.len(), 0);
+    assert_eq!(result.columns.len(), 0);
+    assert_eq!(result.headers.len(), 0);
+    assert_eq!(result.table_bbox, Some([50.0, 25.0, 150.0, 75.0]));
+}
+
+#[test]
+fn should_sort_grid_detections_and_keep_the_first_equally_confident_table() {
+    let classes = [(2, 20.0), (2, 20.0), (1, 20.0), (1, 20.0), (0, 20.0), (0, 20.0)];
+    let boxes = [
+        [0.5, 0.75, 1.0, 0.25],
+        [0.5, 0.25, 1.0, 0.25],
+        [0.75, 0.5, 0.25, 1.0],
+        [0.25, 0.5, 0.25, 1.0],
+        [0.5, 0.5, 1.0, 1.0],
+        [0.5, 0.5, 0.5, 0.5],
+    ];
+    let result = decode_tatr_outputs(query_outputs(&classes, &boxes), (200.0, 100.0), (1000, 500)).unwrap();
+    assert_eq!(result.rows.iter().map(|d| d.bbox[3]).collect::<Vec<_>>(), [37.5, 87.5]);
+    assert_eq!(
+        result.columns.iter().map(|d| d.bbox[2]).collect::<Vec<_>>(),
+        [75.0, 175.0]
+    );
+    assert_eq!(result.table_bbox, Some([0.0, 0.0, 200.0, 100.0]));
+}
+
+#[test]
+fn should_accept_boxes_before_logits_and_clip_to_the_original_image() {
+    let mut outputs = query_outputs(&[(2, 20.0)], &[[0.5, 0.5, 2.0, 2.0]]);
+    outputs.swap(0, 1);
+    let result = decode_tatr_outputs(outputs, (200.0, 100.0), (1000, 500)).unwrap();
+    assert_eq!(result.rows.len(), 1);
+    assert_eq!(result.rows[0].bbox, [0.0, 0.0, 200.0, 100.0]);
+}
+
+#[test]
+fn should_preserve_missing_output_error_and_empty_shape_results() {
+    let error = decode_tatr_outputs(Vec::new(), (200.0, 100.0), (1000, 500)).unwrap_err();
+    assert!(
+        matches!(error, LayoutError::InvalidOutput(ref message) if message == "TATR expected 2 float outputs, got 0")
+    );
+    for (logits_shape, boxes_shape) in [(vec![1, 0, 7], vec![1, 0, 4]), (vec![1, 1, 7], vec![1, 1, 3])] {
+        let outputs = vec![(logits_shape, Vec::new()), (boxes_shape, Vec::new())];
+        let result = decode_tatr_outputs(outputs, (200.0, 100.0), (1000, 500)).unwrap();
+        assert_eq!(
+            result.rows.len() + result.columns.len() + result.headers.len() + result.spanning.len(),
+            0
+        );
+        assert_eq!(result.table_bbox, None);
+    }
+}
+
+#[test]
+fn should_not_read_box_data_for_background_queries() {
+    let mut outputs = query_outputs(&[(6, 20.0)], &[[0.0; 4]]);
+    outputs[1].1.clear();
+    let result = decode_tatr_outputs(outputs, (200.0, 100.0), (1000, 500)).unwrap();
+    assert_eq!(
+        result.rows.len() + result.columns.len() + result.headers.len() + result.spanning.len(),
+        0
+    );
+    assert_eq!(result.table_bbox, None);
+}

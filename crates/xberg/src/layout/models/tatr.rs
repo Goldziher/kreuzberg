@@ -215,7 +215,7 @@ impl TatrModel {
             self.input_name.as_str() => tensor
         ])?;
 
-        let mut float_outputs: Vec<(Vec<usize>, Vec<f32>)> = Vec::new();
+        let mut float_outputs: Vec<TatrOutput> = Vec::new();
         for (_name, value) in outputs.iter() {
             if let Ok(view) = value.try_extract_tensor::<f32>() {
                 let shape: Vec<usize> = view.0.iter().map(|&d| d as usize).collect();
@@ -224,118 +224,113 @@ impl TatrModel {
             }
         }
 
-        if float_outputs.len() < 2 {
-            return Err(LayoutError::InvalidOutput(format!(
-                "TATR expected 2 float outputs, got {}",
-                float_outputs.len()
-            )));
-        }
-
-        let (logits_shape, logits_data, boxes_shape, boxes_data) = if float_outputs[0].0.last() == Some(&NUM_CLASSES) {
-            let (ls, ld) = float_outputs.remove(0);
-            let (bs, bd) = float_outputs.remove(0);
-            (ls, ld, bs, bd)
-        } else {
-            let (bs, bd) = float_outputs.remove(0);
-            let (ls, ld) = float_outputs.remove(0);
-            (ls, ld, bs, bd)
-        };
-
-        let num_queries = logits_shape.get(1).copied().unwrap_or(0);
-        let num_classes = logits_shape.last().copied().unwrap_or(0);
-        let box_dim = boxes_shape.last().copied().unwrap_or(0);
-
-        if num_queries == 0 || num_classes < NUM_CLASSES || box_dim < 4 {
-            return Ok(TatrResult {
-                rows: Vec::new(),
-                columns: Vec::new(),
-                headers: Vec::new(),
-                spanning: Vec::new(),
-                table_bbox: None,
-            });
-        }
-
-        let mut rows = Vec::new();
-        let mut columns = Vec::new();
-        let mut headers = Vec::new();
-        let mut spanning = Vec::new();
-        let mut table_bbox: Option<[f32; 4]> = None;
-        let mut table_confidence = 0.0f32;
-
-        for q in 0..num_queries {
-            let logit_offset = q * num_classes;
-            let logits_slice = &logits_data[logit_offset..logit_offset + num_classes];
-
-            let (class_idx, confidence) = softmax_argmax(logits_slice);
-
-            let class = match TatrClass::from_index(class_idx) {
-                Some(c) => c,
-                None => continue,
-            };
-
-            let threshold = match class {
-                TatrClass::SpanningCell => CONF_THRESHOLD_SPANNING,
-                TatrClass::Table => CONF_THRESHOLD_ROW_COL,
-                _ => CONF_THRESHOLD_ROW_COL,
-            };
-            if confidence < threshold {
-                continue;
-            }
-
-            let box_offset = q * box_dim;
-            let cx = boxes_data[box_offset];
-            let cy = boxes_data[box_offset + 1];
-            let w = boxes_data[box_offset + 2];
-            let h = boxes_data[box_offset + 3];
-
-            let bbox = cxcywh_to_xyxy(cx, cy, w, h, resized_w as f32, resized_h as f32);
-
-            let scale_x = img_w / resized_w as f32;
-            let scale_y = img_h / resized_h as f32;
-            let bbox = [
-                (bbox[0] * scale_x).clamp(0.0, img_w),
-                (bbox[1] * scale_y).clamp(0.0, img_h),
-                (bbox[2] * scale_x).clamp(0.0, img_w),
-                (bbox[3] * scale_y).clamp(0.0, img_h),
-            ];
-
-            let detection = TatrDetection {
-                bbox,
-                confidence,
-                class_name: class,
-            };
-
-            match class {
-                TatrClass::Row => rows.push(detection),
-                TatrClass::Column => columns.push(detection),
-                TatrClass::ColumnHeader | TatrClass::ProjectedRowHeader => {
-                    headers.push(detection);
-                }
-                TatrClass::SpanningCell => spanning.push(detection),
-                // Previously dropped: the model's own Table bbox is a more
-                // precise localization of the table within the crop than the
-                // full crop extent, and callers had no way to widen columns
-                // to it (xberg-io/xberg#193). Keep the highest-confidence one.
-                TatrClass::Table => {
-                    if detection.confidence > table_confidence {
-                        table_confidence = detection.confidence;
-                        table_bbox = Some(detection.bbox);
-                    }
-                }
-            }
-        }
-
-        rows.sort_by(|a, b| a.bbox[3].total_cmp(&b.bbox[3]));
-        columns.sort_by(|a, b| a.bbox[2].total_cmp(&b.bbox[2]));
-
-        Ok(TatrResult {
-            rows,
-            columns,
-            headers,
-            spanning,
-            table_bbox,
-        })
+        decode_tatr_outputs(float_outputs, (img_w, img_h), (resized_w, resized_h))
     }
+}
+
+type TatrOutput = (Vec<usize>, Vec<f32>);
+
+impl TatrResult {
+    fn empty() -> Self {
+        Self {
+            rows: Vec::new(),
+            columns: Vec::new(),
+            headers: Vec::new(),
+            spanning: Vec::new(),
+            table_bbox: None,
+        }
+    }
+
+    fn push_detection(&mut self, detection: TatrDetection, table_confidence: &mut f32) {
+        match detection.class_name {
+            TatrClass::Row => self.rows.push(detection),
+            TatrClass::Column => self.columns.push(detection),
+            TatrClass::ColumnHeader | TatrClass::ProjectedRowHeader => self.headers.push(detection),
+            TatrClass::SpanningCell => self.spanning.push(detection),
+            // The model's own Table bbox locates the table inside the crop;
+            // retain the highest-confidence prediction (xberg-io/xberg#193). ~keep
+            TatrClass::Table => {
+                if detection.confidence > *table_confidence {
+                    *table_confidence = detection.confidence;
+                    self.table_bbox = Some(detection.bbox);
+                }
+            }
+        }
+    }
+}
+
+fn decode_tatr_outputs(
+    mut float_outputs: Vec<TatrOutput>,
+    image_size: (f32, f32),
+    resized_size: (u32, u32),
+) -> Result<TatrResult, LayoutError> {
+    if float_outputs.len() < 2 {
+        return Err(LayoutError::InvalidOutput(format!(
+            "TATR expected 2 float outputs, got {}",
+            float_outputs.len()
+        )));
+    }
+    let (logits, boxes) = if float_outputs[0].0.last() == Some(&NUM_CLASSES) {
+        (float_outputs.remove(0), float_outputs.remove(0))
+    } else {
+        let boxes = float_outputs.remove(0);
+        (float_outputs.remove(0), boxes)
+    };
+    let num_queries = logits.0.get(1).copied().unwrap_or(0);
+    let num_classes = logits.0.last().copied().unwrap_or(0);
+    let box_dim = boxes.0.last().copied().unwrap_or(0);
+    let mut result = TatrResult::empty();
+    if num_queries == 0 || num_classes < NUM_CLASSES || box_dim < 4 {
+        return Ok(result);
+    }
+    let mut table_confidence = 0.0f32;
+    for q in 0..num_queries {
+        let logit_offset = q * num_classes;
+        let logits_slice = &logits.1[logit_offset..logit_offset + num_classes];
+        if let Some(detection) = decode_tatr_query(logits_slice, &boxes.1, q * box_dim, (image_size, resized_size)) {
+            result.push_detection(detection, &mut table_confidence);
+        }
+    }
+    result.rows.sort_by(|a, b| a.bbox[3].total_cmp(&b.bbox[3]));
+    result.columns.sort_by(|a, b| a.bbox[2].total_cmp(&b.bbox[2]));
+    Ok(result)
+}
+
+fn decode_tatr_query(
+    logits: &[f32],
+    boxes: &[f32],
+    box_offset: usize,
+    dimensions: ((f32, f32), (u32, u32)),
+) -> Option<TatrDetection> {
+    let (class_idx, confidence) = softmax_argmax(logits);
+    let class = TatrClass::from_index(class_idx)?;
+    let threshold = match class {
+        TatrClass::SpanningCell => CONF_THRESHOLD_SPANNING,
+        TatrClass::Table => CONF_THRESHOLD_ROW_COL,
+        _ => CONF_THRESHOLD_ROW_COL,
+    };
+    if confidence < threshold {
+        return None;
+    }
+    let cx = boxes[box_offset];
+    let cy = boxes[box_offset + 1];
+    let w = boxes[box_offset + 2];
+    let h = boxes[box_offset + 3];
+    let ((img_w, img_h), (resized_w, resized_h)) = dimensions;
+    let bbox = cxcywh_to_xyxy(cx, cy, w, h, resized_w as f32, resized_h as f32);
+    let scale_x = img_w / resized_w as f32;
+    let scale_y = img_h / resized_h as f32;
+    let bbox = [
+        (bbox[0] * scale_x).clamp(0.0, img_w),
+        (bbox[1] * scale_y).clamp(0.0, img_h),
+        (bbox[2] * scale_x).clamp(0.0, img_w),
+        (bbox[3] * scale_y).clamp(0.0, img_h),
+    ];
+    Some(TatrDetection {
+        bbox,
+        confidence,
+        class_name: class,
+    })
 }
 
 /// Preprocess an image using DETR-standard preprocessing.

@@ -662,8 +662,26 @@ impl WhisperEngine {
     /// Returns the token IDs produced **after** the prompt (i.e. the transcribed
     /// tokens), excluding the final `<|endoftext|>` token.
     fn greedy_decode(&self, prompt: Vec<i64>, encoder_hidden_states: &Value) -> Result<Vec<u32>, TranscriptionError> {
-        let eot = self.special_tokens.end_of_text;
+        let names = self.decoder_io_names();
+        // The position-embedding table has WHISPER_MAX_TOKENS rows (0..448); a
+        // token fed at index ≥ that is out of range, slices an empty position
+        // range, and crashes the self-attention Reshape (GH#1944). Reserve the
+        // prompt's positions from the context budget so the loop can never feed
+        // a token past the table. `max_new_tokens` includes step 0's token. ~keep
+        let max_new_tokens = decoder_token_budget(prompt.len());
+        if max_new_tokens == 0 {
+            return Ok(Vec::new());
+        }
+        let outputs = self.run_decoder_prompt(prompt, encoder_hidden_states, &names)?;
+        let first_token = decoder_output_token(&outputs, &names.logits_output)?;
+        if first_token == self.special_tokens.end_of_text {
+            return Ok(Vec::new());
+        }
+        let cache = WhisperDecoderCache::from_prompt(outputs, &names.logits_output);
+        self.decode_with_past(first_token, encoder_hidden_states, &names, cache, max_new_tokens)
+    }
 
+    fn decoder_io_names(&self) -> DecoderIoNames {
         let dec_input_names: Vec<String> = self.decoder.inputs().iter().map(|i| i.name().to_string()).collect();
         let dec_output_names: Vec<String> = self.decoder.outputs().iter().map(|o| o.name().to_string()).collect();
         let dwp_input_names: Vec<String> = self
@@ -678,151 +696,159 @@ impl WhisperEngine {
             .iter()
             .map(|o| o.name().to_string())
             .collect();
-
         tracing::debug!(?dec_input_names, ?dec_output_names, "Decoder I/O names");
         tracing::debug!(?dwp_input_names, ?dwp_output_names, "Decoder-with-past I/O names");
-
-        let enc_hs_input_name = dec_input_names
-            .iter()
-            .find(|n| n.contains("encoder_hidden_states"))
-            .cloned()
-            .unwrap_or_else(|| "encoder_hidden_states".to_string());
-
-        let logits_output_name = dec_output_names
-            .iter()
-            .find(|n| *n == "logits")
-            .cloned()
-            .unwrap_or_else(|| "logits".to_string());
-
-        let dwp_logits_output_name = dwp_output_names
-            .iter()
-            .find(|n| *n == "logits")
-            .cloned()
-            .unwrap_or_else(|| "logits".to_string());
-
-        let prompt_len = prompt.len();
-        // The position-embedding table has WHISPER_MAX_TOKENS rows (0..448); a
-        // token fed at index ≥ that is out of range, slices an empty position
-        // range, and crashes the self-attention Reshape (GH#1944). Reserve the
-        // prompt's positions from the context budget so the loop can never feed
-        // a token past the table. `max_new_tokens` is the total number of tokens
-        // generated for this window, step 0's token included. ~keep
-        let max_new_tokens = decoder_token_budget(prompt_len);
-        if max_new_tokens == 0 {
-            return Ok(Vec::new());
-        }
-        let input_ids_0 =
-            Array2::from_shape_vec((1, prompt_len), prompt).map_err(|e| TranscriptionError::Shape(e.to_string()))?;
-        let ids_value_0: Value = Value::from_array(input_ids_0)?.into();
-
-        let enc_hs_clone = clone_value_f32(encoder_hidden_states)?;
-
-        let step0_inputs = ort::inputs![
-            "input_ids" => ids_value_0,
-            &enc_hs_input_name => enc_hs_clone,
-        ];
-
-        #[allow(unsafe_code)]
-        let step0_outputs: ort::session::SessionOutputs = unsafe {
-            let ptr = &self.decoder as *const Session as *mut Session;
-            (*ptr).run(step0_inputs)
-        }?;
-
-        let first_token = {
-            let logits_val = step0_outputs
+        DecoderIoNames {
+            encoder_hidden_states_input: dec_input_names
                 .iter()
-                .find(|(name, _)| *name == logits_output_name)
-                .map(|(_, v)| v)
-                .ok_or(TranscriptionError::NoOutput)?;
-            greedy_argmax_last(&logits_val)?
-        };
-
-        if first_token == eot {
-            return Ok(Vec::new());
+                .find(|n| n.contains("encoder_hidden_states"))
+                .cloned()
+                .unwrap_or_else(|| "encoder_hidden_states".to_string()),
+            logits_output: dec_output_names
+                .iter()
+                .find(|n| *n == "logits")
+                .cloned()
+                .unwrap_or_else(|| "logits".to_string()),
+            with_past_logits_output: dwp_output_names
+                .iter()
+                .find(|n| *n == "logits")
+                .cloned()
+                .unwrap_or_else(|| "logits".to_string()),
+            with_past_wants_encoder_states: dwp_input_names.iter().any(|n| n.contains("encoder_hidden_states")),
         }
-        let mut generated: Vec<u32> = vec![first_token];
+    }
 
-        let step0_non_logits: Vec<(String, Value)> = step0_outputs
-            .into_iter()
-            .filter(|(name, _)| *name != logits_output_name)
-            .map(|(name, val)| {
-                let input_name = name.replacen("present", "past_key_values", 1);
-                (input_name, val)
-            })
-            .collect();
+    fn run_decoder_prompt(
+        &self,
+        prompt: Vec<i64>,
+        encoder_hidden_states: &Value,
+        names: &DecoderIoNames,
+    ) -> Result<ort::session::SessionOutputs<'_>, TranscriptionError> {
+        let input_ids =
+            Array2::from_shape_vec((1, prompt.len()), prompt).map_err(|e| TranscriptionError::Shape(e.to_string()))?;
+        let ids_value: Value = Value::from_array(input_ids)?.into();
+        let encoder_states = clone_value_f32(encoder_hidden_states)?;
+        let inputs = ort::inputs![
+            "input_ids" => ids_value,
+            &names.encoder_hidden_states_input => encoder_states,
+        ];
+        #[allow(unsafe_code)]
+        let outputs = unsafe {
+            // SAFETY: The module's shared-session contract relies on ORT run delegating to run_inner(&self). ~keep
+            // Outputs stay tied to &self, so the session outlives their borrow. ~keep
+            let ptr = &self.decoder as *const Session as *mut Session;
+            (*ptr).run(inputs)
+        }?;
+        Ok(outputs)
+    }
 
-        let mut encoder_kvs: Vec<(String, Value)> = Vec::new();
-        let mut decoder_kvs: Vec<(String, Value)> = Vec::new();
-        for (name, val) in step0_non_logits {
-            if name.contains(".encoder.") {
-                encoder_kvs.push((name, val));
-            } else {
-                decoder_kvs.push((name, val));
-            }
-        }
-
-        let dwp_wants_enc_hs = dwp_input_names.iter().any(|n| n.contains("encoder_hidden_states"));
-
+    fn decode_with_past(
+        &self,
+        first_token: u32,
+        encoder_hidden_states: &Value,
+        names: &DecoderIoNames,
+        mut cache: WhisperDecoderCache,
+        max_new_tokens: usize,
+    ) -> Result<Vec<u32>, TranscriptionError> {
+        let mut generated = vec![first_token];
         for _ in 1..max_new_tokens {
             let last_token = *generated.last().expect("generated is non-empty; qed");
-
-            let last_id_arr = Array2::from_shape_vec((1, 1), vec![last_token as i64])
-                .map_err(|e| TranscriptionError::Shape(e.to_string()))?;
-            let ids_val: Value = Value::from_array(last_id_arr)?.into();
-
-            let mut dwp_inputs = ort::inputs!["input_ids" => ids_val];
-
-            if dwp_wants_enc_hs {
-                let enc_hs_c = clone_value_f32(encoder_hidden_states)?;
-                dwp_inputs.push((enc_hs_input_name.as_str().into(), enc_hs_c.into()));
-            }
-
-            for (kv_name, kv_val) in &decoder_kvs {
-                let kv_clone = clone_value_f32(kv_val)?;
-                dwp_inputs.push((kv_name.as_str().into(), kv_clone.into()));
-            }
-
-            for (kv_name, kv_val) in &encoder_kvs {
-                let kv_clone = clone_value_f32(kv_val)?;
-                dwp_inputs.push((kv_name.as_str().into(), kv_clone.into()));
-            }
-
-            #[allow(unsafe_code)]
-            let step_outputs: ort::session::SessionOutputs = unsafe {
-                let ptr = &self.decoder_with_past as *const Session as *mut Session;
-                (*ptr).run(dwp_inputs)
-            }?;
-
-            let next_token = {
-                let logits_val = step_outputs
-                    .iter()
-                    .find(|(name, _)| *name == dwp_logits_output_name)
-                    .map(|(_, v)| v)
-                    .ok_or(TranscriptionError::NoOutput)?;
-                greedy_argmax_last(&logits_val)?
-            };
-
-            if next_token == eot {
+            let outputs = self.run_decoder_with_past(last_token, encoder_hidden_states, names, &cache)?;
+            let next_token = decoder_output_token(&outputs, &names.with_past_logits_output)?;
+            if next_token == self.special_tokens.end_of_text {
                 break;
             }
             generated.push(next_token);
-
-            let new_decoder_kvs: Vec<(String, Value)> = step_outputs
-                .into_iter()
-                .filter(|(name, _)| *name != dwp_logits_output_name)
-                .map(|(name, val)| {
-                    let input_name = name.replacen("present", "past_key_values", 1);
-                    (input_name, val)
-                })
-                .collect();
-
+            let new_decoder_kvs = decoder_cache_outputs(outputs, &names.with_past_logits_output);
             if !new_decoder_kvs.is_empty() {
-                decoder_kvs = new_decoder_kvs;
+                cache.decoder_kvs = new_decoder_kvs;
             }
         }
-
         Ok(generated)
     }
+
+    fn run_decoder_with_past(
+        &self,
+        last_token: u32,
+        encoder_hidden_states: &Value,
+        names: &DecoderIoNames,
+        cache: &WhisperDecoderCache,
+    ) -> Result<ort::session::SessionOutputs<'_>, TranscriptionError> {
+        let last_id_arr = Array2::from_shape_vec((1, 1), vec![last_token as i64])
+            .map_err(|e| TranscriptionError::Shape(e.to_string()))?;
+        let ids_value: Value = Value::from_array(last_id_arr)?.into();
+        let mut inputs = ort::inputs!["input_ids" => ids_value];
+        if names.with_past_wants_encoder_states {
+            let encoder_states = clone_value_f32(encoder_hidden_states)?;
+            inputs.push((names.encoder_hidden_states_input.as_str().into(), encoder_states.into()));
+        }
+        for (kv_name, kv_val) in &cache.decoder_kvs {
+            let kv_clone = clone_value_f32(kv_val)?;
+            inputs.push((kv_name.as_str().into(), kv_clone.into()));
+        }
+        for (kv_name, kv_val) in &cache.encoder_kvs {
+            let kv_clone = clone_value_f32(kv_val)?;
+            inputs.push((kv_name.as_str().into(), kv_clone.into()));
+        }
+        #[allow(unsafe_code)]
+        let outputs = unsafe {
+            // SAFETY: The module's shared-session contract relies on ORT run delegating to run_inner(&self). ~keep
+            // Outputs stay tied to &self, so the session outlives their borrow. ~keep
+            let ptr = &self.decoder_with_past as *const Session as *mut Session;
+            (*ptr).run(inputs)
+        }?;
+        Ok(outputs)
+    }
+}
+
+struct DecoderIoNames {
+    encoder_hidden_states_input: String,
+    logits_output: String,
+    with_past_logits_output: String,
+    with_past_wants_encoder_states: bool,
+}
+
+struct WhisperDecoderCache {
+    encoder_kvs: Vec<(String, Value)>,
+    decoder_kvs: Vec<(String, Value)>,
+}
+
+impl WhisperDecoderCache {
+    fn from_prompt(outputs: ort::session::SessionOutputs<'_>, logits_name: &str) -> Self {
+        let mut encoder_kvs = Vec::new();
+        let mut decoder_kvs = Vec::new();
+        for (name, value) in decoder_cache_outputs(outputs, logits_name) {
+            if name.contains(".encoder.") {
+                encoder_kvs.push((name, value));
+            } else {
+                decoder_kvs.push((name, value));
+            }
+        }
+        Self {
+            encoder_kvs,
+            decoder_kvs,
+        }
+    }
+}
+
+fn decoder_output_token(
+    outputs: &ort::session::SessionOutputs<'_>,
+    logits_name: &str,
+) -> Result<u32, TranscriptionError> {
+    let logits = outputs
+        .iter()
+        .find(|(name, _)| *name == logits_name)
+        .map(|(_, value)| value)
+        .ok_or(TranscriptionError::NoOutput)?;
+    greedy_argmax_last(&logits)
+}
+
+fn decoder_cache_outputs(outputs: ort::session::SessionOutputs<'_>, logits_name: &str) -> Vec<(String, Value)> {
+    outputs
+        .into_iter()
+        .filter(|(name, _)| *name != logits_name)
+        .map(|(name, value)| (name.replacen("present", "past_key_values", 1), value))
+        .collect()
 }
 
 /// Walk the recording in 30-second windows, calling `transcribe_chunk` for
@@ -960,6 +986,34 @@ mod tests {
         let val: Value = Value::from_array(data).unwrap().into();
         let tok = greedy_argmax_last(&val).unwrap();
         assert_eq!(tok, 2);
+    }
+
+    #[test]
+    fn greedy_argmax_last_preserves_last_tie_and_rank_errors() {
+        let tied = Array3::from_shape_vec((1, 1, 4), vec![0.0_f32, 2.0, 2.0, 1.0]).unwrap();
+        let logits: Value = Value::from_array(tied).unwrap().into();
+        assert_eq!(greedy_argmax_last(&logits).unwrap(), 2);
+
+        let rank_two = Array2::from_shape_vec((1, 4), vec![0.0_f32; 4]).unwrap();
+        let logits: Value = Value::from_array(rank_two).unwrap().into();
+        let error = greedy_argmax_last(&logits).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "tensor shape error: Expected logits tensor rank 3, got rank 2"
+        );
+    }
+
+    #[test]
+    fn cloned_decoder_state_preserves_tensor_shape_and_values() {
+        let values = vec![1.0_f32, -2.0, 3.0, 4.0];
+        let tensor = Array3::from_shape_vec((1, 2, 2), values.clone()).unwrap();
+        let original: Value = Value::from_array(tensor).unwrap().into();
+        let cloned = clone_value_f32(&original).unwrap();
+
+        let observed = cloned.try_extract_array::<f32>().unwrap();
+        assert_eq!(observed.shape(), &[1, 2, 2]);
+        assert_eq!(observed.iter().copied().collect::<Vec<_>>(), values);
+        assert_eq!(original.try_extract_array::<f32>().unwrap(), observed);
     }
 
     #[test]

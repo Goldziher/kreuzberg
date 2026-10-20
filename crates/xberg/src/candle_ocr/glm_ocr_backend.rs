@@ -603,13 +603,166 @@ impl OcrBackend for GlmOcrBackend {
     // `RequiresUpright` default.
 }
 
-/// Paired-mode dispatch: run PP-DocLayout-V3, crop regions, dispatch per-region task.
-///
-/// Returns both the assembled markdown content and a vector of recognized formulas.
-/// Each formula captures the LaTeX source (without `$$` delimiters) and its bounding box.
-/// The page number must be filled in by the caller.
-///
-/// Only compiled when `layout-detection` feature is enabled.
+#[cfg(feature = "layout-detection")]
+type PairedResult = (
+    String,
+    Vec<crate::types::Formula>,
+    Vec<crate::types::extraction::BoundingBox>,
+);
+
+#[cfg(feature = "layout-detection")]
+struct PairedPage {
+    parts: Vec<String>,
+    formulas: Vec<crate::types::Formula>,
+    table_bboxes: Vec<crate::types::extraction::BoundingBox>,
+}
+
+#[cfg(feature = "layout-detection")]
+impl PairedPage {
+    fn new(region_count: usize) -> Self {
+        Self {
+            parts: Vec::with_capacity(region_count),
+            formulas: Vec::new(),
+            table_bboxes: Vec::new(),
+        }
+    }
+
+    fn push_output(&mut self, detection: &crate::layout::LayoutDetection, task: GlmOcrTask, content: &str) {
+        let bbox = &detection.bbox;
+        let region_bbox = crate::types::extraction::BoundingBox {
+            x0: bbox.x1 as f64,
+            y0: bbox.y1 as f64,
+            x1: bbox.x2 as f64,
+            y1: bbox.y2 as f64,
+        };
+        let latex_clean = if detection.class_name == crate::layout::LayoutClass::Formula {
+            strip_formula_delimiters(content)
+        } else {
+            content.to_string()
+        };
+        let wrapped = wrap_output(task, &latex_clean);
+        if detection.class_name == crate::layout::LayoutClass::Formula && !latex_clean.is_empty() {
+            self.formulas.push(crate::types::Formula {
+                latex: latex_clean,
+                bbox: Some(region_bbox),
+                // The caller renumbers to the real document page. ~keep
+                page: Some(1),
+            });
+        } else if is_table_region(detection.class_name) && !content.trim().is_empty() {
+            self.table_bboxes.push(region_bbox);
+        }
+        self.parts.push(wrapped);
+    }
+
+    fn finish(self) -> PairedResult {
+        (self.parts.join("\n\n"), self.formulas, self.table_bboxes)
+    }
+}
+
+#[cfg(feature = "layout-detection")]
+fn detect_paired_regions(
+    image_bytes: &[u8],
+    device: DevicePreference,
+    limits: &crate::extractors::security::SecurityLimits,
+) -> crate::Result<(image::RgbImage, Vec<crate::layout::LayoutDetection>)> {
+    use crate::layout::models::LayoutModel;
+
+    let img = crate::extraction::image_decode::decode_standard_rgb8_with_default_security_limits(image_bytes).map_err(
+        |error| crate::XbergError::Ocr {
+            message: format!("GLM-OCR paired: image decode failed: {error}"),
+            source: Some(Box::new(error)),
+        },
+    )?;
+    crate::layout::engine::validate_layout_batch_peak(&[&img], limits)?;
+    let model_path = ensure_layout_model_path()?;
+    let layout_model = get_or_init_layout_model(model_path.as_path(), device).map_err(|e| crate::XbergError::Ocr {
+        message: format!("GLM-OCR paired: layout detection init failed: {e}"),
+        source: Some(Box::new(e)),
+    })?;
+    let detections = layout_model.lock().detect(&img).map_err(|e| crate::XbergError::Ocr {
+        message: format!("GLM-OCR paired: layout detection failed: {e}"),
+        source: Some(Box::new(e)),
+    })?;
+    let mut sorted = detections;
+    sorted.sort_by(|a, b| a.bbox.y1.total_cmp(&b.bbox.y1).then(a.bbox.x1.total_cmp(&b.bbox.x1)));
+    Ok((img, sorted))
+}
+
+#[cfg(feature = "layout-detection")]
+fn encode_paired_crop(
+    img: &image::RgbImage,
+    bbox: &crate::layout::BBox,
+    limits: &crate::extractors::security::SecurityLimits,
+) -> crate::Result<Vec<u8>> {
+    const CROP_PNG_ENCODE_BYTES_PER_PIXEL: u64 = 4;
+    const CROP_PNG_ENCODE_FIXED_BYTES: u64 = 256 * 1024;
+
+    let img_width = img.width();
+    let img_height = img.height();
+    let x = (bbox.x1.max(0.0) as u32).min(img_width.saturating_sub(1));
+    let y = (bbox.y1.max(0.0) as u32).min(img_height.saturating_sub(1));
+    let w = ((bbox.x2 - bbox.x1).max(1.0) as u32).min(img_width - x);
+    let h = ((bbox.y2 - bbox.y1).max(1.0) as u32).min(img_height - y);
+    let current_bytes = u64::try_from(img.as_raw().len()).map_err(|_| {
+        crate::extraction::image_decode::image_dimension_error(img_width, img_height, u64::MAX, u64::MAX)
+    })?;
+    let crop_and_encode_bytes =
+        crate::extraction::image_decode::decoded_byte_count(w, h, 3 + CROP_PNG_ENCODE_BYTES_PER_PIXEL)?
+            .checked_add(CROP_PNG_ENCODE_FIXED_BYTES)
+            .ok_or_else(|| {
+                crate::extraction::image_decode::image_dimension_error(img_width, img_height, u64::MAX, u64::MAX)
+            })?;
+    crate::extraction::image_decode::validate_image_live_bytes(
+        img_width,
+        img_height,
+        current_bytes,
+        crop_and_encode_bytes,
+        limits,
+    )?;
+    let crop = image::imageops::crop_imm(img, x, y, w, h).to_image();
+    let mut crop_bytes: Vec<u8> = Vec::new();
+    crop.write_to(&mut std::io::Cursor::new(&mut crop_bytes), image::ImageFormat::Png)
+        .map_err(|e| crate::XbergError::Ocr {
+            message: format!("GLM-OCR paired: crop encode failed: {e}"),
+            source: Some(Box::new(e)),
+        })?;
+    Ok(crop_bytes)
+}
+
+#[cfg(feature = "layout-detection")]
+fn infer_paired_region(
+    engine: &GlmOcrEngine,
+    crop_bytes: &[u8],
+    task: GlmOcrTask,
+    detection: &crate::layout::LayoutDetection,
+) -> crate::Result<Option<String>> {
+    let bbox = &detection.bbox;
+    // Distinguishes region-overlap duplication from in-region repetition (GH#1675). ~keep
+    tracing::debug!(
+        class = ?detection.class_name,
+        bbox = ?bbox,
+        "GLM-OCR paired: processing region"
+    );
+    match engine.process_image_with_task(crop_bytes, task) {
+        Ok(output) => Ok(Some(output.content)),
+        Err(CandleOcrError::UnsupportedConfig(ref msg)) => {
+            tracing::warn!(
+                class = ?detection.class_name,
+                bbox = ?bbox,
+                reason = %msg,
+                "GLM-OCR paired: skipping region (unsupported config)"
+            );
+            Ok(None)
+        }
+        Err(e) => Err(crate::XbergError::Ocr {
+            message: format!("GLM-OCR paired: region inference failed: {e}"),
+            source: Some(Box::new(e)),
+        }),
+    }
+}
+
+/// Paired-mode dispatch returns Markdown, formula metadata and table bounds.
+/// Formula page numbers are filled in by the caller. ~keep
 #[cfg(feature = "layout-detection")]
 async fn process_paired(
     image_bytes: Vec<u8>,
@@ -618,43 +771,11 @@ async fn process_paired(
     enable_chart_understanding: bool,
     cache_dir: PathBuf,
     revision: String,
-) -> crate::Result<(
-    String,
-    Vec<crate::types::Formula>,
-    Vec<crate::types::extraction::BoundingBox>,
-)> {
-    use crate::layout::models::LayoutModel;
-
-    const CROP_PNG_ENCODE_BYTES_PER_PIXEL: u64 = 4;
-    const CROP_PNG_ENCODE_FIXED_BYTES: u64 = 256 * 1024;
-
-    tokio::task::spawn_blocking(move || {
-        let img = crate::extraction::image_decode::decode_standard_rgb8_with_default_security_limits(&image_bytes)
-            .map_err(|error| crate::XbergError::Ocr {
-                message: format!("GLM-OCR paired: image decode failed: {error}"),
-                source: Some(Box::new(error)),
-            })?;
+) -> crate::Result<PairedResult> {
+    tokio::task::spawn_blocking(move || -> crate::Result<PairedResult> {
         let security_limits = crate::extractors::security::SecurityLimits::default();
-        crate::layout::engine::validate_layout_batch_peak(&[&img], &security_limits)?;
-
-        let model_path = ensure_layout_model_path()?;
-
-        let layout_model =
-            get_or_init_layout_model(model_path.as_path(), device).map_err(|e| crate::XbergError::Ocr {
-                message: format!("GLM-OCR paired: layout detection init failed: {e}"),
-                source: Some(Box::new(e)),
-            })?;
-
-        let detections = layout_model.lock().detect(&img).map_err(|e| crate::XbergError::Ocr {
-            message: format!("GLM-OCR paired: layout detection failed: {e}"),
-            source: Some(Box::new(e)),
-        })?;
-
-        let mut sorted = detections;
-        sorted.sort_by(|a, b| a.bbox.y1.total_cmp(&b.bbox.y1).then(a.bbox.x1.total_cmp(&b.bbox.x1)));
-
+        let (img, sorted) = detect_paired_regions(&image_bytes, device, &security_limits)?;
         let engine = get_or_init_engine(device, dtype, cache_dir, revision)?;
-
         if sorted.is_empty() {
             tracing::debug!("GLM-OCR paired: no layout regions detected, falling back to whole-page inference");
             let output = engine
@@ -663,136 +784,22 @@ async fn process_paired(
                     message: format!("GLM-OCR paired (fallback): whole-page inference failed: {e}"),
                     source: Some(Box::new(e)),
                 })?;
-            return Ok::<
-                (
-                    String,
-                    Vec<crate::types::Formula>,
-                    Vec<crate::types::extraction::BoundingBox>,
-                ),
-                crate::XbergError,
-            >((output.content, Vec::new(), Vec::new()));
+            return Ok((output.content, Vec::new(), Vec::new()));
         }
-
-        let img_width = img.width();
-        let img_height = img.height();
-
-        let mut parts: Vec<String> = Vec::with_capacity(sorted.len());
-        let mut formulas: Vec<crate::types::Formula> = Vec::new();
-        let mut table_bboxes: Vec<crate::types::extraction::BoundingBox> = Vec::new();
-
+        let mut page = PairedPage::new(sorted.len());
         for detection in &sorted {
-            let bbox = &detection.bbox;
-            let region_bbox = crate::types::extraction::BoundingBox {
-                x0: bbox.x1 as f64,
-                y0: bbox.y1 as f64,
-                x1: bbox.x2 as f64,
-                y1: bbox.y2 as f64,
-            };
-
-            // Checkbox state is decided by the layout detector, not the OCR model —
-            // glyph OCR on a tiny checkbox crop cannot reliably recover the state bit
-            // (#190). Emit the canonical marker directly and skip the model call.
+            // The layout detector owns checkbox state; tiny-crop OCR cannot recover it (#190). ~keep
             if let Some(marker) = checkbox_marker_for_class(detection.class_name) {
-                parts.push(marker.to_string());
+                page.parts.push(marker.to_string());
                 continue;
             }
-
-            let x = (bbox.x1.max(0.0) as u32).min(img_width.saturating_sub(1));
-            let y = (bbox.y1.max(0.0) as u32).min(img_height.saturating_sub(1));
-            let w = ((bbox.x2 - bbox.x1).max(1.0) as u32).min(img_width - x);
-            let h = ((bbox.y2 - bbox.y1).max(1.0) as u32).min(img_height - y);
-
-            let current_bytes = u64::try_from(img.as_raw().len()).map_err(|_| {
-                crate::extraction::image_decode::image_dimension_error(img_width, img_height, u64::MAX, u64::MAX)
-            })?;
-            let crop_and_encode_bytes =
-                crate::extraction::image_decode::decoded_byte_count(w, h, 3 + CROP_PNG_ENCODE_BYTES_PER_PIXEL)?
-                    .checked_add(CROP_PNG_ENCODE_FIXED_BYTES)
-                    .ok_or_else(|| {
-                        crate::extraction::image_decode::image_dimension_error(
-                            img_width,
-                            img_height,
-                            u64::MAX,
-                            u64::MAX,
-                        )
-                    })?;
-            crate::extraction::image_decode::validate_image_live_bytes(
-                img_width,
-                img_height,
-                current_bytes,
-                crop_and_encode_bytes,
-                &security_limits,
-            )?;
-
-            let crop = image::imageops::crop_imm(&img, x, y, w, h).to_image();
-
-            let mut crop_bytes: Vec<u8> = Vec::new();
-            crop.write_to(&mut std::io::Cursor::new(&mut crop_bytes), image::ImageFormat::Png)
-                .map_err(|e| crate::XbergError::Ocr {
-                    message: format!("GLM-OCR paired: crop encode failed: {e}"),
-                    source: Some(Box::new(e)),
-                })?;
-
+            let crop_bytes = encode_paired_crop(&img, &detection.bbox, &security_limits)?;
             let region_task = task_for_label(detection.class_name, enable_chart_understanding);
-
-            // ~keep: distinguishes region-overlap duplication (two detections OCR'd over the
-            // same area) from GH#1675's in-region repetition -- without per-region logging,
-            // the two look identical in the assembled output.
-            tracing::debug!(
-                class = ?detection.class_name,
-                bbox = ?bbox,
-                "GLM-OCR paired: processing region"
-            );
-
-            let output = match engine.process_image_with_task(&crop_bytes, region_task) {
-                Ok(out) => out,
-                Err(CandleOcrError::UnsupportedConfig(ref msg)) => {
-                    tracing::warn!(
-                        class = ?detection.class_name,
-                        bbox = ?bbox,
-                        reason = %msg,
-                        "GLM-OCR paired: skipping region (unsupported config)"
-                    );
-                    continue;
-                }
-                Err(e) => {
-                    return Err(crate::XbergError::Ocr {
-                        message: format!("GLM-OCR paired: region inference failed: {e}"),
-                        source: Some(Box::new(e)),
-                    });
-                }
-            };
-
-            let latex_clean = if detection.class_name == crate::layout::LayoutClass::Formula {
-                strip_formula_delimiters(&output.content)
-            } else {
-                output.content.clone()
-            };
-
-            let wrapped = wrap_output(region_task, &latex_clean);
-
-            if detection.class_name == crate::layout::LayoutClass::Formula && !latex_clean.is_empty() {
-                formulas.push(crate::types::Formula {
-                    latex: latex_clean,
-                    bbox: Some(region_bbox),
-                    // The caller renumbers to the real document page.
-                    page: Some(1),
-                });
-            } else if is_table_region(detection.class_name) && !output.content.trim().is_empty() {
-                table_bboxes.push(region_bbox);
+            if let Some(content) = infer_paired_region(&engine, &crop_bytes, region_task, detection)? {
+                page.push_output(detection, region_task, &content);
             }
-
-            parts.push(wrapped);
         }
-
-        Ok::<
-            (
-                String,
-                Vec<crate::types::Formula>,
-                Vec<crate::types::extraction::BoundingBox>,
-            ),
-            crate::XbergError,
-        >((parts.join("\n\n"), formulas, table_bboxes))
+        Ok(page.finish())
     })
     .await
     .map_err(|e| crate::XbergError::Ocr {

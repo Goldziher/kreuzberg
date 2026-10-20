@@ -574,11 +574,6 @@ fn test_process_paired_table_detection_yields_exactly_one_table_with_source_bbox
     use crate::layout::LayoutClass;
     use crate::types::extraction::BoundingBox;
 
-    // Synthetic fixture standing in for `sorted` detections in `process_paired`:
-    // one Table-class region (should become a structured Table entry with its
-    // detection bbox attached) and one Text-class region (must NOT show up in
-    // `result.tables`). Mirrors the per-detection loop body without needing the
-    // GLM model or PP-DocLayout-V3.
     let table_bbox = BoundingBox {
         x0: 12.0,
         y0: 34.0,
@@ -587,21 +582,19 @@ fn test_process_paired_table_detection_yields_exactly_one_table_with_source_bbox
     };
     let table_output = "| Name | Age |\n|------|-----|\n| Alice | 30 |";
     let text_output = "Just some plain OCR'd prose.";
-
-    let regions: Vec<(LayoutClass, BoundingBox, &str)> = vec![
-        (LayoutClass::Table, table_bbox, table_output),
-        (LayoutClass::Text, BoundingBox::default(), text_output),
-    ];
-
-    let mut parts: Vec<String> = Vec::with_capacity(regions.len());
-    let mut table_bboxes: Vec<BoundingBox> = Vec::new();
-    for (class, bbox, output) in &regions {
-        if is_table_region(*class) && !output.trim().is_empty() {
-            table_bboxes.push(*bbox);
-        }
-        parts.push(output.to_string());
-    }
-    let content = parts.join("\n\n");
+    let table = crate::layout::LayoutDetection::new(
+        LayoutClass::Table,
+        1.0,
+        crate::layout::BBox::new(12.0, 34.0, 512.0, 734.0),
+    );
+    let text =
+        crate::layout::LayoutDetection::new(LayoutClass::Text, 1.0, crate::layout::BBox::new(0.0, 0.0, 0.0, 0.0));
+    let mut page = PairedPage::new(2);
+    page.push_output(&table, GlmOcrTask::Table, table_output);
+    page.push_output(&text, GlmOcrTask::Ocr, text_output);
+    let (content, formulas, table_bboxes) = page.finish();
+    assert_eq!(content, format!("{table_output}\n\n{text_output}"));
+    assert!(formulas.is_empty());
 
     let config = OcrConfig::default();
     let mut doc = super::super::ocr_result::build_ocr_document(
@@ -647,4 +640,91 @@ fn test_checkbox_marker_for_class_none_for_non_checkbox_class() {
     use crate::layout::LayoutClass;
     assert_eq!(checkbox_marker_for_class(LayoutClass::Text), None);
     assert_eq!(checkbox_marker_for_class(LayoutClass::Table), None);
+}
+
+#[cfg(feature = "layout-detection")]
+#[tokio::test]
+async fn should_reject_invalid_paired_image_before_loading_models() {
+    let cache = tempfile::tempdir().expect("create model cache directory");
+    let error = process_paired(
+        Vec::new(),
+        DevicePreference::Cpu,
+        DType::F32,
+        false,
+        cache.path().to_path_buf(),
+        "main".to_string(),
+    )
+    .await
+    .expect_err("invalid encoded image should fail before model loading");
+    match error {
+        crate::XbergError::Ocr { message, source } => {
+            assert!(message.starts_with("GLM-OCR paired: image decode failed:"), "{message}");
+            assert!(source.is_some());
+        }
+        other => panic!("unexpected error: {other}"),
+    }
+    assert_eq!(std::fs::read_dir(cache.path()).unwrap().count(), 0);
+}
+
+#[cfg(feature = "layout-detection")]
+#[test]
+fn should_clip_paired_crops_to_the_image_and_preserve_pixels() {
+    let img = image::RgbImage::from_fn(2, 2, |x, y| image::Rgb([x as u8, y as u8, 123]));
+    let limits = crate::extractors::security::SecurityLimits::default();
+    let bytes = encode_paired_crop(&img, &crate::layout::BBox::new(-3.0, -4.0, 7.0, 8.0), &limits).unwrap();
+    let decoded = image::load_from_memory(&bytes).unwrap().to_rgb8();
+    assert_eq!(decoded, img);
+    let bytes = encode_paired_crop(&img, &crate::layout::BBox::new(9.0, 9.0, 10.0, 10.0), &limits).unwrap();
+    let decoded = image::load_from_memory(&bytes).unwrap().to_rgb8();
+    assert_eq!(decoded.dimensions(), (1, 1));
+    assert_eq!(decoded.get_pixel(0, 0), img.get_pixel(1, 1));
+}
+
+#[cfg(feature = "layout-detection")]
+#[test]
+fn should_enforce_the_paired_crop_live_memory_budget_before_encoding() {
+    let img = image::RgbImage::new(2, 2);
+    let limits = crate::extractors::security::SecurityLimits {
+        max_content_size: 12,
+        ..Default::default()
+    };
+    let error = encode_paired_crop(&img, &crate::layout::BBox::new(0.0, 0.0, 2.0, 2.0), &limits).unwrap_err();
+    match error {
+        crate::XbergError::Validation { message, source } => {
+            assert_eq!(
+                message,
+                "Image dimensions 2x2 require 262184 live image-processing bytes, exceeding or invalid under security_limits.max_content_size (12 bytes)"
+            );
+            assert!(source.is_none());
+        }
+        other => panic!("unexpected error: {other}"),
+    }
+}
+
+#[cfg(feature = "layout-detection")]
+#[test]
+fn should_keep_formula_metadata_and_repeated_paired_text() {
+    let bbox = crate::layout::BBox::new(12.0, 34.0, 56.0, 78.0);
+    let mut detection = crate::layout::LayoutDetection::new(crate::layout::LayoutClass::Formula, 1.0, bbox);
+    let mut page = PairedPage::new(3);
+    page.push_output(&detection, GlmOcrTask::Formula, "$$ x^2 $$");
+    detection.class_name = crate::layout::LayoutClass::Text;
+    page.push_output(&detection, GlmOcrTask::Ocr, "Repeated text.");
+    page.push_output(&detection, GlmOcrTask::Ocr, "Repeated text.");
+    let (content, formulas, table_bboxes) = page.finish();
+    assert_eq!(content, "$$\nx^2\n$$\n\nRepeated text.\n\nRepeated text.");
+    assert_eq!(content.matches("Repeated text.").count(), 2);
+    assert_eq!(formulas.len(), 1);
+    assert_eq!(formulas[0].latex, "x^2");
+    assert_eq!(formulas[0].page, Some(1));
+    assert_eq!(
+        formulas[0].bbox,
+        Some(crate::types::extraction::BoundingBox {
+            x0: 12.0,
+            y0: 34.0,
+            x1: 56.0,
+            y1: 78.0
+        })
+    );
+    assert_eq!(table_bboxes.len(), 0);
 }
