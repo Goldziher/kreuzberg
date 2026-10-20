@@ -883,7 +883,13 @@ static FORMATS: &[FormatEntry] = &[
     FormatEntry {
         extensions: &[],
         mime_type: "text/x-source-code",
-        aliases: &["text/x-python", "text/x-r-source", "text/x-julia"],
+        aliases: &[
+            "text/x-python",
+            "text/x-r-source",
+            "text/x-julia",
+            "text/vnd.graphviz",
+            "text/x-plantuml",
+        ],
     },
 ];
 
@@ -1152,7 +1158,9 @@ pub(crate) fn detect_or_validate_bytes(
             let extension = filename.and_then(|name| detect_mime_type(name, false).ok());
             let from_content = detect_mime_type_from_bytes(content);
             match (extension, from_content) {
-                (Some(extension), Ok(content_mime)) => prefer_content_mime(&extension, &content_mime),
+                (Some(extension), Ok(content_mime)) => {
+                    prefer_content_mime(&extension, &content_mime, filename.map(Path::new))
+                }
                 (Some(extension), Err(_)) => validate_mime_type(&extension),
                 (None, Ok(content_mime)) => validate_mime_type(&content_mime),
                 (None, Err(error)) => Err(error),
@@ -1203,7 +1211,20 @@ pub(crate) async fn resolve_owned_bytes_mime(
     Ok((content, detected))
 }
 
-fn prefer_content_mime(extension_mime: &str, content_mime: &str) -> Result<String> {
+#[cfg(feature = "tree-sitter")]
+fn is_plain_graphviz_dot(path: Option<&Path>, content_mime: &str) -> bool {
+    content_mime == PLAIN_TEXT_MIME_TYPE
+        && path
+            .and_then(Path::extension)
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("dot"))
+}
+
+fn prefer_content_mime(extension_mime: &str, content_mime: &str, _path: Option<&Path>) -> Result<String> {
+    #[cfg(feature = "tree-sitter")]
+    if is_plain_graphviz_dot(_path, content_mime) {
+        return Ok(SOURCE_CODE_MIME_TYPE.to_string());
+    }
     let extension_supported = SUPPORTED_MIME_TYPES.contains(extension_mime);
     if extension_supported
         && (content_mime == PLAIN_TEXT_MIME_TYPE
@@ -1231,7 +1252,7 @@ fn resolve_file_mime(path: &Path, path_detection: Result<String>, file: Option<&
             return Err(path_error);
         }
     };
-    let resolved = match file.and_then(|file| magic_override(file, &detected)) {
+    let resolved = match file.and_then(|file| magic_override(file, &detected, path)) {
         Some(from_magic) => {
             tracing::debug!(path = %path.display(), extension_mime = %detected, magic_mime = %from_magic,
                     "extension/content MIME disagree; preferring content");
@@ -1245,9 +1266,13 @@ fn resolve_file_mime(path: &Path, path_detection: Result<String>, file: Option<&
 /// If the file's magic bytes confidently indicate a different supported MIME
 /// type than the extension did, return it. Returns `None` when the content has
 /// no signature, the read fails, or content and extension agree.
-fn magic_override(file: &mut std::fs::File, extension_mime: &str) -> Option<String> {
+fn magic_override(file: &mut std::fs::File, extension_mime: &str, _path: &Path) -> Option<String> {
     let from_magic = detect_mime_type_from_file_content(file, PackageInspection::FullArchive)?;
 
+    #[cfg(feature = "tree-sitter")]
+    if is_plain_graphviz_dot(Some(_path), &from_magic) {
+        return Some(SOURCE_CODE_MIME_TYPE.to_string());
+    }
     if from_magic == PLAIN_TEXT_MIME_TYPE && SUPPORTED_MIME_TYPES.contains(extension_mime) {
         return None;
     }

@@ -39,12 +39,13 @@ pub(crate) const CODE_INTELLIGENCE_SCRATCH_KEY: &str = "__xberg_code_intelligenc
 /// `ProcessingWarning::source` for every warning this extractor emits (#171).
 const CODE_WARNING_SOURCE: &str = "code";
 
-/// Canonical source-code MIME plus common language-specific notebook aliases. ~keep
 const CODE_MIME_TYPES: &[&str] = &[
     SOURCE_CODE_MIME_TYPE,
     "text/x-python",
     "text/x-julia",
     "text/x-r-source",
+    "text/vnd.graphviz",
+    "text/x-plantuml",
 ];
 
 #[cfg_attr(alef, alef(skip))]
@@ -263,6 +264,8 @@ impl CodeExtractor {
             "text/x-python" => Some("python"),
             "text/x-julia" => Some("julia"),
             "text/x-r-source" => Some("r"),
+            "text/vnd.graphviz" => Some("dot"),
+            "text/x-plantuml" => Some("plantuml"),
             _ => None,
         }
     }
@@ -377,7 +380,8 @@ impl InternalDocumentExtractor for CodeExtractor {
         if let Some(document) = Self::extract_text_notebook(&source, _mime_type, config, &mut budget)? {
             return Ok(document);
         }
-        let language = Self::detect_language(path, &source)?;
+        let language = Self::detect_language(path, &source)
+            .or_else(|error| Self::language_from_mime(_mime_type).map(str::to_string).ok_or(error))?;
         Self::extract_with_language(&source, &language, config)
     }
 
@@ -424,7 +428,7 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn should_claim_common_text_notebook_mime_aliases() {
+    fn should_claim_registered_source_code_mime_aliases() {
         let extractor = CodeExtractor::new();
         let supported = extractor.supported_mime_types();
         assert_eq!(
@@ -433,7 +437,9 @@ mod tests {
                 SOURCE_CODE_MIME_TYPE,
                 "text/x-python",
                 "text/x-julia",
-                "text/x-r-source"
+                "text/x-r-source",
+                "text/vnd.graphviz",
+                "text/x-plantuml"
             ]
         );
     }
