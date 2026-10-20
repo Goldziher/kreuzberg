@@ -63,7 +63,7 @@ async fn measured_command_timer_excludes_pre_spawn_staging() {
     assert!(outcome.error.is_none());
     assert!(outcome.output.unwrap().status.success());
     assert!(outcome.resource_stats.baseline_memory_bytes > 0);
-    assert!(outcome.resource_stats.peak_memory_bytes >= outcome.resource_stats.baseline_memory_bytes);
+    assert!(outcome.resource_stats.peak_memory_bytes > 0);
     assert!(outcome.resource_stats.sample_count > 0);
     assert!(wall_start.elapsed().saturating_sub(outcome.duration) >= Duration::from_millis(40));
 }
@@ -128,29 +128,47 @@ async fn timeout_error_surfaces_child_stderr_tail() {
 }
 
 #[cfg(unix)]
-#[tokio::test]
-async fn measured_nonzero_exit_preserves_resource_stats() {
-    let mut cmd = SubprocessAdapter::measured_command("sh");
-    cmd.args(["-c", "sleep 0.02; exit 7"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    SubprocessAdapter::configure_measured_stdin(&mut cmd);
-    SubprocessAdapter::configure_child_process(&mut cmd);
+#[test]
+fn measured_nonzero_exit_preserves_resource_stats() {
+    use super::super::support::MeasuredCommandOutcome;
+    use crate::monitoring::{ResourceMonitor, ResourceSample};
+    use std::os::unix::process::ExitStatusExt;
 
-    let measured = SubprocessAdapter::execute_measured_command(
-        &mut cmd,
-        Duration::from_secs(1),
-        "failing command",
-        Duration::from_millis(1),
-    )
-    .await
-    .unwrap();
-    let execution = SubprocessAdapter::finish_measured_command(measured, "Failing command");
+    let samples = [ResourceSample {
+        memory_bytes: 2048,
+        vm_size_bytes: 8192,
+        page_faults: 0,
+        cpu_percent: 0.0,
+        timestamp_ms: 1,
+    }];
+    // The blocked shell is baseline metadata; target RSS may be lower after exec. ~keep
+    for target_samples in [samples.as_slice(), &[]] {
+        let expected = ResourceMonitor::calculate_stats(target_samples, &[], 4096);
+        let measured = MeasuredCommandOutcome {
+            output: Some(std::process::Output {
+                status: std::process::ExitStatus::from_raw(7 << 8),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            }),
+            duration: Duration::from_millis(20),
+            resource_stats: expected.clone(),
+            error: None,
+        };
+        let execution = SubprocessAdapter::finish_measured_command(measured, "Failing command");
 
-    assert!(matches!(execution.error, Some(Error::Benchmark(_))));
-    assert!(execution.resource_stats.baseline_memory_bytes > 0);
-    assert!(execution.resource_stats.peak_memory_bytes >= execution.resource_stats.baseline_memory_bytes);
-    assert!(execution.resource_stats.sample_count > 0);
+        assert!(matches!(execution.error, Some(Error::Benchmark(_))));
+        assert_eq!(execution.duration, Duration::from_millis(20));
+        assert_eq!(
+            execution.resource_stats.baseline_memory_bytes,
+            expected.baseline_memory_bytes
+        );
+        assert_eq!(execution.resource_stats.peak_memory_bytes, expected.peak_memory_bytes);
+        assert_eq!(
+            execution.resource_stats.peak_memory_delta_bytes,
+            expected.peak_memory_delta_bytes
+        );
+        assert_eq!(execution.resource_stats.sample_count, expected.sample_count);
+    }
 }
 
 #[cfg(unix)]
