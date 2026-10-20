@@ -6,6 +6,7 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::collections::HashSet;
 
 use comrak::nodes::{
     Ast, AstNode, LineColumn, NodeAlert, NodeCode, NodeCodeBlock, NodeFootnoteDefinition, NodeFootnoteReference,
@@ -99,6 +100,7 @@ pub(crate) fn keep_code_literal<'a>(root: &'a AstNode<'a>, arena: &'a comrak::Ar
         set_tight(node);
     }
     // Readers pair "$" across code spans and across a tight item's paragraphs, which comrak writes one newline apart.
+    let mut seen = HashSet::new();
     let blocks: Vec<_> = root
         .descendants()
         .filter(|node| matches!(&node.data.borrow().value, NodeValue::Code(code) if code.literal.contains('$')))
@@ -110,8 +112,16 @@ pub(crate) fn keep_code_literal<'a>(root: &'a AstNode<'a>, arena: &'a comrak::Ar
                 .last()
                 .unwrap_or(block)
         })
+        .filter(|block| seen.insert(std::ptr::from_ref(*block)))
         .collect();
-    for block in blocks {
+    // A block inside another in the set is covered by the outer block's walk.
+    let outermost = blocks.into_iter().filter(|block| {
+        !block
+            .ancestors()
+            .skip(1)
+            .any(|ancestor| seen.contains(&std::ptr::from_ref(ancestor)))
+    });
+    for block in outermost {
         for node in block.descendants().collect::<Vec<_>>() {
             escape_dollars(node, arena);
         }
@@ -2904,6 +2914,17 @@ mod tests {
             ],
         );
         assert!(markdown.contains("Costs $5 and $`x^2`$."), "{markdown}");
+    }
+
+    #[test]
+    fn should_escape_each_prose_dollar_once_beside_many_code_spans() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        let text = "a $1 x$ b $2 y$ c $3";
+        let annotations = vec![code_annotation(text, "x$"), code_annotation(text, "y$")];
+        builder.push_paragraph(text, annotations, None, None);
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(&markdown, &["x$", "y$"]);
+        assert!(markdown.contains(r"a \$1 `x$` b \$2 `y$` c \$3"), "{markdown}");
     }
 
     #[test]

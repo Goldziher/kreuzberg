@@ -116,13 +116,28 @@ fn is_code_block(content: &str) -> bool {
     false
 }
 
-/// A ```` ```math ```` fence anywhere in the chunk, the form the Markdown writer gives display math.
+/// A ```` ```math ```` fence opened outside any other fence, the form the Markdown writer gives
+/// display math. Quote markers before a fence are skipped.
 fn is_math_fence(content: &str) -> bool {
-    content.lines().any(|line| {
-        let line = line.trim();
-        let info = line.trim_start_matches('`');
-        line.len() - info.len() >= 3 && info.split_ascii_whitespace().next() == Some("math")
-    })
+    let mut open: Option<(char, usize)> = None;
+    for line in content.lines() {
+        let line = line.trim_start_matches(['>', ' ', '\t']).trim_end();
+        let Some(fence) = line.chars().next().filter(|c| *c == '`' || *c == '~') else {
+            continue;
+        };
+        let info = line.trim_start_matches(fence);
+        let run = line.len() - info.len();
+        if run < 3 {
+            continue;
+        }
+        match open {
+            Some((ch, len)) if ch == fence && run >= len && info.is_empty() => open = None,
+            Some(_) => {}
+            None if info.split_ascii_whitespace().next() == Some("math") => return true,
+            None => open = Some((fence, run)),
+        }
+    }
+    false
 }
 
 fn is_table_like(content: &str) -> bool {
@@ -361,6 +376,8 @@ mod tests {
         assert_eq!(classify("Intro.\n\n```math\nx_i + y\n```"), ChunkType::Formula);
         assert_eq!(classify("````math\na ``` b\n````"), ChunkType::Formula);
         assert_eq!(classify("```mathematica\nPlot[x]\n```"), ChunkType::CodeBlock);
+        assert_eq!(classify("````markdown\n```math\nx^2\n```\n````"), ChunkType::CodeBlock);
+        assert_eq!(classify("> ```math\n> x^2\n> ```"), ChunkType::Formula);
     }
 
     #[test]

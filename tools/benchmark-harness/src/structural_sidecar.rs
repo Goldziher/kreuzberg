@@ -398,7 +398,10 @@ impl MarkdownParseState {
     }
 
     fn push_text(&mut self, text: &str) {
-        if let Some(buf) = self.item_text.last_mut() {
+        // A math fence is a formula of its own, as `$$` display math is, even inside a list item.
+        if self.in_code_block && self.in_math_fence {
+            push_spaced(&mut self.current_text, text);
+        } else if let Some(buf) = self.item_text.last_mut() {
             push_spaced(buf, text);
         } else if self.current_text.starts_with("\u{0}IMG\u{0}") {
             self.current_text.push_str(text);

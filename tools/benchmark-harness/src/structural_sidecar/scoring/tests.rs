@@ -198,6 +198,20 @@ fn test_math_fence_is_a_display_formula() {
 }
 
 #[test]
+fn test_math_fence_in_a_list_item_is_a_display_formula() {
+    let s = StructuralSidecar::from_markdown("- Energy\n\n  ```math\n  E = mc^2\n  ```\n");
+    assert!(
+        matches!(
+            &s.nodes[..],
+            [StructuralNode::Formula { display: true, text }, StructuralNode::ListItem { text: label, .. }]
+                if text == "E = mc^2" && label == "Energy"
+        ),
+        "{:?}",
+        s.nodes
+    );
+}
+
+#[test]
 fn test_code_math_is_inline_math() {
     let s = StructuralSidecar::from_markdown("$`x^2`$\n");
     assert!(
