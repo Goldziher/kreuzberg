@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(ios): Native libraries link with bundled ONNX Runtime’s CoreML backend.**
+  Device and simulator builds include the matching Apple compiler availability runtime.
 - **(html): Whitespace-only inline formatting and blank Word-exported HTML paragraphs no longer panic.**
   Surrounding paragraph content is preserved. (#2182)
 - **(markdown): Separate paragraphs inside a list item retain paragraph breaks and annotation offsets.** (#2181)

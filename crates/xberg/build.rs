@@ -1,4 +1,5 @@
 fn main() {
+    link_ios_compiler_runtime();
     println!("cargo::rustc-check-cfg=cfg(coverage)");
 
     println!("cargo::rustc-check-cfg=cfg(inference_ort)");
@@ -52,6 +53,82 @@ fn main() {
         emit_rerun_directives(&manifest_dir);
     }
     println!("cargo::rustc-env=XBERG_BUILD_ID={}", build_id());
+}
+
+fn link_ios_compiler_runtime() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("ios")
+        || std::env::var_os("CARGO_FEATURE_ORT_BUNDLED").is_none()
+    {
+        return;
+    }
+    let (sdk, library) = if std::env::var("CARGO_CFG_TARGET_ABI").as_deref() == Ok("sim") {
+        ("iphonesimulator", "clang_rt.iossim")
+    } else {
+        ("iphoneos", "clang_rt.ios")
+    };
+    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH unset");
+    let apple_arch = if arch == "aarch64" { "arm64" } else { &arch };
+    let runtime = ios_compiler_runtime(sdk, library);
+    let staged = stage_ios_compiler_runtime(sdk, &runtime, apple_arch);
+    println!(
+        "cargo::rustc-link-search=native={}",
+        staged.parent().expect("runtime has no parent").display()
+    );
+    println!("cargo::rustc-link-lib=static={library}");
+    println!("cargo::rerun-if-changed={}", runtime.display());
+    for variable in ["DEVELOPER_DIR", "TOOLCHAINS", "SDKROOT"] {
+        println!("cargo::rerun-if-env-changed={variable}");
+    }
+}
+
+fn ios_compiler_runtime(sdk: &str, library: &str) -> std::path::PathBuf {
+    let output = std::process::Command::new("xcrun")
+        .args(["--sdk", sdk, "clang", "--print-resource-dir"])
+        .output()
+        .unwrap_or_else(|error| panic!("query {sdk} compiler runtime directory: {error}"));
+    assert!(
+        output.status.success(),
+        "query {sdk} compiler runtime directory ({}): {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let resource = String::from_utf8(output.stdout)
+        .unwrap_or_else(|error| panic!("decode {sdk} compiler runtime directory: {error}"));
+    assert!(!resource.trim().is_empty(), "empty {sdk} compiler runtime directory");
+    std::path::Path::new(resource.trim())
+        .join("lib/darwin")
+        .join(format!("lib{library}.a"))
+}
+
+fn stage_ios_compiler_runtime(sdk: &str, archive: &std::path::Path, arch: &str) -> std::path::PathBuf {
+    use std::io::Read;
+
+    let mut header = [0; 8];
+    std::fs::File::open(archive)
+        .and_then(|mut file| file.read_exact(&mut header))
+        .unwrap_or_else(|error| panic!("read {sdk} compiler runtime archive: {error}"));
+    let destination = std::path::PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR unset"))
+        .join(archive.file_name().expect("runtime archive has no filename"));
+    // Rust bundles native archives into rlibs, but cannot read Xcode's universal archives. ~keep
+    if &header == b"!<arch>\n" {
+        std::fs::copy(archive, &destination)
+            .unwrap_or_else(|error| panic!("copy {sdk} compiler runtime archive: {error}"));
+    } else {
+        let output = std::process::Command::new("xcrun")
+            .arg("lipo")
+            .arg(archive)
+            .args(["-thin", arch, "-output"])
+            .arg(&destination)
+            .output()
+            .unwrap_or_else(|error| panic!("extract {arch} from {sdk} compiler runtime: {error}"));
+        assert!(
+            output.status.success(),
+            "extract {arch} from {sdk} compiler runtime ({}): {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    destination
 }
 
 /// Best-effort identifier for *this* build, embedded at compile time via `env!("XBERG_BUILD_ID")`.

@@ -64,6 +64,7 @@ tasks:
     cmds:
       - python3 scripts/ci/test_publish_workflow_contracts.py
       - python3 scripts/ci/test_php_release_contracts.py
+      - python3 scripts/ci/test_ios_compiler_runtime.py
 
   default:
     desc: "List available tasks"
