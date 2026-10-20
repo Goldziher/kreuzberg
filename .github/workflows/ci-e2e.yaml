@@ -139,6 +139,9 @@ jobs:
     needs: [build-ffi]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 360
+    env:
+      # ~keep Gradle's nested JNI fat-LTO build exceeds the ARM runner's 16 GB (#2163).
+      CARGO_PROFILE_RELEASE_LTO: ${{ matrix.lang == 'kotlin-android' && 'thin' || 'fat' }}
     strategy:
       fail-fast: false
       matrix:

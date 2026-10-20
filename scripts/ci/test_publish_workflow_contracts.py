@@ -689,6 +689,17 @@ def test_swift_static_library_builds_disable_host_extension_symbol_lookup() -> N
     assert "targets: ${{ matrix.target }}" in swift
 
 
+def test_kotlin_e2e_native_build_uses_thin_lto() -> None:
+    workflow = (WORKFLOW.parent / "ci-e2e.yaml").read_text()
+    job = job_block(workflow, "e2e-tests")
+    environment = re.search(r"(?ms)^    env:\n(.*?)(?=^    \S)", job)
+    assert environment is not None, "e2e job does not configure the nested JNI Cargo build"
+    setting = re.search(r"CARGO_PROFILE_RELEASE_LTO: \$\{\{ (.*?) \}\}", environment[1])
+    assert setting is not None, "nested JNI build inherits memory-intensive fat LTO"
+    for language, expected in (("kotlin-android", "thin"), ("java", "fat"), ("swift", "fat")):
+        assert evaluate_expression(setting[1], {"matrix": {"lang": language}}) == expected
+
+
 def test_swift_ios_builds_pin_the_deployment_target_to_the_manifest_floor() -> None:
     manifest = (Path(__file__).parents[2] / "Package.swift").read_text()
     floor = re.search(r"\.iOS\(\.v(\d+)\)", manifest)
@@ -753,6 +764,7 @@ def test_csharp_native_build_leaves_rpath_to_generated_ffi_package() -> None:
 
 
 if __name__ == "__main__":
+    test_kotlin_e2e_native_build_uses_thin_lto()
     test_macos_onnx_action_forwards_rpath_option_only_to_macos()
     test_csharp_native_build_leaves_rpath_to_generated_ffi_package()
     test_release_event_guards_cover_initial_actor_and_tag_policy()
