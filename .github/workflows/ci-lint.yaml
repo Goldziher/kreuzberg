@@ -444,6 +444,13 @@ jobs:
         uses: dart-lang/setup-dart@v1
         with:
           sdk: "3.13"
+      # Dart infers formatting language rules from package_config.json, created by pub get. ~keep
+      - name: Resolve Dart binding dependencies
+        working-directory: packages/dart
+        run: dart pub get
+      - name: Resolve Dart E2E dependencies
+        working-directory: e2e/dart
+        run: dart pub get --enforce-lockfile
       - name: Install alef CLI
         uses: xberg-io/actions/install-alef@v1
         # alef is a third-party tool. The job-wide `-D warnings` turns its own

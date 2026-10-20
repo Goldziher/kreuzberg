@@ -763,7 +763,36 @@ def test_csharp_native_build_leaves_rpath_to_generated_ffi_package() -> None:
     ]
 
 
+def assert_dart_e2e_formatter_bootstrap(workflow: str) -> None:
+    freshness = job_block(workflow, "e2e-freshness")
+    dart_setup = freshness.index("uses: dart-lang/setup-dart@")
+    verification = freshness.index("run: task e2e:verify")
+    for directory, command in [
+        ("packages/dart", "dart pub get"),
+        ("e2e/dart", "dart pub get --enforce-lockfile"),
+    ]:
+        pattern = rf"(?m)^        working-directory: {re.escape(directory)}\n        run: {re.escape(command)}$"
+        bootstraps = list(re.finditer(pattern, freshness))
+        assert len(bootstraps) == 1, f"one dependency bootstrap must establish {directory}'s language version"
+        assert dart_setup < bootstraps[0].start() < verification
+
+
+def test_dart_e2e_freshness_resolves_package_language_version() -> None:
+    workflow = CI_WORKFLOW.read_text()
+    assert_dart_e2e_formatter_bootstrap(workflow)
+    for directory in ["packages/dart", "e2e/dart"]:
+        missing = workflow.replace(f"working-directory: {directory}\n", "working-directory: wrong/path\n", 1)
+        assert missing != workflow
+        error_message = None
+        try:
+            assert_dart_e2e_formatter_bootstrap(missing)
+        except AssertionError as error:
+            error_message = str(error)
+        assert error_message == f"one dependency bootstrap must establish {directory}'s language version"
+
+
 if __name__ == "__main__":
+    test_dart_e2e_freshness_resolves_package_language_version()
     test_kotlin_e2e_native_build_uses_thin_lto()
     test_macos_onnx_action_forwards_rpath_option_only_to_macos()
     test_csharp_native_build_leaves_rpath_to_generated_ffi_package()
