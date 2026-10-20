@@ -13,6 +13,7 @@
 //!   without breaking existing classifications.
 
 use crate::types::{ChunkType, HeadingContext};
+use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 
 /// Classify a single chunk based on its content and optional heading context.
 ///
@@ -44,6 +45,10 @@ pub(crate) fn classify_chunk(content: &str, heading_context: Option<&HeadingCont
 
     if is_heading(trimmed, heading_context) {
         return ChunkType::Heading;
+    }
+
+    if is_math_fence(content) {
+        return ChunkType::Formula;
     }
 
     if is_code_block(content) {
@@ -110,6 +115,22 @@ fn is_code_block(content: &str) -> bool {
         }
     }
     false
+}
+
+/// A ```` ```math ```` fence anywhere in the chunk, the form the Markdown writer gives display
+/// math. Parsed as CommonMark so fences inside other fences or indented code do not count, while
+/// fences in block quotes and list items do.
+fn is_math_fence(content: &str) -> bool {
+    if !content.contains("math") {
+        return false;
+    }
+    Parser::new_ext(content, Options::all()).any(|event| {
+        matches!(
+            event,
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info)))
+                if info.split_ascii_whitespace().next() == Some("math")
+        )
+    })
 }
 
 fn is_table_like(content: &str) -> bool {
@@ -343,6 +364,16 @@ mod tests {
     fn test_formula_latex() {
         assert_eq!(classify(r"The result is $\frac{a}{b}$"), ChunkType::Formula);
         assert_eq!(classify(r"$$\sum_{i=0}^{n} x_i$$"), ChunkType::Formula);
+        assert_eq!(classify("```math\nx_i + y\n```"), ChunkType::Formula);
+        assert_eq!(classify("```math display\nx_i + y\n```"), ChunkType::Formula);
+        assert_eq!(classify("Intro.\n\n```math\nx_i + y\n```"), ChunkType::Formula);
+        assert_eq!(classify("````math\na ``` b\n````"), ChunkType::Formula);
+        assert_eq!(classify("```mathematica\nPlot[x]\n```"), ChunkType::CodeBlock);
+        assert_eq!(classify("````markdown\n```math\nx^2\n```\n````"), ChunkType::CodeBlock);
+        assert_eq!(classify("> ```math\n> x^2\n> ```"), ChunkType::Formula);
+        assert_eq!(classify("    ```math\n    x^2\n    ```"), ChunkType::CodeBlock);
+        assert_eq!(classify("- ```math\n  x^2\n  ```"), ChunkType::Formula);
+        assert_eq!(classify("1. ```math\n   x^2\n   ```"), ChunkType::Formula);
     }
 
     #[test]

@@ -1,5 +1,6 @@
 //! Render an `InternalDocument` to GFM-compliant Markdown via comrak.
 
+use comrak::nodes::{AstNode, NodeValue};
 use comrak::{Arena, Options, format_commonmark};
 use std::borrow::Cow;
 use std::sync::LazyLock;
@@ -8,7 +9,7 @@ use crate::types::annotations::PdfAnnotation;
 use crate::types::internal::InternalDocument;
 
 use super::common::{annotation_display_text, annotation_type_label};
-use super::comrak_bridge::{build_comrak_ast, escape_math_holding_html};
+use super::comrak_bridge::{build_comrak_ast, keep_code_literal};
 
 /// Single-pass replacement of multiple two-char escape sequences of the form `\X`
 /// where X is one of `_`, `[`, `]`, `(`, `)`.
@@ -54,37 +55,15 @@ fn unescape_backslash_sequences<'a>(input: &'a str, targets: &[char]) -> Cow<'a,
     Cow::Owned(out)
 }
 
-/// ~keep Single-pass replacement of `&#9;` / `&#10;` → space and `&#2;` → removed.
-///
-/// Returns [`Cow::Borrowed`] when none of these entities appear (zero allocation).
-fn replace_html_entities(input: &str) -> Cow<'_, str> {
-    if !input.contains("&#9;") && !input.contains("&#10;") && !input.contains("&#2;") {
-        return Cow::Borrowed(input);
-    }
-
-    let mut out = String::with_capacity(input.len());
-    let mut rest = input;
-
-    while !rest.is_empty() {
-        if let Some(pos) = rest.find("&#") {
-            out.push_str(&rest[..pos]);
-            let after = &rest[pos..];
-            if let Some(tail) = after.strip_prefix("&#9;").or_else(|| after.strip_prefix("&#10;")) {
-                out.push(' ');
-                rest = tail;
-            } else if let Some(tail) = after.strip_prefix("&#2;") {
-                rest = tail;
-            } else {
-                out.push_str("&#");
-                rest = &after[2..];
-            }
-        } else {
-            out.push_str(rest);
-            break;
+/// ~keep Write tabs in Text as spaces, not comrak's `&#9;`; `normalize_text` drops other controls.
+fn replace_text_tabs<'a>(root: &'a AstNode<'a>) {
+    for node in root.descendants() {
+        if let NodeValue::Text(text) = &mut node.data.borrow_mut().value
+            && text.contains('\t')
+        {
+            *text = Cow::Owned(text.replace('\t', " "));
         }
     }
-
-    Cow::Owned(out)
 }
 
 /// Collapse runs of three or more consecutive newlines down to exactly two
@@ -132,7 +111,11 @@ pub(crate) fn render_markdown(doc: &InternalDocument) -> String {
     tracing::debug!(element_count = doc.elements.len(), "markdown rendering starting");
     let arena = Arena::new();
     let root = build_comrak_ast(doc, &arena);
-    escape_math_holding_html(root);
+    replace_text_tabs(root);
+    if !doc.include_watermarks {
+        strip_arxiv_watermark_noise(root);
+    }
+    keep_code_literal(root, &arena);
 
     if root.first_child().is_none() {
         tracing::debug!("markdown rendering: empty AST, returning empty string");
@@ -147,18 +130,10 @@ pub(crate) fn render_markdown(doc: &InternalDocument) -> String {
 
     output = filter_page_marker_comments(output, doc.page_marker_format.as_deref());
 
-    if let Cow::Owned(s) = replace_html_entities(&output) {
-        output = s;
-    }
-
     output = unescape_markdown_output(output, doc.escape_markdown);
 
     if let Cow::Owned(s) = collapse_excess_newlines(&output) {
         output = s;
-    }
-
-    if !doc.include_watermarks {
-        output = strip_arxiv_watermark_noise(output);
     }
 
     output = append_annotations_section(output, doc.annotations.as_deref());
@@ -286,36 +261,47 @@ fn finalize_annotations_appendix(annotations: Option<&[PdfAnnotation]>) -> Strin
     block
 }
 
-/// Strip arXiv watermark noise from rendered markdown.
+/// Strip arXiv watermark noise from the document's prose.
 ///
 /// LaTeX-generated PDFs often have a rotated sidebar with the arXiv identifier
 /// that the PDF extractor concatenates with body text. This strips patterns like:
 /// "Title N arXiv:NNNN.NNNNNvN [cat.SC] DD Mon YYYY" from the first pages.
-fn strip_arxiv_watermark_noise(mut text: String) -> String {
-    let search_limit = text.floor_char_boundary(text.len().min(6000));
-    let search_area = &text[..search_limit];
-
-    if let Some(m) = ARXIV_WATERMARK_REGEX.find(search_area) {
-        let after = &search_area[m.end()..];
-        let before_char = if m.start() > 0 {
-            search_area[..m.start()].chars().last()
-        } else {
-            None
+/// Only `Text` nodes are searched, so a removal can neither reach into code nor
+/// join two blocks.
+fn strip_arxiv_watermark_noise<'a>(root: &'a AstNode<'a>) {
+    let mut searched = 0;
+    for node in root.descendants() {
+        if searched >= 6000 {
+            return;
+        }
+        let mut data = node.data.borrow_mut();
+        let NodeValue::Text(text) = &mut data.value else {
+            continue;
         };
-
-        let is_at_paragraph_boundary = before_char == Some('.') || after.starts_with('\n') || after.starts_with("\n\n");
+        let search_limit = text.floor_char_boundary(text.len().min(6000 - searched));
+        searched += text.len();
+        let Some(m) = ARXIV_WATERMARK_REGEX.find(&text[..search_limit]) else {
+            continue;
+        };
+        let range = m.range();
+        let is_at_paragraph_boundary =
+            text[..range.start].ends_with('.') || (range.end == text.len() && ends_its_block(node));
         if is_at_paragraph_boundary {
-            let start = m.start();
-            let end = m.end();
             tracing::trace!(
-                stripped = %&text[start..end].chars().take(80).collect::<String>(),
+                stripped = %text[range.clone()].chars().take(80).collect::<String>(),
                 "stripping arXiv watermark from markdown output"
             );
-            text.replace_range(start..end, "");
+            text.to_mut().replace_range(range, "");
         }
+        return;
     }
+}
 
-    text
+fn ends_its_block<'a>(node: &'a AstNode<'a>) -> bool {
+    node.next_sibling().is_none()
+        && node
+            .parent()
+            .is_none_or(|parent| parent.data.borrow().value.block() || ends_its_block(parent))
 }
 
 /// Shared comrak options with all GFM extensions enabled.
@@ -326,6 +312,8 @@ pub(crate) fn comrak_options<'a>() -> Options<'a> {
     options.extension.footnotes = true;
     options.extension.description_lists = true;
     options.extension.math_dollars = true;
+    // Parse-only: the DOCX and PDF writers then read `$`-adjacent code as math, as `render_markdown` writes it.
+    options.extension.math_code = true;
     options.extension.underline = true;
     options.extension.subscript = true;
     options.extension.superscript = true;
@@ -624,59 +612,6 @@ mod tests {
             .replace("\\)", ")");
         let result = unescape_backslash_sequences(input, &['_', '[', ']', '(', ')']);
         assert_eq!(result.as_ref(), expected.as_str());
-    }
-
-    #[test]
-    fn replace_html_entities_empty_returns_borrowed() {
-        let result = replace_html_entities("");
-        assert!(matches!(result, Cow::Borrowed(_)));
-    }
-
-    #[test]
-    fn replace_html_entities_no_entities_returns_borrowed() {
-        let input = "plain text with no HTML entities";
-        let result = replace_html_entities(input);
-        assert!(
-            matches!(result, Cow::Borrowed(_)),
-            "expected Cow::Borrowed when no &#xx; entities present"
-        );
-        assert_eq!(result, input);
-    }
-
-    #[test]
-    fn replace_html_entities_newline_entity_becomes_space() {
-        let result = replace_html_entities("line1&#10;line2");
-        assert!(matches!(result, Cow::Owned(_)));
-        assert_eq!(result, "line1 line2");
-    }
-
-    #[test]
-    fn replace_html_entities_tab_entity_becomes_space() {
-        let result = replace_html_entities("Name:&#9;Alice Example\n&#9;Indented\nAlpha&#9;Beta");
-        assert!(matches!(result, Cow::Owned(_)));
-        assert_eq!(result, "Name: Alice Example\n Indented\nAlpha Beta");
-    }
-
-    #[test]
-    fn replace_html_entities_stx_entity_is_removed() {
-        let result = replace_html_entities("before&#2;after");
-        assert!(matches!(result, Cow::Owned(_)));
-        assert_eq!(result, "beforeafter");
-    }
-
-    #[test]
-    fn replace_html_entities_both_entities_in_one_pass() {
-        let input = "a&#10;b&#2;c";
-        let result = replace_html_entities(input);
-        let expected = input.replace("&#10;", " ").replace("&#2;", "");
-        assert_eq!(result.as_ref(), expected.as_str());
-    }
-
-    #[test]
-    fn replace_html_entities_unknown_entity_is_kept_verbatim() {
-        let input = "a&#42;b";
-        let result = replace_html_entities(input);
-        assert_eq!(result, "a&#42;b");
     }
 
     #[test]

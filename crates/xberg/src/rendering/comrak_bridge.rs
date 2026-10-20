@@ -6,6 +6,7 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::collections::HashSet;
 
 use comrak::nodes::{
     Ast, AstNode, LineColumn, NodeAlert, NodeCode, NodeCodeBlock, NodeFootnoteDefinition, NodeFootnoteReference,
@@ -16,7 +17,7 @@ use crate::types::document_structure::{AnnotationKind, ContentLayer, TextAnnotat
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement, list_item_source_label_from_attributes};
 
 use super::common::{
-    FootnoteCollector, NestingKind, RenderState, annotated_math, handle_container_end, holds_html_tag, is_body_element,
+    FootnoteCollector, NestingKind, RenderState, annotated_math, handle_container_end, is_body_element,
     is_container_end, parse_metadata_entries, sorted_inline_annotations, valid_math_annotation,
 };
 
@@ -64,20 +65,264 @@ fn normalize_text(text: &str) -> String {
     result
 }
 
-/// Turn each `Math` node whose TeX holds an HTML tag into `Text`, so the CommonMark writer escapes
-/// it. Only the Markdown output needs this: comrak's HTML writer escapes a Math literal itself.
-pub(crate) fn escape_math_holding_html<'a>(root: &'a AstNode<'a>) {
-    for node in root.descendants() {
-        let mut data = node.data.borrow_mut();
-        let text = match &data.value {
-            NodeValue::Math(math) if holds_html_tag(math.literal.as_bytes()) => {
-                let delimiter = if math.display_math { "$$" } else { "$" };
-                normalize_text(&format!("{delimiter}{}{delimiter}", math.literal))
+/// Rewrite the AST so text inside code spans, code blocks and math cannot turn into raw HTML in
+/// Markdown output. Math becomes code math: a ```` ```math ```` fence for display math alone in a
+/// paragraph, `` $`tex`$ `` otherwise. Math whose TeX holds a backtick or `$`, or that shares a
+/// block (widened to its outermost tight list item) with code holding `$`, is written as a plain
+/// code span. The HTML writer escapes all of these itself.
+pub(crate) fn keep_code_literal<'a>(root: &'a AstNode<'a>, arena: &'a comrak::Arena<'a>) {
+    for node in root.descendants().collect::<Vec<_>>() {
+        let math = match &mut node.data.borrow_mut().value {
+            NodeValue::CodeBlock(block) => {
+                block.literal = unix_lines(&block.literal);
+                block.info = one_line(&block.info);
+                continue;
             }
+            // comrak's writer indexes the first byte of a code span.
+            NodeValue::Code(code) if code.literal.is_empty() => None,
+            NodeValue::Math(math) => Some(std::mem::take(math)),
             _ => continue,
         };
-        data.value = NodeValue::Text(Cow::Owned(text));
+        match math {
+            Some(math) => write_math_as_code(node, math),
+            None => node.detach(),
+        }
     }
+    for node in root.descendants().collect::<Vec<_>>() {
+        trim_paragraph_start(node);
+        // An empty paragraph writes nothing, but it opens a loose item with a blank line, and an
+        // item may begin with only one, so the item's real content would fall out of it.
+        if matches!(node.data.borrow().value, NodeValue::Paragraph) && node.first_child().is_none() {
+            node.detach();
+        }
+    }
+    for node in root.descendants() {
+        set_tight(node);
+    }
+    // Readers pair "$" across code spans and across a tight item's paragraphs, which comrak writes one newline apart.
+    let mut seen = HashSet::new();
+    let blocks: Vec<_> = root
+        .descendants()
+        .filter(|node| matches!(&node.data.borrow().value, NodeValue::Code(code) if code.literal.contains('$')))
+        .filter_map(|node| node.ancestors().find(|ancestor| ancestor.data.borrow().value.block()))
+        .map(|block| {
+            block
+                .ancestors()
+                .filter(|node| in_tight_item(node))
+                .last()
+                .unwrap_or(block)
+        })
+        .filter(|block| seen.insert(std::ptr::from_ref(*block)))
+        .collect();
+    // A block inside another in the set is covered by the outer block's walk.
+    let outermost = blocks.into_iter().filter(|block| {
+        !block
+            .ancestors()
+            .skip(1)
+            .any(|ancestor| seen.contains(&std::ptr::from_ref(ancestor)))
+    });
+    for block in outermost {
+        for node in block.descendants().collect::<Vec<_>>() {
+            escape_dollars(node, arena);
+        }
+    }
+    // comrak writes no "**" for a Strong inside a Strong, so code spans either side of one are
+    // adjacent in the output. Flatten it, as the writer does, so the merge below sees them.
+    for node in root.descendants().collect::<Vec<_>>() {
+        flatten_nested_strong(node);
+    }
+    for node in root.descendants().collect::<Vec<_>>() {
+        merge_following_code(node);
+    }
+}
+
+/// A reader strips a paragraph's leading whitespace, but after a list marker it moves the item's
+/// content column, which comrak does not follow when it indents the item's other blocks.
+fn trim_paragraph_start<'a>(node: &'a AstNode<'a>) {
+    if !matches!(node.data.borrow().value, NodeValue::Paragraph) {
+        return;
+    }
+    while let Some(child) = node.first_child() {
+        let empty = match &mut child.data.borrow_mut().value {
+            NodeValue::Text(text) => {
+                let blank = text.len() - text.trim_start_matches([' ', '\t', '\r', '\n']).len();
+                if blank > 0 {
+                    text.to_mut().drain(..blank);
+                }
+                text.is_empty()
+            }
+            _ => false,
+        };
+        if !empty {
+            return;
+        }
+        child.detach();
+    }
+}
+
+/// comrak writes a tight item's blocks one newline apart, which a reader reads back only if each
+/// item is one paragraph, optionally followed by a list that can interrupt it: CommonMark 5.2 lets
+/// a list interrupt a paragraph only if its first item is not empty and, when ordered, starts at 1.
+fn set_tight<'a>(node: &'a AstNode<'a>) {
+    if !matches!(node.data.borrow().value, NodeValue::List(_)) {
+        return;
+    }
+    let interrupts_paragraph = |list: &'a AstNode<'a>| {
+        matches!(&list.data.borrow().value, NodeValue::List(nested)
+            if nested.list_type == comrak::nodes::ListType::Bullet || nested.start == 1)
+            && list
+                .first_child()
+                .and_then(|item| item.first_child())
+                .is_some_and(opens_with_text)
+    };
+    let tight = node.children().all(|item| {
+        let mut blocks = item.children();
+        let (first, second) = (blocks.next(), blocks.next());
+        first.is_some_and(opens_with_text) && blocks.next().is_none() && second.is_none_or(interrupts_paragraph)
+    });
+    if let NodeValue::List(list) = &mut node.data.borrow_mut().value {
+        list.tight = tight;
+    }
+}
+
+fn opens_with_text<'a>(paragraph: &'a AstNode<'a>) -> bool {
+    matches!(paragraph.data.borrow().value, NodeValue::Paragraph)
+        && paragraph
+            .first_child()
+            .is_some_and(|child| match &child.data.borrow().value {
+                NodeValue::Text(text) => !text.is_empty(),
+                NodeValue::SoftBreak | NodeValue::LineBreak => false,
+                _ => true,
+            })
+}
+
+fn flatten_nested_strong<'a>(node: &'a AstNode<'a>) {
+    let nested = matches!(node.data.borrow().value, NodeValue::Strong)
+        && node
+            .parent()
+            .is_some_and(|parent| matches!(parent.data.borrow().value, NodeValue::Strong));
+    if !nested {
+        return;
+    }
+    for child in node.children().collect::<Vec<_>>() {
+        node.insert_before(child);
+    }
+    node.detach();
+}
+
+/// comrak sizes each code span's backtick fence alone, so a reader pairs a backtick of one span
+/// with a lone backtick inside the next. Adjacent spans read as one, so they are written as one.
+fn merge_following_code<'a>(node: &'a AstNode<'a>) {
+    if !matches!(node.data.borrow().value, NodeValue::Code(_)) {
+        return;
+    }
+    while let Some(next) = node.next_sibling() {
+        let literal = match &mut next.data.borrow_mut().value {
+            NodeValue::Text(text) if text.is_empty() => None,
+            NodeValue::Code(code) => Some(std::mem::take(&mut code.literal)),
+            _ => break,
+        };
+        next.detach();
+        if let (Some(literal), NodeValue::Code(code)) = (literal, &mut node.data.borrow_mut().value) {
+            code.literal.push_str(&literal);
+        }
+    }
+}
+
+fn in_tight_item(node: &AstNode<'_>) -> bool {
+    matches!(node.data.borrow().value, NodeValue::Item(_) | NodeValue::TaskItem(_))
+        && node
+            .parent()
+            .is_some_and(|list| matches!(&list.data.borrow().value, NodeValue::List(list) if list.tight))
+}
+
+fn write_math_as_code<'a>(node: &'a AstNode<'a>, math: NodeMath) {
+    if math.literal.trim().is_empty() {
+        node.detach();
+        return;
+    }
+    if math.display_math
+        && let Some(paragraph) = node.parent().filter(|parent| holds_only(parent, node))
+    {
+        for child in paragraph.children().collect::<Vec<_>>() {
+            child.detach();
+        }
+        paragraph.data.borrow_mut().value = NodeValue::CodeBlock(Box::new(NodeCodeBlock {
+            fenced: true,
+            fence_char: b'`',
+            fence_length: 3,
+            fence_offset: 0,
+            info: "math".to_string(),
+            literal: unix_lines(&math.literal),
+            closed: true,
+        }));
+        return;
+    }
+    let literal = one_line(&math.literal);
+    // Code math ends at the first "`$", and a dollar-only parser's math at the first "$".
+    node.data.borrow_mut().value = if literal.contains(['`', '$']) {
+        NodeValue::Code(NodeCode {
+            num_backticks: 1,
+            literal,
+        })
+    } else {
+        NodeValue::Math(NodeMath {
+            dollar_math: false,
+            display_math: math.display_math,
+            literal,
+        })
+    };
+}
+
+/// Write each `$` in Text as `\$` and code math as a code span. comrak escapes a backslash in Text.
+fn escape_dollars<'a>(node: &'a AstNode<'a>, arena: &'a comrak::Arena<'a>) {
+    let mut data = node.data.borrow_mut();
+    match &mut data.value {
+        NodeValue::Math(math) => {
+            let literal = std::mem::take(&mut math.literal);
+            data.value = NodeValue::Code(NodeCode {
+                num_backticks: 1,
+                literal,
+            });
+        }
+        NodeValue::Text(text) if text.contains('$') => {
+            let prose = std::mem::take(text).into_owned();
+            let (head, last) = prose.rsplit_once('$').expect("text holds a dollar");
+            for piece in head.split('$') {
+                if !piece.is_empty() {
+                    node.insert_before(mk(arena, NodeValue::Text(Cow::Owned(piece.to_string()))));
+                }
+                node.insert_before(mk(arena, NodeValue::Raw(r"\$".to_string())));
+            }
+            *text = Cow::Owned(last.to_string());
+        }
+        _ => {}
+    }
+}
+
+/// A CommonMark line ends at a lone "\r" too, and comrak re-adds a quote or list prefix only after "\n".
+fn unix_lines(text: &str) -> String {
+    text.split("\r\n")
+        .map(|line| line.replace('\r', "\n"))
+        .collect::<Vec<_>>()
+        .join("\r\n")
+}
+
+/// A line inside a code span can open an HTML block, which interrupts the paragraph.
+fn one_line(text: &str) -> String {
+    text.replace("\r\n", " ").replace(['\r', '\n'], " ")
+}
+
+fn holds_only<'a>(paragraph: &'a AstNode<'a>, node: &'a AstNode<'a>) -> bool {
+    matches!(paragraph.data.borrow().value, NodeValue::Paragraph)
+        && paragraph.children().all(|child| {
+            child.same_node(node)
+                || match &child.data.borrow().value {
+                    NodeValue::Text(text) => text.trim().is_empty(),
+                    NodeValue::SoftBreak | NodeValue::LineBreak => true,
+                    _ => false,
+                }
+        })
 }
 
 /// Check whether ALL annotations on an element cover the full text with the
@@ -2137,7 +2382,10 @@ mod tests {
             })
             .collect();
         assert_eq!(math, vec![(r"\alpha^{2}".into(), false)]);
-        assert_eq!(crate::rendering::render_markdown(&doc).trim(), text);
+        assert_eq!(
+            crate::rendering::render_markdown(&doc).trim(),
+            r"From $5 to $10; $`\alpha^{2}`$ holds."
+        );
     }
 
     #[test]
@@ -2359,7 +2607,7 @@ mod tests {
                 ));
                 assert_eq!(
                     crate::rendering::render_markdown(&doc).trim(),
-                    format!("{prefix}**{math}**{suffix}")
+                    format!(r"{prefix}**$`\alpha  + x`$**{suffix}")
                 );
                 let html = crate::rendering::render_html(&doc);
                 assert_eq!(html.matches("data-math-style=\"inline\"").count(), 1);
@@ -2411,7 +2659,7 @@ mod tests {
         let mut builder = InternalDocumentBuilder::new("test");
         builder.push_paragraph(text, annotations, None, None);
         let doc = builder.build();
-        assert_eq!(crate::rendering::render_markdown(&doc).trim(), text);
+        assert_eq!(crate::rendering::render_markdown(&doc).trim(), r"$`\alpha  + x`$");
         assert_eq!(
             crate::rendering::render_html(&doc)
                 .matches("data-math-style=\"inline\"")
@@ -2420,43 +2668,422 @@ mod tests {
         );
     }
 
-    #[test]
-    fn should_escape_math_holding_an_html_tag_in_markdown_only() {
-        let text = "See $<img src=x>$, $<javascript:alert(1)>$ and $a<b$.";
-        let annotations = ["$<img src=x>$", "$<javascript:alert(1)>$", "$a<b$"]
-            .into_iter()
-            .map(|span| {
-                let start = text.find(span).unwrap() as u32;
-                TextAnnotation {
-                    start,
-                    end: start + span.len() as u32,
-                    kind: AnnotationKind::math(false),
-                }
-            })
-            .collect();
-        let mut builder = InternalDocumentBuilder::new("test");
+    fn math_span(text: &str, span: &str) -> TextAnnotation {
+        let start = text.find(span).unwrap() as u32;
+        TextAnnotation {
+            start,
+            end: start + span.len() as u32,
+            kind: AnnotationKind::math(span.starts_with("$$")),
+        }
+    }
+
+    fn push_math_paragraph(builder: &mut InternalDocumentBuilder, text: &str, spans: &[&str]) {
+        let annotations = spans.iter().map(|span| math_span(text, span)).collect();
         builder.push_paragraph(text, annotations, None, None);
-        builder.push_formula("<script>x</script>", None, None);
+    }
+
+    /// The literal of every code span, code block and math node in `markdown`, failing on any
+    /// raw HTML, link or image a reader would see.
+    fn literals(markdown: &str, options: &Options) -> Vec<String> {
+        let arena = comrak::Arena::new();
+        comrak::parse_document(&arena, markdown, options)
+            .descendants()
+            .filter_map(|node| match &node.data.borrow().value {
+                NodeValue::Code(code) => Some(code.literal.clone()),
+                NodeValue::CodeBlock(block) => Some(block.literal.trim_end().to_string()),
+                NodeValue::Math(math) => Some(math.literal.clone()),
+                value @ (NodeValue::HtmlInline(_)
+                | NodeValue::HtmlBlock(_)
+                | NodeValue::Link(_)
+                | NodeValue::Image(_)) => panic!("{value:?} in: {markdown}"),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Re-parse `markdown` as plain CommonMark, as xberg's own options read it, and with dollar
+    /// math only, the way remark-math reads it.
+    fn assert_literals(markdown: &str, expected: &[&str]) {
+        assert_eq!(literals(markdown, &Options::default()), expected, "{markdown}");
+        assert_eq!(
+            literals(markdown, &crate::rendering::markdown::comrak_options()),
+            expected,
+            "{markdown}"
+        );
+        let mut dollars = Options::default();
+        dollars.extension.math_dollars = true;
+        assert_no_html(markdown, &dollars);
+    }
+
+    fn assert_no_html(markdown: &str, options: &Options) {
+        literals(markdown, options);
+    }
+
+    fn code_annotation(text: &str, span: &str) -> TextAnnotation {
+        let start = text.find(span).unwrap() as u32;
+        TextAnnotation {
+            start,
+            end: start + span.len() as u32,
+            kind: AnnotationKind::Code,
+        }
+    }
+
+    #[test]
+    fn should_write_math_as_code_math() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        push_math_paragraph(&mut builder, r"Let $a<b$ and $$x^2$$ hold.", &["$a<b$", "$$x^2$$"]);
+        push_math_paragraph(&mut builder, r"$$\sum_i x_i$$", &[r"$$\sum_i x_i$$"]);
+        builder.push_formula("y = x", None, None);
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_eq!(
+            markdown,
+            "Let $`a<b`$ and $`x^2`$ hold.\n\n```math\n\\sum_i x_i\n```\n\n```math\ny = x\n```\n"
+        );
+    }
+
+    #[test]
+    fn should_keep_hostile_math_inside_code_spans_and_fences() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        for tex in [
+            "<img src=x onerror=alert(1)>",
+            "<https://x>",
+            "x\n\n<img src=x>",
+            "a`$<img src=x>",
+        ] {
+            let span = format!("${tex}$");
+            push_math_paragraph(&mut builder, &format!("See {span} here"), &[span.as_str()]);
+        }
+        builder.push_formula("<script>\nalert(1)\n</script>", None, None);
+        builder.push_formula("a\n```\n<b>", None, None);
         let doc = builder.build();
 
         let markdown = crate::rendering::render_markdown(&doc);
-        for span in [
-            r"$\<img src=x\>$",
-            r"$\<javascript:alert(1)\>$",
-            "$a<b$",
-            r"$$\<script\>x\</script\>$$",
-        ] {
-            assert!(markdown.contains(span), "{span} not in: {markdown}");
-        }
+        assert_literals(
+            &markdown,
+            &[
+                "<img src=x onerror=alert(1)>",
+                "<https://x>",
+                "x  <img src=x>",
+                "a`$<img src=x>",
+                "<script>\nalert(1)\n</script>",
+                "a\n```\n<b>",
+            ],
+        );
+        assert!(markdown.contains("See ``a`$<img src=x>`` here"), "{markdown}");
+        assert!(markdown.contains("````math\na\n```\n<b>\n````"), "{markdown}");
 
         let html = crate::rendering::render_html(&doc);
-        for span in [
-            r#"<span data-math-style="inline">&lt;img src=x&gt;</span>"#,
-            r#"<span data-math-style="inline">&lt;javascript:alert(1)&gt;</span>"#,
-            r#"<span data-math-style="inline">a&lt;b</span>"#,
-            r#"<span data-math-style="display">&lt;script&gt;x&lt;/script&gt;</span>"#,
+        assert!(
+            html.contains(r#"<span data-math-style="inline">&lt;img src=x onerror=alert(1)&gt;</span>"#),
+            "{html}"
+        );
+        assert!(
+            html.contains(r#"<span data-math-style="display">&lt;script&gt;"#),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn should_keep_line_breaks_from_ending_code() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_quote_start();
+        builder.push_formula("x\r<img src=x onerror=alert(1)>", None, None);
+        builder.push_code("a\r\n```\r<img src=x>", None, None, None);
+        builder.push_quote_end();
+        builder.push_code("b", Some("x`\r~~~\r<img src=x>"), None, None);
+        builder.push_list(false);
+        builder.push_list_item("item", false, vec![], None, None);
+        builder.push_formula("y\r<img src=x>", None, None);
+        builder.end_list();
+
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(
+            &markdown,
+            &[
+                "x\n<img src=x onerror=alert(1)>",
+                "a\r\n```\n<img src=x>",
+                "b",
+                "y\n<img src=x>",
+            ],
+        );
+    }
+
+    #[test]
+    fn should_write_prose_tabs_as_spaces_and_leave_code_alone() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        let text = "Tab\there and `&#2;`<img src=x>";
+        let annotation = code_annotation(text, "`&#2;`<img src=x>");
+        builder.push_paragraph(text, vec![annotation], None, None);
+        builder.push_code("``&#2;`\n<img src=x>", None, None, None);
+
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(&markdown, &["`&#2;`<img src=x>", "``&#2;`\n<img src=x>"]);
+        assert!(markdown.starts_with("Tab here and "), "{markdown}");
+    }
+
+    #[test]
+    fn should_not_strip_an_arxiv_watermark_from_a_line_holding_code() {
+        let mut builder = InternalDocumentBuilder::new("pdf");
+        builder.push_paragraph("Notes.", vec![], None, None);
+        builder.push_code("arXiv:2301.00001v1\n<img src=x>", None, None, None);
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(&markdown, &["arXiv:2301.00001v1\n<img src=x>"]);
+
+        let mut builder = InternalDocumentBuilder::new("pdf");
+        builder.push_quote_start();
+        builder.push_code("w1. w2 w3 w4 w5 w6 w7 w8 w9\narXiv:2301.00001v1", None, None, None);
+        builder.push_code("<img src=x>", None, None, None);
+        builder.push_quote_end();
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(
+            &markdown,
+            &["w1. w2 w3 w4 w5 w6 w7 w8 w9\narXiv:2301.00001v1", "<img src=x>"],
+        );
+    }
+
+    #[test]
+    fn should_strip_an_arxiv_watermark_without_joining_the_next_block() {
+        let watermark = "$5. arXiv:2301.00001v1";
+        let mut builder = InternalDocumentBuilder::new("pdf");
+        builder.push_paragraph(watermark, vec![], None, None);
+        push_math_paragraph(&mut builder, "Let $x^2$ hold.", &["$x^2$"]);
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_eq!(markdown, "$5.\n\nLet $`x^2`$ hold.\n");
+
+        let mut builder = InternalDocumentBuilder::new("pdf");
+        builder.push_paragraph(watermark, vec![], None, None);
+        builder.push_list(false);
+        builder.push_list_item("item", false, vec![], None, None);
+        let text = "b c$<img src=x onerror=alert(1)>";
+        let annotation = code_annotation(text, "c$<img src=x onerror=alert(1)>");
+        builder.push_paragraph(text, vec![annotation], None, None);
+        builder.end_list();
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(&markdown, &["c$<img src=x onerror=alert(1)>"]);
+        assert!(markdown.starts_with("$5.\n\n- item"), "{markdown}");
+    }
+
+    #[test]
+    fn should_escape_prose_dollars_beside_code_holding_a_dollar() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        for (text, span) in [
+            (
+                "p $b$x`y$<img src=x onerror=alert(1)>$",
+                "$x`y$<img src=x onerror=alert(1)>$",
+            ),
+            (
+                "see $$q $a$$<img src=x onerror=alert(1)>$",
+                "$a$$<img src=x onerror=alert(1)>$",
+            ),
+            (
+                r"p $b\$x$<img src=x onerror=alert(1)>$",
+                "$x$<img src=x onerror=alert(1)>$",
+            ),
+            ("Costs $5 and $x^2$.", "$x^2$"),
         ] {
-            assert!(html.contains(span), "{span} not in: {html}");
+            push_math_paragraph(&mut builder, text, &[span]);
         }
+        let text = "$x$5 then a$<img src=x>";
+        let annotations = vec![
+            TextAnnotation {
+                start: 0,
+                end: 3,
+                kind: AnnotationKind::math(false),
+            },
+            code_annotation(text, "a$<img src=x>"),
+        ];
+        builder.push_paragraph(text, annotations, None, None);
+        builder.push_list(false);
+        builder.push_list_item("Pay $a", false, vec![], None, None);
+        let text = "b c$<img src=x onerror=alert(1)>";
+        let annotation = code_annotation(text, "c$<img src=x onerror=alert(1)>");
+        builder.push_paragraph(text, vec![annotation], None, None);
+        builder.end_list();
+
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(
+            &markdown,
+            &[
+                "x`y$<img src=x onerror=alert(1)>",
+                "a$$<img src=x onerror=alert(1)>",
+                "x$<img src=x onerror=alert(1)>",
+                "x^2",
+                "x",
+                "a$<img src=x>",
+                "c$<img src=x onerror=alert(1)>",
+            ],
+        );
+        assert!(markdown.contains("Costs $5 and $`x^2`$."), "{markdown}");
+    }
+
+    #[test]
+    fn should_escape_each_prose_dollar_once_beside_many_code_spans() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        let text = "a $1 x$ b $2 y$ c $3";
+        let annotations = vec![code_annotation(text, "x$"), code_annotation(text, "y$")];
+        builder.push_paragraph(text, annotations, None, None);
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(&markdown, &["x$", "y$"]);
+        assert!(markdown.contains(r"a \$1 `x$` b \$2 `y$` c \$3"), "{markdown}");
+    }
+
+    #[test]
+    fn should_merge_adjacent_code_spans() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        let text = "ac`<img src=x>";
+        let annotations = vec![
+            TextAnnotation {
+                start: 0,
+                end: 1,
+                kind: AnnotationKind::Code,
+            },
+            code_annotation(text, "c`<img src=x>"),
+        ];
+        builder.push_paragraph(text, annotations, None, None);
+        let text = "a$c`<img src=x>$";
+        let mut annotations = vec![code_annotation(text, "a")];
+        annotations.push(TextAnnotation {
+            start: 1,
+            end: text.len() as u32,
+            kind: AnnotationKind::math(false),
+        });
+        builder.push_paragraph(text, annotations, None, None);
+        // comrak writes a Strong nested in a Strong with no delimiter, in either nesting order.
+        let text = "ac`<img src=x>";
+        let span = |start: u32, end: usize, kind: AnnotationKind| TextAnnotation {
+            start,
+            end: end as u32,
+            kind,
+        };
+        let annotations = vec![
+            span(0, text.len(), AnnotationKind::Bold),
+            span(0, 1, AnnotationKind::Code),
+            span(1, text.len(), AnnotationKind::Bold),
+            span(1, text.len(), AnnotationKind::Code),
+        ];
+        builder.push_paragraph(text, annotations, None, None);
+        let annotations = vec![
+            span(0, text.len(), AnnotationKind::Bold),
+            span(0, 1, AnnotationKind::Bold),
+            span(0, 1, AnnotationKind::Code),
+            span(1, text.len(), AnnotationKind::Code),
+        ];
+        builder.push_paragraph(text, annotations, None, None);
+
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(
+            &markdown,
+            &["ac`<img src=x>", "ac`<img src=x>", "ac`<img src=x>", "ac`<img src=x>"],
+        );
+    }
+
+    #[test]
+    fn should_drop_empty_math_and_code() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph("text", vec![], None, None);
+        builder.push_formula(" ", None, None);
+        push_math_paragraph(&mut builder, "a $ $ b", &["$ $"]);
+        let text = "c \u{1} d";
+        builder.push_paragraph(text, vec![code_annotation(text, "\u{1}")], None, None);
+        assert_eq!(
+            crate::rendering::render_markdown(&builder.build()),
+            "text\n\na  b\n\nc  d\n"
+        );
+    }
+
+    #[test]
+    fn should_not_write_a_list_tight_when_an_empty_item_follows_a_paragraph() {
+        // The empty item cannot interrupt the paragraph, so the lines would merge into it.
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_list(false);
+        builder.push_list_item("$", false, vec![], None, None);
+        builder.push_list(true);
+        builder.push_list_item("", true, vec![], None, None);
+        let text = "$$a<!-->$$";
+        builder.push_list_item(text, true, vec![math_span(text, text)], None, None);
+        builder.end_list();
+        builder.end_list();
+        assert_literals(&crate::rendering::render_markdown(&builder.build()), &["a<!-->"]);
+    }
+
+    #[test]
+    fn should_not_write_a_paragraph_after_a_table_in_a_tight_item() {
+        // It would be read as a row of the table.
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_list(false);
+        builder.push_list_item("", false, vec![], None, None);
+        builder.push_table_from_cells(&[vec![String::new(), String::new()]], None, None);
+        let text = "$|$<x r=)>";
+        let annotations = vec![math_span(text, "$|$"), code_annotation(text, "<x r=)>")];
+        builder.push_paragraph(text, annotations, None, None);
+        builder.end_list();
+        assert_literals(&crate::rendering::render_markdown(&builder.build()), &["|", "<x r=)>"]);
+    }
+
+    #[test]
+    fn should_keep_an_item_blank_led_text_from_moving_its_content_column() {
+        // A reader puts the content column after the marker's spaces, comrak indents by the marker.
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_list(true);
+        builder.push_list_item(" $", true, vec![], None, None);
+        builder.push_formula(">", None, None);
+        builder.push_paragraph("1", vec![], None, None);
+        builder.push_list_item("", true, vec![], None, None);
+        builder.push_paragraph("$-", vec![], None, None);
+        builder.push_list_item("", true, vec![], None, None);
+        push_math_paragraph(&mut builder, "$$>$<t>$$$", &["$$>$<t>$$"]);
+        builder.end_list();
+        assert_literals(&crate::rendering::render_markdown(&builder.build()), &[">", ">$<t>"]);
+
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_list(false);
+        builder.push_list_item(" $", false, vec![], None, None);
+        builder.push_list(true);
+        builder.push_list_item("\n$", true, vec![], None, None);
+        builder.push_code("", Some("`<x>"), None, None);
+        builder.end_list();
+        builder.end_list();
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(&markdown, &[""]);
+        assert!(markdown.starts_with("- $\n  1. $\n"), "{markdown}");
+    }
+
+    #[test]
+    fn should_keep_an_empty_texted_item_s_blocks_inside_it() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_list(true);
+        builder.push_list_item("", true, vec![], None, None);
+        builder.push_paragraph("x", vec![], None, None);
+        builder.push_code("y", None, None, None);
+        builder.push_list_item("z", true, vec![], None, None);
+        builder.end_list();
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_literals(&markdown, &["y"]);
+        assert_eq!(markdown, "1. x\n   \n   ```\n   y\n   ```\n\n2. z\n");
+        let arena = comrak::Arena::new();
+        let root = comrak::parse_document(&arena, &markdown, &crate::rendering::markdown::comrak_options());
+        let item = root.first_child().and_then(|list| list.first_child()).unwrap();
+        assert_eq!(item.children().count(), 2, "{markdown}");
+    }
+
+    #[test]
+    fn should_write_an_ordinary_list_tight() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_list(false);
+        builder.push_list_item("Alpha", false, vec![], None, None);
+        builder.push_list_item("Beta", false, vec![], None, None);
+        builder.end_list();
+        builder.push_paragraph("Then", vec![], None, None);
+        builder.push_list(true);
+        builder.push_list_item("One", true, vec![], None, None);
+        builder.push_list(false);
+        builder.push_list_item("Nested", false, vec![], None, None);
+        builder.end_list();
+        builder.push_list_item("Two", true, vec![], None, None);
+        builder.end_list();
+        assert_eq!(
+            crate::rendering::render_markdown(&builder.build()),
+            "- Alpha\n- Beta\n\nThen\n\n1. One\n   - Nested\n2. Two\n"
+        );
     }
 }

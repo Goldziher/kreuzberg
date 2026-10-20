@@ -182,6 +182,11 @@ impl Builder {
         match value {
             NodeValue::Paragraph => self.open_text(Role::Body),
             NodeValue::Heading(heading) => self.open_text(Role::Heading(heading.level.clamp(1, 6))),
+            NodeValue::CodeBlock(block) if block.info.split_ascii_whitespace().next() == Some("math") => {
+                self.open_text(Role::Body);
+                self.text(block.literal.strip_suffix('\n').unwrap_or(&block.literal));
+                self.close_text();
+            }
             NodeValue::CodeBlock(block) => self.code_block(&block.literal),
             NodeValue::FrontMatter(text) => self.code_block(text),
             NodeValue::HtmlBlock(block) => {

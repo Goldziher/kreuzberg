@@ -40,10 +40,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pulldown_cmark::{Event, Parser, Tag, TagEnd};
+use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
 
-use crate::markdown_quality::{compute_order_score, fold_order_into_sf1};
+use crate::markdown_quality::{compute_order_score, fold_order_into_sf1, inline_math_tex};
 use crate::quality::{compute_f1, tokenize};
 
 // `structural_sidecar.rs` is itself attached to `crate::quality` via `#[path]` (see
@@ -192,6 +192,7 @@ struct MarkdownParseState {
     current_text: String,
     in_heading: Option<u8>,
     in_code_block: bool,
+    in_math_fence: bool,
 }
 
 impl MarkdownParseState {
@@ -206,6 +207,7 @@ impl MarkdownParseState {
             current_text: String::new(),
             in_heading: None,
             in_code_block: false,
+            in_math_fence: false,
         }
     }
 
@@ -247,9 +249,11 @@ impl MarkdownParseState {
         self.heading_stack.push((level, idx, text));
     }
 
-    fn start_code_block(&mut self) {
+    fn start_code_block(&mut self, kind: &CodeBlockKind) {
         self.flush_paragraph();
         self.in_code_block = true;
+        self.in_math_fence =
+            matches!(kind, CodeBlockKind::Fenced(info) if info.split_ascii_whitespace().next() == Some("math"));
     }
 
     fn end_code_block(&mut self) {
@@ -259,7 +263,7 @@ impl MarkdownParseState {
         if trimmed.is_empty() {
             return;
         }
-        if is_formula(trimmed) {
+        if self.in_math_fence || is_formula(trimmed) {
             self.nodes.push(StructuralNode::Formula {
                 display: true,
                 text: trimmed.to_string(),
@@ -394,7 +398,10 @@ impl MarkdownParseState {
     }
 
     fn push_text(&mut self, text: &str) {
-        if let Some(buf) = self.item_text.last_mut() {
+        // A math fence is a formula of its own, as `$$` display math is, even inside a list item.
+        if self.in_code_block && self.in_math_fence {
+            push_spaced(&mut self.current_text, text);
+        } else if let Some(buf) = self.item_text.last_mut() {
             push_spaced(buf, text);
         } else if self.current_text.starts_with("\u{0}IMG\u{0}") {
             self.current_text.push_str(text);
@@ -444,7 +451,7 @@ impl MarkdownParseState {
         match event {
             Event::Start(Tag::Heading { level, .. }) => self.start_heading(level as u8),
             Event::End(TagEnd::Heading(_)) => self.end_heading(),
-            Event::Start(Tag::CodeBlock(_)) => self.start_code_block(),
+            Event::Start(Tag::CodeBlock(kind)) => self.start_code_block(&kind),
             Event::End(TagEnd::CodeBlock) => self.end_code_block(),
             Event::Start(Tag::Table(_)) => self.start_table(),
             Event::End(TagEnd::Table) => self.end_table(),
@@ -468,7 +475,7 @@ impl MarkdownParseState {
             Event::Text(text) | Event::Code(text) => self.push_text(&text),
             Event::SoftBreak => self.soft_break(),
             Event::HardBreak => self.hard_break(),
-            Event::InlineMath(text) => self.push_inline_math(&text),
+            Event::InlineMath(text) => self.push_inline_math(inline_math_tex(&text)),
             Event::DisplayMath(text) => self.display_math(&text),
             _ => {}
         }
