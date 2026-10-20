@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(markdown): Separate paragraphs inside a list item retain paragraph breaks and annotation offsets.** (#2181)
 - **(code): Graphviz `.dot` files and Graphviz/PlantUML MIME aliases now extract as source code.**
   Binary Word templates retain Word extraction. (#2180)
 - **(ocr): Tesseract now reads display-rotated PDF pages upright regardless of `auto_rotate`.** A `/Rotate`d page was sent to Tesseract sideways, so a landscape bid table came back as garbage (page confidence 0.35) unless `auto_rotate` was on; it is now rotated upright first and the recognised boxes are mapped back to the page (0.87 on the same page). Cached results for such pages are not reused. (#2172)

@@ -244,6 +244,9 @@ impl MarkdownExtractor {
                     heading_text.clear();
                     heading_annotations.clear();
                 }
+                Event::Start(Tag::Paragraph) if in_list_item > 0 && !list_item_text.is_empty() => {
+                    list_item_text.push_str("\n\n");
+                }
                 Event::Start(Tag::Paragraph)
                     if !in_heading && in_list_item == 0 && footnote_def_label.is_none() && !in_def_desc =>
                 {
@@ -1573,6 +1576,32 @@ nested:
                 _ => None,
             })
             .collect()
+    }
+
+    #[tokio::test]
+    async fn should_preserve_annotations_after_list_item_paragraph_breaks() {
+        let doc = MarkdownExtractor::new()
+            .extract_content(
+                "- **café first**\n\n  *second paragraph*\n".as_bytes(),
+                "text/markdown",
+                &ExtractionConfig::default(),
+            )
+            .await
+            .expect("extraction should succeed");
+        let items: Vec<_> = doc
+            .elements
+            .iter()
+            .filter(|element| matches!(element.kind, ElementKind::ListItem { .. }))
+            .collect();
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].text, "café first\n\nsecond paragraph");
+        let spans: Vec<_> = items[0]
+            .annotations
+            .iter()
+            .map(|annotation| &items[0].text[annotation.start as usize..annotation.end as usize])
+            .collect();
+        assert_eq!(spans, ["café first", "second paragraph"]);
     }
 
     /// Regression test for GH#1459: a nested list used to silently lose every ancestor
