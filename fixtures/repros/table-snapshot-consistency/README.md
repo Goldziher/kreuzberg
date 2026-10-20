@@ -9,9 +9,9 @@ Structured output returns 2 global tables but 3 page tables. The unmatched page 
 From this directory:
 
 ```sh
-xberg extract fixture/wildomar-p17-repro.pdf --config configs/structured.json --format json
-xberg extract fixture/wildomar-p17-repro.pdf --config configs/raw-plain.json --format json
-xberg extract fixture/wildomar-p17-repro.pdf --config configs/fallback.json --format json
+xberg extract fixture/wildomar-p17-repro.pdf --config configs/structured.toml --format json
+xberg extract fixture/wildomar-p17-repro.pdf --config configs/raw-plain.toml --format json
+xberg extract fixture/wildomar-p17-repro.pdf --config configs/fallback.toml --format json
 ```
 
 ## Source

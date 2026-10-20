@@ -1,0 +1,18 @@
+use_cache = false
+disable_ocr = true
+enable_quality_processing = false
+include_document_structure = false
+output_format = "plain"
+extraction_timeout_secs = 90
+
+[pages]
+extract_pages = true
+insert_page_markers = false
+
+[pdf_options]
+
+[pdf_options.hierarchy]
+enabled = false
+
+[concurrency]
+max_threads = 2

@@ -9,7 +9,7 @@ Wickman should align with bidder `02` and `$68,000.00` on item 1. Its name inste
 From this directory:
 
 ```sh
-xberg extract sfport-p1-repro.pdf --config config.json --format json
+xberg extract sfport-p1-repro.pdf --config config.toml --format json
 ```
 
 ## Source
