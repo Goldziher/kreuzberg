@@ -34,7 +34,7 @@ const LITEPARSE_BINARY: &str = "lit";
 const LITEPARSE_VERSION_PREFIX: &str = "lit ";
 const LITEPARSE_REQUIRED_BATCH_OPTIONS: [&str; 3] = ["--format", "--no-ocr", "--num-workers"];
 const MINERU_BATCH_CAPABILITY: BatchCapability = BatchCapability {
-    entry_point: BatchEntryPoint::MineruDoParse,
+    entry_point: BatchEntryPoint::MineruParser,
     timing_scope: BatchTimingScope::ColdEndToEndSubprocess,
     per_item_timing: false,
 };
@@ -572,10 +572,9 @@ pub fn create_pymupdf4llm_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter
     )
 }
 
-/// Creates a subprocess adapter for MinerU 3.4.5.
+/// Creates a subprocess adapter for MinerU 4.0.12.
 ///
-/// Batch mode invokes `mineru.cli.common.do_parse` once, which delegates to
-/// `doc_analyze_streaming` for cross-document model batching.
+/// Batch mode reuses one basic CPU parser for sequential documents.
 pub fn create_mineru_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter> {
     let script_path = get_script_path("mineru_extract.py")?;
     let (command, mut args) = find_python_with_framework("mineru")?;
@@ -598,8 +597,7 @@ pub fn create_mineru_adapter(ocr_enabled: bool) -> Result<SubprocessAdapter> {
     .with_configured_ocr(ocr_enabled)
     .with_format_aware(true)
     .with_single_file_args(single_file_args)
-    // MinerU maps the forwarded Tesseract codes to its PaddleOCR model (kor->korean, ~keep
-    // jpn->japan); the Korean/Japanese weights are prefetched in the model-cache job.
+    // The public parser has no language selector; unsupported requests fail before model loading. ~keep
     .with_ocr_language_arg("--ocr-lang")
     .with_ocr_language_policy(crate::adapter::declared_ocr_language_policy("mineru"))
     .with_max_timeout(Duration::from_secs(MINERU_MAX_TIMEOUT_SECS)))

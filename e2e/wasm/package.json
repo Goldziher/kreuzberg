@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "@xberg-io/xberg-wasm": "file:../../crates/xberg-wasm/pkg/nodejs",
-    "rollup": "^4.64.7",
+    "rollup": "^4.64.10",
     "vitest": "^5.0.5"
   }
 }

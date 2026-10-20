@@ -514,6 +514,9 @@ fn worker_semantics(mode: BenchmarkMode, capability: Option<BatchCapability>) ->
         (BenchmarkMode::Batch, Some(BatchEntryPoint::MineruDoParse)) => {
             "MinerU 3.4.5 do_parse pipeline; model batches span documents through doc_analyze_streaming processing windows"
         }
+        (BenchmarkMode::Batch, Some(BatchEntryPoint::MineruParser)) => {
+            "MinerU 4.0.12 basic CPU parser; sequential documents sharing one parser; no cross-document model batching"
+        }
         (BenchmarkMode::Batch, None) => "batch harness concurrency",
     }
 }
@@ -839,18 +842,24 @@ mod tests {
     }
 
     #[test]
-    fn mineru_batch_provenance_labels_cross_document_model_batching() {
-        assert_eq!(
-            worker_semantics(
-                BenchmarkMode::Batch,
-                Some(BatchCapability {
-                    entry_point: BatchEntryPoint::MineruDoParse,
-                    timing_scope: crate::types::BatchTimingScope::ColdEndToEndSubprocess,
-                    per_item_timing: false,
-                })
+    fn mineru_batch_provenance_preserves_each_api_execution_contract() {
+        for (entry_point, expected) in [
+            (
+                BatchEntryPoint::MineruDoParse,
+                "MinerU 3.4.5 do_parse pipeline; model batches span documents through doc_analyze_streaming processing windows",
             ),
-            "MinerU 3.4.5 do_parse pipeline; model batches span documents through doc_analyze_streaming processing windows"
-        );
+            (
+                BatchEntryPoint::MineruParser,
+                "MinerU 4.0.12 basic CPU parser; sequential documents sharing one parser; no cross-document model batching",
+            ),
+        ] {
+            let capability = BatchCapability {
+                entry_point,
+                timing_scope: crate::types::BatchTimingScope::ColdEndToEndSubprocess,
+                per_item_timing: false,
+            };
+            assert_eq!(worker_semantics(BenchmarkMode::Batch, Some(capability)), expected);
+        }
     }
 
     #[test]

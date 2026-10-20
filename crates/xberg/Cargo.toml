@@ -1345,7 +1345,7 @@ bytes = { workspace = true }
 # than unifying them and `encoding` never reaches our copy. Do not collapse
 # them onto one version without checking what `encoding` gates out — it
 # compiles away `Attribute::unescape_value`, among others.
-calamine = { version = "0.36.1", features = ["dates"], optional = true }
+calamine = { version = "0.37.0", features = ["dates"], optional = true }
 cfb = { workspace = true, optional = true }
 chardetng = { version = "1.0.0", optional = true }
 chrono = { workspace = true, optional = true }
@@ -1380,7 +1380,7 @@ indexmap = "2.14.2"
 infer = "0.22.0"
 itertools = { workspace = true, optional = true }
 jotdown = "0.10"
-jsonschema = { version = "0.58", optional = true, default-features = false }
+jsonschema = { version = "0.59", optional = true, default-features = false }
 libc = { workspace = true }
 # lofty: pure-Rust audio tag reader (ID3v1/v2, MP4 atoms, Vorbis comments, FLAC, etc.)
 # MIT license. Used for metadata extraction independent of the inference backend.
@@ -1390,7 +1390,7 @@ lofty = { version = "0.25", optional = true }
 # xberg-io/liter-llm). hf-hub 1.0 now rides the same reqwest/aws-lc-rs stack.
 log = { workspace = true }
 lopdf = { version = "0.45.0", optional = true, default-features = false }
-lru = { version = "0.18", optional = true }
+lru = { version = "0.19", optional = true }
 mail-parser = { version = "0.11.9", features = ["full_encoding"], optional = true }
 # AsciiMath parser, used to reach LaTeX through the shared MathML converter.
 mathemascii = { version = "0.4.0", optional = true }
@@ -1443,7 +1443,7 @@ rake = { version = "0.3.6", optional = true }
 rayon = { workspace = true }
 regex = "1.13.1"
 resvg = { workspace = true, optional = true }
-rmcp = { version = "3.5.1", features = [
+rmcp = { version = "3.6.0", features = [
     "server",
     "macros",
     "base64",
@@ -1469,7 +1469,7 @@ serde = { workspace = true }
 # means the guarantee survives that dependency changing. See `issue_165_json_key_order`.
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_toon_format = { workspace = true }
-sevenz-rust2 = { version = "0.24.0", optional = true }
+sevenz-rust2 = { version = "0.24.1", optional = true }
 sha2 = { version = "0.11", optional = true }
 simdutf8 = { version = "0.1", optional = true }
 similar = { workspace = true, optional = true }
@@ -1519,8 +1519,8 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["s
 tract-onnx = { workspace = true, optional = true }
 # Typst's own parser, used to convert Typst math to LaTeX.
 typst-syntax = { version = "0.15.1", optional = true }
-unhwp = { version = "0.22.0", default-features = false, features = ["hwpx"], optional = true }
-unicode-normalization = { version = "0.1.25", optional = true }
+unhwp = { version = "0.23.0", default-features = false, features = ["hwpx"], optional = true }
+unicode-normalization = { version = "0.1.26", optional = true }
 url = { workspace = true }
 urlencoding = "2"
 usvg = { workspace = true, optional = true }
@@ -1774,7 +1774,7 @@ filetime = "0.2"
 futures = { workspace = true }
 image = { workspace = true, default-features = false, features = ["png"] }
 # Test retrieval features prove runtime compilation stays offline under Cargo feature unification. ~keep
-jsonschema = { version = "0.58", default-features = false, features = ["resolve-file", "resolve-http", "tls-ring"] }
+jsonschema = { version = "0.59", default-features = false, features = ["resolve-file", "resolve-http", "tls-ring"] }
 qrcode = { version = "0.14", default-features = false, features = ["image"] }
 # Test-only: builds an in-memory model2vec fixture (safetensors bytes) for the
 # static_engine unit tests, without a network fetch.

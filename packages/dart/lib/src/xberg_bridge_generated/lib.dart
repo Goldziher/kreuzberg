@@ -4494,11 +4494,14 @@ class ConversionOptions {
   /// Infer image dimensions from data.
   final bool inferDimensions;
 
-  /// Maximum DOM traversal depth.
+  /// Maximum conversion traversal depth (default: 1024).
   ///
-  /// `None` uses the library's internal native-stack safety limit. Explicit
-  /// values above that safety limit are clamped to prevent process-aborting
-  /// stack overflows on pathologically deep DOM trees.
+  /// `None` uses 1024; explicit values are clamped to that same ceiling. Nodes at
+  /// or beyond the limit, including their text and descendants, are skipped and
+  /// a `DepthLimitExceeded` warning is returned. Structural elements such as
+  /// `html` and `body` count toward the depth.
+  ///
+  /// Raw HTML preservation and SVG serialization use separate 64-level guards.
   final PlatformInt64? maxDepth;
 
   /// CSS selectors for elements to exclude entirely (element + all content).

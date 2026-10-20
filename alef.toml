@@ -188,10 +188,10 @@ rust_features = ["api", "keywords-yake", "embedding-presets", "pdf"]
 # hand-authored plugin snippets failed on `unresolved import async_trait`
 # rather than on anything wrong with their own code. Kept at the workspace
 # version (Cargo.toml:51). ~keep
-rust_dependencies = { tokio = { version = "1.53.1", features = [
+rust_dependencies = { tokio = { version = "1.54.0", features = [
   "macros",
   "rt-multi-thread",
-] }, serde_json = { version = "1.0.151" }, async-trait = { version = "0.1.92" }, tracing = { version = "0.1" }, reqwest = { version = "0.13.4", default_features = false, features = [
+] }, serde_json = { version = "1.0.154" }, async-trait = { version = "0.1.92" }, tracing = { version = "0.1" }, reqwest = { version = "0.13.5", default_features = false, features = [
   "json",
   "multipart",
 ] } }
@@ -819,7 +819,6 @@ traineddata = "traineddata"
 "crates/xberg-tesseract/build.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long", "nesting-too-deep"]
 "crates/xberg-tesseract/src/api.rs" = ["file-too-long"]
 "crates/xberg/src/api/handlers.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
-"crates/xberg/src/candle_ocr/glm_ocr_backend.rs" = ["function-too-long"]
 "crates/xberg/src/core/config/extraction/core.rs" = [
   "cyclomatic-complexity",
   "file-too-long",
@@ -979,7 +978,6 @@ traineddata = "traineddata"
   "nesting-too-deep",
 ]
 "crates/xberg/src/layout/models/slanet.rs" = ["cyclomatic-complexity", "function-too-long"]
-"crates/xberg/src/layout/models/tatr.rs" = ["function-too-long"]
 "crates/xberg/src/layout/models/yolo.rs" = ["function-too-long"]
 "crates/xberg/src/mcp/server.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
 "crates/xberg/src/model_download.rs" = ["file-too-long", "function-too-long"]
@@ -1056,7 +1054,7 @@ traineddata = "traineddata"
 "crates/xberg/src/reranking/mod.rs" = ["file-too-long", "function-too-long", "too-many-parameters"]
 "crates/xberg/src/table_core.rs" = ["file-too-long", "function-too-long"]
 "crates/xberg/src/text/redaction/engine.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]
-"crates/xberg/src/transcription/engine.rs" = ["function-too-long"]
+"crates/xberg/src/transcription/engine.rs" = ["file-too-long"]
 "crates/xberg/src/types/extraction.rs" = ["file-too-long", "type-too-long"]
 "crates/xberg/src/types/internal_builder.rs" = ["too-many-parameters"]
 "crates/xberg/src/types/metadata.rs" = ["cyclomatic-complexity", "file-too-long", "function-too-long"]

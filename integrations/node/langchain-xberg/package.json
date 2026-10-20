@@ -58,7 +58,7 @@
     "@langchain/core": ">=0.3.0 <2"
   },
   "devDependencies": {
-    "@langchain/core": "^1.2.17",
+    "@langchain/core": "^1.2.18",
     "@types/node": "^26.6.5",
     "tsup": "^9.0.0",
     "typescript": "~6.0.3",

@@ -20,6 +20,7 @@ tasks:
     cmds:
       - scripts/ci/benchmarks/validate-workflow-build-config.sh
       - python3 -m unittest scripts/ci/benchmarks/test_validate_workflow_matrix.py
+      - python3 -m unittest scripts/ci/benchmarks/test_dependency_groups.py
       - tools/benchmark-harness/tests/test_benchmark_thread_budget.sh
       - tools/benchmark-harness/tests/test_bench_local_frameworks.sh
       - tools/benchmark-harness/tests/test_liteparse_extract.sh

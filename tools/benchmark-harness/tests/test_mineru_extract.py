@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import importlib.util
-import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -21,110 +20,81 @@ def _load_wrapper() -> types.ModuleType:
 
 
 class MineruBatchConformanceTest(unittest.TestCase):
-    """Validate native batch behavior without importing the real MinerU package."""
+    """Verify public API compatibility and honest batch accounting."""
 
-    def test_native_batch_uses_one_do_parse_call_and_preserves_input_order(self) -> None:
-        """Pass all inputs through one ordered native pipeline invocation."""
+    def test_mineru4_loads_the_supported_public_parser(self) -> None:
+        """Load the supported upstream public entry point."""
         wrapper = _load_wrapper()
-        input_paths = ["/fixtures/second.pdf", "/fixtures/first.pdf"]
-        observed: dict[str, object] = {}
-
-        def read_fn(path: Path) -> bytes:
-            return f"bytes:{path.name}".encode()
-
-        def do_parse(**kwargs: object) -> None:
-            observed.update(kwargs)
-            output_dir = Path(str(kwargs["output_dir"]))
-            task_stems = list(kwargs["pdf_file_names"])
-            parse_method = str(kwargs["parse_method"])
-            for index, task_stem in enumerate(task_stems):
-                target = output_dir / task_stem / parse_method / f"{task_stem}.md"
-                target.parent.mkdir(parents=True)
-                target.write_text(f"markdown:{input_paths[index]}", encoding="utf-8")
-
-        with mock.patch.object(wrapper, "_load_mineru_api", return_value=(do_parse, read_fn)):
-            outputs, total_ms = wrapper._native_pipeline_markdown(input_paths, ocr_enabled=False)
-
-        assert outputs == [f"markdown:{path}" for path in input_paths]
-        assert total_ms >= 0.0
-        assert observed["backend"] == "pipeline"
-        assert observed["parse_method"] == "txt"
-        assert observed["pdf_bytes_list"] == [b"bytes:second.pdf", b"bytes:first.pdf"]
-        assert observed["pdf_file_names"] == [
-            "benchmark_document_00000000",
-            "benchmark_document_00000001",
-        ]
-
-    def test_batch_reports_only_makespan_and_unavailable_item_timings(self) -> None:
-        """Expose a measured makespan without inventing per-document durations."""
-        wrapper = _load_wrapper()
-        with mock.patch.object(
-            wrapper,
-            "_native_pipeline_markdown",
-            return_value=(["first", "second"], 42.5),
+        package = types.ModuleType("mineru")
+        package.MinerUParser = object
+        with (
+            mock.patch.object(wrapper.importlib_metadata, "version", return_value="4.0.12"),
+            mock.patch.dict("sys.modules", {"mineru": package}),
         ):
-            payload = wrapper.extract_batch(["a.pdf", "b.pdf"], False)
+            assert wrapper._load_mineru_api() is object
 
+    def test_batch_reuses_one_parser_and_preserves_input_order(self) -> None:
+        """Keep parser initialization shared while retaining document order."""
+        wrapper = _load_wrapper()
+        paths = ["/fixtures/second.pdf", "/fixtures/first.pdf"]
+        parser = mock.Mock()
+        parser.parse.side_effect = [
+            types.SimpleNamespace(markdown=lambda: "second"),
+            types.SimpleNamespace(markdown=lambda: "first"),
+        ]
+        constructor = mock.Mock(return_value=parser)
+        with mock.patch.object(wrapper, "_load_mineru_api", return_value=constructor):
+            outputs, total_ms = wrapper._native_pipeline_markdown(paths, ocr_enabled=False)
+        assert outputs == ["second", "first"]
+        assert total_ms >= 0.0
+        assert constructor.call_args_list == [mock.call(tier="basic", parse_mode="txt")]
+        assert parser.parse.call_args_list == [mock.call(Path(path)) for path in paths]
+
+    def test_ocr_mode_is_forwarded_to_the_public_parser(self) -> None:
+        """Select OCR explicitly without requesting a VLM tier."""
+        wrapper = _load_wrapper()
+        parser = mock.Mock()
+        parser.parse.return_value = types.SimpleNamespace(markdown=lambda: "recognized")
+        constructor = mock.Mock(return_value=parser)
+        with mock.patch.object(wrapper, "_load_mineru_api", return_value=constructor):
+            outputs, _ = wrapper._native_pipeline_markdown(["scan.pdf"], ocr_enabled=True, ocr_language="eng")
+        assert outputs == ["recognized"]
+        assert constructor.call_args_list == [mock.call(tier="basic", parse_mode="ocr")]
+
+    def test_batch_reports_sequential_processing_and_no_invented_item_timings(self) -> None:
+        """Expose actual execution semantics without synthetic per-file durations."""
+        wrapper = _load_wrapper()
+        with mock.patch.object(wrapper, "_native_pipeline_markdown", return_value=(["first", "second"], 42.5)):
+            payload = wrapper.extract_batch(["a.pdf", "b.pdf"], False)
         assert [item["content"] for item in payload["results"]] == ["first", "second"]
         assert payload["total_ms"] == 42.5
         assert payload["per_file_ms"] == [None, None]
         assert all("_extraction_time_ms" not in item for item in payload["results"])
-        assert payload["metadata"]["model_batching"] == "cross_document_processing_windows_via_doc_analyze_streaming"
+        assert payload["metadata"]["model_batching"] == "sequential_documents_shared_parser"
+        assert payload["metadata"]["batch_api"] == "mineru.MinerUParser.parse"
 
-    def test_missing_native_output_fails_strict_cardinality(self) -> None:
-        """Reject a batch when MinerU omits any ordered output."""
+    def test_non_text_native_output_is_rejected(self) -> None:
+        """Reject malformed upstream output before serializing the result."""
         wrapper = _load_wrapper()
+        parser = mock.Mock()
+        parser.parse.return_value = types.SimpleNamespace(markdown=lambda: None)
+        with (
+            mock.patch.object(wrapper, "_load_mineru_api", return_value=mock.Mock(return_value=parser)),
+            self.assertRaisesRegex(RuntimeError, "non-text Markdown"),
+        ):
+            wrapper._native_pipeline_markdown(["a.pdf"], ocr_enabled=False)
 
-        def do_parse(**kwargs: object) -> None:
-            output_dir = Path(str(kwargs["output_dir"]))
-            task_stem = next(iter(kwargs["pdf_file_names"]))
-            parse_method = str(kwargs["parse_method"])
-            target = output_dir / task_stem / parse_method / f"{task_stem}.md"
-            target.parent.mkdir(parents=True)
-            target.write_text("first", encoding="utf-8")
-
-        with tempfile.TemporaryDirectory() as fixture_dir:
-            paths = [str(Path(fixture_dir) / "a.pdf"), str(Path(fixture_dir) / "b.pdf")]
-            read_fn = mock.Mock(return_value=b"pdf")
-            with mock.patch.object(wrapper, "_load_mineru_api", return_value=(do_parse, read_fn)):
-                error: RuntimeError | None = None
-                try:
-                    wrapper._native_pipeline_markdown(paths, ocr_enabled=True)
-                except RuntimeError as caught:
-                    error = caught
-                else:
-                    self.fail("missing native output unexpectedly succeeded")
-
-        assert error is not None
-        assert "cardinality mismatch" in str(error)
-
-    def test_unexpected_native_markdown_output_fails_strict_cardinality(self) -> None:
-        """Reject a batch when MinerU emits an unexpected Markdown output."""
+    def test_unavailable_ocr_language_selection_fails_before_parsing(self) -> None:
+        """Reject unavailable languages before importing models or parsing input."""
         wrapper = _load_wrapper()
-
-        def do_parse(**kwargs: object) -> None:
-            output_dir = Path(str(kwargs["output_dir"]))
-            parse_method = str(kwargs["parse_method"])
-            for task_stem in kwargs["pdf_file_names"]:
-                target = output_dir / task_stem / parse_method / f"{task_stem}.md"
-                target.parent.mkdir(parents=True)
-                target.write_text(task_stem, encoding="utf-8")
-            extra = output_dir / "unexpected" / parse_method / "extra.md"
-            extra.parent.mkdir(parents=True)
-            extra.write_text("extra", encoding="utf-8")
-
-        read_fn = mock.Mock(return_value=b"pdf")
-        with mock.patch.object(wrapper, "_load_mineru_api", return_value=(do_parse, read_fn)):
-            error: RuntimeError | None = None
-            try:
-                wrapper._native_pipeline_markdown(["a.pdf", "b.pdf"], ocr_enabled=False)
-            except RuntimeError as caught:
-                error = caught
-            else:
-                self.fail("unexpected native Markdown output was accepted")
-
-        assert error is not None
-        assert "unexpected=['unexpected/txt/extra.md']" in str(error)
+        for language in ("eng+kor", "jpn", "jpn_vert"):
+            with self.subTest(language=language):
+                with (
+                    mock.patch.object(wrapper, "_load_mineru_api") as loader,
+                    self.assertRaisesRegex(ValueError, "does not expose OCR language selection"),
+                ):
+                    wrapper._native_pipeline_markdown(["a.pdf"], ocr_enabled=True, ocr_language=language)
+                assert loader.call_count == 0
 
 
 if __name__ == "__main__":

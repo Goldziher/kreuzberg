@@ -103,6 +103,7 @@ impl SubprocessAdapter {
             Some(BatchEntryPoint::DoclingJobkit) => b"docling-jobkit",
             Some(BatchEntryPoint::LiteparseBatchParse) => b"liteparse-batch-parse",
             Some(BatchEntryPoint::MineruDoParse) => b"mineru-do-parse",
+            Some(BatchEntryPoint::MineruParser) => b"mineru-parser",
             None => b"unverified",
         };
         for value in [self.name.as_bytes(), entry_point, output_format.as_bytes(), ocr_mode] {

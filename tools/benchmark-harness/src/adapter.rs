@@ -56,6 +56,8 @@ pub enum OcrLanguagePolicy {
     AnyBatchGlobal,
     /// Sceptre's supported script groups, configured independently per document.
     SceptrePerDocument,
+    /// MinerU basic uses its fixed Chinese/English recognition model.
+    MineruChineseEnglish,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,6 +73,10 @@ impl OcrLanguagePolicy {
         };
         if self == Self::DefaultOnly {
             return false;
+        }
+        if self == Self::MineruChineseEnglish {
+            let languages = canonicalize_ocr_languages(language);
+            return !languages.is_empty() && languages.iter().all(|code| matches!(code.as_str(), "eng" | "chi_sim"));
         }
         if self != Self::SceptrePerDocument {
             return canonical_ocr_language_arg(language).is_some();
@@ -135,7 +141,8 @@ pub fn declared_ocr_language_policy(framework: &str) -> OcrLanguagePolicy {
     }
 
     match framework.strip_suffix("-batch").unwrap_or(framework) {
-        "docling" | "mineru" => OcrLanguagePolicy::AnyBatchGlobal,
+        "docling" => OcrLanguagePolicy::AnyBatchGlobal,
+        "mineru" => OcrLanguagePolicy::MineruChineseEnglish,
         "tika" | "unstructured" => OcrLanguagePolicy::AnyPerDocument,
         _ => OcrLanguagePolicy::DefaultOnly,
     }
@@ -456,7 +463,7 @@ mod tests {
         );
         assert_eq!(
             declared_ocr_language_policy("mineru-batch"),
-            OcrLanguagePolicy::AnyBatchGlobal
+            OcrLanguagePolicy::MineruChineseEnglish
         );
         assert_eq!(declared_ocr_language_policy("tika"), OcrLanguagePolicy::AnyPerDocument);
         assert_eq!(
@@ -467,6 +474,17 @@ mod tests {
             declared_ocr_language_policy("xberg-markdown-baseline"),
             OcrLanguagePolicy::AnyPerDocument
         );
+    }
+
+    #[test]
+    fn mineru4_policy_skips_unavailable_explicit_ocr_languages() {
+        let policy = declared_ocr_language_policy("mineru-batch");
+        for language in [None, Some("eng"), Some("chi_sim"), Some("chi_sim+eng")] {
+            assert!(policy.supports(language), "expected {language:?} to be supported");
+        }
+        for language in [Some("jpn"), Some("jpn_vert"), Some("kor"), Some("eng+kor")] {
+            assert!(!policy.supports(language), "expected {language:?} to be skipped");
+        }
     }
 
     #[test]

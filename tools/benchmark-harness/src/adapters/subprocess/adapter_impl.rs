@@ -124,6 +124,7 @@ impl FrameworkAdapter for SubprocessAdapter {
         match self.batch_capability.map(|capability| capability.entry_point) {
             Some(crate::types::BatchEntryPoint::DoclingJobkit) => (None, None),
             Some(crate::types::BatchEntryPoint::MineruDoParse) => (None, None),
+            Some(crate::types::BatchEntryPoint::MineruParser) => (None, Some(1)),
             Some(crate::types::BatchEntryPoint::XbergCliExtractBatch) => (Some(requested), None),
             Some(crate::types::BatchEntryPoint::XbergRustEngineExtractBatch) => (Some(requested), None),
             Some(crate::types::BatchEntryPoint::LiteparseBatchParse) => (Some(requested), Some(self.batch_workers)),
@@ -152,10 +153,12 @@ impl FrameworkAdapter for SubprocessAdapter {
                     .arg("--version")
                     .output()
             }
-            Some(crate::types::BatchEntryPoint::MineruDoParse) => std::process::Command::new(&self.command)
-                .args(["-c", MINERU_VERSION_PROBE])
-                .envs(self.env.iter().map(|(key, value)| (key, value)))
-                .output(),
+            Some(crate::types::BatchEntryPoint::MineruDoParse | crate::types::BatchEntryPoint::MineruParser) => {
+                std::process::Command::new(&self.command)
+                    .args(["-c", MINERU_VERSION_PROBE])
+                    .envs(self.env.iter().map(|(key, value)| (key, value)))
+                    .output()
+            }
             _ => std::process::Command::new(&self.command).arg("--version").output(),
         };
         output

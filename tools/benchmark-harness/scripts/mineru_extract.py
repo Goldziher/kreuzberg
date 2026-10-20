@@ -1,14 +1,9 @@
 # Copyright (c) 2026 Xberg. All rights reserved.
-"""MinerU 3.4.5 extraction wrapper for the benchmark harness.
+"""MinerU 4 extraction wrapper for the benchmark harness.
 
-Supports three modes:
-- sync: process one file through the pipeline
-- batch: process multiple files through the native multi-document pipeline
-- server: persistent mode reading paths from stdin
-
-The batch path intentionally calls MinerU's public ``do_parse`` entry point once.
-In MinerU 3.4.5, that delegates to ``doc_analyze_streaming``, whose processing
-windows batch model inference across document boundaries.
+Sync and server modes parse one document at a time. Batch mode reuses one basic
+CPU parser and processes documents sequentially; MinerU 4 exposes no native
+multi-document parsing API.
 """
 
 from __future__ import annotations
@@ -23,7 +18,6 @@ import signal
 import socket
 import subprocess
 import sys
-import tempfile
 import time
 from importlib import metadata as importlib_metadata
 from pathlib import Path
@@ -33,36 +27,13 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 os.environ.setdefault("ONNXRUNTIME_PROVIDERS", "CPUExecutionProvider")
 os.environ.setdefault("MINERU_DEVICE_MODE", "cpu")
 
-# Cap stray unbounded network calls when requested. MinerU's
-# persist_downloaded_model_config does a bare requests.get() with NO timeout to a
-# config template on gcore.jsdelivr.net on the first model resolution whenever
-# ~/mineru.json is absent; HF_HUB_OFFLINE does not govern it, so on an egress-
-# restricted runner it hangs the full harness timeout. The bench workflow avoids the
-# call entirely by packaging ~/mineru.json, and sets MINERU_NET_TIMEOUT so any
-# residual/future stray call fails fast and loud instead of hanging. Must be set
-# before mineru is imported (done lazily below). ~keep
+os.environ.setdefault("MINERU_MODEL_SMALL_BACKEND", "onnx")
+
 _net_timeout = float(os.environ.get("MINERU_NET_TIMEOUT", "0") or "0")
 if _net_timeout > 0:
     socket.setdefaulttimeout(_net_timeout)
 
-# FTLANG_CACHE points fast-langdetect's cache inside the packaged HF hub dir. In
-# practice MinerU calls detect_language with the default low_memory=True, loading the
-# bundled lid.176.ftz from package resources with no network fetch, so this is a
-# harmless safeguard rather than a fix. Set before mineru is imported (done lazily). ~keep
-_hf_hub_cache = os.environ.get("HF_HUB_CACHE") or str(
-    Path(os.environ.get("HF_HOME") or Path.home() / ".cache" / "huggingface") / "hub"
-)
-os.environ.setdefault("FTLANG_CACHE", str(Path(_hf_hub_cache) / "fasttext-langdetect"))
-
-PINNED_MINERU_VERSION = "3.4.5"
-# The benchmark corpus is English and the competitor wrappers request English
-# (PaddleOCR lang="en", unstructured languages=["eng"]). MinerU exposes no
-# English-only OCR model: normalize_ocr_model_lang aliases "en" -> "ch", so this
-# selects the same CN+EN PP-OCRv6 model MinerU uses for English while making the
-# requested language explicit and consistent with the other frameworks. It does
-# not change the model or the scores; it removes a misleading Chinese default. ~keep
-DEFAULT_OCR_LANGUAGE = "en"
-PIPELINE_BACKEND = "pipeline"
+PINNED_MINERU_VERSION = "4.0.12"
 
 
 def _load_mineru_api():
@@ -73,9 +44,9 @@ def _load_mineru_api():
             f"MinerU {PINNED_MINERU_VERSION} is required by the benchmark harness; found {installed_version}"
         )
 
-    from mineru.cli.common import do_parse, read_fn
+    from mineru import MinerUParser
 
-    return do_parse, read_fn
+    return MinerUParser
 
 
 def _get_peak_memory_bytes() -> int:
@@ -86,74 +57,28 @@ def _get_peak_memory_bytes() -> int:
     return usage.ru_maxrss
 
 
-def _tesseract_to_paddle_lang(ocr_language: str | None) -> str:
-    """Map a canonical Tesseract language string (``eng+kor``, ``jpn_vert``) to the
-    single PaddleOCR model MinerU selects via ``p_lang_list``. MinerU takes one
-    model per document; the Korean and Japanese PP-OCR models both cover their
-    script plus Latin, so a mixed ``eng+kor`` request maps to ``korean``. An unset
-    or English-only request keeps the default (``en`` -> CN+EN model), unchanged.
-    """
-    if not ocr_language:
-        return DEFAULT_OCR_LANGUAGE
-    codes = [code.strip().lower() for code in ocr_language.split("+") if code.strip()]
-    if any(code.startswith("kor") for code in codes):
-        return "korean"
-    if any(code.startswith("jpn") for code in codes):
-        return "japan"
-    return DEFAULT_OCR_LANGUAGE
-
-
 def _native_pipeline_markdown(
     file_paths: list[str], ocr_enabled: bool, ocr_language: str | None = None
 ) -> tuple[list[str], float]:
-    """Run one MinerU 3.4.5 multi-document pipeline invocation."""
+    """Reuse MinerU's public basic parser without claiming cross-document batching."""
     if not file_paths:
         return [], 0.0
-
-    do_parse, read_fn = _load_mineru_api()
-    task_stems = [f"benchmark_document_{index:08d}" for index in range(len(file_paths))]
-    document_bytes = [read_fn(Path(file_path)) for file_path in file_paths]
-    parse_method = "ocr" if ocr_enabled else "txt"
-
-    with tempfile.TemporaryDirectory() as output_dir:
-        output_root = Path(output_dir)
-        expected_markdown_paths = [Path(task_stem) / parse_method / f"{task_stem}.md" for task_stem in task_stems]
-        start = time.perf_counter()
-        do_parse(
-            output_dir=output_dir,
-            pdf_file_names=list(task_stems),
-            pdf_bytes_list=list(document_bytes),
-            p_lang_list=[_tesseract_to_paddle_lang(ocr_language)] * len(file_paths),
-            backend=PIPELINE_BACKEND,
-            parse_method=parse_method,
-            f_draw_layout_bbox=False,
-            f_draw_span_bbox=False,
-            f_dump_md=True,
-            f_dump_middle_json=False,
-            f_dump_model_output=False,
-            f_dump_orig_pdf=False,
-            f_dump_content_list=False,
+    languages = {code.strip().lower() for code in (ocr_language or "eng").split("+") if code.strip()}
+    if ocr_enabled and not languages.issubset({"eng", "en", "chi_sim", "zh", "ch"}):
+        raise ValueError(
+            f"MinerU 4 does not expose OCR language selection for {ocr_language!r}; basic uses a CN/EN model"
         )
 
-        produced_markdown_paths = sorted(path.relative_to(output_root) for path in output_root.rglob("*.md"))
-        expected_markdown_paths.sort()
-        if produced_markdown_paths != expected_markdown_paths:
-            missing = sorted(set(expected_markdown_paths) - set(produced_markdown_paths))
-            unexpected = sorted(set(produced_markdown_paths) - set(expected_markdown_paths))
-            raise RuntimeError(
-                "MinerU native batch output cardinality mismatch: "
-                f"expected {len(expected_markdown_paths)} Markdown outputs, "
-                f"found {len(produced_markdown_paths)}; "
-                f"missing={[path.as_posix() for path in missing]}; "
-                f"unexpected={[path.as_posix() for path in unexpected]}"
-            )
-
-        markdown_outputs = [
-            (output_root / markdown_path).read_text(encoding="utf-8") for markdown_path in expected_markdown_paths
-        ]
-        total_duration_ms = (time.perf_counter() - start) * 1000.0
-
-    return markdown_outputs, total_duration_ms
+    parser_class = _load_mineru_api()
+    start = time.perf_counter()
+    parser = parser_class(tier="basic", parse_mode="ocr" if ocr_enabled else "txt")
+    outputs = []
+    for index, file_path in enumerate(file_paths):
+        markdown = parser.parse(Path(file_path)).markdown()
+        if not isinstance(markdown, str):
+            raise RuntimeError(f"MinerU returned non-text Markdown for document index {index}")
+        outputs.append(markdown)
+    return outputs, (time.perf_counter() - start) * 1000.0
 
 
 _MD_STRIP_RE = None
@@ -197,7 +122,7 @@ def extract_sync(
         "metadata": {
             "framework": "mineru",
             "output_format": output_format,
-            "batch_api": "mineru.cli.common.do_parse",
+            "batch_api": "mineru.MinerUParser.parse",
         },
         "_extraction_time_ms": duration_ms,
         "_peak_memory_bytes": _get_peak_memory_bytes(),
@@ -207,7 +132,7 @@ def extract_sync(
 def extract_batch(
     file_paths: list[str], ocr_enabled: bool, output_format: str = "markdown", ocr_language: str | None = None
 ) -> dict[str, Any]:
-    """Extract a strict ordered batch using MinerU's multi-document pipeline."""
+    """Extract an ordered batch by reusing one sequential parser."""
     markdown_outputs, total_duration_ms = _native_pipeline_markdown(file_paths, ocr_enabled, ocr_language)
     peak_memory = _get_peak_memory_bytes()
     results = [
@@ -216,7 +141,7 @@ def extract_batch(
             "metadata": {
                 "framework": "mineru",
                 "output_format": output_format,
-                "batch_api": "mineru.cli.common.do_parse",
+                "batch_api": "mineru.MinerUParser.parse",
             },
             "_peak_memory_bytes": peak_memory,
         }
@@ -228,9 +153,9 @@ def extract_batch(
         "per_file_ms": [None] * len(results),
         "metadata": {
             "framework": "mineru",
-            "batch_api": "mineru.cli.common.do_parse",
-            "model_batching": "cross_document_processing_windows_via_doc_analyze_streaming",
-            "reported_total_timing_scope": "do_parse_and_ordered_markdown_materialization",
+            "batch_api": "mineru.MinerUParser.parse",
+            "model_batching": "sequential_documents_shared_parser",
+            "reported_total_timing_scope": "parser_initialization_and_ordered_markdown_materialization",
             "benchmark_timing_scope": "cold_end_to_end_subprocess",
             "per_item_timing": "unavailable",
         },

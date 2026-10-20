@@ -7,7 +7,7 @@ minimumReleaseAgeExclude:
   - "@astrojs/markdown-satteri@0.4.4"
   - "@astrojs/prism@4.1.0"
   - "@astrojs/telemetry@3.4.0"
-  - astro@7.4.0
+  - astro@7.4.0 || 7.4.1
 overrides:
   # The plugin uses only isMatch, which picomatch provides without vulnerable braces. ~keep
   "starlight-llms-txt>micromatch": "npm:picomatch@4.0.7"

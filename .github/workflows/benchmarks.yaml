@@ -90,6 +90,11 @@ jobs:
       - name: Install Task
         uses: xberg-io/actions/install-task@v1
 
+      - name: Install uv for benchmark dependency contracts
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.3"
+
       - name: Validate benchmark scripts
         run: task benchmark:validate:scripts
 
@@ -1178,73 +1183,53 @@ jobs:
         id: mineru-model-cache
         uses: actions/cache@v6
         with:
-          path: |
-            ~/.cache/huggingface/hub
-            ~/mineru.json
-          # `gen6` is a generation counter for the cached weights + ~/mineru.json, NOT a
-          # MinerU version -- deliberately so, because the two move independently: 3.4.5
-          # changed only docx_converter.py, pdf_text_tool.py and version.py, leaving
-          # MINERU_CONFIG_VERSION and every model-resolution path byte-identical. Bump it
-          # when the weight set or the mineru.json schema changes, not when MinerU does. ~keep
-          key: mineru-weights-gen6-kor-jpn-${{ runner.os }}-${{ runner.arch }}
+          path: ~/.mineru/models
+          # MinerU 4 basic uses a new ONNX model repository and local model registry. ~keep
+          key: mineru4-basic-onnx-gen1-${{ runner.os }}-${{ runner.arch }}
 
-      - name: Warm MinerU model weights (native + OCR pipelines)
+      - name: Warm MinerU basic CPU model weights
         if: steps.mineru-model-cache.outputs.cache-hit != 'true'
         env:
           UV_NO_SYNC: "1"
+          MINERU_MODEL_SMALL_BACKEND: onnx
         run: |
           set -euo pipefail
-          txt_fixture="test_documents/pdf/fake_memo.pdf"
-          ocr_fixture="test_documents/pdf/non_searchable.pdf"
-          echo "Warming MinerU pipeline weights (txt path) on ${txt_fixture}..."
+          uv run --no-sync python - <<'PYTHON'
+          from mineru.model.download import download_model_repo
+          from mineru.model.registry import model_repos_for_tier
+          repos = model_repos_for_tier("basic", small_backend="onnx")
+          assert len(repos) == 1, f"Unexpected basic model repository count: {len(repos)}"
+          for repo in repos:
+              download_model_repo(repo, source="huggingface")
+          PYTHON
           uv run --no-sync python tools/benchmark-harness/scripts/mineru_extract.py \
-            --no-ocr --format=markdown sync "$txt_fixture" > /dev/null
-          echo "Warming MinerU OCR weights (ocr path) on ${ocr_fixture}..."
+            --no-ocr --format=markdown sync test_documents/pdf/fake_memo.pdf > /dev/null
           uv run --no-sync python tools/benchmark-harness/scripts/mineru_extract.py \
-            --ocr --format=markdown sync "$ocr_fixture" > /dev/null
-          echo "Warming MinerU Korean + Japanese PaddleOCR weights..."
-          # The image OCR cohort forwards non-English languages; PaddleOCR downloads the
-          # per-language model on first use, so warm korean/japan here (content is
-          # irrelevant to which model is fetched) to keep it out of the timed run.
-          uv run --no-sync python tools/benchmark-harness/scripts/mineru_extract.py \
-            --ocr --ocr-lang=eng+kor --format=markdown sync "$ocr_fixture" > /dev/null
-          uv run --no-sync python tools/benchmark-harness/scripts/mineru_extract.py \
-            --ocr --ocr-lang=jpn_vert --format=markdown sync "$ocr_fixture" > /dev/null
-          echo "MinerU model cache populated at $HF_HUB_CACHE"
-          du -sh "$HF_HUB_CACHE" || true
+            --ocr --format=markdown sync test_documents/pdf/non_searchable.pdf > /dev/null
 
-      - name: Ensure MinerU config (mineru.json) present
+      - name: Verify MinerU basic model completeness
         env:
           UV_NO_SYNC: "1"
+          MINERU_MODEL_SMALL_BACKEND: onnx
+          MINERU_MODEL_SOURCE: local
         run: |
           set -euo pipefail
-          # MinerU's persist_downloaded_model_config fetches a config template from
-          # gcore.jsdelivr.net (bare requests.get, no timeout) on the first model
-          # resolution whenever ~/mineru.json is absent -- ungoverned by HF_HUB_OFFLINE,
-          # so on the egress-restricted bench runner it hangs the full timeout. Packaging
-          # a valid ~/mineru.json makes get_existing_configured_model_root short-circuit
-          # the download entirely. The warm step above writes it as a side effect; on a
-          # cache hit it is restored by actions/cache. Regenerate online if still missing.
-          if [ ! -f "$HOME/mineru.json" ]; then
-            echo "mineru.json missing after warm/cache-restore; generating online..."
-            uv run --no-sync python tools/benchmark-harness/scripts/mineru_extract.py \
-              --no-ocr --format=markdown sync test_documents/pdf/fake_memo.pdf > /dev/null
-          fi
-          uv run --no-sync python - <<'PY'
-          import json, os
-          cfg = os.path.expanduser("~/mineru.json")
-          data = json.load(open(cfg))
-          models_dir = data.get("models-dir") or {}
-          assert models_dir.get("pipeline"), f"mineru.json missing models-dir.pipeline: {data}"
-          print(f"mineru.json OK: config_version={data.get('config_version')} models-dir={models_dir}")
-          PY
+          uv run --no-sync python - <<'PYTHON'
+          from mineru.model.download import verify_model_repo
+          from mineru.model.registry import model_repos_for_tier
+          repos = model_repos_for_tier("basic", small_backend="onnx")
+          assert len(repos) == 1, f"Unexpected basic model repository count: {len(repos)}"
+          for repo in repos:
+              result = verify_model_repo(repo)
+              assert result.ready, f"Incomplete model repository: {result.missing_paths}"
+              print(f"Verified {repo.name}: {result.root}")
+          PYTHON
 
       - name: Package MinerU model cache
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/mineru-model-cache"
-          tar -C "$HOME" -cf "$RUNNER_TEMP/mineru-model-cache/mineru-models.tar" \
-            .cache/huggingface/hub mineru.json
+          tar -C "$HOME" -cf "$RUNNER_TEMP/mineru-model-cache/mineru-models.tar" .mineru/models
           ls -lh "$RUNNER_TEMP/mineru-model-cache/mineru-models.tar"
 
       - name: Upload MinerU model cache
@@ -1330,7 +1315,8 @@ jobs:
           {
             echo "HF_HOME=$HOME/.cache/huggingface"
             echo "HF_HUB_CACHE=$HOME/.cache/huggingface/hub"
-            echo "MINERU_MODEL_SOURCE=huggingface"
+            echo "MINERU_MODEL_SOURCE=local"
+            echo "MINERU_MODEL_SMALL_BACKEND=onnx"
             echo "HF_HUB_OFFLINE=1"
             echo "TRANSFORMERS_OFFLINE=1"
           } >> "$GITHUB_ENV"
@@ -1346,8 +1332,16 @@ jobs:
           set -euo pipefail
           mkdir -p "$HOME/.cache/huggingface"
           tar -C "$HOME" -xf "$RUNNER_TEMP/mineru-model-cache/mineru-models.tar"
-          test -f "$HOME/mineru.json" || { echo "mineru.json not restored from cache artifact"; exit 1; }
-          du -sh "$HOME/.cache/huggingface/hub" || true
+          uv run --no-sync python - <<'PYTHON'
+          from mineru.model.download import verify_model_repo
+          from mineru.model.registry import model_repos_for_tier
+          repos = model_repos_for_tier("basic", small_backend="onnx")
+          assert len(repos) == 1, f"Unexpected basic model repository count: {len(repos)}"
+          for repo in repos:
+              result = verify_model_repo(repo)
+              assert result.ready, f"Restored model repository is incomplete: {result.missing_paths}"
+          PYTHON
+          du -sh "$HOME/.mineru/models"
 
       - name: Log MinerU offline env and restored cache state
         if: always()
@@ -1359,11 +1353,10 @@ jobs:
           echo "HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-<unset>}"
           echo "TRANSFORMERS_OFFLINE=${TRANSFORMERS_OFFLINE:-<unset>}"
           echo "MINERU_MODEL_SOURCE=${MINERU_MODEL_SOURCE:-<unset>}"
-          echo "=== ~/mineru.json (drives the offline model short-circuit; absence => gcore fetch hang) ==="
-          cat "$HOME/mineru.json" || echo "!! mineru.json absent"
-          echo "=== HF hub cache contents ==="
-          ls -1 "$HOME/.cache/huggingface/hub" 2>/dev/null || echo "!! hub dir absent"
-          du -sh "$HOME/.cache/huggingface/hub" 2>/dev/null || true
+          echo "MINERU_MODEL_SMALL_BACKEND=${MINERU_MODEL_SMALL_BACKEND:-<unset>}"
+          echo "=== MinerU local model repositories ==="
+          ls -1 "$HOME/.mineru/models" 2>/dev/null || echo "!! model directory absent"
+          du -sh "$HOME/.mineru/models" 2>/dev/null || true
 
       - name: Run benchmark
         env:

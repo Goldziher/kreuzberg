@@ -632,6 +632,7 @@ pub enum BatchEntryPoint {
     DoclingJobkit,
     LiteparseBatchParse,
     MineruDoParse,
+    MineruParser,
 }
 
 /// Scope represented by the measured batch makespan.
