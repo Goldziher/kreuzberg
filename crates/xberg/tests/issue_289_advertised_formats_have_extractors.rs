@@ -78,7 +78,7 @@ const MIN_ENTRIES_WITH_EXTENSIONS: usize = 80;
 
 const EXPECTED_FORMAT_COUNT: usize = 107;
 const EXPECTED_EXTENSION_COUNT: usize = 141;
-const EXPECTED_ALIAS_COUNT: usize = 56;
+const EXPECTED_ALIAS_COUNT: usize = 58;
 
 const MIME_ONLY_FORMATS: &[&str] = &[
     "text/x-gfm",
@@ -122,6 +122,20 @@ fn string_literals(line: &str) -> Vec<String> {
         rest = &after_open[close + 1..];
     }
     literals
+}
+
+fn array_literals<'a>(first_line: &str, lines: &mut impl Iterator<Item = &'a str>) -> Vec<String> {
+    let mut literals = string_literals(first_line);
+    if first_line.contains(']') {
+        return literals;
+    }
+    for line in lines.by_ref() {
+        literals.extend(string_literals(line));
+        if line.contains(']') {
+            return literals;
+        }
+    }
+    panic!("unterminated catalogue array: {first_line}");
 }
 
 /// Maps `const NAME: &str = "value";` declarations to their values.
@@ -169,7 +183,8 @@ fn parse_catalogue(source: &str) -> Vec<CatalogueEntry> {
     let mut aliases: Vec<String> = Vec::new();
     let mut inside_entry = false;
 
-    for line in formats_table(source).lines() {
+    let mut lines = formats_table(source).lines();
+    while let Some(line) = lines.next() {
         let line = line.trim();
         if line.starts_with("FormatEntry {") {
             inside_entry = true;
@@ -179,7 +194,7 @@ fn parse_catalogue(source: &str) -> Vec<CatalogueEntry> {
         } else if !inside_entry {
             continue;
         } else if let Some(tail) = line.strip_prefix("extensions:") {
-            extensions = string_literals(tail);
+            extensions = array_literals(tail, &mut lines);
         } else if let Some(tail) = line.strip_prefix("mime_type:") {
             let value = tail.trim().trim_end_matches(',');
             mime_type = Some(if value.starts_with('"') {
@@ -195,7 +210,7 @@ fn parse_catalogue(source: &str) -> Vec<CatalogueEntry> {
                     .unwrap_or_else(|| panic!("mime_type constant `{value}` is not declared in core/mime.rs"))
             });
         } else if let Some(tail) = line.strip_prefix("aliases:") {
-            aliases = string_literals(tail);
+            aliases = array_literals(tail, &mut lines);
         } else if line == "}," {
             let resolved = mime_type
                 .take()
@@ -210,6 +225,43 @@ fn parse_catalogue(source: &str) -> Vec<CatalogueEntry> {
     }
 
     entries
+}
+
+#[test]
+fn catalogue_parser_reads_multiline_extensions_and_aliases() {
+    let source = r#"
+static FORMATS: &[FormatEntry] = &[
+    FormatEntry {
+        extensions: &[
+            "py",
+            "r",
+        ],
+        mime_type: "text/x-source-code",
+        aliases: &[
+            "text/x-python",
+            "text/x-r-source",
+            "text/x-julia",
+            "text/vnd.graphviz",
+            "text/x-plantuml",
+        ],
+    },
+];
+"#;
+    let catalogue = parse_catalogue(source);
+
+    assert_eq!(catalogue.len(), 1);
+    assert_eq!(catalogue[0].extensions, ["py", "r"]);
+    assert_eq!(catalogue[0].mime_type, "text/x-source-code");
+    assert_eq!(
+        catalogue[0].aliases,
+        [
+            "text/x-python",
+            "text/x-r-source",
+            "text/x-julia",
+            "text/vnd.graphviz",
+            "text/x-plantuml",
+        ]
+    );
 }
 
 /// Every canonical MIME and alias in the catalogue must resolve to the same extractor.
