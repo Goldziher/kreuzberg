@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rst): Internal underscores in Unicode words remain intact when resolving named references.**
 - **(rendering): Markdown output ends raw HTML and JSX blocks before the next block.**
   A raw block was written with no line break, so an HTML block's lines ran together and the block after it was glued on (`</div># Heading`, `<Badge />- item`), which turned the heading or list into raw text; consecutive raw blocks now form one run, one line each, followed by a blank line. Source blank lines between raw fragments remain intact.
 - **(djot): The paragraphs of a list item are separated by a space.**
@@ -41,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The text before each `<a type="note">` was pushed as a paragraph of its own, so `brown fox<a>1</a> jumps.` came out as `brown fox[^1]` and a separate `jumps.`; the paragraph is now whole and its references follow it, as in the Markdown extractor. A note's own `<title>` is left out of the footnote text when it repeats the reference's marker (`1`); other titles, such as a poem's inside the note, stay.
 - **(jats): Inline markup stays inside its word, and table rows outside a row group are read.**
   Every text run was joined with a space, so `CO<sub>2</sub>` read `CO 2` and `uptake<xref>1</xref>.` read `uptake 1 .`; text now joins as written, with layout whitespace collapsed. A `<tr>` directly in `<table>` or in `<tfoot>` was skipped, so such a table came out empty apart from its caption.
+- **(rst): Named hyperlink references and `replace::` substitutions read as docutils renders them.**
+  `` `the docs`_ `` became inline code, `Python_` kept its underscore and `|project|` stayed literal; a reference now reads as its text, linked to the `.. _name: url` target of that name, and a substitution is replaced by its definition wherever that appears.
 - **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
   IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
 - **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**

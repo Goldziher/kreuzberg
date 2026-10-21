@@ -66,6 +66,139 @@ pub struct RstExtractor;
 #[cfg(feature = "office")]
 use crate::extraction::latex_shape::wrap_aligned_math;
 
+/// Hyperlink targets and `replace::` substitutions, which a reference may use before the
+/// definition appears.
+#[cfg(feature = "office")]
+#[derive(Default)]
+struct RstReferences<'a> {
+    /// Target name (normalized) -> URL, from `.. _name: url`.
+    targets: AHashMap<String, String>,
+    /// Substitution name (normalized) -> replacement text, from `.. |name| replace:: text`.
+    substitutions: AHashMap<String, String>,
+    /// Charged for the text substitutions add, so their expansion stays within the content limit
+    budget: Option<std::cell::RefCell<&'a mut SecurityBudget>>,
+    /// The limit an expansion ran into; the document is then refused
+    exceeded: std::cell::RefCell<Option<crate::extractors::security::SecurityError>>,
+}
+
+#[cfg(feature = "office")]
+impl RstReferences<'_> {
+    /// Reference names match case-insensitively and with whitespace collapsed, as in docutils.
+    fn normalize(name: &str) -> String {
+        name.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+    }
+
+    /// Whether `len` more bytes of expanded text fit the budget. The first refusal is kept and
+    /// makes the extraction fail.
+    fn charge(&self, len: usize) -> bool {
+        if self.exceeded.borrow().is_some() {
+            return false;
+        }
+        let Some(budget) = &self.budget else {
+            return true;
+        };
+        match budget.borrow_mut().account_text(len) {
+            Ok(()) => true,
+            Err(error) => {
+                self.exceeded.replace(Some(error));
+                false
+            }
+        }
+    }
+
+    /// Whether `trimmed` (a line without its indentation) starts an RST comment: `..` alone, or
+    /// followed by text that is not a directive, target, substitution, footnote or citation.
+    fn is_comment(trimmed: &str) -> bool {
+        let Some(rest) = trimmed.strip_prefix("..") else {
+            return false;
+        };
+        if rest.is_empty() {
+            return true;
+        }
+        let Some(rest) = rest.strip_prefix(' ') else {
+            return false;
+        };
+        let rest = rest.trim_start();
+        let is_directive = rest
+            .split_once("::")
+            .is_some_and(|(name, _)| !name.is_empty() && !name.contains(char::is_whitespace));
+        !(is_directive || rest.starts_with(['_', '|', '[']))
+    }
+
+    /// Whether the indented block after `trimmed` is not RST markup: the literal block after a
+    /// paragraph ending in `::`, the body of a code or raw directive, or a comment.
+    fn opens_inactive_block(trimmed: &str) -> bool {
+        let is_literal_intro = trimmed.ends_with("::") && !trimmed.starts_with("..");
+        let is_code_directive = ["code", "code-block", "sourcecode", "raw", "math"]
+            .iter()
+            .any(|name| trimmed.starts_with(&format!(".. {name}::")));
+        is_literal_intro || is_code_directive || Self::is_comment(trimmed)
+    }
+
+    fn collect(lines: &[&str]) -> Self {
+        let mut references = Self::default();
+        // The indentation of the line that opened a literal, code or comment block: the lines ~keep
+        // indented deeper belong to it, and a definition shown there is not in effect ~keep
+        let mut inactive_indent: Option<usize> = None;
+        // The first line after the body of the substitution definition last read ~keep
+        let mut skip_until = 0;
+        for (index, line) in lines.iter().enumerate() {
+            if index < skip_until {
+                continue;
+            }
+            let trimmed = line.trim();
+            let indent = line.len() - line.trim_start().len();
+            if let Some(block_indent) = inactive_indent {
+                if trimmed.is_empty() || indent > block_indent {
+                    continue;
+                }
+                inactive_indent = None;
+            }
+            if Self::opens_inactive_block(trimmed) {
+                inactive_indent = Some(indent);
+                if Self::is_comment(trimmed) {
+                    continue;
+                }
+            }
+            if let Some(rest) = trimmed.strip_prefix(".. _") {
+                // `.. _name: url`, or `` .. _`name: with a colon`: url `` ~keep
+                let target = match rest.strip_prefix('`') {
+                    Some(quoted) => quoted.split_once("`:"),
+                    None => rest.split_once(": "),
+                };
+                // A URL ending in `_` names another target (an alias), not an address ~keep
+                if let Some((name, url)) = target
+                    && let url = url.trim()
+                    && !name.is_empty()
+                    && !url.is_empty()
+                    && !url.ends_with('_')
+                {
+                    references.targets.insert(Self::normalize(name), url.to_string());
+                }
+            } else if let Some(rest) = trimmed.strip_prefix(".. |")
+                && let Some((name, directive)) = rest.split_once('|')
+                && let Some(text) = directive.trim_start().strip_prefix("replace::")
+            {
+                let mut text = text.trim().to_string();
+                // The definition continues on lines indented deeper than it is; the next ~keep
+                // definition at the same indentation is its own ~keep
+                for (offset, next) in lines[index + 1..].iter().enumerate() {
+                    let next_indent = next.len() - next.trim_start().len();
+                    if next.trim().is_empty() || next_indent <= indent {
+                        break;
+                    }
+                    text.push(' ');
+                    text.push_str(next.trim());
+                    // A body line is read once, here, not again as a line of its own ~keep
+                    skip_until = index + 2 + offset;
+                }
+                references.substitutions.insert(Self::normalize(name), text);
+            }
+        }
+        references
+    }
+}
+
 #[cfg(feature = "office")]
 impl RstExtractor {
     /// Create a new RST extractor.
@@ -415,7 +548,7 @@ impl RstExtractor {
     ///
     /// Handles: `**strong**` (bold), `*emphasis*` (italic), ``` ``literal`` ``` (code),
     /// and `` `interpreted` `` (code).
-    fn parse_inline_markup(raw: &str) -> (String, Vec<TextAnnotation>) {
+    fn parse_inline_markup(raw: &str, references: &RstReferences) -> (String, Vec<TextAnnotation>) {
         let mut out = String::with_capacity(raw.len());
         let mut annotations = Vec::new();
         let bytes = raw.as_bytes();
@@ -487,6 +620,12 @@ impl RstExtractor {
                 let inner = &raw[i + 1..end];
                 let after_close = end + 1;
                 if after_close < len && bytes[after_close] == b'_' {
+                    // `__` ends an anonymous reference ~keep
+                    let reference_end = if bytes.get(after_close + 1) == Some(&b'_') {
+                        after_close + 2
+                    } else {
+                        after_close + 1
+                    };
                     if let Some(angle_start) = inner.rfind('<')
                         && let Some(angle_end) = inner.rfind('>')
                         && angle_end > angle_start
@@ -503,20 +642,26 @@ impl RstExtractor {
                                 kind: AnnotationKind::Link { url, title: None },
                             });
                         }
-                        i = after_close + 1;
+                        i = reference_end;
                         continue;
                     }
+                    // A named reference reads as its text, linked to the target of that name ~keep
                     let start = out.len() as u32;
                     out.push_str(inner);
                     let end_off = out.len() as u32;
-                    if start < end_off {
+                    if start < end_off
+                        && let Some(url) = references.targets.get(&RstReferences::normalize(inner))
+                    {
                         annotations.push(TextAnnotation {
                             start,
                             end: end_off,
-                            kind: AnnotationKind::Code,
+                            kind: AnnotationKind::Link {
+                                url: url.clone(),
+                                title: None,
+                            },
                         });
                     }
-                    i = after_close + 1;
+                    i = reference_end;
                     continue;
                 }
                 let start = out.len() as u32;
@@ -545,12 +690,97 @@ impl RstExtractor {
                     continue;
                 }
             }
+            // `|name|` is replaced by its `replace::` text; `|name|_` also links it to the target `name` ~keep
+            if bytes[i] == b'|'
+                && let Some(close) = raw[i + 1..].find('|')
+                && let name = &raw[i + 1..i + 1 + close]
+                && !name.is_empty()
+                && name.trim() == name
+                && let Some(replacement) = references.substitutions.get(&RstReferences::normalize(name))
+            {
+                let start = out.len() as u32;
+                // Expansion is charged before anything is built or appended: the definition's ~keep
+                // length bounds the text it reads as. Past the limit the document is refused. ~keep
+                if references.charge(replacement.len()) {
+                    let (text, inner_annotations) = Self::parse_inline_markup(replacement, &RstReferences::default());
+                    out.push_str(&text);
+                    annotations.extend(inner_annotations.into_iter().map(|mut annotation| {
+                        annotation.start += start;
+                        annotation.end += start;
+                        annotation
+                    }));
+                }
+                i += close + 2;
+                if bytes.get(i) == Some(&b'_') {
+                    i += if bytes.get(i + 1) == Some(&b'_') { 2 } else { 1 };
+                    if let Some(url) = references.targets.get(&RstReferences::normalize(name))
+                        && start < out.len() as u32
+                    {
+                        annotations.push(TextAnnotation {
+                            start,
+                            end: out.len() as u32,
+                            kind: AnnotationKind::Link {
+                                url: url.clone(),
+                                title: None,
+                            },
+                        });
+                    }
+                }
+                continue;
+            }
+            // `name_` is a reference to the target `name`. Only a defined target counts, so an ~keep
+            // identifier such as `value_` in prose keeps its underscore. ~keep
+            if bytes[i] == b'_'
+                && !raw[i + 1..]
+                    .chars()
+                    .next()
+                    .is_some_and(|next| next == '_' || next.is_alphanumeric())
+                && let Some(name) = Self::simple_reference_name(&raw[..i])
+                && out.ends_with(name)
+                && let Some(url) = references.targets.get(&RstReferences::normalize(name))
+            {
+                annotations.push(TextAnnotation {
+                    start: (out.len() - name.len()) as u32,
+                    end: out.len() as u32,
+                    kind: AnnotationKind::Link {
+                        url: url.clone(),
+                        title: None,
+                    },
+                });
+                i += 1;
+                continue;
+            }
             let ch = raw[i..].chars().next().unwrap();
             out.push(ch);
             i += ch.len_utf8();
         }
 
         (out, annotations)
+    }
+
+    /// The simple reference name `before` ends with: words joined by single `-`, `_`, `.`, `:` or `+`.
+    ///
+    /// The punctuation must be isolated, as in docutils: two adjacent marks end the name, so the
+    /// backward scan stops there and no character is scanned for more than one reference.
+    fn simple_reference_name(before: &str) -> Option<&str> {
+        let mut start = before.len();
+        // Whether the character after the current one (in reading order) is alphanumeric ~keep
+        let mut followed_by_alnum = false;
+        for (index, c) in before.char_indices().rev() {
+            if c.is_alphanumeric() {
+                start = index;
+                followed_by_alnum = true;
+            } else if matches!(c, '-' | '_' | '.' | ':' | '+')
+                && followed_by_alnum
+                && before[..index].chars().next_back().is_some_and(char::is_alphanumeric)
+            {
+                followed_by_alnum = false;
+            } else {
+                break;
+            }
+        }
+        let name = &before[start..];
+        (!name.is_empty() && name.ends_with(char::is_alphanumeric)).then_some(name)
     }
 
     /// Find the position of a closing marker substring starting from `from`.
@@ -746,9 +976,22 @@ impl RstExtractor {
     ///
     /// Handles sections, paragraphs, code blocks, tables, footnotes, citations,
     /// and cross-references.
+    #[cfg(test)]
     pub(crate) fn build_internal_document(content: &str, inject_placeholders: bool) -> InternalDocument {
+        Self::build_internal_document_within(content, inject_placeholders, None)
+            .expect("without a budget the build cannot fail")
+    }
+
+    /// Build the document, charging `budget` (when given) for the text substitutions add.
+    fn build_internal_document_within(
+        content: &str,
+        inject_placeholders: bool,
+        budget: Option<&mut SecurityBudget>,
+    ) -> Result<InternalDocument> {
         let mut b = InternalDocumentBuilder::new("rst");
         let lines: Vec<&str> = content.lines().collect();
+        let mut references = RstReferences::collect(&lines);
+        references.budget = budget.map(std::cell::RefCell::new);
         let mut heading_char_order: Vec<char> = Vec::new();
         let mut has_overline_heading = false;
         let mut highlight_lang: Option<String> = None;
@@ -902,7 +1145,7 @@ impl RstExtractor {
                     i += 1;
                 }
                 if !caption_text.is_empty() {
-                    let (stripped, annotations) = Self::parse_inline_markup(&caption_text);
+                    let (stripped, annotations) = Self::parse_inline_markup(&caption_text, &references);
                     b.push_paragraph(&stripped, annotations, None, None);
                 }
                 continue;
@@ -1118,7 +1361,7 @@ impl RstExtractor {
                     i += 1;
                 }
                 if is_directive && !body_text.is_empty() {
-                    let (stripped, annotations) = Self::parse_inline_markup(&body_text);
+                    let (stripped, annotations) = Self::parse_inline_markup(&body_text, &references);
                     b.push_paragraph(&stripped, annotations, None, None);
                 }
                 continue;
@@ -1196,7 +1439,7 @@ impl RstExtractor {
                         full_text.push_str(lines[i].trim());
                         i += 1;
                     }
-                    let (parsed_text, item_annotations) = Self::parse_inline_markup(&full_text);
+                    let (parsed_text, item_annotations) = Self::parse_inline_markup(&full_text, &references);
                     b.push_list_item(&parsed_text, is_ordered, item_annotations, None, None);
                 }
                 b.end_list();
@@ -1213,7 +1456,7 @@ impl RstExtractor {
                     } else {
                         format!("{display_text}:")
                     };
-                    let (stripped, annotations) = Self::parse_inline_markup(&display_text);
+                    let (stripped, annotations) = Self::parse_inline_markup(&display_text, &references);
                     b.push_paragraph(&stripped, annotations, None, None);
                 }
                 i += 1;
@@ -1282,7 +1525,7 @@ impl RstExtractor {
                     i += 1;
                 }
                 let block_text = block_lines.join("\n");
-                let (stripped, annotations) = Self::parse_inline_markup(block_text.trim_matches('\n'));
+                let (stripped, annotations) = Self::parse_inline_markup(block_text.trim_matches('\n'), &references);
                 if !stripped.is_empty() {
                     let idx = b.push_paragraph(&stripped, annotations, None, None);
                     for fref in Self::find_footnote_references(&block_text) {
@@ -1333,7 +1576,7 @@ impl RstExtractor {
                     i += 1;
                 }
                 let footnote_refs = Self::find_footnote_references(&para_text);
-                let (stripped, annotations) = Self::parse_inline_markup(&para_text);
+                let (stripped, annotations) = Self::parse_inline_markup(&para_text, &references);
                 let idx = b.push_paragraph(&stripped, annotations, None, None);
 
                 for fref in &footnote_refs {
@@ -1347,7 +1590,10 @@ impl RstExtractor {
             i += 1;
         }
 
-        b.build()
+        if let Some(error) = references.exceeded.take() {
+            return Err(error.into());
+        }
+        Ok(b.build())
     }
 
     /// Extract RST cross-reference roles (`:ref:`, `:doc:`, etc.) and emit relationships.
@@ -1566,7 +1812,7 @@ impl InternalDocumentExtractor for RstExtractor {
         // `extract_tables` pass used to raw-push the same tables again, adding an unreferenced
         // (and, for grid tables, less accurate) entry to `doc.tables` for every table without
         // contributing anything to rendered output.
-        let mut doc = Self::build_internal_document(&text, inject_placeholders);
+        let mut doc = Self::build_internal_document_within(&text, inject_placeholders, Some(&mut budget))?;
         doc.mime_type = mime_type.to_string();
         doc.metadata = metadata;
 
@@ -1807,6 +2053,160 @@ Second paragraph.
             "the simple table must still be extracted: {:?}",
             doc.tables
         );
+    }
+
+    /// Each paragraph's text with the URL of every link annotation in it.
+    fn paragraph_links(rst: &str) -> Vec<(String, Vec<String>)> {
+        RstExtractor::build_internal_document(rst, false)
+            .elements
+            .iter()
+            .filter(|e| matches!(e.kind, crate::types::internal::ElementKind::Paragraph))
+            .map(|e| {
+                let urls = e
+                    .annotations
+                    .iter()
+                    .filter_map(|a| match &a.kind {
+                        AnnotationKind::Link { url, .. } => {
+                            Some(format!("{}={url}", &e.text[a.start as usize..a.end as usize]))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                (e.text.clone(), urls)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn should_resolve_named_references_to_their_targets() {
+        let rst = "See Python_, `the docs`_, `Anonymous <https://a.example>`__ and missing_.\n\n\
+                   Keep value_ and snake_case_name as written; `Unknown name`_ is plain.\n\n\
+                   .. _python: https://python.org\n\
+                   .. _`The  Docs`: https://docs.example\n";
+        let paragraphs = paragraph_links(rst);
+
+        assert_eq!(paragraphs[0].0, "See Python, the docs, Anonymous and missing_.");
+        assert_eq!(
+            paragraphs[0].1,
+            [
+                "Python=https://python.org",
+                "the docs=https://docs.example",
+                "Anonymous=https://a.example"
+            ]
+        );
+        assert_eq!(
+            paragraphs[1],
+            (
+                "Keep value_ and snake_case_name as written; Unknown name is plain.".to_string(),
+                vec![]
+            )
+        );
+    }
+
+    #[test]
+    fn should_ignore_definitions_shown_in_literal_code_and_comment_blocks() {
+        let rst = "See |project| at site_ and |inner|.\n\n\
+                   .. |project| replace:: REAL\n\
+                   .. _site: https://real.example\n\n\
+                   Example::\n\n    .. |project| replace:: SPOOF\n\n\
+                   .. code-block:: rst\n\n    .. _site: https://spoof.example\n\n\
+                   .. a comment\n   .. |project| replace:: COMMENT\n\n\
+                   .. note::\n\n   .. |inner| replace:: INNER\n";
+        let paragraphs = paragraph_links(rst);
+
+        assert_eq!(
+            paragraphs[0],
+            (
+                "See REAL at site and INNER.".to_string(),
+                vec!["site=https://real.example".to_string()]
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn should_charge_substitution_expansion_to_the_content_budget() {
+        use crate::plugins::InternalDocumentExtractor;
+
+        let rst = format!(".. |big| replace:: {}\n\n{}\n", "x".repeat(256), "|big| ".repeat(48));
+        let config = ExtractionConfig {
+            security_limits: Some(crate::extractors::security::SecurityLimits {
+                max_content_size: 4 * rst.len(),
+                ..Default::default()
+            }),
+            ..ExtractionConfig::default()
+        };
+
+        let error = RstExtractor::new()
+            .extract_content(rst.as_bytes(), "text/x-rst", &config)
+            .await
+            .expect_err("expanded substitutions must consume the security budget");
+
+        assert!(error.to_string().contains("Content too large"), "got: {error}");
+    }
+
+    #[test]
+    fn should_end_a_substitution_body_at_the_next_definition_of_the_same_indentation() {
+        let rst = "Read |a| and |b|.\n\n.. note::\n\n   .. |a| replace:: A\n   .. |b| replace:: B\n      continued\n";
+        assert_eq!(paragraph_links(rst)[0].0, "Read A and B continued.");
+
+        // Each definition stores only its own text, however many there are ~keep
+        let definitions: String = (0..400)
+            .map(|i| format!("   .. |d{i}| replace:: value {i}\n"))
+            .collect();
+        let lines: Vec<&str> = definitions.lines().collect();
+        let references = RstReferences::collect(&lines);
+        let stored: usize = references.substitutions.values().map(String::len).sum();
+        assert!(
+            stored < definitions.len(),
+            "stored {stored} bytes for {} source bytes",
+            definitions.len()
+        );
+    }
+
+    #[test]
+    fn should_resolve_unicode_names_without_linking_internal_underscores() {
+        for (reference, name, expected, linked) in [
+            ("x_é", "x", "x_é", false),
+            ("x_٣", "x", "x_٣", false),
+            ("é_", "é", "é", true),
+            ("x_", "x", "x", true),
+        ] {
+            let rst = format!("Use {reference} here.\n\n.. _{name}: https://example.test\n");
+            let links = if linked {
+                vec![format!("{expected}=https://example.test")]
+            } else {
+                vec![]
+            };
+            assert_eq!(paragraph_links(&rst)[0], (format!("Use {expected} here."), links));
+        }
+    }
+
+    #[test]
+    fn should_scan_reference_names_in_linear_time() {
+        // A rescan of the whole name run per underscore would take hundreds of millions of steps ~keep
+        let rst = format!("{}\n\n.. _x: https://x.example\n", "x_-".repeat(20_000));
+        let paragraphs = paragraph_links(&rst);
+        assert_eq!(paragraphs[0].1.len(), 20_000);
+    }
+
+    #[test]
+    fn should_replace_substitutions_defined_anywhere() {
+        let rst = "Built with |project| and |Link|_; |unknown| stays.\n\n\
+                   | Not | a substitution\n\n\
+                   .. |project| replace:: *Xberg*\n   the extractor\n\
+                   .. |link| replace:: the site\n\
+                   .. _link: https://site.example\n";
+        let paragraphs = paragraph_links(rst);
+
+        assert_eq!(
+            paragraphs[0],
+            (
+                "Built with Xberg the extractor and the site; |unknown| stays.".to_string(),
+                vec!["the site=https://site.example".to_string()]
+            )
+        );
+        // A line block whose text holds a `|`, not a substitution reference ~keep
+        assert_eq!(paragraphs[1].0, "Not | a substitution", "got: {paragraphs:?}");
     }
 
     #[test]
