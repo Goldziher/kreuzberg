@@ -264,9 +264,13 @@ fn strip_cue_tags(payload: &str) -> (Option<String>, String) {
     let mut speaker = None;
     let mut out = String::with_capacity(payload.len());
     let mut rest = payload;
+    // Inside `<rt>`: the ruby text printed over its base is an annotation, not part of the line ~keep
+    let mut in_ruby_text = false;
 
     while let Some(open) = rest.find('<') {
-        out.push_str(&rest[..open]);
+        if !in_ruby_text {
+            out.push_str(&rest[..open]);
+        }
         let after = &rest[open + 1..];
         let Some(close) = after.find('>') else {
             // Unbalanced '<' — keep it verbatim rather than dropping the remainder.
@@ -274,6 +278,13 @@ fn strip_cue_tags(payload: &str) -> (Option<String>, String) {
             return (speaker, decode_escapes(&out));
         };
         let tag = &after[..close];
+        let name = tag.split(['.', ' ', '\t']).next().unwrap_or_default();
+        match name {
+            "rt" => in_ruby_text = true,
+            // A ruby's end also ends the ruby text its last `<rt>` left open ~keep
+            "/rt" | "/ruby" => in_ruby_text = false,
+            _ => {}
+        }
         if speaker.is_none()
             && let Some(name) = parse_voice_tag(tag)
         {
@@ -281,7 +292,9 @@ fn strip_cue_tags(payload: &str) -> (Option<String>, String) {
         }
         rest = &after[close + 1..];
     }
-    out.push_str(rest);
+    if !in_ruby_text {
+        out.push_str(rest);
+    }
     (speaker, decode_escapes(&out))
 }
 
@@ -304,14 +317,58 @@ fn parse_voice_tag(tag: &str) -> Option<String> {
     if name.is_empty() { None } else { Some(name.to_string()) }
 }
 
-/// Decode the character escapes WebVTT defines for cue payloads.
+/// Decode the character references in a cue payload: the named ones WebVTT lists, `&quot;` and
+/// `&apos;`, and numeric ones such as `&#39;` or `&#x2014;`. Any other `&` stays as written.
 fn decode_escapes(text: &str) -> String {
-    text.replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&nbsp;", "\u{a0}")
-        .replace("&lrm;", "\u{200e}")
-        .replace("&rlm;", "\u{200f}")
-        .replace("&amp;", "&")
+    /// The longest reference decoded, `&#x10FFFF;`; looking no further keeps the scan linear
+    const MAX_REFERENCE_LEN: usize = 10;
+
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let candidate = &rest[amp..];
+        let decoded = candidate
+            .char_indices()
+            .take(MAX_REFERENCE_LEN)
+            .find(|&(_, c)| c == ';')
+            .and_then(|(semicolon, _)| Some((decode_reference(&candidate[1..semicolon])?, semicolon + 1)));
+        match decoded {
+            Some((character, len)) => {
+                out.push(character);
+                rest = &candidate[len..];
+            }
+            None => {
+                out.push('&');
+                rest = &candidate[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The character `name` (a reference between `&` and `;`) stands for.
+fn decode_reference(name: &str) -> Option<char> {
+    let code = if let Some(hex) = name.strip_prefix("#x").or_else(|| name.strip_prefix("#X")) {
+        u32::from_str_radix(hex, 16).ok()?
+    } else if let Some(decimal) = name.strip_prefix('#') {
+        decimal.parse().ok()?
+    } else {
+        return match name {
+            "amp" => Some('&'),
+            "lt" => Some('<'),
+            "gt" => Some('>'),
+            "quot" => Some('"'),
+            "apos" => Some('\''),
+            "nbsp" => Some('\u{a0}'),
+            "lrm" => Some('\u{200e}'),
+            "rlm" => Some('\u{200f}'),
+            _ => None,
+        };
+    };
+    // A NUL or a surrogate is not a character a reference can produce ~keep
+    char::from_u32(code).filter(|&character| character != '\0')
 }
 
 fn warning(message: &'static str) -> ProcessingWarning {
@@ -478,6 +535,30 @@ mod tests {
         let (speaker, text) = strip_cue_tags("<v Roger Bingham>We are <i>here</i> &amp; now");
         assert_eq!(speaker.as_deref(), Some("Roger Bingham"));
         assert_eq!(text, "We are here & now");
+    }
+
+    #[test]
+    fn should_decode_numeric_and_quote_references() {
+        let (_, text) = strip_cue_tags("It&#39;s &quot;fine&quot; &#x2014; &apos;ok&#X27; &amp;lt; &copy; & co");
+        assert_eq!(text, "It's \"fine\" \u{2014} 'ok' &lt; &copy; & co");
+        // An unterminated or out-of-range reference stays as written ~keep
+        let (_, text) = strip_cue_tags("&#39 &#x110000; &#0; &#xD800; 5&6");
+        assert_eq!(text, "&#39 &#x110000; &#0; &#xD800; 5&6");
+    }
+
+    #[test]
+    fn should_leave_ruby_text_out_of_the_line() {
+        let (_, text) = strip_cue_tags("<ruby>漢<rt>kan</rt>字<rt>ji</rt></ruby> desu");
+        assert_eq!(text, "漢字 desu");
+        // `</ruby>` ends a ruby text left open, and ruby text at the end is dropped too ~keep
+        let (_, text) = strip_cue_tags("<ruby>日<rt>ni</ruby>本<ruby>語<rt.small>go");
+        assert_eq!(text, "日本語");
+    }
+
+    #[test]
+    fn should_decode_references_in_linear_time() {
+        let (_, text) = strip_cue_tags(&"&".repeat(200_000));
+        assert_eq!(text.len(), 200_000);
     }
 
     #[test]
