@@ -71,6 +71,15 @@ const SPRM_P_F_IN_TABLE: u16 = 0x2416;
 /// a row: it holds only the row's end mark. `spra` = 1.
 const SPRM_P_F_TTP: u16 = 0x2417;
 
+/// `sprmTDefTable` and `sprmTDefTable10` -- a row's cell layout, the sprms
+/// whose length takes two bytes. A row's terminating paragraph carries the
+/// row's table sprms, so its PAPX has one.
+const SPRM_T_DEF_TABLE: u16 = 0xD608;
+const SPRM_T_DEF_TABLE_10: u16 = 0xD606;
+
+/// `sprmPChgTabs` -- tab stops changed; a length of 255 starts its long form.
+const SPRM_P_CHG_TABS: u16 = 0xC615;
+
 /// Every `PapxFkp` is exactly one 512-byte page, and its entry count lives in
 /// the final byte. ~keep
 const FKP_PAGE_LEN: usize = 512;
@@ -113,14 +122,30 @@ fn for_each_sprm(grpprl: &[u8], mut visit: impl FnMut(u16, &[u8])) {
         let sprm = u16::from_le_bytes([grpprl[pos], grpprl[pos + 1]]);
         pos += 2;
 
-        let len = match sprm_operand_len(sprm) {
-            Some(len) => len,
-            // spra 6: variable, first operand byte is the length.
-            None if sprm >> 13 == 6 => match grpprl.get(pos) {
-                Some(&cb) => usize::from(cb) + 1,
+        let len = match sprm {
+            // sprmTDefTable and sprmTDefTable10 hold a 2-byte length, plus one.
+            SPRM_T_DEF_TABLE | SPRM_T_DEF_TABLE_10 => match grpprl.get(pos..pos + 2) {
+                Some(cb) => usize::from(u16::from_le_bytes([cb[0], cb[1]])) + 1,
                 None => break,
             },
-            None => break,
+            // sprmPChgTabs with a length byte of 255 is sized by its counts:
+            // tabs deleted (4 bytes each), then tabs added (3 bytes each).
+            SPRM_P_CHG_TABS if grpprl.get(pos) == Some(&255) => {
+                let Some(&deleted) = grpprl.get(pos + 1) else { break };
+                let Some(&added) = grpprl.get(pos + 2 + 4 * usize::from(deleted)) else {
+                    break;
+                };
+                3 + 4 * usize::from(deleted) + 3 * usize::from(added)
+            }
+            _ => match sprm_operand_len(sprm) {
+                Some(len) => len,
+                // spra 6: variable, first operand byte is the length.
+                None if sprm >> 13 == 6 => match grpprl.get(pos) {
+                    Some(&cb) => usize::from(cb) + 1,
+                    None => break,
+                },
+                None => break,
+            },
         };
 
         let operand = match grpprl.get(pos..pos + len) {
@@ -597,6 +622,28 @@ mod tests {
             Some(TableParagraph { row_end: true })
         );
         assert_eq!(table_paragraph_from_grpprl(&[0x16, 0x24, 0x00]), None, "fInTable off");
+    }
+
+    #[test]
+    fn table_membership_is_read_after_a_table_definition() {
+        // sprmTDefTable first, as long as a row of 12 cells makes it: its
+        // 2-byte length (the operand's size minus one) must be read as such
+        // for the flags after it to be found.
+        let mut grpprl = vec![0x08, 0xD6, 0x01, 0x01];
+        grpprl.extend_from_slice(&[0; 256]);
+        grpprl.extend_from_slice(&[0x16, 0x24, 0x01, 0x17, 0x24, 0x01]);
+        assert_eq!(
+            table_paragraph_from_grpprl(&grpprl),
+            Some(TableParagraph { row_end: true })
+        );
+
+        // sprmPChgTabs in its long form: one tab deleted, two added.
+        let mut grpprl = vec![0x15, 0xC6, 255, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0];
+        grpprl.extend_from_slice(&[0x16, 0x24, 0x01]);
+        assert_eq!(
+            table_paragraph_from_grpprl(&grpprl),
+            Some(TableParagraph { row_end: false })
+        );
     }
 
     #[test]
