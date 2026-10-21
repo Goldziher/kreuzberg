@@ -2454,7 +2454,7 @@ mod tests {
             (r#"text:c="0""#, 1),
             (r#"text:c="-2""#, 1),
             (r#"text:c="x""#, 1),
-            (r#"text:c="999999999999""#, MAX_ODF_SPACE_RUN),
+            (r#"text:c="4294967295""#, MAX_ODF_SPACE_RUN),
         ] {
             let xml = format!("<text:s {NS} {attribute}/>");
             let doc = roxmltree::Document::parse(&xml).unwrap();
