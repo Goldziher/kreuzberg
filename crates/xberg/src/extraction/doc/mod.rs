@@ -29,6 +29,24 @@ pub(crate) struct DocParagraph {
     /// `Some(level)` when the paragraph's style resolves to `heading 1`..
     /// `heading 9`, directly or through its base style.
     pub heading_level: Option<u8>,
+    /// `Some(..)` when the paragraph is in a table.
+    #[serde(default)]
+    pub table: Option<DocTableMark>,
+}
+
+/// Where a table paragraph falls in its table.
+///
+/// Word ends the last paragraph of each cell with a cell mark instead of a
+/// paragraph mark, and ends each row with a paragraph holding only a row
+/// mark. A paragraph that is neither is one of several in its cell. A nested
+/// table's paragraphs end with paragraph marks, so its text stays in the cell
+/// of the outer table that holds it. ~keep
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct DocTableMark {
+    /// The paragraph ends a cell.
+    pub cell_end: bool,
+    /// The paragraph ends a row.
+    pub row_end: bool,
 }
 
 /// What the Word97+ text path produces: the assembled text plus the paragraph
@@ -354,6 +372,9 @@ use piece_table::extract_text_word97;
 /// chunking `content` consumers use. ~keep
 const PARAGRAPH_MARK: char = '\r';
 
+/// Word's cell mark, which ends a cell's last paragraph and a table row.
+const CELL_MARK: char = '\x07';
+
 /// Split the raw main text into paragraphs and attach each one's list binding.
 ///
 /// Operates on the *raw* text so that character positions still line up with
@@ -366,7 +387,10 @@ const PARAGRAPH_MARK: char = '\r';
 /// hyperlink laid over a whole paragraph after that paragraph's mark, and a
 /// `TOC` result holds every entry's paragraph -- and on its own the paragraph
 /// holding the begin would see it unterminated and keep the instruction as
-/// text. ~keep
+/// text.
+///
+/// A cell mark ends a paragraph too when the paragraph is in a table, so each
+/// cell is its own paragraph instead of the row's cells running together. ~keep
 fn split_main_paragraphs(main: &str, main_fc_ends: &[u32], list_tables: &papx::ListTables) -> Vec<DocParagraph> {
     let markup = field_markup_mask(main);
     let mut paragraphs = Vec::new();
@@ -376,11 +400,19 @@ fn split_main_paragraphs(main: &str, main_fc_ends: &[u32], list_tables: &papx::L
 
     for (i, (c, is_markup)) in main.chars().zip(markup).enumerate() {
         char_count = i + 1;
-        if c == PARAGRAPH_MARK {
-            push_paragraph(&mut paragraphs, &raw, main_fc_ends.get(i).copied(), list_tables);
-            raw.clear();
-            after_last_mark = false;
-            continue;
+        if c == PARAGRAPH_MARK || c == CELL_MARK {
+            let mark_fc_end = main_fc_ends.get(i).copied();
+            let table = mark_fc_end.and_then(|fc_end| list_tables.table_for_paragraph_end(fc_end));
+            if c == PARAGRAPH_MARK || table.is_some() {
+                let table = table.map(|table| DocTableMark {
+                    cell_end: c == CELL_MARK && !table.row_end,
+                    row_end: c == CELL_MARK && table.row_end,
+                });
+                push_paragraph(&mut paragraphs, &raw, mark_fc_end, table, list_tables);
+                raw.clear();
+                after_last_mark = false;
+                continue;
+            }
         }
         after_last_mark = true;
         if !is_markup {
@@ -392,17 +424,24 @@ fn split_main_paragraphs(main: &str, main_fc_ends: &[u32], list_tables: &papx::L
         // A final run with no paragraph mark still has properties keyed on the
         // FC one past its last character.
         let last_fc = main_fc_ends.get(char_count.saturating_sub(1)).copied();
-        push_paragraph(&mut paragraphs, &raw, last_fc, list_tables);
+        push_paragraph(&mut paragraphs, &raw, last_fc, None, list_tables);
     }
 
     paragraphs
 }
 
 /// Normalize one paragraph's raw text, field markup already taken out, and
-/// record it when it survives.
-fn push_paragraph(out: &mut Vec<DocParagraph>, raw: &str, mark_fc_end: Option<u32>, list_tables: &papx::ListTables) {
+/// record it when it survives. A table paragraph always does: an empty cell
+/// still holds its column, and a row's end mark is empty.
+fn push_paragraph(
+    out: &mut Vec<DocParagraph>,
+    raw: &str,
+    mark_fc_end: Option<u32>,
+    table: Option<DocTableMark>,
+    list_tables: &papx::ListTables,
+) {
     let content = normalize_doc_text(raw);
-    if content.is_empty() {
+    if content.is_empty() && table.is_none() {
         return;
     }
     // Word keys a paragraph's PAPX on the FC one past its paragraph mark,
@@ -415,6 +454,7 @@ fn push_paragraph(out: &mut Vec<DocParagraph>, raw: &str, mark_fc_end: Option<u3
         content,
         list,
         heading_level,
+        table,
     });
 }
 

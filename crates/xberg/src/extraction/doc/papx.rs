@@ -1,11 +1,13 @@
-//! Paragraph properties (`PAPX`) for legacy `.doc`, limited to list membership.
+//! Paragraph properties (`PAPX`) for legacy `.doc`, limited to list and table
+//! membership.
 //!
 //! [MS-DOC] stores paragraph formatting in `PAPX` grpprls held in 512-byte
 //! `PapxFkp` pages, indexed by byte offset (`FC`) through the FIB's
-//! `PlcfBtePapx`. This module reads only what #1550 needs: whether a paragraph
-//! is bound to an automatic list (`sprmPIlfo`) and at what depth
-//! (`sprmPIlvl`). Resolving the *number* Word paints requires `PlfLst` /
-//! `PlfLfo` and a counter walk, which is deliberately out of scope.
+//! `PlcfBtePapx`. This module reads only what #1550 needs -- whether a
+//! paragraph is bound to an automatic list (`sprmPIlfo`) and at what depth
+//! (`sprmPIlvl`) -- and whether it sits in a table (`sprmPFInTable`) or ends
+//! a table row (`sprmPFTtp`). Resolving the *number* Word paints requires
+//! `PlfLst` / `PlfLfo` and a counter walk, which is deliberately out of scope.
 
 use ahash::AHashMap;
 
@@ -62,6 +64,13 @@ const SPRM_P_ILFO: u16 = 0x460B;
 /// so a 1-byte operand.
 const SPRM_P_ILVL: u16 = 0x260A;
 
+/// `sprmPFInTable` -- the paragraph is in a table cell. `spra` = 1.
+const SPRM_P_F_IN_TABLE: u16 = 0x2416;
+
+/// `sprmPFTtp` -- the paragraph is the table terminating paragraph that ends
+/// a row: it holds only the row's end mark. `spra` = 1.
+const SPRM_P_F_TTP: u16 = 0x2417;
+
 /// Every `PapxFkp` is exactly one 512-byte page, and its entry count lives in
 /// the final byte. ~keep
 const FKP_PAGE_LEN: usize = 512;
@@ -95,10 +104,9 @@ fn sprm_operand_len(sprm: u16) -> Option<usize> {
     }
 }
 
-/// Scan a `grpprl` for the two sprms that describe list membership.
-fn list_binding_from_grpprl(grpprl: &[u8]) -> Option<ListBinding> {
-    let mut ilfo: Option<u16> = None;
-    let mut ilvl: u8 = 0;
+/// Call `visit` with each sprm in a `grpprl` and its operand, stopping at the
+/// first one whose length cannot be read.
+fn for_each_sprm(grpprl: &[u8], mut visit: impl FnMut(u16, &[u8])) {
     let mut pos = 0usize;
 
     while pos + 2 <= grpprl.len() {
@@ -121,19 +129,51 @@ fn list_binding_from_grpprl(grpprl: &[u8]) -> Option<ListBinding> {
         };
         pos += len;
 
-        match sprm {
-            SPRM_P_ILFO if operand.len() >= 2 => {
-                ilfo = Some(u16::from_le_bytes([operand[0], operand[1]]));
-            }
-            SPRM_P_ILVL if !operand.is_empty() => ilvl = operand[0],
-            _ => {}
-        }
+        visit(sprm, operand);
     }
+}
+
+/// Scan a `grpprl` for the two sprms that describe list membership.
+fn list_binding_from_grpprl(grpprl: &[u8]) -> Option<ListBinding> {
+    let mut ilfo: Option<u16> = None;
+    let mut ilvl: u8 = 0;
+
+    for_each_sprm(grpprl, |sprm, operand| match sprm {
+        SPRM_P_ILFO if operand.len() >= 2 => {
+            ilfo = Some(u16::from_le_bytes([operand[0], operand[1]]));
+        }
+        SPRM_P_ILVL if !operand.is_empty() => ilvl = operand[0],
+        _ => {}
+    });
 
     match ilfo {
         Some(ilfo) if ilfo != 0 => Some(ListBinding { ilfo, ilvl }),
         _ => None,
     }
+}
+
+/// A paragraph's place in a table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct TableParagraph {
+    /// The paragraph is the row's terminating paragraph (`sprmPFTtp`).
+    pub row_end: bool,
+}
+
+/// Scan a `grpprl` for table membership; `None` when the paragraph is not in a
+/// table.
+fn table_paragraph_from_grpprl(grpprl: &[u8]) -> Option<TableParagraph> {
+    let mut in_table = false;
+    let mut row_end = false;
+
+    for_each_sprm(grpprl, |sprm, operand| match sprm {
+        SPRM_P_F_IN_TABLE => in_table = operand.first().is_some_and(|&v| v != 0),
+        SPRM_P_F_TTP => row_end = operand.first().is_some_and(|&v| v != 0),
+        _ => {}
+    });
+
+    // A row's terminating paragraph is in the table whether or not it also
+    // says so.
+    (in_table || row_end).then_some(TableParagraph { row_end })
 }
 
 /// Extract one `BxPap` entry's `GrpPrlAndIstd`: the paragraph's style index
@@ -385,6 +425,11 @@ pub(super) struct ParagraphListIndex {
     /// Paragraph style index (`istd`), for every paragraph that carries a
     /// `PAPX` -- not only list-bound ones.
     style_by_end_fc: AHashMap<u32, u16>,
+    /// FKP runs whose paragraphs sit in a table, as `(first FC, FC one past
+    /// the run, membership)`, sorted by their end. Looked up by range rather
+    /// than by the run's end: one run covers every consecutive paragraph that
+    /// shares a `PAPX`, and the cells of a row usually do. ~keep
+    table_runs: Vec<(u32, u32, TableParagraph)>,
 }
 
 impl ParagraphListIndex {
@@ -420,6 +465,7 @@ impl ParagraphListIndex {
             let pn = (u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]) & 0x003F_FFFF) as usize;
             index.absorb_fkp_page(word_doc, pn);
         }
+        index.table_runs.sort_unstable_by_key(|&(_, end, _)| end);
 
         index
     }
@@ -439,10 +485,13 @@ impl ParagraphListIndex {
         }
 
         for i in 0..crun {
+            let start_fc_at = i * 4;
             let end_fc_at = (i + 1) * 4;
-            let Some(raw) = page.get(end_fc_at..end_fc_at + 4) else {
+            let (Some(start), Some(raw)) = (page.get(start_fc_at..end_fc_at), page.get(end_fc_at..end_fc_at + 4))
+            else {
                 break;
             };
+            let start_fc = u32::from_le_bytes([start[0], start[1], start[2], start[3]]);
             let end_fc = u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]);
 
             let b_offset = page[rgbx_at + i * BX_PAP_LEN];
@@ -455,7 +504,20 @@ impl ParagraphListIndex {
             if let Some(binding) = list_binding_from_grpprl(grpprl) {
                 self.by_end_fc.insert(end_fc, binding);
             }
+            if let Some(table) = table_paragraph_from_grpprl(grpprl)
+                && start_fc < end_fc
+            {
+                self.table_runs.push((start_fc, end_fc, table));
+            }
         }
+    }
+
+    /// Table membership of the paragraph whose mark ends at `end_fc`: the run
+    /// that holds the mark's last byte.
+    fn table_for_paragraph_end(&self, end_fc: u32) -> Option<TableParagraph> {
+        let at = self.table_runs.partition_point(|&(_, end, _)| end < end_fc);
+        let &(start, _, table) = self.table_runs.get(at)?;
+        (start < end_fc).then_some(table)
     }
 
     /// Look up the binding for a paragraph whose mark ends at `end_fc`.
@@ -497,6 +559,11 @@ impl ListTables {
         self.styles.heading_level(self.index.style_for_paragraph_end(end_fc)?)
     }
 
+    /// Table membership for the paragraph whose mark ends at `end_fc`.
+    pub(super) fn table_for_paragraph_end(&self, end_fc: u32) -> Option<TableParagraph> {
+        self.index.table_for_paragraph_end(end_fc)
+    }
+
     /// Membership for the paragraph whose mark ends at `end_fc`.
     pub(super) fn membership_for_paragraph_end(&self, end_fc: u32) -> Option<(u8, bool)> {
         self.index
@@ -516,6 +583,47 @@ mod tests {
         assert_eq!(sprm_operand_len(0x6000), Some(4), "spra 3 is a 4-byte operand");
         assert_eq!(sprm_operand_len(0xE000), Some(3), "spra 7 is a 3-byte operand");
         assert_eq!(sprm_operand_len(0xC000), None, "spra 6 is variable-length");
+    }
+
+    #[test]
+    fn table_membership_is_read_from_in_table_and_ttp() {
+        assert_eq!(table_paragraph_from_grpprl(&[0x03, 0x24, 0x01]), None, "sprmPJc alone");
+        assert_eq!(
+            table_paragraph_from_grpprl(&[0x16, 0x24, 0x01]),
+            Some(TableParagraph { row_end: false })
+        );
+        assert_eq!(
+            table_paragraph_from_grpprl(&[0x16, 0x24, 0x01, 0x17, 0x24, 0x01]),
+            Some(TableParagraph { row_end: true })
+        );
+        assert_eq!(table_paragraph_from_grpprl(&[0x16, 0x24, 0x00]), None, "fInTable off");
+    }
+
+    #[test]
+    fn table_runs_are_looked_up_by_the_range_that_holds_the_mark() {
+        let index = ParagraphListIndex {
+            table_runs: vec![
+                (100, 120, TableParagraph { row_end: false }),
+                (120, 122, TableParagraph { row_end: true }),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            index.table_for_paragraph_end(106),
+            Some(TableParagraph { row_end: false }),
+            "inside a run"
+        );
+        assert_eq!(
+            index.table_for_paragraph_end(120),
+            Some(TableParagraph { row_end: false }),
+            "a run's last byte"
+        );
+        assert_eq!(
+            index.table_for_paragraph_end(122),
+            Some(TableParagraph { row_end: true })
+        );
+        assert_eq!(index.table_for_paragraph_end(100), None, "before the first run");
+        assert_eq!(index.table_for_paragraph_end(130), None, "after the last run");
     }
 
     #[test]

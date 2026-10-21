@@ -5,11 +5,11 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::core::mime::LEGACY_WORD_MIME_TYPE;
-use crate::extraction::doc::{DocParagraph, DocSubdocument, DocSubdocumentKind, extract_doc_text};
+use crate::extraction::doc::{DocParagraph, DocSubdocument, DocSubdocumentKind, DocTableMark, extract_doc_text};
 use crate::plugins::{InternalDocumentExtractor, Plugin};
-use crate::types::Metadata;
 use crate::types::document_structure::ContentLayer;
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
+use crate::types::{Metadata, Table};
 use ahash::AHashMap;
 use async_trait::async_trait;
 use std::borrow::Cow;
@@ -207,7 +207,10 @@ fn push_blank_line_chunks(doc: &mut InternalDocument, content: &str) {
 /// opens or closes nested containers, and a change of *kind* at the same depth
 /// closes and reopens: a document can move from a numbered run straight into a
 /// bulleted one at the same level, and merging those would label half the
-/// items wrongly. ~keep
+/// items wrongly.
+///
+/// Consecutive table paragraphs become one `Table`, cell by cell and row by
+/// row, the way the DOCX path reads `w:tbl`. ~keep
 fn push_paragraph_elements(doc: &mut InternalDocument, paragraphs: &[DocParagraph]) {
     // The switch is "does this document EMIT styled headings", which is
     // narrower than either alternative that looks right.
@@ -227,9 +230,16 @@ fn push_paragraph_elements(doc: &mut InternalDocument, paragraphs: &[DocParagrap
         .any(|paragraph| paragraph.heading_level.is_some() && paragraph.list.is_none());
     // One entry per open container, holding whether it is ordered.
     let mut open: Vec<bool> = Vec::new();
+    let mut table = PendingTable::default();
 
     for (i, paragraph) in paragraphs.iter().enumerate() {
         let text = paragraph.content.trim();
+        if let Some(mark) = paragraph.table {
+            close_lists(doc, &mut open, 0);
+            table.add(text, mark);
+            continue;
+        }
+        table.flush(doc);
         if text.is_empty() {
             continue;
         }
@@ -267,6 +277,7 @@ fn push_paragraph_elements(doc: &mut InternalDocument, paragraphs: &[DocParagrap
         ));
     }
 
+    table.flush(doc);
     close_lists(doc, &mut open, 0);
 }
 
@@ -320,6 +331,57 @@ fn push_subdocuments(
             element.anchor = anchor.clone();
             doc.push_element(element);
         }
+    }
+}
+
+/// The rows of the table being read, until a paragraph outside it ends it.
+#[derive(Default)]
+struct PendingTable {
+    rows: Vec<Vec<String>>,
+    row: Vec<String>,
+    cell: String,
+}
+
+impl PendingTable {
+    /// Add one table paragraph. A cell's paragraphs are joined by line breaks.
+    fn add(&mut self, text: &str, mark: DocTableMark) {
+        if !text.is_empty() {
+            if !self.cell.is_empty() {
+                self.cell.push('\n');
+            }
+            self.cell.push_str(text);
+        }
+        if mark.cell_end {
+            self.row.push(std::mem::take(&mut self.cell));
+        }
+        if mark.row_end {
+            self.end_row();
+        }
+    }
+
+    fn end_row(&mut self) {
+        if !self.cell.is_empty() {
+            self.row.push(std::mem::take(&mut self.cell));
+        }
+        if !self.row.is_empty() {
+            self.rows.push(std::mem::take(&mut self.row));
+        }
+    }
+
+    /// Emit the table read so far, unless it holds no text, and start over.
+    fn flush(&mut self, doc: &mut InternalDocument) {
+        self.end_row();
+        let cells = std::mem::take(&mut self.rows);
+        if cells.iter().flatten().all(|cell| cell.trim().is_empty()) {
+            return;
+        }
+        let markdown = crate::rendering::common::render_table_markdown(&cells);
+        let table_index = doc.push_table(Table {
+            cells,
+            markdown,
+            ..Default::default()
+        });
+        doc.push_element(InternalElement::text(ElementKind::Table { table_index }, "", 0));
     }
 }
 
@@ -835,5 +897,108 @@ mod tests {
             "the fallback must be reported: {:?}",
             doc.processing_warnings
         );
+    }
+
+    fn paragraph(content: &str, table: Option<DocTableMark>) -> DocParagraph {
+        DocParagraph {
+            content: content.to_string(),
+            list: None,
+            heading_level: None,
+            table,
+        }
+    }
+
+    const CELL: Option<DocTableMark> = Some(DocTableMark {
+        cell_end: true,
+        row_end: false,
+    });
+    const ROW: Option<DocTableMark> = Some(DocTableMark {
+        cell_end: false,
+        row_end: true,
+    });
+    const IN_CELL: Option<DocTableMark> = Some(DocTableMark {
+        cell_end: false,
+        row_end: false,
+    });
+
+    fn element_kinds(doc: &InternalDocument) -> Vec<&'static str> {
+        doc.elements
+            .iter()
+            .map(|element| match element.kind {
+                ElementKind::Table { .. } => "table",
+                ElementKind::Paragraph => "paragraph",
+                ElementKind::Heading { .. } => "heading",
+                ElementKind::ListStart { .. } => "list-start",
+                ElementKind::ListItem { .. } => "list-item",
+                ElementKind::ListEnd => "list-end",
+                _ => "other",
+            })
+            .collect()
+    }
+
+    #[test]
+    fn should_emit_consecutive_table_paragraphs_as_one_table() {
+        let paragraphs = [
+            paragraph("A long introduction paragraph.", None),
+            paragraph("Region", CELL),
+            paragraph("Q1", CELL),
+            paragraph("", ROW),
+            paragraph("North", CELL),
+            paragraph("", CELL),
+            paragraph("", ROW),
+            paragraph("After the table, more prose follows.", None),
+        ];
+        let mut doc = InternalDocument::new("doc");
+
+        push_paragraph_elements(&mut doc, &paragraphs);
+
+        assert_eq!(element_kinds(&doc), ["paragraph", "table", "paragraph"]);
+        assert_eq!(
+            doc.tables[0].cells,
+            [
+                vec!["Region".to_string(), "Q1".to_string()],
+                vec!["North".to_string(), String::new()]
+            ]
+        );
+    }
+
+    #[test]
+    fn should_join_the_paragraphs_of_a_cell_with_line_breaks() {
+        let paragraphs = [
+            paragraph("first", IN_CELL),
+            paragraph("second", CELL),
+            paragraph("", ROW),
+        ];
+        let mut doc = InternalDocument::new("doc");
+
+        push_paragraph_elements(&mut doc, &paragraphs);
+
+        assert_eq!(doc.tables[0].cells, [vec!["first\nsecond".to_string()]]);
+    }
+
+    #[test]
+    fn should_leave_out_a_table_with_no_text() {
+        let paragraphs = [paragraph("", CELL), paragraph("", CELL), paragraph("", ROW)];
+        let mut doc = InternalDocument::new("doc");
+
+        push_paragraph_elements(&mut doc, &paragraphs);
+
+        assert!(doc.elements.is_empty());
+        assert!(doc.tables.is_empty());
+    }
+
+    #[test]
+    fn should_close_an_open_list_before_a_table() {
+        let mut item = paragraph("An item", None);
+        item.list = Some(crate::extraction::doc::DocListMembership {
+            level: 0,
+            ordered: false,
+        });
+        let paragraphs = [item, paragraph("cell", CELL), paragraph("", ROW)];
+        let mut doc = InternalDocument::new("doc");
+
+        push_paragraph_elements(&mut doc, &paragraphs);
+
+        assert_eq!(element_kinds(&doc), ["list-start", "list-item", "list-end", "table"]);
     }
 }
