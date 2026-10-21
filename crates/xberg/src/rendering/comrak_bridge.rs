@@ -1300,8 +1300,22 @@ pub(crate) fn build_comrak_ast<'a>(doc: &InternalDocument, arena: &'a comrak::Ar
             }
 
             ElementKind::RawBlock => {
-                let raw = mk(arena, NodeValue::Raw(elem_text.to_string()));
-                parent.append(raw);
+                // A raw block is written as it is. Consecutive ones form one run, one per line
+                // (pulldown-cmark reports an HTML block line by line), and a blank line ends the
+                // run, so the next block starts a line of its own instead of being glued onto
+                // the raw text (`</div># Heading`). ~keep
+                let text = elem_text.trim_end_matches('\n');
+                let merged = parent.last_child().is_some_and(|last| {
+                    if let NodeValue::Raw(previous) = &mut last.data.borrow_mut().value {
+                        *previous = format!("{}\n{text}\n\n", previous.trim_end_matches('\n'));
+                        true
+                    } else {
+                        false
+                    }
+                });
+                if !merged {
+                    parent.append(mk(arena, NodeValue::Raw(format!("{text}\n\n"))));
+                }
             }
 
             ElementKind::MetadataBlock => {
@@ -2780,6 +2794,26 @@ mod tests {
         assert!(
             html.contains(r#"<span data-math-style="display">&lt;script&gt;"#),
             "{html}"
+        );
+    }
+
+    #[test]
+    fn should_end_a_run_of_raw_blocks_before_the_next_block() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph("Intro.", vec![], None, None);
+        builder.push_raw_block("html", "<div class=\"note\">", None);
+        builder.push_raw_block("html", "Raw HTML block", None);
+        builder.push_raw_block("html", "</div>", None);
+        builder.push_heading(1, "Heading", None, None);
+        builder.push_raw_block("jsx", "<Badge />", None);
+        builder.push_list(false);
+        builder.push_list_item("item", false, vec![], None, None);
+        builder.end_list();
+
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_eq!(
+            markdown,
+            "Intro.\n\n<div class=\"note\">\nRaw HTML block\n</div>\n\n# Heading\n\n<Badge />\n\n- item\n"
         );
     }
 

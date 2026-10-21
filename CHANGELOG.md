@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rendering): Markdown output ends raw HTML and JSX blocks before the next block.**
+  A raw block was written with no line break, so an HTML block's lines ran together and the block after it was glued on (`</div># Heading`, `<Badge />- item`), which turned the heading or list into raw text; consecutive raw blocks now form one run, one line each, followed by a blank line.
 - **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
   IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
 - **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
