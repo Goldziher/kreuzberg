@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(djot): The paragraphs of a list item are separated by a space.**
+  A list item's second paragraph was appended to its first with nothing in between, so `two` followed by `continued paragraph` read `twocontinued paragraph`; the paragraphs are now joined with a space, as in the Markdown extractor.
 - **(docbook): An admonition's body is the admonition's text.**
   `<note>`, `<warning>`, `<tip>`, `<caution>` and `<important>` pushed an admonition whose text was its kind and then the body as a separate paragraph, so Markdown showed `> [!NOTE]` / `> note` with the body outside the callout; the body is now the admonition's text, as in the AsciiDoc, RST and Markdown extractors.
 - **(build): The `xml` feature compiles without `svg` or `pdf`.**
