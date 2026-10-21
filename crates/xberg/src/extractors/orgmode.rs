@@ -389,14 +389,10 @@ impl OrgModeExtractor {
 
         let mut pending_caption: Option<String> = None;
         let mut pending_name: Option<String> = None;
+        let mut no_comment_closers_remain = false;
 
         while i < lines.len() {
             let trimmed = lines[i].trim();
-            // A comment line (`#` alone or followed by whitespace) is not document text
-            if Self::is_comment_line(trimmed) {
-                i += 1;
-                continue;
-            }
 
             if !trimmed.is_empty()
                 && (pending_caption.is_some() || pending_name.is_some())
@@ -408,6 +404,31 @@ impl OrgModeExtractor {
                 // mis-attaching it to an unrelated, later element.
                 pending_caption = None;
                 pending_name = None;
+            }
+
+            // A comment line (`#` alone or followed by whitespace) is not document text
+            if Self::is_comment_line(trimmed) {
+                i += 1;
+                continue;
+            }
+
+            // A comment block is never exported. Its delimiters match in any case, and only an
+            // exact `#+END_COMMENT` line closes it; without one the opener is not a block and
+            // the lines after it are read as usual.
+            if trimmed
+                .split_whitespace()
+                .next()
+                .is_some_and(|word| word.eq_ignore_ascii_case("#+BEGIN_COMMENT"))
+            {
+                let close = if no_comment_closers_remain {
+                    None
+                } else {
+                    (i + 1..lines.len()).find(|&j| lines[j].trim().eq_ignore_ascii_case("#+END_COMMENT"))
+                };
+                // A failed search also rules out closers for every later opener. ~keep
+                no_comment_closers_remain = close.is_none();
+                i = close.map_or(i + 1, |j| j + 1);
+                continue;
             }
 
             if trimmed.starts_with("#+")
@@ -567,19 +588,6 @@ impl OrgModeExtractor {
                     i += 1;
                 }
                 b.push_code(block_content.trim_end(), None, None, None);
-                continue;
-            }
-
-            // A comment block is never exported. Its delimiters match in any case, and only an
-            // exact `#+END_COMMENT` line closes it; without one the opener is not a block and
-            // the lines after it are read as usual.
-            if trimmed
-                .split_whitespace()
-                .next()
-                .is_some_and(|word| word.eq_ignore_ascii_case("#+BEGIN_COMMENT"))
-            {
-                let close = (i + 1..lines.len()).find(|&j| lines[j].trim().eq_ignore_ascii_case("#+END_COMMENT"));
-                i = close.map_or(i + 1, |j| j + 1);
                 continue;
             }
 
@@ -1832,5 +1840,53 @@ mod tests {
             ["Visible"]
         );
         assert_eq!(texts("#+BEGIN_COMMENT\nNever closed\n"), ["Never closed"]);
+    }
+
+    #[test]
+    fn should_skip_mixed_case_comment_openers_before_keyword_handling() {
+        for opener in ["#+BeGiN_CoMmEnT", "#+Begin_COMMENT", "#+BEGIN_Comment"] {
+            for closer in ["#+END_COMMENT", "#+end_comment", "#+EnD_CoMmEnT"] {
+                let org = format!("{opener}\nHIDDEN\n{closer}\nVisible\n");
+                let document = OrgModeExtractor::build_internal_document(&org);
+                let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+                assert_eq!(texts, ["Visible"], "opener {opener:?}, closer {closer:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn should_detach_affiliated_keywords_when_a_comment_separates_the_target() {
+        use crate::types::internal::ElementKind;
+
+        for (between, expected_caption, expected_anchor) in [
+            ("", Some("Table caption"), Some("table-name")),
+            ("# A separate comment\n", None, None),
+            ("#+BEGIN_COMMENT\nHidden\n#+END_COMMENT\n", None, None),
+        ] {
+            let org = format!("#+CAPTION: Table caption\n#+NAME: table-name\n{between}| A | B |\n| 1 | 2 |\n");
+            let document = OrgModeExtractor::build_internal_document(&org);
+            let table = document
+                .elements
+                .iter()
+                .find(|e| matches!(e.kind, ElementKind::Table { .. }))
+                .expect("table remains present");
+            assert_eq!(document.tables.len(), 1);
+            let caption = table
+                .attributes
+                .as_ref()
+                .and_then(|attrs| attrs.get("caption"))
+                .map(String::as_str);
+            assert_eq!(caption, expected_caption, "separator {between:?}");
+            assert_eq!(table.anchor.as_deref(), expected_anchor, "separator {between:?}");
+        }
+    }
+
+    #[test]
+    fn should_keep_visible_text_after_many_unclosed_comment_openers() {
+        let mut org = "#+BEGIN_COMMENT\n".repeat(1_000);
+        org.push_str("Visible\n");
+        let document = OrgModeExtractor::build_internal_document(&org);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+        assert_eq!(texts, ["Visible"]);
     }
 }
