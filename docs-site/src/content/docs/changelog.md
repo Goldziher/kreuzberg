@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
+  Docling and MinerU retain Pillow 12.3.0 until their upstream constraints allow the update.
 - **(llama-index): The standalone node-parser lock uses NLTK 3.10.4 with guarded model-file access.**
 - **(tls): Reject distrusted emSign certificate intermediates by updating rustls-webpki to 0.103.16.**
   Resolves RUSTSEC-2026-0382.
