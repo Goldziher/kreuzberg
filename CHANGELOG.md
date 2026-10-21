@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(asciidoc): Cross references, passthroughs, escapes and hard line breaks read as Asciidoctor renders them.**
   `<<install,the guide>>`, `xref:faq[the FAQ]` and `pass:[...]` stayed as raw macros, `\*not bold*` kept its backslash, `\{name}` was still substituted, and a line ending in ` +` kept the `+`; each now reads as its text, and ` +` ends the line.
+- **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
+  IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
+- **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
+  Line blocks also retain their footnote and cross-reference relationships.
+  `| Line one` / `| Line two` ran together as `| Line one | Line two`, and `Example::` read `Example`; a line block is now one line per `|` line, and `Text::` reads `Text:` while `Text ::` reads `Text`, as in docutils.
+- **(latex): Source lines wrapped at a fixed width form one paragraph, and `~` reads as a no-break space.**
+  Every source line was its own paragraph, so a wrapped sentence was split apart and a `\footnote{...}` spanning two lines was not parsed; paragraphs now end at a blank line or a block-level line, comments follow LaTeX's rules (but not inside `\verb|...|`, whose contents stay literal), paragraphs stop at `\bye` and `\end{document}`, and `Dr.~Smith` no longer keeps the tilde.
 - **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
   A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**

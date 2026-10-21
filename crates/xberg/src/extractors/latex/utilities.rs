@@ -89,7 +89,7 @@ pub(crate) fn extract_env_name(line: &str) -> Option<String> {
 ///
 /// Handles common LaTeX escape sequences like \\&, \\#, \\\_, etc.
 pub(crate) fn clean_text(text: &str) -> String {
-    text.to_string()
+    tie_to_nbsp(text)
         .replace("\\\\", "\n")
         .replace("\\&", "&")
         .replace("\\#", "#")
@@ -99,6 +99,97 @@ pub(crate) fn clean_text(text: &str) -> String {
         .replace("\\%", "%")
         .trim()
         .to_string()
+}
+
+/// `\~` is an accent command, so only unescaped ties become no-break spaces. ~keep
+fn tie_to_nbsp(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut escaped = false;
+    let mut verbatim_end = 0;
+    for (index, ch) in text.char_indices() {
+        if index < verbatim_end {
+            out.push(ch);
+            continue;
+        }
+        if ch == '\\'
+            && !escaped
+            && let Some(len) = verb_span_len(&text[index..])
+        {
+            verbatim_end = index + len;
+            out.push(ch);
+            continue;
+        }
+        if ch == '~' && !escaped {
+            out.push('\u{a0}');
+        } else {
+            out.push(ch);
+        }
+        escaped = ch == '\\' && !escaped;
+    }
+    out
+}
+
+/// Match the inline parser's `\verb` delimiter rules so its literal contents survive. ~keep
+fn verb_span_len(text: &str) -> Option<usize> {
+    let after_verb = text.strip_prefix("\\verb")?;
+    let delim = after_verb.chars().next()?;
+    if delim.is_alphabetic() || delim == '{' {
+        return None;
+    }
+    let end = after_verb[delim.len_utf8()..].find(delim)?;
+    Some("\\verb".len() + 2 * delim.len_utf8() + end)
+}
+
+/// Comment parsing state retained across physical source lines. ~keep
+#[derive(Default)]
+pub(super) struct CommentState {
+    escaped: bool,
+    url_depth: usize,
+}
+
+impl CommentState {
+    /// Scan newly appended text only; rescanning the growing paragraph is quadratic. ~keep
+    pub(super) fn strip_new_comment(&mut self, text: &mut String, start: usize) -> bool {
+        let mut comment_at = None;
+        let mut verbatim_end = 0;
+        for (relative, ch) in text[start..].char_indices() {
+            let index = start + relative;
+            if index < verbatim_end {
+                continue;
+            }
+            if ch == '\\'
+                && !self.escaped
+                && let Some(len) = verb_span_len(&text[index..])
+            {
+                verbatim_end = index + len;
+                continue;
+            }
+            if self.url_depth > 0 {
+                match ch {
+                    '{' => self.url_depth += 1,
+                    '}' => self.url_depth -= 1,
+                    _ => {}
+                }
+                continue;
+            }
+            if ch == '{' && (text[..index].ends_with("\\url") || text[..index].ends_with("\\href")) {
+                self.url_depth = 1;
+                continue;
+            }
+            if ch == '%' && !self.escaped {
+                comment_at = Some(index);
+                break;
+            }
+            self.escaped = ch == '\\' && !self.escaped;
+        }
+        match comment_at {
+            Some(index) => {
+                text.truncate(index);
+                true
+            }
+            None => false,
+        }
+    }
 }
 
 /// Returns true if a line inside a table-like environment (`tabular`,

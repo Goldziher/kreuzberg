@@ -1207,7 +1207,13 @@ impl RstExtractor {
                 if let Some(display_text) = trimmed.strip_suffix("::")
                     && !display_text.is_empty()
                 {
-                    let (stripped, annotations) = Self::parse_inline_markup(display_text);
+                    // docutils keeps one colon of `Text::`, and none of `Text ::` ~keep
+                    let display_text = if display_text.ends_with(char::is_whitespace) {
+                        display_text.trim_end().to_string()
+                    } else {
+                        format!("{display_text}:")
+                    };
+                    let (stripped, annotations) = Self::parse_inline_markup(&display_text);
                     b.push_paragraph(&stripped, annotations, None, None);
                 }
                 i += 1;
@@ -1250,6 +1256,39 @@ impl RstExtractor {
                 }
                 if !code_content.is_empty() {
                     b.push_code(code_content.trim_end(), highlight_lang.as_deref(), None, None);
+                }
+                continue;
+            }
+
+            // A line block keeps its line breaks. Each line starts with `| ` (a bare `|` is an
+            // empty line), and a line indented past the `|` continues the line above. ~keep
+            if trimmed == "|" || trimmed.starts_with("| ") {
+                let indent = line.len() - line.trim_start().len();
+                let mut block_lines: Vec<String> = Vec::new();
+                while i < lines.len() {
+                    let l = lines[i];
+                    let l_trimmed = l.trim();
+                    if l_trimmed == "|" || l_trimmed.starts_with("| ") {
+                        block_lines.push(l_trimmed[1..].trim().to_string());
+                    } else if !l_trimmed.is_empty()
+                        && l.len() - l.trim_start().len() > indent
+                        && let Some(last) = block_lines.last_mut()
+                    {
+                        last.push(' ');
+                        last.push_str(l_trimmed);
+                    } else {
+                        break;
+                    }
+                    i += 1;
+                }
+                let block_text = block_lines.join("\n");
+                let (stripped, annotations) = Self::parse_inline_markup(block_text.trim_matches('\n'));
+                if !stripped.is_empty() {
+                    let idx = b.push_paragraph(&stripped, annotations, None, None);
+                    for fref in Self::find_footnote_references(&block_text) {
+                        b.push_footnote_ref(&format!("[{fref}]"), &fref, None);
+                    }
+                    Self::extract_rst_cross_refs(&block_text, idx, &mut b);
                 }
                 continue;
             }
@@ -1789,6 +1828,30 @@ Second paragraph.
         );
     }
 
+    fn paragraph_texts(rst: &str) -> Vec<String> {
+        RstExtractor::build_internal_document(rst, false)
+            .elements
+            .iter()
+            .filter(|e| matches!(e.kind, crate::types::internal::ElementKind::Paragraph))
+            .map(|e| e.text.clone())
+            .collect()
+    }
+
+    #[test]
+    fn should_keep_the_line_breaks_of_a_line_block() {
+        let rst = "| Line one\n|     indented *two*\n|\n| Line four, which\n  continues here\n\nAfter.\n";
+        assert_eq!(
+            paragraph_texts(rst),
+            ["Line one\nindented two\n\nLine four, which continues here", "After."]
+        );
+    }
+
+    #[test]
+    fn should_keep_one_colon_before_a_literal_block() {
+        let rst = "Example::\n\n    code\n\nSpaced ::\n\n    code\n";
+        assert_eq!(paragraph_texts(rst), ["Example:", "Spaced"]);
+    }
+
     fn rst_warnings(doc: &crate::types::internal::InternalDocument) -> Vec<String> {
         doc.processing_warnings
             .iter()
@@ -1822,6 +1885,41 @@ Second paragraph.
             rst_warnings(&doc).is_empty(),
             "a document without .. include:: must not warn, got {:?}",
             rst_warnings(&doc)
+        );
+    }
+
+    #[test]
+    fn should_retain_footnote_reference_relationship_in_a_line_block() {
+        let source = "| First [1]_\n| Second\n\n.. [1] A note.\n";
+        let doc = RstExtractor::build_internal_document(source, false);
+
+        assert_eq!(
+            doc.elements
+                .iter()
+                .filter(|element| matches!(element.kind, crate::types::internal::ElementKind::FootnoteRef))
+                .count(),
+            1
+        );
+        assert_eq!(
+            doc.relationships
+                .iter()
+                .filter(|relationship| relationship.kind == RelationshipKind::FootnoteReference)
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn should_retain_cross_reference_relationship_in_a_line_block() {
+        let source = "| See :ref:`target`\n| Another line\n";
+        let doc = RstExtractor::build_internal_document(source, false);
+
+        assert_eq!(
+            doc.relationships
+                .iter()
+                .filter(|relationship| relationship.kind == RelationshipKind::CrossReference)
+                .count(),
+            1
         );
     }
 }
