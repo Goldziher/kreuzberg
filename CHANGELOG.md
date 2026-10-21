@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rendering): Plain-text output writes the footnotes of LaTeX, Markdown, reST, Org, Typst, Djot, DocBook, FictionBook, EPUB and PPT documents.**
+  Their definitions were left on the body layer, so plain output kept the `[^1]` marker and dropped the note; definitions now always sit on the footnote layer, and JSON output appends them after the body as it does for DOCX and ODT.
 - **(doc): Fields spanning paragraph boundaries retain their displayed text without leaking instructions.** (#2184)
 - **(ppt): Speaker notes are referenced from their own slides in rendered Markdown.** (#2186)
 - **(ios): Native libraries link with bundled ONNX Runtime’s CoreML backend.**
