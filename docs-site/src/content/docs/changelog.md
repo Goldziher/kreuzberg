@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(doc): Legacy Word tables retain their cell and row structure.**
+  Table cells no longer run into adjacent paragraphs. Configured table-cell limits also bound padded table output,
+  and styles inside table cells no longer suppress headings in the surrounding document.
 - **(vtt): Numeric character references and `&quot;`/`&apos;` in cue text are decoded, and ruby text is left out of the line.**
   Signed references remain literal, zero-padded references decode correctly, and `<rt>` text outside ruby remains visible.
   Only the six named escapes were decoded, so `It&#39;s` and `&quot;fine&quot;` reached the text as written; references are now decoded in one pass, and other named ones stay as written. The `<rt>` reading printed over a ruby base was glued into the line (`漢kan字ji`); it is now dropped, also when `</ruby>` closes it.

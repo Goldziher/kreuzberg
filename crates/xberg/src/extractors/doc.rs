@@ -6,6 +6,7 @@ use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::core::mime::LEGACY_WORD_MIME_TYPE;
 use crate::extraction::doc::{DocParagraph, DocSubdocument, DocSubdocumentKind, DocTableMark, extract_doc_text};
+use crate::extractors::security::SecurityBudget;
 use crate::plugins::{InternalDocumentExtractor, Plugin};
 use crate::types::document_structure::ContentLayer;
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
@@ -108,7 +109,8 @@ impl InternalDocumentExtractor for DocExtractor {
         if result.paragraphs.is_empty() && result.subdocuments.is_empty() {
             push_blank_line_chunks(&mut doc, &result.content);
         } else {
-            push_paragraph_elements(&mut doc, &result.paragraphs);
+            let mut budget = SecurityBudget::from_config(config);
+            push_paragraph_elements(&mut doc, &result.paragraphs, &mut budget)?;
             push_subdocuments(&mut doc, &result.subdocuments, config.content_filter.as_ref());
         }
 
@@ -211,7 +213,11 @@ fn push_blank_line_chunks(doc: &mut InternalDocument, content: &str) {
 ///
 /// Consecutive table paragraphs become one `Table`, cell by cell and row by
 /// row, the way the DOCX path reads `w:tbl`. ~keep
-fn push_paragraph_elements(doc: &mut InternalDocument, paragraphs: &[DocParagraph]) {
+fn push_paragraph_elements(
+    doc: &mut InternalDocument,
+    paragraphs: &[DocParagraph],
+    budget: &mut SecurityBudget,
+) -> Result<()> {
     // The switch is "does this document EMIT styled headings", which is
     // narrower than either alternative that looks right.
     //
@@ -227,7 +233,7 @@ fn push_paragraph_elements(doc: &mut InternalDocument, paragraphs: &[DocParagrap
     // none, leaving the document with no heading structure at all. ~keep
     let styled_headings = paragraphs
         .iter()
-        .any(|paragraph| paragraph.heading_level.is_some() && paragraph.list.is_none());
+        .any(|paragraph| paragraph.heading_level.is_some() && paragraph.list.is_none() && paragraph.table.is_none());
     // One entry per open container, holding whether it is ordered.
     let mut open: Vec<bool> = Vec::new();
     let mut table = PendingTable::default();
@@ -236,10 +242,10 @@ fn push_paragraph_elements(doc: &mut InternalDocument, paragraphs: &[DocParagrap
         let text = paragraph.content.trim();
         if let Some(mark) = paragraph.table {
             close_lists(doc, &mut open, 0);
-            table.add(text, mark);
+            table.add(text, mark, budget)?;
             continue;
         }
-        table.flush(doc);
+        table.flush(doc, budget)?;
         if text.is_empty() {
             continue;
         }
@@ -277,8 +283,9 @@ fn push_paragraph_elements(doc: &mut InternalDocument, paragraphs: &[DocParagrap
         ));
     }
 
-    table.flush(doc);
+    table.flush(doc, budget)?;
     close_lists(doc, &mut open, 0);
+    Ok(())
 }
 
 /// Emit header, footer, footnote, comment and text-box text after the body, the
@@ -340,11 +347,13 @@ struct PendingTable {
     rows: Vec<Vec<String>>,
     row: Vec<String>,
     cell: String,
+    columns: usize,
+    reserved_cells: usize,
 }
 
 impl PendingTable {
     /// Add one table paragraph. A cell's paragraphs are joined by line breaks.
-    fn add(&mut self, text: &str, mark: DocTableMark) {
+    fn add(&mut self, text: &str, mark: DocTableMark, budget: &mut SecurityBudget) -> Result<()> {
         if !text.is_empty() {
             if !self.cell.is_empty() {
                 self.cell.push('\n');
@@ -352,28 +361,55 @@ impl PendingTable {
             self.cell.push_str(text);
         }
         if mark.cell_end {
-            self.row.push(std::mem::take(&mut self.cell));
+            self.end_cell(budget)?;
         }
         if mark.row_end {
-            self.end_row();
+            self.end_row(budget)?;
         }
+        Ok(())
     }
 
-    fn end_row(&mut self) {
+    fn end_cell(&mut self, budget: &mut SecurityBudget) -> Result<()> {
+        let grid = self
+            .row
+            .len()
+            .checked_add(1)
+            .map(|columns| columns.max(self.columns))
+            .and_then(|columns| {
+                self.rows
+                    .len()
+                    .checked_add(1)?
+                    .checked_mul(columns)
+                    .map(|cells| (columns, cells))
+            });
+        let (columns, cells) = grid.ok_or_else(|| crate::XbergError::security("DOC table cell count overflow"))?;
+        // Markdown pads every row to the widest one, including rows already read. ~keep
+        // Reserve that whole rectangle before allocating another cell. ~keep
+        budget.add_cells(cells - self.reserved_cells)?;
+        self.columns = columns;
+        self.reserved_cells = cells;
+        self.row.push(std::mem::take(&mut self.cell));
+        Ok(())
+    }
+
+    fn end_row(&mut self, budget: &mut SecurityBudget) -> Result<()> {
         if !self.cell.is_empty() {
-            self.row.push(std::mem::take(&mut self.cell));
+            self.end_cell(budget)?;
         }
         if !self.row.is_empty() {
             self.rows.push(std::mem::take(&mut self.row));
         }
+        Ok(())
     }
 
     /// Emit the table read so far, unless it holds no text, and start over.
-    fn flush(&mut self, doc: &mut InternalDocument) {
-        self.end_row();
+    fn flush(&mut self, doc: &mut InternalDocument, budget: &mut SecurityBudget) -> Result<()> {
+        self.end_row(budget)?;
         let cells = std::mem::take(&mut self.rows);
+        self.columns = 0;
+        self.reserved_cells = 0;
         if cells.iter().flatten().all(|cell| cell.trim().is_empty()) {
-            return;
+            return Ok(());
         }
         let markdown = crate::rendering::common::render_table_markdown(&cells);
         let table_index = doc.push_table(Table {
@@ -382,6 +418,7 @@ impl PendingTable {
             ..Default::default()
         });
         doc.push_element(InternalElement::text(ElementKind::Table { table_index }, "", 0));
+        Ok(())
     }
 }
 

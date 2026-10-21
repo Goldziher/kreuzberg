@@ -123,13 +123,13 @@ fn for_each_sprm(grpprl: &[u8], mut visit: impl FnMut(u16, &[u8])) {
         pos += 2;
 
         let len = match sprm {
-            // sprmTDefTable and sprmTDefTable10 hold a 2-byte length, plus one.
+            // sprmTDefTable and sprmTDefTable10 hold a 2-byte length, plus one. ~keep
             SPRM_T_DEF_TABLE | SPRM_T_DEF_TABLE_10 => match grpprl.get(pos..pos + 2) {
                 Some(cb) => usize::from(u16::from_le_bytes([cb[0], cb[1]])) + 1,
                 None => break,
             },
-            // sprmPChgTabs with a length byte of 255 is sized by its counts:
-            // tabs deleted (4 bytes each), then tabs added (3 bytes each).
+            // sprmPChgTabs with a length byte of 255 is sized by its counts: ~keep
+            // tabs deleted (4 bytes each), then tabs added (3 bytes each). ~keep
             SPRM_P_CHG_TABS if grpprl.get(pos) == Some(&255) => {
                 let Some(&deleted) = grpprl.get(pos + 1) else { break };
                 let Some(&added) = grpprl.get(pos + 2 + 4 * usize::from(deleted)) else {
@@ -139,7 +139,7 @@ fn for_each_sprm(grpprl: &[u8], mut visit: impl FnMut(u16, &[u8])) {
             }
             _ => match sprm_operand_len(sprm) {
                 Some(len) => len,
-                // spra 6: variable, first operand byte is the length.
+                // spra 6: variable, first operand byte is the length. ~keep
                 None if sprm >> 13 == 6 => match grpprl.get(pos) {
                     Some(&cb) => usize::from(cb) + 1,
                     None => break,
@@ -196,8 +196,8 @@ fn table_paragraph_from_grpprl(grpprl: &[u8]) -> Option<TableParagraph> {
         _ => {}
     });
 
-    // A row's terminating paragraph is in the table whether or not it also
-    // says so.
+    // A row's terminating paragraph is in the table whether or not it also ~keep
+    // says so. ~keep
     (in_table || row_end).then_some(TableParagraph { row_end })
 }
 
@@ -626,9 +626,9 @@ mod tests {
 
     #[test]
     fn table_membership_is_read_after_a_table_definition() {
-        // sprmTDefTable first, as long as a row of 12 cells makes it: its
-        // 2-byte length (the operand's size minus one) must be read as such
-        // for the flags after it to be found.
+        // sprmTDefTable first, as long as a row of 12 cells makes it: its ~keep
+        // 2-byte length (the operand's size minus one) must be read as such ~keep
+        // for the flags after it to be found. ~keep
         let mut grpprl = vec![0x08, 0xD6, 0x01, 0x01];
         grpprl.extend_from_slice(&[0; 256]);
         grpprl.extend_from_slice(&[0x16, 0x24, 0x01, 0x17, 0x24, 0x01]);
@@ -637,7 +637,7 @@ mod tests {
             Some(TableParagraph { row_end: true })
         );
 
-        // sprmPChgTabs in its long form: one tab deleted, two added.
+        // sprmPChgTabs in its long form: one tab deleted, two added. ~keep
         let mut grpprl = vec![0x15, 0xC6, 255, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0];
         grpprl.extend_from_slice(&[0x16, 0x24, 0x01]);
         assert_eq!(

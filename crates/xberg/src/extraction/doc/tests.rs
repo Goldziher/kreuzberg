@@ -770,7 +770,7 @@ fn should_keep_the_paragraphs_after_an_unterminated_field_begin() {
 /// Build a `.doc` whose body is `text` in one uncompressed piece, with one
 /// `PapxFkp` page giving each run of characters (`start..end`, char indices,
 /// together covering `text`) the paragraph-property grpprl beside it.
-fn build_utf16_doc_with_papx(text: &str, runs: &[(std::ops::Range<usize>, &[u8])]) -> Vec<u8> {
+pub(crate) fn build_utf16_doc_with_papx(text: &str, runs: &[(std::ops::Range<usize>, &[u8])]) -> Vec<u8> {
     const TEXT_OFFSET: usize = 900;
     let units: Vec<u16> = text.encode_utf16().collect();
     let fc = |char_index: usize| (TEXT_OFFSET + char_index * 2) as u32;
@@ -781,8 +781,8 @@ fn build_utf16_doc_with_papx(text: &str, runs: &[(std::ops::Range<usize>, &[u8])
         write_u16(&mut word_doc, TEXT_OFFSET + i * 2, *unit);
     }
 
-    // PapxFkp: crun+1 FCs, crun 13-byte BxPap entries, then the PAPXs, each
-    // a cb byte and 2*cb-1 bytes of istd (0) plus grpprl; crun in the last byte.
+    // PapxFkp: crun+1 FCs, crun 13-byte BxPap entries, then the PAPXs, each ~keep
+    // a cb byte and 2*cb-1 bytes of istd (0) plus grpprl; crun in the last byte. ~keep
     let page = &mut word_doc[page_offset..page_offset + 512];
     let crun = runs.len();
     let mut papx_at = 256usize;
@@ -803,7 +803,7 @@ fn build_utf16_doc_with_papx(text: &str, runs: &[(std::ops::Range<usize>, &[u8])
         fc_raw: TEXT_OFFSET as u32,
     }]);
     let mut table_stream = build_table_stream(&mut word_doc, &plc_pcd);
-    // PlcfBtePapx: the FCs the one page covers, then its page number.
+    // PlcfBtePapx: the FCs the one page covers, then its page number. ~keep
     let plcf_at = table_stream.len();
     table_stream.extend_from_slice(&fc(0).to_le_bytes());
     table_stream.extend_from_slice(&fc(units.len()).to_le_bytes());
