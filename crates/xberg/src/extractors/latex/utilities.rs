@@ -89,7 +89,7 @@ pub(crate) fn extract_env_name(line: &str) -> Option<String> {
 ///
 /// Handles common LaTeX escape sequences like \\&, \\#, \\\_, etc.
 pub(crate) fn clean_text(text: &str) -> String {
-    text.to_string()
+    tie_to_nbsp(text)
         .replace("\\\\", "\n")
         .replace("\\&", "&")
         .replace("\\#", "#")
@@ -99,6 +99,57 @@ pub(crate) fn clean_text(text: &str) -> String {
         .replace("\\%", "%")
         .trim()
         .to_string()
+}
+
+/// Replace each tie (`~`) with a no-break space. `\~` is an accent command, not a tie, and
+/// is left for the caller.
+fn tie_to_nbsp(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut escaped = false;
+    for ch in text.chars() {
+        if ch == '~' && !escaped {
+            out.push('\u{a0}');
+        } else {
+            out.push(ch);
+        }
+        escaped = ch == '\\' && !escaped;
+    }
+    out
+}
+
+/// Remove an unescaped `%` comment from the end of `text`. Returns true when `text`
+/// ended in a comment, which in LaTeX also swallows the line break after it.
+pub(crate) fn strip_trailing_comment(text: &mut String) -> bool {
+    let mut escaped = false;
+    let mut comment_at = None;
+    // Inside the argument of `\url` or `\href`, `%` is part of the address (`%20`).
+    let mut url_depth = 0usize;
+    for (index, ch) in text.char_indices() {
+        if url_depth > 0 {
+            match ch {
+                '{' => url_depth += 1,
+                '}' => url_depth -= 1,
+                _ => {}
+            }
+            continue;
+        }
+        if ch == '{' && (text[..index].ends_with("\\url") || text[..index].ends_with("\\href")) {
+            url_depth = 1;
+            continue;
+        }
+        if ch == '%' && !escaped {
+            comment_at = Some(index);
+            break;
+        }
+        escaped = ch == '\\' && !escaped;
+    }
+    match comment_at {
+        Some(index) => {
+            text.truncate(index);
+            true
+        }
+        None => false,
+    }
 }
 
 /// Returns true if a line inside a table-like environment (`tabular`,

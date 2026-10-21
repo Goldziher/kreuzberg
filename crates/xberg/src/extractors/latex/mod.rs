@@ -165,6 +165,10 @@ impl LatexExtractor {
             } else if bytes[pos] == b'\'' && pos + 1 < len && bytes[pos + 1] == b'\'' {
                 output.push('\u{201D}');
                 pos += 2;
+            } else if bytes[pos] == b'~' {
+                // A tie: a space the line must not break at
+                output.push('\u{a0}');
+                pos += 1;
             } else if bytes[pos] == b'`' {
                 output.push('\u{2018}');
                 pos += 1;
@@ -723,6 +727,54 @@ impl LatexExtractor {
         }
     }
 
+    /// Join `first` with the lines that continue its paragraph, advancing `i` past them.
+    ///
+    /// A paragraph ends at a blank line or at a line that starts a block: an environment
+    /// boundary, an `\item`, display math, a heading, an image, an `\input`/`\include`, or a
+    /// command this extractor skips. A comment line inside the paragraph is dropped, and a
+    /// line ending in an unescaped `%` joins the next one without a space, as LaTeX does.
+    fn join_paragraph_lines(
+        first: &str,
+        lines: &[&str],
+        i: &mut usize,
+        heading_map: &ahash::AHashMap<&'static str, u8>,
+    ) -> String {
+        let mut text = first.to_string();
+        while *i + 1 < lines.len() {
+            let next = lines[*i + 1].trim();
+            if next.starts_with('%') {
+                *i += 1;
+                continue;
+            }
+            if next.is_empty() || Self::starts_block(next, heading_map) {
+                break;
+            }
+            let glued = utilities::strip_trailing_comment(&mut text);
+            if !glued {
+                text.push(' ');
+            }
+            text.push_str(next);
+            *i += 1;
+        }
+        utilities::strip_trailing_comment(&mut text);
+        text
+    }
+
+    /// Whether `line` starts a block, so it cannot continue the paragraph above it.
+    fn starts_block(line: &str, heading_map: &ahash::AHashMap<&'static str, u8>) -> bool {
+        if line.starts_with("\\[") || line.starts_with("$$") || Self::is_skip_command(line) {
+            return true;
+        }
+        let Some(after_backslash) = line.strip_prefix('\\') else {
+            return false;
+        };
+        let cmd_end = after_backslash
+            .find(|c: char| !c.is_ascii_alphabetic() && c != '*')
+            .unwrap_or(after_backslash.len());
+        let cmd = after_backslash[..cmd_end].trim_end_matches('*');
+        matches!(cmd, "begin" | "end" | "item" | "includegraphics" | "par") || heading_map.contains_key(cmd)
+    }
+
     /// Commands that should be silently skipped (no text output).
     const SKIP_COMMANDS: &[&str] = &[
         "maketitle",
@@ -930,6 +982,15 @@ impl LatexExtractor {
             }
             return;
         }
+
+        // A paragraph runs until a blank line or a block-level line, as in LaTeX itself;
+        // source wrapped at a fixed width is one paragraph, not one per line.
+        let joined = if trimmed.starts_with("\\[") {
+            trimmed.to_string()
+        } else {
+            Self::join_paragraph_lines(trimmed, lines, i, heading_map)
+        };
+        let trimmed = joined.as_str();
 
         Self::extract_refs(trimmed, b, "\\ref{", RelationshipKind::CrossReference);
         Self::extract_refs(trimmed, b, "\\cite{", RelationshipKind::CitationReference);
@@ -1512,6 +1573,51 @@ Plain body text.
             latex_warnings(&doc).is_empty(),
             "a figure with \\includegraphics must not warn, got {:?}",
             latex_warnings(&doc)
+        );
+    }
+
+    /// Source wrapped at a fixed width is one paragraph per blank-line block, as LaTeX
+    /// typesets it. Before, every source line was its own paragraph, which split
+    /// sentences apart and left a `\footnote{...}` spanning two lines unparsed.
+    #[test]
+    fn should_join_wrapped_source_lines_into_one_paragraph() {
+        let latex = "\\begin{document}\nThis sentence is wrapped\nacross two source lines.\n\nSecond paragraph\nalso wrapped.\n\\section{Next}\nBody\n\\begin{itemize}\n\\item one\n\\end{itemize}\nAfter list\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+
+        assert_eq!(
+            texts,
+            [
+                "This sentence is wrapped across two source lines.",
+                "Second paragraph also wrapped.",
+                "Next",
+                "Body",
+                "",
+                "one",
+                "",
+                "After list"
+            ]
+        );
+    }
+
+    #[test]
+    fn should_read_a_footnote_that_spans_two_source_lines() {
+        let latex = "\\begin{document}\nStart\\footnote{split\nacross lines} end.\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+
+        assert_eq!(texts[0], "Start end.");
+        assert!(texts.contains(&"split across lines"), "got: {texts:?}");
+    }
+
+    #[test]
+    fn should_follow_latex_comments_and_ties_when_joining_lines() {
+        let latex = "\\begin{document}\nDr.~Smith keeps % a comment\ngoing on%\nand glued.\n% a full comment line\nSee \\url{https://example.com/a%20b} here.\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+
+        assert_eq!(
+            document.elements[0].text,
+            "Dr.\u{a0}Smith keeps going onand glued. See https://example.com/a%20b here."
         );
     }
 }
