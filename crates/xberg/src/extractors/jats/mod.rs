@@ -78,6 +78,10 @@ fn extract_para_with_annotations_jats(
 
                 let name = e.name();
                 let tag = crate::utils::xml_tag_name(name.as_ref());
+                // A nested block (a list in the paragraph) is set apart from the text before it
+                if parser::BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) {
+                    push_collapsed(&mut text, " ");
+                }
 
                 match tag.as_ref() {
                     // An article writes its equation inside the sentence that
@@ -120,10 +124,17 @@ fn extract_para_with_annotations_jats(
                     _ => {}
                 }
             }
-            Ok(Event::End(_)) => {
+            // An explicit line break (`<bold>first<break/>second</bold>`) separates the words
+            Ok(Event::Empty(e)) if parser::BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) => {
+                push_collapsed(&mut text, " ");
+            }
+            Ok(Event::End(e)) => {
                 budget.leave();
                 if depth == 0 {
                     break;
+                }
+                if parser::BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) {
+                    push_collapsed(&mut text, " ");
                 }
 
                 if let Some(&(kind, open_depth, start, ref href)) = inline_stack.last()
@@ -779,6 +790,19 @@ mod tests {
                 .any(|(_, t)| t == "We studied H2O uptake1 in vitro and in vivo."),
             "got: {texts:?}"
         );
+    }
+
+    #[test]
+    fn should_keep_block_and_line_break_boundaries_as_separators() {
+        let jats = r#"<article><body><p><bold>first<break/>second</bold> and a list<list><list-item><p>item</p></list-item></list>after</p>
+<table-wrap><table><tr><td>first<p>second</p></td><td>x</td></tr></table></table-wrap></body></article>"#;
+        let mut budget = SecurityBudget::with_defaults();
+        let doc = build_jats_internal_document(jats, &mut budget).expect("parse");
+        let texts: Vec<&str> = doc.elements.iter().map(|e| e.text.as_str()).collect();
+        let markdown = crate::rendering::render_markdown(&doc);
+
+        assert!(texts.contains(&"first second and a list item after"), "got: {texts:?}");
+        assert!(markdown.contains("| first second | x |"), "got: {markdown}");
     }
 
     #[test]

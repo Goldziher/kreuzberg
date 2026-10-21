@@ -23,7 +23,7 @@ pub(super) fn extract_formula_latex(reader: &mut EntityReader<'_>, budget: &mut 
 /// JATS elements that are blocks of their own inside the element whose text is read; a
 /// space sets their text apart. Any other element (`italic`, `sub`, `sup`, `xref`, ...) is
 /// inline, and its text joins the text around it as written.
-const BLOCK_ELEMENTS: &[&str] = &[
+pub(super) const BLOCK_ELEMENTS: &[&str] = &[
     "p",
     "title",
     "label",
@@ -49,9 +49,13 @@ pub(super) fn extract_text_content(reader: &mut EntityReader<'_>, budget: &mut S
     loop {
         budget.step()?;
         match reader.read_event() {
-            Ok(Event::Start(_)) => {
+            Ok(Event::Start(e)) => {
                 budget.enter()?;
                 depth += 1;
+                // A block sets its text apart on both sides: `<td>first<p>second</p></td>`
+                if BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) {
+                    text.push(' ');
+                }
             }
             Ok(Event::End(e)) => {
                 budget.leave();
