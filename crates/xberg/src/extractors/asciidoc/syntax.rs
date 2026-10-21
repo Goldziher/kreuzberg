@@ -251,6 +251,22 @@ pub(super) fn can_close_macro(
     last_close.is_some_and(|close| close > offset)
 }
 
+pub(super) fn parse_inline_macro(
+    rest: &str,
+    at_boundary: bool,
+    offset: usize,
+    last_delimiters: (Option<usize>, Option<usize>, Option<usize>),
+) -> Option<(usize, String)> {
+    // The `pass:` and `xref:` macros open a word, so `bypass:[x]` stays literal. ~keep
+    let macro_allowed = at_boundary || !(rest.starts_with("pass:") || rest.starts_with("xref:"));
+    if !macro_allowed || !can_close_macro(rest, offset, last_delimiters) {
+        return None;
+    }
+    parse_passthrough(rest)
+        .map(|passthrough| (passthrough.consumed, passthrough.text))
+        .or_else(|| parse_cross_reference(rest))
+}
+
 /// Parse a cross reference at `rest`'s start, `<<id>>`, `<<id,text>>` or `xref:id[text]`,
 /// into the bytes consumed and the text it shows: its own text, or the target id without one.
 pub(super) fn parse_cross_reference(rest: &str) -> Option<(usize, String)> {

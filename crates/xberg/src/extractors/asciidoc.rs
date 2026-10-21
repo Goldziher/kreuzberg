@@ -40,7 +40,7 @@ use std::borrow::Cow;
 mod syntax;
 use syntax::{
     MathNotation, can_close_macro, count_columns, is_delimiter, list_marker, macro_delimiters, parse_attribute_entry,
-    parse_block_attributes, parse_block_title, parse_constrained_span, parse_cross_reference, parse_link_macro,
+    parse_block_attributes, parse_block_title, parse_constrained_span, parse_inline_macro, parse_link_macro,
     parse_math_macro, parse_passthrough, section_level, single_attribute, split_inline_admonition, split_table_row,
 };
 
@@ -750,14 +750,8 @@ impl<'a> AsciiDocParser<'a> {
                 at_boundary = false;
                 continue;
             }
-            // The `pass:` and `xref:` macros open a word, so `bypass:[x]` stays literal ~keep
-            let macro_allowed = at_boundary || !(rest.starts_with("pass:") || rest.starts_with("xref:"));
-            if macro_allowed
-                && can_close_macro(rest, substituted.len() - rest.len(), last_delimiters)
-                && let Some((consumed, text)) = parse_passthrough(rest)
-                    .map(|passthrough| (passthrough.consumed, passthrough.text))
-                    .or_else(|| parse_cross_reference(rest))
-            {
+            let offset = substituted.len() - rest.len();
+            if let Some((consumed, text)) = parse_inline_macro(rest, at_boundary, offset, last_delimiters) {
                 out.push_str(&text);
                 rest = &rest[consumed..];
                 at_boundary = false;
