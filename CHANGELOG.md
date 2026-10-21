@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
+  `| Line one` / `| Line two` ran together as `| Line one | Line two`, and `Example::` read `Example`; a line block is now one line per `|` line, and `Text::` reads `Text:` while `Text ::` reads `Text`, as in docutils.
 - **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
   A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**
