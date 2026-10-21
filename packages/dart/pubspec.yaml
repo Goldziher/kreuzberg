@@ -20,7 +20,6 @@ dev_dependencies:
   test: "^1.33.0"
   lints: "^6.1.0"
   # Freezed is build-only, so its SDK floor does not constrain package consumers. ~keep
-  freezed: "^4.0.2"
-  # json_serializable 6.14 requires build 4; build_runner 2.17 requires build 5. ~keep
-  build_runner: "^2.16.2"
-  json_serializable: "^6.14.1"
+  freezed: "^4.0.3"
+  build_runner: "^2.17.1"
+  json_serializable: "^6.15.2"
