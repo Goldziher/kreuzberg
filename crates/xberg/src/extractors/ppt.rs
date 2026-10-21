@@ -318,6 +318,16 @@ fn push_deck_slide(builder: &mut InternalDocumentBuilder, slide: &PptSlideText, 
 
     push_slide_body(builder, trimmed, &title, header_lines);
 
+    // A slide's speaker notes are a footnote of that slide. Its reference ends the
+    // slide's text, so Markdown ties each note to its slide; without one, every note
+    // was an unreferenced definition listed after the last slide, which GFM renderers
+    // do not show at all. ~keep
+    let notes = slide.notes.as_deref().filter(|notes| !notes.is_empty());
+    let notes_key = format!("slide-{}-notes", slide.number);
+    if notes.is_some() {
+        builder.push_footnote_ref(&slide.number.to_string(), &notes_key, None);
+    }
+
     // Each table follows the slide's other text and carries the slide's page, as a PPTX
     // table does. ~keep
     for table in &slide.tables {
@@ -331,11 +341,8 @@ fn push_deck_slide(builder: &mut InternalDocumentBuilder, slide: &PptSlideText, 
         builder.push_image(None, image.clone(), image.page_number, None);
     }
 
-    if let Some(notes) = slide.notes.as_deref()
-        && !notes.is_empty()
-    {
-        let key = format!("slide-{}-notes", slide.number);
-        builder.push_footnote_definition(notes, &key, None);
+    if let Some(notes) = notes {
+        builder.push_footnote_definition(notes, &notes_key, None);
     }
 }
 
@@ -609,6 +616,32 @@ mod tests {
         if let Some(notes) = result.metadata.additional.get("speaker_notes") {
             assert!(notes.is_array(), "PPT speaker_notes in metadata should be a JSON array");
         }
+    }
+
+    /// Each slide's speaker notes are referenced from the end of that slide's text, so
+    /// they stay tied to their slide in Markdown instead of trailing the deck unreferenced.
+    #[test]
+    fn should_reference_each_slides_notes_from_that_slide() {
+        let slide = |number: u32, text: &str, notes: Option<&str>| PptSlideText {
+            number,
+            text: text.to_string(),
+            title: Some(format!("Slide {number}")),
+            notes: notes.map(str::to_string),
+            tables: Vec::new(),
+        };
+        let slides = vec![
+            slide(1, "Slide 1\nFirst body", Some("Notes for one")),
+            slide(2, "Slide 2\nSecond body", None),
+            slide(3, "Slide 3\nThird body", Some("Notes for three")),
+        ];
+        let doc = PptExtractor::build_internal_document(&slides, &[]);
+
+        let markdown = crate::rendering::render_markdown(&doc);
+        assert!(markdown.contains("First body[^1]"), "{markdown}");
+        assert!(markdown.contains("Third body[^2]"), "{markdown}");
+        assert!(!markdown.contains("Second body[^"), "{markdown}");
+        assert!(markdown.contains("[^1]:\n    Notes for one"), "{markdown}");
+        assert!(markdown.contains("[^2]:\n    Notes for three"), "{markdown}");
     }
 
     /// Slide-element `text` (the title, for `ElementKind::Slide`) for slide `number`, or
