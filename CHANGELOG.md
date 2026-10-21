@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
+  IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
 - **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
   A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**

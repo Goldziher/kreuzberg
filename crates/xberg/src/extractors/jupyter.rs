@@ -494,6 +494,51 @@ impl JupyterExtractor {
         }
     }
 
+    /// Text a kernel wrote for a terminal, as a notebook frontend shows it: ANSI escape sequences
+    /// (the colours of an IPython traceback) are dropped, and a carriage return moves back to the
+    /// start of the line, so the text after it overwrites the text before it, as progress bars expect.
+    fn terminal_text(text: &str) -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut line: Vec<char> = Vec::new();
+        let mut column = 0;
+        let mut chars = text.chars().peekable();
+        while let Some(ch) = chars.next() {
+            match ch {
+                // An escape sequence is ESC and a byte in `@`..=`_`, two of which start a longer one
+                '\u{1b}' => match chars.next_if(|c| ('@'..='_').contains(c)) {
+                    // CSI: parameter and intermediate bytes up to a final byte in `@`..=`~`
+                    Some('[') => while chars.next().is_some_and(|c| !('@'..='~').contains(&c)) {},
+                    // OSC: up to BEL or ST (`ESC \`)
+                    Some(']') => {
+                        while let Some(c) = chars.next() {
+                            if c == '\u{7}' || (c == '\u{1b}' && chars.next_if_eq(&'\\').is_some()) {
+                                break;
+                            }
+                        }
+                    }
+                    _ => {}
+                },
+                '\r' if chars.peek() == Some(&'\n') => {}
+                '\r' => column = 0,
+                '\n' => {
+                    out.extend(line.drain(..));
+                    out.push('\n');
+                    column = 0;
+                }
+                _ => {
+                    if column < line.len() {
+                        line[column] = ch;
+                    } else {
+                        line.push(ch);
+                    }
+                    column += 1;
+                }
+            }
+        }
+        out.extend(line);
+        out
+    }
+
     /// Extract output from a cell.
     fn extract_output(
         output: &Value,
@@ -520,7 +565,7 @@ impl JupyterExtractor {
     /// Extract stream output (stdout, stderr).
     fn extract_stream_output(output: &Value, content: &mut String) -> Result<()> {
         if let Some(text) = output.get("text") {
-            let text_content = Self::extract_source(text);
+            let text_content = Self::terminal_text(&Self::extract_source(text));
             content.push_str(&text_content);
         }
 
@@ -728,7 +773,7 @@ impl JupyterExtractor {
         output: &Value,
         budget: &mut SecurityBudget,
     ) -> Result<()> {
-        let text = Self::extract_source(output.get("text").unwrap_or(&Value::Null));
+        let text = Self::terminal_text(&Self::extract_source(output.get("text").unwrap_or(&Value::Null)));
         let trimmed = text.trim();
         if !trimmed.is_empty() {
             budget.account_text(trimmed.len())?;
@@ -839,7 +884,7 @@ impl JupyterExtractor {
     fn collect_error_text(output: &Value, budget: &mut SecurityBudget) -> Result<String> {
         let ename = output.get("ename").and_then(|e| e.as_str()).unwrap_or("Unknown");
         let evalue = output.get("evalue").and_then(|e| e.as_str()).unwrap_or("");
-        let mut text = format!("Error ({}): {}", ename, evalue);
+        let mut text = format!("Error ({}): {}", ename, Self::terminal_text(evalue));
 
         if let Some(traceback) = output.get("traceback").and_then(|t| t.as_array()) {
             text.push('\n');
@@ -848,7 +893,7 @@ impl JupyterExtractor {
                 budget.step()?;
                 if let Some(line_str) = line.as_str() {
                     text.push('\n');
-                    text.push_str(line_str);
+                    text.push_str(&Self::terminal_text(line_str));
                 }
             }
         }
@@ -1309,14 +1354,14 @@ impl JupyterExtractor {
         let ename = output.get("ename").and_then(|e| e.as_str()).unwrap_or("Unknown");
         let evalue = output.get("evalue").and_then(|e| e.as_str()).unwrap_or("");
 
-        content.push_str(&format!("Error ({}): {}\n", ename, evalue));
+        content.push_str(&format!("Error ({}): {}\n", ename, Self::terminal_text(evalue)));
 
         if let Some(traceback) = output.get("traceback").and_then(|t| t.as_array()) {
             content.push_str("Traceback:\n");
             for line in traceback {
                 budget.step()?;
                 if let Some(line_str) = line.as_str() {
-                    content.push_str(line_str);
+                    content.push_str(&Self::terminal_text(line_str));
                     content.push('\n');
                 }
             }
@@ -1635,6 +1680,66 @@ mod tests {
         }"#,
         )
         .unwrap()
+    }
+
+    #[test]
+    fn terminal_text_drops_escape_sequences_and_applies_carriage_returns() {
+        // IPython traceback colours, a 256-colour run and an OSC 8 hyperlink
+        assert_eq!(
+            JupyterExtractor::terminal_text("\u{1b}[0;31mZeroDivisionError\u{1b}[0m: \u{1b}[38;5;241m1\u{1b}[39m"),
+            "ZeroDivisionError: 1"
+        );
+        assert_eq!(
+            JupyterExtractor::terminal_text("\u{1b}]8;;https://example.com\u{1b}\\docs\u{1b}]8;;\u{7} here"),
+            "docs here"
+        );
+        // A progress bar redrawn with `\r` keeps its last state; a shorter redraw keeps the rest
+        assert_eq!(
+            JupyterExtractor::terminal_text(" 33%|###  | 1/3\r100%|#####| 3/3\ndone\r\n"),
+            "100%|#####| 3/3\ndone\n"
+        );
+        assert_eq!(JupyterExtractor::terminal_text("abcdef\rXY"), "XYcdef");
+        // A lone ESC before ordinary text, and an unterminated sequence, drop nothing else
+        assert_eq!(JupyterExtractor::terminal_text("a\u{1b}\nb\u{1b}[1"), "a\nb");
+    }
+
+    #[test]
+    fn should_render_stream_and_error_outputs_as_a_notebook_shows_them() {
+        let notebook_json = r#"{
+            "cells": [
+                {
+                    "cell_type": "code",
+                    "source": ["run()"],
+                    "execution_count": 1,
+                    "outputs": [
+                        {"output_type": "stream", "name": "stderr", "text": [" 50%|##   | 1/2\r100%|#####| 2/2\n"]},
+                        {
+                            "output_type": "error",
+                            "ename": "ValueError",
+                            "evalue": "bad \u001b[1mvalue\u001b[0m",
+                            "traceback": ["\u001b[0;31mValueError\u001b[0m: bad value"]
+                        }
+                    ],
+                    "metadata": {}
+                }
+            ],
+            "metadata": {},
+            "nbformat": 4,
+            "nbformat_minor": 5
+        }"#;
+        let notebook: Value = serde_json::from_str(notebook_json).unwrap();
+
+        let (content, _, _, _, _, _) = JupyterExtractor::extract_notebook(notebook_json.as_bytes(), false).unwrap();
+        let doc = JupyterExtractor::build_internal_document(&notebook, JupyterCellRendering::Both, false).unwrap();
+        let texts: Vec<&str> = doc.elements.iter().map(|e| e.text.as_str()).collect();
+
+        for text in [content.as_str(), &texts.join("\n")] {
+            assert!(!text.contains('\u{1b}') && !text.contains("[0;31m"), "got: {text:?}");
+            assert!(!text.contains("50%"), "got: {text:?}");
+            assert!(text.contains("100%|#####| 2/2"), "got: {text:?}");
+            assert!(text.contains("Error (ValueError): bad value"), "got: {text:?}");
+            assert!(text.contains("ValueError: bad value"), "got: {text:?}");
+        }
     }
 
     #[test]
