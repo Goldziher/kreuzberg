@@ -1304,21 +1304,23 @@ pub(crate) fn build_comrak_ast<'a>(doc: &InternalDocument, arena: &'a comrak::Ar
                 // (pulldown-cmark reports an HTML block line by line), and a blank line ends the
                 // run, so the next block starts a line of its own instead of being glued onto
                 // the raw text (`</div># Heading`). ~keep
-                let text = elem_text.trim_end_matches('\n');
+                const SEPARATOR: &str = "\n\n";
                 let merged = parent.last_child().is_some_and(|last| {
                     if let NodeValue::Raw(previous) = &mut last.data.borrow_mut().value {
-                        // Appended in place: rebuilding the run per line would copy it each time. ~keep
-                        previous.truncate(previous.trim_end_matches('\n').len());
-                        previous.push('\n');
-                        previous.push_str(text);
-                        previous.push_str("\n\n");
+                        // Remove only our separator; trailing newlines in the source are content. ~keep
+                        previous.truncate(previous.len() - SEPARATOR.len());
+                        if !previous.ends_with('\n') {
+                            previous.push('\n');
+                        }
+                        previous.push_str(elem_text);
+                        previous.push_str(SEPARATOR);
                         true
                     } else {
                         false
                     }
                 });
                 if !merged {
-                    parent.append(mk(arena, NodeValue::Raw(format!("{text}\n\n"))));
+                    parent.append(mk(arena, NodeValue::Raw(format!("{elem_text}{SEPARATOR}"))));
                 }
             }
 
@@ -3134,5 +3136,59 @@ mod tests {
             crate::rendering::render_markdown(&builder.build()),
             "- Alpha\n- Beta\n\nThen\n\n1. One\n   - Nested\n2. Two\n"
         );
+    }
+    #[test]
+    fn should_preserve_literal_blank_lines_between_raw_fragments() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_raw_block("html", "<pre>first\n\n", None);
+        builder.push_raw_block("html", "second</pre>", None);
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert!(markdown.contains("<pre>first\n\nsecond</pre>"), "got: {markdown:?}");
+    }
+
+    #[test]
+    fn should_preserve_raw_unicode_and_source_newlines_before_the_next_block() {
+        for first_newlines in 0..=3 {
+            for last_newlines in 0..=3 {
+                let first = format!("<pre>α{}", "\n".repeat(first_newlines));
+                let last = format!("β</pre>{}", "\n".repeat(last_newlines));
+                let mut builder = InternalDocumentBuilder::new("test");
+                builder.push_raw_block("html", &first, None);
+                builder.push_raw_block("html", &last, None);
+                builder.push_heading(1, "After", None, None);
+                let doc = builder.build();
+                let arena = comrak::Arena::new();
+                let root = build_comrak_ast(&doc, &arena);
+                let raw = root.first_child().expect("raw block");
+                let separator = if first_newlines == 0 { "\n" } else { "" };
+                assert!(
+                    matches!(
+                        &raw.data.borrow().value,
+                        NodeValue::Raw(text) if text == &format!("{first}{separator}{last}\n\n")
+                    ),
+                    "source newlines: first={first_newlines}, last={last_newlines}"
+                );
+                let markdown = crate::rendering::render_markdown(&doc);
+                let normalized_newlines = "\n".repeat(first_newlines.clamp(1, 2));
+                assert_eq!(markdown, format!("<pre>α{normalized_newlines}β</pre>\n\n# After\n"));
+            }
+        }
+    }
+
+    #[test]
+    fn should_keep_separate_raw_runs_after_inline_dollar_escapes() {
+        let mut builder = InternalDocumentBuilder::new("test");
+        builder.push_paragraph("price $5 and $10", vec![crate::builder::code(0, 8)], None, None);
+        builder.push_raw_block("html", "<pre>α\n\n", None);
+        builder.push_raw_block("html", "β</pre>", None);
+        builder.push_list(false);
+        builder.push_list_item("item", false, vec![], None, None);
+        builder.end_list();
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert!(
+            markdown.contains("\\$10"),
+            "inline dollar escape did not run: {markdown:?}"
+        );
+        assert!(markdown.contains("<pre>α\n\nβ</pre>\n\n- item\n"), "got: {markdown:?}");
     }
 }

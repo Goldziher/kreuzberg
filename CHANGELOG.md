@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **(rendering): Markdown output ends raw HTML and JSX blocks before the next block.**
-  A raw block was written with no line break, so an HTML block's lines ran together and the block after it was glued on (`</div># Heading`, `<Badge />- item`), which turned the heading or list into raw text; consecutive raw blocks now form one run, one line each, followed by a blank line.
+  A raw block was written with no line break, so an HTML block's lines ran together and the block after it was glued on (`</div># Heading`, `<Badge />- item`), which turned the heading or list into raw text; consecutive raw blocks now form one run, one line each, followed by a blank line. Source blank lines between raw fragments remain intact.
 - **(djot): The paragraphs of a list item are separated by a space.**
   A list item's second paragraph was appended to its first with nothing in between, so `two` followed by `continued paragraph` read `twocontinued paragraph`; the paragraphs are now joined with a space, as in the Markdown extractor.
 - **(docbook): An admonition's body is the admonition's text.**
