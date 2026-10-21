@@ -216,3 +216,32 @@ async fn valid_utf8_asciidoc_source_produces_zero_decode_warnings() {
         decode_warnings(&result)
     );
 }
+
+#[test]
+fn should_read_cross_references_as_their_text() {
+    assert_eq!(
+        paragraphs(
+            "See <<install,the install guide>>, <<setup>> and xref:faq[the FAQ].\n\nShift: a << b >> c, x <<y and bypass:[z]."
+        ),
+        [
+            "See the install guide, setup and the FAQ.",
+            "Shift: a << b >> c, x <<y and bypass:[z]."
+        ]
+    );
+}
+
+#[test]
+fn should_keep_passthrough_text_and_escaped_markup_literal() {
+    assert_eq!(
+        paragraphs(":name: value\n\nRaw pass:[<b>x</b>] and +++<i>y</i>+++, \\*not bold* and \\{name} but {name}."),
+        ["Raw <b>x</b> and <i>y</i>, *not bold* and {name} but value."]
+    );
+}
+
+#[test]
+fn should_end_a_line_with_a_hard_break_at_a_trailing_plus() {
+    assert_eq!(
+        paragraphs("First line +\nsecond line\nstill second +\nthird\n\nC++ stays."),
+        ["First line\nsecond line still second\nthird", "C++ stays."]
+    );
+}

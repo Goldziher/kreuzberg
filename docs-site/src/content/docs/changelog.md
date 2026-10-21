@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(asciidoc): Cross references, passthroughs, escapes and hard line breaks read as Asciidoctor renders them.**
+  `<<install,the guide>>`, `xref:faq[the FAQ]` and `pass:[...]` stayed as raw macros, `\*not bold*` kept its backslash, `\{name}` was still substituted, and a line ending in ` +` kept the `+`; each now reads as its text, and ` +` ends the line.
 - **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
   A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**

@@ -226,6 +226,43 @@ pub(super) fn parse_link_macro(rest: &str) -> Option<(usize, String, String)> {
     Some((url.len(), url.clone(), url))
 }
 
+/// Parse a cross reference at `rest`'s start, `<<id>>`, `<<id,text>>` or `xref:id[text]`,
+/// into the bytes consumed and the text it shows: its own text, or the target id without one.
+pub(super) fn parse_cross_reference(rest: &str) -> Option<(usize, String)> {
+    let (target, text, consumed) = if let Some(inner) = rest.strip_prefix("<<") {
+        let close = inner.find(">>")?;
+        let (target, text) = inner[..close].split_once(',').unwrap_or((&inner[..close], ""));
+        (target, text, close + 4)
+    } else {
+        let inner = rest.strip_prefix("xref:")?;
+        let open = inner.find('[')?;
+        let close = inner[open..].find(']')? + open;
+        (&inner[..open], &inner[open + 1..close], "xref:".len() + close + 1)
+    };
+    if target.is_empty() || target.contains(char::is_whitespace) {
+        return None;
+    }
+    let text = text.trim();
+    Some((consumed, if text.is_empty() { target } else { text }.to_string()))
+}
+
+/// Parse an inline passthrough at `rest`'s start, `pass:[text]` or `+++text+++`, whose text
+/// is kept as written.
+pub(super) fn parse_passthrough(rest: &str) -> Option<(usize, String)> {
+    if let Some(inner) = rest.strip_prefix("+++") {
+        let close = inner.find("+++")?;
+        return Some((close + 6, inner[..close].to_string()));
+    }
+    let inner = rest.strip_prefix("pass:")?;
+    let open = inner.find('[')?;
+    // Only substitution names such as `q` or `q,a` may sit between `pass:` and `[`
+    if !inner[..open].chars().all(|c| c.is_ascii_alphabetic() || c == ',') {
+        return None;
+    }
+    let close = inner[open..].find(']')? + open;
+    Some(("pass:".len() + close + 1, inner[open + 1..close].to_string()))
+}
+
 /// Parse a constrained `*strong*`, `_emphasis_` or `` `mono` `` span at `rest`'s start.
 pub(super) fn parse_constrained_span(rest: &str) -> Option<(usize, String, AnnotationKind)> {
     let marker = rest.chars().next()?;
