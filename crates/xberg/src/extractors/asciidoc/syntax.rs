@@ -226,18 +226,40 @@ pub(super) fn parse_link_macro(rest: &str) -> Option<(usize, String, String)> {
     Some((url.len(), url.clone(), url))
 }
 
+/// Byte offset of the first `close` in `text`, scanning no further than the next `opener`. An
+/// opener without a close of its own then costs only the stretch up to the next opener, so a run
+/// of unterminated openers in untrusted input is read in linear time.
+fn find_close(text: &str, close: &str, opener: &str) -> Option<usize> {
+    for (index, _) in text.char_indices() {
+        let rest = &text[index..];
+        if rest.starts_with(close) {
+            return Some(index);
+        }
+        if rest.starts_with(opener) {
+            return None;
+        }
+    }
+    None
+}
+
 /// Parse a cross reference at `rest`'s start, `<<id>>`, `<<id,text>>` or `xref:id[text]`,
 /// into the bytes consumed and the text it shows: its own text, or the target id without one.
 pub(super) fn parse_cross_reference(rest: &str) -> Option<(usize, String)> {
     let (target, text, consumed) = if let Some(inner) = rest.strip_prefix("<<") {
-        let close = inner.find(">>")?;
+        let close = find_close(inner, ">>", "<<")?;
         let (target, text) = inner[..close].split_once(',').unwrap_or((&inner[..close], ""));
         (target, text, close + 4)
     } else {
         let inner = rest.strip_prefix("xref:")?;
-        let open = inner.find('[')?;
-        let close = inner[open..].find(']')? + open;
-        (&inner[..open], &inner[open + 1..close], "xref:".len() + close + 1)
+        // The id runs up to `[` and holds no whitespace
+        let open = inner.find(|c: char| c == '[' || c.is_whitespace())?;
+        let after_open = inner[open..].strip_prefix('[')?;
+        let close = find_close(after_open, "]", "xref:")?;
+        (
+            &inner[..open],
+            &after_open[..close],
+            "xref:".len() + open + 1 + close + 1,
+        )
     };
     if target.is_empty() || target.contains(char::is_whitespace) {
         return None;
@@ -246,21 +268,38 @@ pub(super) fn parse_cross_reference(rest: &str) -> Option<(usize, String)> {
     Some((consumed, if text.is_empty() { target } else { text }.to_string()))
 }
 
+/// An inline passthrough at the start of some text: `pass:[text]` or `+++text+++`.
+pub(super) struct Passthrough {
+    /// Bytes the macro takes up, delimiters included
+    pub(super) consumed: usize,
+    /// The text, as written
+    pub(super) text: String,
+    /// Whether the macro asks for attribute references to be replaced (`pass:a[...]`)
+    pub(super) substitutes_attributes: bool,
+}
+
 /// Parse an inline passthrough at `rest`'s start, `pass:[text]` or `+++text+++`, whose text
 /// is kept as written.
-pub(super) fn parse_passthrough(rest: &str) -> Option<(usize, String)> {
+pub(super) fn parse_passthrough(rest: &str) -> Option<Passthrough> {
     if let Some(inner) = rest.strip_prefix("+++") {
         let close = inner.find("+++")?;
-        return Some((close + 6, inner[..close].to_string()));
+        return Some(Passthrough {
+            consumed: close + 6,
+            text: inner[..close].to_string(),
+            substitutes_attributes: false,
+        });
     }
     let inner = rest.strip_prefix("pass:")?;
-    let open = inner.find('[')?;
     // Only substitution names such as `q` or `q,a` may sit between `pass:` and `[`
-    if !inner[..open].chars().all(|c| c.is_ascii_alphabetic() || c == ',') {
-        return None;
-    }
-    let close = inner[open..].find(']')? + open;
-    Some(("pass:".len() + close + 1, inner[open + 1..close].to_string()))
+    let open = inner.find(|c: char| !(c.is_ascii_alphabetic() || c == ','))?;
+    let after_open = inner[open..].strip_prefix('[')?;
+    let close = find_close(after_open, "]", "pass:")?;
+    let subs = &inner[..open];
+    Some(Passthrough {
+        consumed: "pass:".len() + open + 1 + close + 1,
+        text: after_open[..close].to_string(),
+        substitutes_attributes: subs.split(',').any(|sub| sub == "a" || sub == "attributes"),
+    })
 }
 
 /// Parse a constrained `*strong*`, `_emphasis_` or `` `mono` `` span at `rest`'s start.

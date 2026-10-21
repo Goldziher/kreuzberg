@@ -665,38 +665,51 @@ impl<'a> AsciiDocParser<'a> {
         }
         let mut out = String::with_capacity(text.len());
         let mut rest = text;
-        while let Some(open) = rest.find('{') {
-            out.push_str(&rest[..open]);
-            let after = &rest[open + 1..];
-            match after.find('}') {
-                Some(close) => {
-                    let name = &after[..close];
-                    // `\{name}` is an escaped reference and reads literally
-                    if out.ends_with('\\') {
-                        out.pop();
-                        out.push('{');
-                        out.push_str(name);
-                        out.push('}');
-                        rest = &after[close + 1..];
-                        continue;
-                    }
-                    match self.attributes.get(name) {
-                        Some(value) => out.push_str(value),
-                        None => {
-                            out.push('{');
-                            out.push_str(name);
-                            out.push('}');
-                        }
-                    }
-                    rest = &after[close + 1..];
+        // A passthrough macro opens a word, as in `parse_inline`
+        let mut at_boundary = true;
+        while let Some(ch) = rest.chars().next() {
+            // A passthrough keeps `{name}` unless it asks for attributes (`pass:a[...]`)
+            if (rest.starts_with("+++") || (at_boundary && rest.starts_with("pass:")))
+                && let Some(passthrough) = parse_passthrough(rest)
+            {
+                let source = &rest[..passthrough.consumed];
+                if passthrough.substitutes_attributes {
+                    // `pass:a[` and `]` around the substituted text
+                    out.push_str(&source[..source.len() - passthrough.text.len() - 1]);
+                    out.push_str(&self.substitute_attributes(&passthrough.text));
+                    out.push(']');
+                } else {
+                    out.push_str(source);
                 }
-                None => {
-                    out.push('{');
-                    rest = after;
+                rest = &rest[passthrough.consumed..];
+                at_boundary = false;
+                continue;
+            }
+            // `\{name}` is an escaped reference; `parse_inline` drops the backslash
+            if let Some(after) = rest.strip_prefix("\\{") {
+                out.push_str("\\{");
+                rest = after;
+                at_boundary = false;
+                continue;
+            }
+            if ch == '{' {
+                let after = &rest[1..];
+                let name_end = after
+                    .find(|c: char| !(c.is_alphanumeric() || c == '_' || c == '-'))
+                    .unwrap_or(after.len());
+                if after[name_end..].starts_with('}')
+                    && let Some(value) = self.attributes.get(&after[..name_end])
+                {
+                    out.push_str(value);
+                    rest = &after[name_end + 1..];
+                    at_boundary = false;
+                    continue;
                 }
             }
+            out.push(ch);
+            at_boundary = ch.is_whitespace() || ch == '(' || ch == '[';
+            rest = &rest[ch.len_utf8()..];
         }
-        out.push_str(rest);
         out
     }
 
@@ -727,7 +740,7 @@ impl<'a> AsciiDocParser<'a> {
             // A backslash before markup keeps the markup character literal: `\*not bold*`
             if let Some(after) = rest.strip_prefix('\\')
                 && let Some(escaped) = after.chars().next()
-                && "*_`#^~+<[".contains(escaped)
+                && "*_`#^~+<[{".contains(escaped)
             {
                 out.push(escaped);
                 rest = &after[escaped.len_utf8()..];
@@ -737,7 +750,9 @@ impl<'a> AsciiDocParser<'a> {
             // The `pass:` and `xref:` macros open a word, so `bypass:[x]` stays literal
             let macro_allowed = at_boundary || !(rest.starts_with("pass:") || rest.starts_with("xref:"));
             if macro_allowed
-                && let Some((consumed, text)) = parse_passthrough(rest).or_else(|| parse_cross_reference(rest))
+                && let Some((consumed, text)) = parse_passthrough(rest)
+                    .map(|passthrough| (passthrough.consumed, passthrough.text))
+                    .or_else(|| parse_cross_reference(rest))
             {
                 out.push_str(&text);
                 rest = &rest[consumed..];

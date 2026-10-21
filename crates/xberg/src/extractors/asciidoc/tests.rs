@@ -245,3 +245,33 @@ fn should_end_a_line_with_a_hard_break_at_a_trailing_plus() {
         ["First line\nsecond line still second\nthird", "C++ stays."]
     );
 }
+
+#[test]
+fn should_keep_attribute_references_in_a_passthrough_unless_it_asks_for_them() {
+    assert_eq!(
+        paragraphs(":name: value\n\npass:[{name}] and +++{name}+++ but {name} and pass:a[{name}]."),
+        ["{name} and {name} but value and value."]
+    );
+}
+
+#[test]
+fn should_drop_the_backslash_of_an_escaped_reference_without_any_attributes() {
+    assert_eq!(paragraphs("Literal \\{name}."), ["Literal {name}."]);
+}
+
+#[test]
+fn should_leave_unterminated_references_as_written() {
+    assert_eq!(
+        paragraphs("<<a <<b,the text>> <<c and xref:x[y xref:z[w] and pass:[p pass:[q]."),
+        ["<<a the text <<c and xref:x[y w and pass:[p q."]
+    );
+}
+
+#[test]
+fn should_read_many_unterminated_openers_in_linear_time() {
+    // Each opener scans only up to the next one; a scan to the end per opener would take
+    // billions of comparisons here
+    let source = "<<a xref:b[ pass:[ ".repeat(20_000);
+    let text = paragraphs(&source).concat();
+    assert_eq!(text, source.trim_end());
+}
