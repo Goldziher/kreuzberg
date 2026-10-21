@@ -646,15 +646,18 @@ impl TypstExtractor {
     }
 
     /// The source without its comments: a `//` comment up to the end of its line and a
-    /// (nestable) `/* */` comment. Raw text, an escaped character, a string inside a call's
-    /// parentheses and the `//` after a URL scheme's `:` are not comments.
+    /// (nestable) `/* */` comment. Raw text, an escaped character, a string in code (the
+    /// arguments of `#name(...)`) and a bare `http(s)://` URL are not comments; quotes in
+    /// markup, parenthesized or not, are smart quotes and protect nothing.
     fn strip_comments(content: &str) -> String {
         let bytes = content.as_bytes();
-        let mut out = String::with_capacity(content.len());
+        let mut out = CommentFreeText::with_capacity(content.len());
         let mut copied = 0;
         let mut index = 0;
-        let mut paren_depth = 0_usize;
+        // One entry per open `(` or `[`: whether it is code (a call's arguments) or markup
+        let mut modes: Vec<bool> = Vec::new();
         while index < bytes.len() {
+            let in_code = modes.last().copied().unwrap_or(false);
             match bytes[index] {
                 b'`' => {
                     // Raw text runs to a closing run of as many backticks
@@ -667,7 +670,7 @@ impl TypstExtractor {
                 b'\\' => {
                     index += 1 + content[index + 1..].chars().next().map_or(0, char::len_utf8);
                 }
-                b'"' if paren_depth > 0 => {
+                b'"' if in_code => {
                     let mut cursor = index + 1;
                     while cursor < bytes.len() && bytes[cursor] != b'"' {
                         cursor += if bytes[cursor] == b'\\' { 2 } else { 1 };
@@ -675,44 +678,57 @@ impl TypstExtractor {
                     index = (cursor + 1).min(bytes.len());
                 }
                 b'(' => {
-                    paren_depth += 1;
+                    modes.push(in_code || Self::follows_call_name(bytes, index));
                     index += 1;
                 }
-                b')' => {
-                    paren_depth = paren_depth.saturating_sub(1);
+                b'[' => {
+                    // A content block is markup again, also inside code
+                    modes.push(false);
                     index += 1;
                 }
-                b'/' if bytes[index..].starts_with(b"//") && !(index > 0 && bytes[index - 1] == b':') => {
-                    out.push_str(&content[copied..index]);
+                b')' | b']' => {
+                    modes.pop();
+                    index += 1;
+                }
+                b'h' if !in_code
+                    && (bytes[index..].starts_with(b"http://") || bytes[index..].starts_with(b"https://"))
+                    && !(index > 0 && bytes[index - 1].is_ascii_alphanumeric()) =>
+                {
+                    // A bare URL runs to the next whitespace, `//` included
+                    index = content[index..]
+                        .find(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '[' | ']' | '"'))
+                        .map_or(bytes.len(), |offset| index + offset);
+                }
+                b'/' if bytes[index..].starts_with(b"//") => {
+                    out.push(&content[copied..index]);
                     index = content[index..].find('\n').map_or(bytes.len(), |offset| index + offset);
-                    index = Self::drop_comment_line(&mut out, content, index);
+                    index = out.drop_comment_line(content, index);
                     copied = index;
                 }
                 b'/' if bytes[index..].starts_with(b"/*") => {
-                    out.push_str(&content[copied..index]);
+                    out.push(&content[copied..index]);
                     index = Self::skip_typst_comment(bytes, index).unwrap_or(bytes.len());
-                    index = Self::drop_comment_line(&mut out, content, index);
+                    // `b /* gone */ c` reads `b c`, as Typst renders it
+                    if out.text.ends_with(' ') && bytes.get(index) == Some(&b' ') {
+                        index += 1;
+                    }
+                    index = out.drop_comment_line(content, index);
                     copied = index;
                 }
                 _ => index += 1,
             }
         }
-        out.push_str(&content[copied..]);
-        out
+        out.push(&content[copied..]);
+        out.text
     }
 
-    /// After a comment that ends at `index`: when the comment had its line to itself, drop
-    /// the rest of that line and its line break, and return where the source continues. A
-    /// comment is not a blank line, so it must not end the paragraph around it.
-    fn drop_comment_line(out: &mut String, content: &str, index: usize) -> usize {
-        let line_start = out.rfind('\n').map_or(0, |offset| offset + 1);
-        let rest = &content[index..];
-        let trailing = rest.len() - rest.trim_start_matches([' ', '\t']).len();
-        if !out[line_start..].trim().is_empty() || !rest[trailing..].starts_with('\n') {
-            return index;
-        }
-        out.truncate(line_start);
-        index + trailing + 1
+    /// Whether the `(` at `open` follows `#name`, which makes its contents a call's arguments.
+    fn follows_call_name(bytes: &[u8], open: usize) -> bool {
+        let name_start = bytes[..open]
+            .iter()
+            .rposition(|&byte| !(byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.')))
+            .map_or(0, |position| position + 1);
+        name_start < open && name_start > 0 && bytes[name_start - 1] == b'#'
     }
 
     /// Skip a Typst line or nested block comment starting at `index`.
@@ -902,9 +918,13 @@ impl TypstExtractor {
     fn parse_escape(s: &str) -> Option<(char, usize)> {
         let rest = s.strip_prefix('\\')?;
         if let Some(hex) = rest.strip_prefix("u{") {
-            let close = hex.find('}')?;
-            let escaped = char::from_u32(u32::from_str_radix(&hex[..close], 16).ok()?)?;
-            return Some((escaped, 1 + "u{".len() + close + 1));
+            // The hex digits, then the closing brace right after them
+            let digits = hex.bytes().take_while(u8::is_ascii_hexdigit).count();
+            if hex.as_bytes().get(digits) != Some(&b'}') {
+                return None;
+            }
+            let escaped = char::from_u32(u32::from_str_radix(&hex[..digits], 16).ok()?)?;
+            return Some((escaped, 1 + "u{".len() + digits + 1));
         }
         let escaped = rest.chars().next().filter(char::is_ascii_punctuation)?;
         Some((escaped, 2))
@@ -931,6 +951,47 @@ impl TypstExtractor {
         let after = s.strip_prefix(prefix)?;
         let end = after.find(']')?;
         Some(after[..end].to_string())
+    }
+}
+
+/// Comment-free source as it is assembled, with whether its current line holds anything but
+/// whitespace, kept up to date as text is appended so no line is ever scanned twice.
+#[cfg(feature = "office")]
+struct CommentFreeText {
+    text: String,
+    line_blank: bool,
+}
+
+#[cfg(feature = "office")]
+impl CommentFreeText {
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            text: String::with_capacity(capacity),
+            line_blank: true,
+        }
+    }
+
+    fn push(&mut self, segment: &str) {
+        match segment.rfind('\n') {
+            Some(newline) => self.line_blank = segment[newline + 1..].trim().is_empty(),
+            None => self.line_blank &= segment.trim().is_empty(),
+        }
+        self.text.push_str(segment);
+    }
+
+    /// After a comment that ends at `index`: when the comment had its line to itself, drop
+    /// the rest of that line and its line break, and return where the source continues. A
+    /// comment is not a blank line, so it must not end the paragraph around it.
+    fn drop_comment_line(&mut self, content: &str, index: usize) -> usize {
+        let rest = &content[index..];
+        let trailing = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+        if !self.line_blank || !rest[trailing..].starts_with('\n') {
+            return index;
+        }
+        // The line holds only whitespace, which goes with it
+        let line_start = self.text.trim_end_matches([' ', '\t']).len();
+        self.text.truncate(line_start);
+        index + trailing + 1
     }
 }
 
@@ -1903,6 +1964,27 @@ Actual content"#;
             typst_paragraphs(content),
             ["Before After, see the site and https://y.org.", "raw // kept text."]
         );
+    }
+
+    #[test]
+    fn should_treat_quotes_in_markup_parentheses_as_text_and_keep_whole_urls() {
+        let content = "He said (a \"quote\" // hidden\nand more) and (b /* gone */ c).\n\nVisit https://x.org/a//b after, or #link(\"https://y.org/c//d\")[the page] // note\n";
+        assert_eq!(
+            typst_paragraphs(content),
+            [
+                "He said (a \"quote\" and more) and (b c).",
+                "Visit https://x.org/a//b after, or the page"
+            ]
+        );
+    }
+
+    #[test]
+    fn should_read_repeated_comments_and_unterminated_escapes_in_linear_time() {
+        // A scan of the whole line or the whole rest per occurrence would take millions of steps
+        let comments = "a /* c */ ".repeat(20_000);
+        assert_eq!(typst_paragraphs(&comments), [vec!["a"; 20_000].join(" ")]);
+        let escapes = "\\u{".repeat(20_000);
+        assert!(!typst_paragraphs(&escapes).is_empty());
     }
 
     #[test]
