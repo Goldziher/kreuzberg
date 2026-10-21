@@ -78,6 +78,10 @@ fn extract_para_with_annotations_jats(
 
                 let name = e.name();
                 let tag = crate::utils::xml_tag_name(name.as_ref());
+                // A nested block (a list in the paragraph) is set apart from the text before it ~keep
+                if parser::BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) {
+                    push_collapsed(&mut text, " ");
+                }
 
                 match tag.as_ref() {
                     // An article writes its equation inside the sentence that
@@ -120,22 +124,31 @@ fn extract_para_with_annotations_jats(
                     _ => {}
                 }
             }
-            Ok(Event::End(_)) => {
+            // An explicit line break (`<bold>first<break/>second</bold>`) separates the words ~keep
+            Ok(Event::Empty(e)) if parser::BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) => {
+                push_collapsed(&mut text, " ");
+            }
+            Ok(Event::End(e)) => {
                 budget.leave();
                 if depth == 0 {
                     break;
+                }
+                if parser::BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) {
+                    push_collapsed(&mut text, " ");
                 }
 
                 if let Some(&(kind, open_depth, start, ref href)) = inline_stack.last()
                     && open_depth == depth
                 {
-                    let end = text.len() as u32;
-                    let actual_start = if (start as usize) < text.len() {
-                        let span = &text[start as usize..end as usize];
-                        let trimmed = span.trim_start();
-                        end - trimmed.len() as u32
+                    let text_end = text.len() as u32;
+                    // The span without the whitespace around it ~keep
+                    let (actual_start, end) = if (start as usize) < text.len() {
+                        let span = &text[start as usize..text_end as usize];
+                        let leading = (span.len() - span.trim_start().len()) as u32;
+                        let trailing = (span.len() - span.trim_end().len()) as u32;
+                        (start + leading, text_end.saturating_sub(trailing).max(start + leading))
                     } else {
-                        start
+                        (start, text_end)
                     };
                     if end > actual_start {
                         let href_clone = href.clone();
@@ -163,15 +176,14 @@ fn extract_para_with_annotations_jats(
                 depth -= 1;
             }
             Ok(Event::Text(t)) => {
+                // Text joins the text around it as written, so `H<sub>2</sub>O` reads `H2O`; ~keep
+                // whitespace from the XML layout collapses to one space ~keep
                 let decoded = t.as_ref().to_string();
                 if !decoded.trim().is_empty() {
                     budget.check_entity(decoded.trim())?;
                     budget.account_text(decoded.trim().len())?;
-                    if !text.is_empty() && !text.ends_with(' ') && !text.ends_with('\n') {
-                        text.push(' ');
-                    }
-                    text.push_str(decoded.trim());
                 }
+                push_collapsed(&mut text, &decoded);
             }
             Ok(Event::CData(t)) => {
                 let decoded = t.as_ref().to_string();
@@ -193,6 +205,26 @@ fn extract_para_with_annotations_jats(
     }
 
     Ok((text.trim().to_string(), annotations, formulas))
+}
+
+/// Append `fragment` to `text` with each run of whitespace collapsed to one space, keeping a
+/// space at either end only where `fragment` has whitespace there.
+fn push_collapsed(text: &mut String, fragment: &str) {
+    let words: Vec<&str> = fragment.split_whitespace().collect();
+    let separated = |text: &String| text.is_empty() || text.ends_with([' ', '\n']);
+    if words.is_empty() {
+        if !fragment.is_empty() && !separated(text) {
+            text.push(' ');
+        }
+        return;
+    }
+    if fragment.starts_with(char::is_whitespace) && !separated(text) {
+        text.push(' ');
+    }
+    text.push_str(&words.join(" "));
+    if fragment.ends_with(char::is_whitespace) {
+        text.push(' ');
+    }
 }
 
 /// Build an `InternalDocument` from JATS XML content.
@@ -397,7 +429,8 @@ fn build_jats_internal_document(content: &str, budget: &mut SecurityBudget) -> c
                     "tbody" if in_table => {
                         in_tbody = true;
                     }
-                    "tr" if (in_thead || in_tbody) && in_table => {
+                    // A row can sit in `thead`, `tbody` or `tfoot`, or directly in `table` ~keep
+                    "tr" if in_table => {
                         in_row = true;
                         current_row.clear();
                     }
@@ -729,6 +762,60 @@ impl InternalDocumentExtractor for JatsExtractor {
 mod tests {
     use super::*;
     use elements::extract_jats_all_in_one;
+
+    fn element_texts(jats: &str) -> Vec<(String, String)> {
+        let mut budget = SecurityBudget::with_defaults();
+        build_jats_internal_document(jats, &mut budget)
+            .expect("parse")
+            .elements
+            .iter()
+            .map(|e| (format!("{:?}", e.kind), e.text.clone()))
+            .collect()
+    }
+
+    #[test]
+    fn should_keep_inline_markup_inside_the_word_it_belongs_to() {
+        let jats = r#"<article><front><article-meta><title-group><article-title>Effects of CO<sub>2</sub> on <italic>E. coli</italic></article-title></title-group></article-meta></front>
+<body><p>We studied H<sub>2</sub>O uptake<xref ref-type="bibr" rid="b1">1</xref> in
+   <italic>vitro</italic> and <bold>in</bold> <bold>vivo</bold>.</p></body></article>"#;
+        let texts = element_texts(jats);
+
+        assert!(
+            texts.iter().any(|(_, t)| t == "Effects of CO2 on E. coli"),
+            "got: {texts:?}"
+        );
+        assert!(
+            texts
+                .iter()
+                .any(|(_, t)| t == "We studied H2O uptake1 in vitro and in vivo."),
+            "got: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn should_keep_block_and_line_break_boundaries_as_separators() {
+        let jats = r#"<article><body><p><bold>first<break/>second</bold> and a list<list><list-item><p>item</p></list-item></list>after</p>
+<table-wrap><table><tr><td>first<p>second</p></td><td>x</td></tr></table></table-wrap></body></article>"#;
+        let mut budget = SecurityBudget::with_defaults();
+        let doc = build_jats_internal_document(jats, &mut budget).expect("parse");
+        let texts: Vec<&str> = doc.elements.iter().map(|e| e.text.as_str()).collect();
+        let markdown = crate::rendering::render_markdown(&doc);
+
+        assert!(texts.contains(&"first second and a list item after"), "got: {texts:?}");
+        assert!(markdown.contains("| first second | x |"), "got: {markdown}");
+    }
+
+    #[test]
+    fn should_read_table_rows_outside_a_row_group() {
+        let jats = r#"<article><body><table-wrap><table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr><tfoot><tr><td>Total</td><td>3</td></tr></tfoot></table></table-wrap></body></article>"#;
+        let mut budget = SecurityBudget::with_defaults();
+        let doc = build_jats_internal_document(jats, &mut budget).expect("parse");
+        let markdown = crate::rendering::render_markdown(&doc);
+
+        assert!(markdown.contains("| A | B |"), "got: {markdown}");
+        assert!(markdown.contains("| 1 | 2 |"), "got: {markdown}");
+        assert!(markdown.contains("| Total | 3 |"), "got: {markdown}");
+    }
 
     /// A journal writes its equation inside the sentence that refers to it.
     /// The paragraph reader consumed the whole `<p>`, so an article whose
