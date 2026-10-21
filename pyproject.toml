@@ -42,7 +42,7 @@ dev = [
 # below it, and if this failure returns, compare jobkit's handled `PdfBackend` variants
 # against the default docling resolves to before assuming the adapter is at fault. ~keep
 bench-docling = ["docling-jobkit==3.9.0", "easyocr>=1.7.2", "transformers>=5.10.0"]
-bench-markitdown = ["markitdown[all]==0.1.8"]
+bench-markitdown = ["markitdown[all]==0.1.9"]
 bench-mineru = ["mineru==4.0.12", "onnxruntime", "transformers>=5.10.0"]
 # paddlepaddle==3.3.1 ships no manylinux aarch64 wheel for any CPython version (checked
 # against every cp39-cp313 build on PyPI), so it carries an explicit platform exclusion
