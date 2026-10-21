@@ -654,16 +654,17 @@ impl TypstExtractor {
         let mut out = CommentFreeText::with_capacity(content.len());
         let mut copied = 0;
         let mut index = 0;
-        // One entry per open `(` or `[`: whether it is code (a call's arguments) or markup
-        let mut modes: Vec<bool> = Vec::new();
-        // A `#let`, `#set`, `#show`, `#import` or `#include` statement is code to the end of
-        // its line, outside any bracket opened in it
+        // One entry per open `(`, `[` or code `{`: whether it is code (a call's arguments, a
+        // code block) or markup, and whether a `}` closes it
+        let mut modes: Vec<(bool, bool)> = Vec::new();
+        // A statement (`#let`, `#set`, `#if`, ...) is code to the end of its line, outside any
+        // bracket or block opened in it
         let mut statement_depth: Option<usize> = None;
         while index < bytes.len() {
             if statement_depth.is_some_and(|depth| depth == modes.len()) && matches!(bytes[index], b'\n' | b';') {
                 statement_depth = None;
             }
-            let in_code = modes.last().copied().unwrap_or(statement_depth.is_some());
+            let in_code = modes.last().map_or(statement_depth.is_some(), |&(code, _)| code);
             match bytes[index] {
                 b'#' if !in_code && Self::starts_statement(&bytes[index + 1..]) => {
                     statement_depth = Some(modes.len());
@@ -699,12 +700,21 @@ impl TypstExtractor {
                 b'(' => {
                     // `#name(...)` and `#(...)` open code
                     let opens_code = Self::follows_call_name(bytes, index) || (index > 0 && bytes[index - 1] == b'#');
-                    modes.push(in_code || opens_code);
+                    modes.push((in_code || opens_code, false));
                     index += 1;
                 }
                 b'[' => {
                     // A content block is markup again, also inside code
-                    modes.push(false);
+                    modes.push((false, false));
+                    index += 1;
+                }
+                // A code block, in code or as `#{...}`; in markup a brace is text
+                b'{' if in_code || (index > 0 && bytes[index - 1] == b'#') => {
+                    modes.push((true, true));
+                    index += 1;
+                }
+                b'}' if modes.last().is_some_and(|&(_, brace)| brace) => {
+                    modes.pop();
                     index += 1;
                 }
                 b')' | b']' => {
@@ -745,7 +755,11 @@ impl TypstExtractor {
 
     /// Whether `after_hash` (the source after a `#`) starts a statement keyword.
     fn starts_statement(after_hash: &[u8]) -> bool {
-        ["let", "set", "show", "import", "include"].iter().any(|keyword| {
+        [
+            "let", "set", "show", "import", "include", "if", "for", "while", "context",
+        ]
+        .iter()
+        .any(|keyword| {
             after_hash.starts_with(keyword.as_bytes())
                 && !after_hash
                     .get(keyword.len())
@@ -2017,6 +2031,24 @@ Actual content"#;
             ["Text #(\"/*\") Visible after."]
         );
         assert_eq!(typst_paragraphs("Note #\"//\" here // gone\n"), ["Note #\"//\" here"]);
+    }
+
+    #[test]
+    fn should_treat_strings_in_multiline_code_blocks_as_strings() {
+        // A code block's string is no comment, however many lines the block spans
+        for source in [
+            "#let sample() = {\n  let marker = \"/*\"\n}\nVisible.",
+            "#{\n  let x = \"//\"\n}\nVisible.",
+            "#if true {\n  \"/*\"\n} else {\n  \"*/\"\n}\nVisible.",
+        ] {
+            assert_eq!(TypstExtractor::strip_comments(source), source);
+        }
+        assert_eq!(
+            TypstExtractor::strip_comments("#let f() = {\n  \"/*\"\n}\nKept // gone\n"),
+            "#let f() = {\n  \"/*\"\n}\nKept \n"
+        );
+        // In markup a brace is text, and a comment after it is still one
+        assert_eq!(typst_paragraphs("Set {a} here // gone"), ["Set {a} here"]);
     }
 
     #[test]
