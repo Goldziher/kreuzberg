@@ -140,7 +140,12 @@ impl RstReferences<'_> {
         // The indentation of the line that opened a literal, code or comment block: the lines
         // indented deeper belong to it, and a definition shown there is not in effect
         let mut inactive_indent: Option<usize> = None;
+        // The first line after the body of the substitution definition last read
+        let mut skip_until = 0;
         for (index, line) in lines.iter().enumerate() {
+            if index < skip_until {
+                continue;
+            }
             let trimmed = line.trim();
             let indent = line.len() - line.trim_start().len();
             if let Some(block_indent) = inactive_indent {
@@ -175,15 +180,17 @@ impl RstReferences<'_> {
                 && let Some(text) = directive.trim_start().strip_prefix("replace::")
             {
                 let mut text = text.trim().to_string();
-                for next in lines[index + 1..]
-                    .iter()
-                    .take_while(|next| next.starts_with([' ', '\t']))
-                {
-                    if next.trim().is_empty() {
+                // The definition continues on lines indented deeper than it is; the next
+                // definition at the same indentation is its own
+                for (offset, next) in lines[index + 1..].iter().enumerate() {
+                    let next_indent = next.len() - next.trim_start().len();
+                    if next.trim().is_empty() || next_indent <= indent {
                         break;
                     }
                     text.push(' ');
                     text.push_str(next.trim());
+                    // A body line is read once, here, not again as a line of its own
+                    skip_until = index + 2 + offset;
                 }
                 references.substitutions.insert(Self::normalize(name), text);
             }
@@ -751,14 +758,27 @@ impl RstExtractor {
     }
 
     /// The simple reference name `before` ends with: words joined by single `-`, `_`, `.`, `:` or `+`.
+    ///
+    /// The punctuation must be isolated, as in docutils: two adjacent marks end the name, so the
+    /// backward scan stops there and no character is scanned for more than one reference.
     fn simple_reference_name(before: &str) -> Option<&str> {
-        let start = before
-            .char_indices()
-            .rev()
-            .take_while(|&(_, c)| c.is_alphanumeric() || matches!(c, '-' | '_' | '.' | ':' | '+'))
-            .last()
-            .map(|(index, _)| index)?;
-        let name = before[start..].trim_start_matches(|c: char| !c.is_alphanumeric());
+        let mut start = before.len();
+        // Whether the character after the current one (in reading order) is alphanumeric
+        let mut followed_by_alnum = false;
+        for (index, c) in before.char_indices().rev() {
+            if c.is_alphanumeric() {
+                start = index;
+                followed_by_alnum = true;
+            } else if matches!(c, '-' | '_' | '.' | ':' | '+')
+                && followed_by_alnum
+                && before[..index].chars().next_back().is_some_and(char::is_alphanumeric)
+            {
+                followed_by_alnum = false;
+            } else {
+                break;
+            }
+        }
+        let name = &before[start..];
         (!name.is_empty() && name.ends_with(char::is_alphanumeric)).then_some(name)
     }
 
@@ -2121,6 +2141,33 @@ Second paragraph.
             .expect_err("expanded substitutions must consume the security budget");
 
         assert!(error.to_string().contains("Content too large"), "got: {error}");
+    }
+
+    #[test]
+    fn should_end_a_substitution_body_at_the_next_definition_of_the_same_indentation() {
+        let rst = "Read |a| and |b|.\n\n.. note::\n\n   .. |a| replace:: A\n   .. |b| replace:: B\n      continued\n";
+        assert_eq!(paragraph_links(rst)[0].0, "Read A and B continued.");
+
+        // Each definition stores only its own text, however many there are
+        let definitions: String = (0..400)
+            .map(|i| format!("   .. |d{i}| replace:: value {i}\n"))
+            .collect();
+        let lines: Vec<&str> = definitions.lines().collect();
+        let references = RstReferences::collect(&lines);
+        let stored: usize = references.substitutions.values().map(String::len).sum();
+        assert!(
+            stored < definitions.len(),
+            "stored {stored} bytes for {} source bytes",
+            definitions.len()
+        );
+    }
+
+    #[test]
+    fn should_scan_reference_names_in_linear_time() {
+        // A rescan of the whole name run per underscore would take hundreds of millions of steps
+        let rst = format!("{}\n\n.. _x: https://x.example\n", "x_-".repeat(20_000));
+        let paragraphs = paragraph_links(&rst);
+        assert_eq!(paragraphs[0].1.len(), 20_000);
     }
 
     #[test]
