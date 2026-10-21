@@ -66,6 +66,11 @@
 //!      -F 'config={"ocr":{"language":"eng"}}' \
 //!      http://localhost:8000/extract
 //!
+//! # Return only Base64 image data, omitting raw byte arrays
+//! curl -F "files=@document.pdf" -F 'include_image_data=false' \
+//!      -F 'config={"images":{"extract_images":true,"include_data_base64":true}}' \
+//!      http://localhost:8000/extract
+//!
 //! # Health check
 //! curl http://localhost:8000/health
 //!
@@ -88,6 +93,7 @@ pub(crate) mod jobs;
 #[cfg(feature = "api")]
 pub mod openapi;
 mod openweb;
+mod response;
 mod router;
 mod startup;
 mod types;

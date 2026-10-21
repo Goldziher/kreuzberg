@@ -836,7 +836,7 @@ pub enum ImageKind {
 pub struct ExtractedImage {
     /// Raw image data (PNG, JPEG, WebP, etc. bytes).
     /// Uses `bytes::Bytes` for cheap cloning of large buffers.
-    #[cfg_attr(feature = "api", schema(value_type = Vec<u8>, format = "binary"))]
+    #[cfg_attr(feature = "api", schema(value_type = Vec<u8>, format = "binary", required = false))]
     pub data: Bytes,
 
     /// Image format (e.g., "jpeg", "png", "webp")

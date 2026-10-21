@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **(api): Set `include_image_data: false` to omit raw image byte arrays from extraction responses.**
+  JSON and multipart requests support this option for synchronous and asynchronous extraction; image metadata
+  and optional Base64 data remain available, and the default response is unchanged. (#2187)
 - **(pdf): `PdfError` accepts errors from Lopdf 0.46 while preserving its Lopdf 0.45 conversion.**
 - **(llm): Rust exposes failed structured-response usage through `xberg::llm::usage::usage_from_error`.** (#2139)
 

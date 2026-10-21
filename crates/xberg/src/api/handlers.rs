@@ -26,7 +26,7 @@ use super::{
 /// Validation is an allowlist: a field outside this set is rejected rather than
 /// silently dropped, so a typo (`configuration`, `outputFormat`) fails loudly
 /// instead of being ignored and quietly falling back to the server defaults (#248).
-const ACCEPTED_EXTRACT_MULTIPART_FIELDS: [&str; 8] = [
+const ACCEPTED_EXTRACT_MULTIPART_FIELDS: [&str; 9] = [
     "file",
     "files",
     "urls",
@@ -35,6 +35,7 @@ const ACCEPTED_EXTRACT_MULTIPART_FIELDS: [&str; 8] = [
     "output_format",
     "pdf_password",
     "format",
+    "include_image_data",
 ];
 
 /// Build the rejection for a multipart field name outside the allowlist.
@@ -92,6 +93,7 @@ pub(crate) struct UnifiedExtractRequest {
     output_format: Option<crate::core::config::OutputFormat>,
     pdf_passwords: Vec<String>,
     use_toon: bool,
+    include_image_data: bool,
 }
 
 impl UnifiedExtractRequest {
@@ -135,6 +137,12 @@ struct JsonUnifiedExtractRequest {
     config: Option<crate::core::config::ExtractionConfig>,
     #[serde(default)]
     format: Option<String>,
+    #[serde(default = "default_include_image_data")]
+    include_image_data: bool,
+}
+
+fn default_include_image_data() -> bool {
+    true
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -244,6 +252,7 @@ async fn parse_json_extract_request(req: Request) -> Result<UnifiedExtractReques
     Ok(UnifiedExtractRequest {
         inputs,
         config: body.config,
+        include_image_data: body.include_image_data,
         output_format: None,
         pdf_passwords: Vec::new(),
         use_toon: body
@@ -274,6 +283,7 @@ where
     let mut output_format = None;
     let mut pdf_passwords = Vec::new();
     let mut use_toon = false;
+    let mut include_image_data = true;
 
     while let Some(field) = multipart
         .next_field()
@@ -349,6 +359,17 @@ where
                     .map_err(|e| ApiError::validation(crate::error::XbergError::validation(e.to_string())))?;
                 pdf_passwords.push(pwd);
             }
+            "include_image_data" => {
+                let value = field
+                    .text()
+                    .await
+                    .map_err(|e| ApiError::validation(crate::error::XbergError::validation(e.to_string())))?;
+                include_image_data = value.trim().parse::<bool>().map_err(|_| {
+                    ApiError::validation(crate::error::XbergError::validation(
+                        "include_image_data must be a boolean (true or false)",
+                    ))
+                })?;
+            }
             "format" => {
                 let format_str = field
                     .text()
@@ -368,6 +389,7 @@ where
         output_format,
         pdf_passwords,
         use_toon,
+        include_image_data,
     })
 }
 
@@ -623,7 +645,7 @@ fn wants_toon(headers: &HeaderMap) -> bool {
 }
 
 /// Serialize extraction results as a TOON response.
-fn toon_response(results: &ExtractionResult) -> Result<axum::response::Response<axum::body::Body>, ApiError> {
+fn toon_response(results: &impl serde::Serialize) -> Result<axum::response::Response<axum::body::Body>, ApiError> {
     let body = serde_toon::to_string(results).map_err(|e| {
         ApiError::internal(crate::error::XbergError::Other(format!(
             "Failed to serialize response to TOON: {}",
@@ -640,9 +662,12 @@ fn toon_response(results: &ExtractionResult) -> Result<axum::response::Response<
 ///
 /// POST /extract
 ///
-/// Accepts multipart form data with:
+/// JSON requests place `include_image_data` at the request root, alongside `inputs` and `config`.
+/// Multipart form data accepts:
 /// - `files`: One or more files to extract
 /// - `config` (optional): JSON extraction configuration (overrides server defaults)
+/// - `include_image_data` (optional): Include raw image bytes (default `true`). Set to `false`
+///   to omit `images[].data`; `config.images.include_data_base64` independently controls Base64.
 /// - `format` (optional): Wire format for the response (`json` or `toon`, default: `json`).
 ///   Alternatively, set the `Accept: application/toon` header.
 ///
@@ -697,6 +722,18 @@ pub(crate) async fn extract_handler(
     enforce_and_apply_api_uri_policy(&request.inputs, &mut final_config, api_allows_local_uri_inputs())?;
     let results = extract_unified_inputs(request.inputs, final_config).await?;
 
+    if !request.include_image_data {
+        let value = super::response::serialize_results(results, false).map_err(|e| {
+            ApiError::internal(crate::error::XbergError::Other(format!(
+                "Failed to serialize extraction response: {e}"
+            )))
+        })?;
+        return if use_toon {
+            toon_response(&value)
+        } else {
+            Ok(Json(value).into_response())
+        };
+    }
     if use_toon {
         toon_response(&results)
     } else {
@@ -1215,9 +1252,12 @@ where
 ///
 /// POST /extract-async
 ///
-/// Accepts multipart form data with:
+/// JSON requests place `include_image_data` at the request root, alongside `inputs` and `config`.
+/// Multipart form data accepts:
 /// - `files`: One or more files to extract
 /// - `config` (optional): JSON extraction configuration
+/// - `include_image_data` (optional): Include raw image bytes (default `true`); omission
+///   applies to the completed job result and retains metadata and optional `data_base64`.
 ///
 /// Returns immediately with a job ID. Poll `GET /jobs/{job_id}` for status.
 ///
@@ -1271,6 +1311,7 @@ pub(crate) async fn extract_async_handler(
     enforce_and_apply_api_uri_policy(&request.inputs, &mut effective_config, api_allows_local_uri_inputs())?;
     effective_config.cancel_token = state.job_store.cancellation_token(&job_id);
     let inputs = request.inputs;
+    let include_image_data = request.include_image_data;
 
     let job_store = Arc::clone(&state.job_store);
     let job_id_bg = job_id.clone();
@@ -1290,7 +1331,8 @@ pub(crate) async fn extract_async_handler(
             let results = extract_unified_inputs(inputs, effective_config)
                 .await
                 .map_err(|e| e.body.message)?;
-            serde_json::to_value(&results).map_err(|e| format!("failed to serialize results: {e}"))
+            super::response::serialize_results(results, include_image_data)
+                .map_err(|e| format!("failed to serialize results: {e}"))
         };
 
         match timeout_extraction(timeout_dur, cancel_token, extraction_fut).await {
@@ -1622,7 +1664,7 @@ mod tests {
         assert_eq!(
             error.body.message,
             "Validation error: Unknown multipart field 'configuration'. \
-             Accepted fields: file, files, urls, inputs, config, output_format, pdf_password, format"
+             Accepted fields: file, files, urls, inputs, config, output_format, pdf_password, format, include_image_data"
         );
     }
 
@@ -1638,6 +1680,7 @@ mod tests {
                 "urls" | "inputs" => "[]",
                 "config" => "{}",
                 "output_format" => "markdown",
+                "include_image_data" => "true",
                 _ => "x",
             };
             let request = multipart_request_with_field("allowlistboundary", field_name, value);
