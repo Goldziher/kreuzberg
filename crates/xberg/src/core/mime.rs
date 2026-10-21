@@ -828,7 +828,7 @@ static FORMATS: &[FormatEntry] = &[
     FormatEntry {
         extensions: &["tex", "latex"],
         mime_type: "application/x-latex",
-        aliases: &["text/x-tex"],
+        aliases: &["text/x-tex", "application/x-tex"],
     },
     FormatEntry {
         extensions: &["typst", "typ"],
@@ -838,17 +838,17 @@ static FORMATS: &[FormatEntry] = &[
     FormatEntry {
         extensions: &["pages"],
         mime_type: "application/x-iwork-pages-sffpages",
-        aliases: &[],
+        aliases: &["application/vnd.apple.pages"],
     },
     FormatEntry {
         extensions: &["numbers"],
         mime_type: "application/x-iwork-numbers-sffnumbers",
-        aliases: &[],
+        aliases: &["application/vnd.apple.numbers"],
     },
     FormatEntry {
         extensions: &["key"],
         mime_type: "application/x-iwork-keynote-sffkey",
-        aliases: &[],
+        aliases: &["application/vnd.apple.keynote"],
     },
     FormatEntry {
         extensions: &["mp3", "mpga"],
@@ -884,6 +884,9 @@ static FORMATS: &[FormatEntry] = &[
         extensions: &[],
         mime_type: "text/x-source-code",
         aliases: &[
+            "application/x-sh",
+            "text/x-sh",
+            "text/x-shellscript",
             "text/x-python",
             "text/x-r-source",
             "text/x-julia",
@@ -1064,11 +1067,30 @@ pub fn validate_mime_type(mime_type: &str) -> Result<String> {
         .find(|supported| supported.eq_ignore_ascii_case(essence))
     {
         tracing::trace!(mime_type = %mime_type, matched = %supported, "MIME type validated by essence");
-        return Ok((*supported).to_string());
+        return Ok(normalize_registered_mime_type(supported).to_string());
     }
 
     tracing::debug!(mime_type = %mime_type, essence, "MIME type not in supported set");
     Err(XbergError::UnsupportedFormat(mime_type.to_string()))
+}
+
+fn normalize_registered_mime_type(mime_type: &str) -> &str {
+    // ~keep Preserve existing alias return values; added client spellings use canonical routing.
+    match mime_type {
+        "application/x-tex" => "application/x-latex",
+        "application/x-sh" | "text/x-sh" | "text/x-shellscript" => SOURCE_CODE_MIME_TYPE,
+        "application/vnd.apple.pages" => IWORK_PAGES_MIME_TYPE,
+        "application/vnd.apple.numbers" => IWORK_NUMBERS_MIME_TYPE,
+        "application/vnd.apple.keynote" => IWORK_KEYNOTE_MIME_TYPE,
+        _ => mime_type,
+    }
+}
+
+fn is_generic_mime_type(mime_type: &str) -> bool {
+    mime_type
+        .trim()
+        .parse::<mime::Mime>()
+        .is_ok_and(|parsed| parsed.essence_str().eq_ignore_ascii_case(OCTET_STREAM_MIME_TYPE))
 }
 
 /// Detect or validate MIME type.
@@ -1105,7 +1127,7 @@ pub(crate) fn detect_or_validate_file(
     mime_type: Option<&str>,
     policy: crate::core::config::MimeDetectionPolicy,
 ) -> Result<String> {
-    if let Some(mime) = mime_type.filter(|mime| *mime != OCTET_STREAM_MIME_TYPE) {
+    if let Some(mime) = mime_type.filter(|mime| !is_generic_mime_type(mime)) {
         tracing::debug!(mime_type = %mime, "validating caller-provided MIME type");
         return validate_mime_type(mime);
     }
@@ -1135,7 +1157,7 @@ pub(crate) fn detect_or_validate_bytes(
     mime_type: Option<&str>,
     policy: crate::core::config::MimeDetectionPolicy,
 ) -> Result<String> {
-    if let Some(mime) = mime_type {
+    if let Some(mime) = mime_type.filter(|mime| !is_generic_mime_type(mime)) {
         tracing::debug!(mime_type = %mime, "validating caller-provided MIME type");
         return validate_mime_type(mime);
     }
@@ -1176,7 +1198,7 @@ pub(crate) async fn resolve_owned_bytes_mime(
     mime_type: Option<String>,
     policy: crate::core::config::MimeDetectionPolicy,
 ) -> Result<(Vec<u8>, String)> {
-    if let Some(explicit) = mime_type.as_deref().filter(|mime| *mime != OCTET_STREAM_MIME_TYPE) {
+    if let Some(explicit) = mime_type.as_deref().filter(|mime| !is_generic_mime_type(mime)) {
         return validate_mime_type(explicit).map(|validated| (content, validated));
     }
     if policy == crate::core::config::MimeDetectionPolicy::TrustExtension
@@ -1188,8 +1210,7 @@ pub(crate) async fn resolve_owned_bytes_mime(
     }
 
     tokio::task::spawn_blocking(move || {
-        let explicit = mime_type.as_deref().filter(|mime| *mime != OCTET_STREAM_MIME_TYPE);
-        let detected = detect_or_validate_bytes(&content, filename.as_deref(), explicit, policy)?;
+        let detected = detect_or_validate_bytes(&content, filename.as_deref(), mime_type.as_deref(), policy)?;
         Ok((content, detected))
     })
     .await
@@ -1206,8 +1227,7 @@ pub(crate) async fn resolve_owned_bytes_mime(
     mime_type: Option<String>,
     policy: crate::core::config::MimeDetectionPolicy,
 ) -> Result<(Vec<u8>, String)> {
-    let explicit = mime_type.as_deref().filter(|mime| *mime != OCTET_STREAM_MIME_TYPE);
-    let detected = detect_or_validate_bytes(&content, filename.as_deref(), explicit, policy)?;
+    let detected = detect_or_validate_bytes(&content, filename.as_deref(), mime_type.as_deref(), policy)?;
     Ok((content, detected))
 }
 
@@ -3502,7 +3522,7 @@ mod tests {
                 continue;
             };
             for alias in format.aliases {
-                match registry.get(alias) {
+                match validate_mime_type(alias).and_then(|mime| registry.get(&mime)) {
                     Ok(aliased) if aliased.name() == canonical.name() => {}
                     Ok(aliased) => unclaimed.push(format!(
                         "{alias} (alias of {}) resolves to {}, not {}",
@@ -3586,3 +3606,7 @@ mod tests {
         assert_eq!(detect_mime_type_from_bytes(windows_1252).unwrap(), PLAIN_TEXT_MIME_TYPE);
     }
 }
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "mime/declared_type_tests.rs"]
+mod declared_type_tests;

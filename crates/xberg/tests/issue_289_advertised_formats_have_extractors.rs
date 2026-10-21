@@ -18,6 +18,8 @@
 //!
 //! # Why this test is gated on `full` rather than made feature-aware
 //!
+//! Only extractor availability needs `full`; static catalogue guards also run in narrow builds. ~keep
+//!
 //! The constraint is that the catalogue and the registry must agree *in whatever build is
 //! running*. Two shapes satisfy that:
 //!
@@ -53,14 +55,17 @@
 //!
 //! This test only reads the process-global extractor registry; it never registers, clears or
 //! otherwise mutates it, so it is safe alongside tests that exercise registry lifecycle.
-#![cfg(feature = "full")]
 
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
 use xberg::core::mime::detect_mime_type;
+#[cfg(feature = "full")]
+use xberg::core::mime::validate_mime_type;
+#[cfg(feature = "full")]
 use xberg::extractors::ensure_initialized;
+#[cfg(feature = "full")]
 use xberg::plugins::registry::get_document_extractor_registry;
 
 /// Opening line of the catalogue table in `core/mime.rs`.
@@ -78,7 +83,7 @@ const MIN_ENTRIES_WITH_EXTENSIONS: usize = 80;
 
 const EXPECTED_FORMAT_COUNT: usize = 107;
 const EXPECTED_EXTENSION_COUNT: usize = 141;
-const EXPECTED_ALIAS_COUNT: usize = 58;
+const EXPECTED_ALIAS_COUNT: usize = 65;
 
 const MIME_ONLY_FORMATS: &[&str] = &[
     "text/x-gfm",
@@ -268,6 +273,7 @@ static FORMATS: &[FormatEntry] = &[
 ///
 /// A failure names every offending format, not just the first, so a feature-list regression that
 /// drops several extractors at once is diagnosable in one run.
+#[cfg(feature = "full")]
 #[test]
 fn every_catalogued_format_resolves_to_a_registered_extractor() {
     ensure_initialized().expect("built-in extractor registration should succeed");
@@ -287,7 +293,7 @@ fn every_catalogued_format_resolves_to_a_registered_extractor() {
             }
         };
         for alias in &entry.aliases {
-            match registry_guard.get(alias) {
+            match validate_mime_type(alias).and_then(|mime| registry_guard.get(&mime)) {
                 Ok(extractor) if extractor.name() == canonical.name() => {}
                 Ok(extractor) => unextractable.push(format!(
                     "{alias} routes to {}, not canonical extractor {}",

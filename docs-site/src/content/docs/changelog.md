@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**
+  Newly supported aliases resolve to their existing canonical formats. (#2205)
+- **(mime): Generic octet-stream declarations still trigger format detection with parameters or different casing.**
+  `application/octet-stream; charset=utf-8` and surrounding spaces no longer prevent detection
+  from names or bytes. (#2206)
 - **(downloads): Percent-encoded proxy credentials are decoded correctly.**
   Model and tessdata downloads preserve literal percent signs and colons in proxy passwords.
   Encode literal percent signs in proxy URLs as `%25`.
