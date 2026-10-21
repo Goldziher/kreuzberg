@@ -570,6 +570,19 @@ impl OrgModeExtractor {
                 continue;
             }
 
+            // A comment block is never exported. Its delimiters match in any case, and only an
+            // exact `#+END_COMMENT` line closes it; without one the opener is not a block and
+            // the lines after it are read as usual.
+            if trimmed
+                .split_whitespace()
+                .next()
+                .is_some_and(|word| word.eq_ignore_ascii_case("#+BEGIN_COMMENT"))
+            {
+                let close = (i + 1..lines.len()).find(|&j| lines[j].trim().eq_ignore_ascii_case("#+END_COMMENT"));
+                i = close.map_or(i + 1, |j| j + 1);
+                continue;
+            }
+
             if trimmed.starts_with("#+BEGIN_") || trimmed.starts_with("#+begin_") {
                 let block_type = trimmed
                     .split_whitespace()
@@ -579,8 +592,6 @@ impl OrgModeExtractor {
                     .or_else(|| trimmed.split_whitespace().next().unwrap_or("").strip_prefix("#+begin_"))
                     .unwrap_or("UNKNOWN")
                     .to_string();
-                // A comment block is never exported
-                let is_comment = block_type.eq_ignore_ascii_case("COMMENT");
                 let end_marker_upper = format!("#+END_{}", block_type);
                 let end_marker_lower = end_marker_upper.to_lowercase();
                 i += 1;
@@ -597,9 +608,7 @@ impl OrgModeExtractor {
                     block_content.push_str(lines[i]);
                     i += 1;
                 }
-                if !is_comment {
-                    b.push_raw_block("orgmode", block_content.trim_end(), None);
-                }
+                b.push_raw_block("orgmode", block_content.trim_end(), None);
                 continue;
             }
 
@@ -1802,5 +1811,26 @@ mod tests {
         let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
 
         assert_eq!(texts, ["H", "text one", "text two", "#notacomment end"]);
+    }
+
+    /// Comment delimiters match in any case and the closer must be the whole line; an
+    /// opener that is never closed is not a block, so the text after it stays.
+    #[test]
+    fn should_match_comment_block_delimiters_exactly_and_keep_text_after_an_unclosed_one() {
+        let texts = |org: &str| {
+            OrgModeExtractor::build_internal_document(org)
+                .elements
+                .iter()
+                .map(|e| e.text.clone())
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(texts("#+begin_comment\nHIDDEN\n#+END_COMMENT\nVisible\n"), ["Visible"]);
+        assert_eq!(texts("#+BEGIN_COMMENT\nHIDDEN\n#+end_Comment\nVisible\n"), ["Visible"]);
+        assert_eq!(
+            texts("#+BEGIN_COMMENT\nHIDDEN\n#+END_COMMENTARY\nSTILL HIDDEN\n#+END_COMMENT\nVisible\n"),
+            ["Visible"]
+        );
+        assert_eq!(texts("#+BEGIN_COMMENT\nNever closed\n"), ["Never closed"]);
     }
 }
