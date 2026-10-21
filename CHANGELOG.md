@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Every text run was joined with a space, so `CO<sub>2</sub>` read `CO 2` and `uptake<xref>1</xref>.` read `uptake 1 .`; text now joins as written, with layout whitespace collapsed. A `<tr>` directly in `<table>` or in `<tfoot>` was skipped, so such a table came out empty apart from its caption.
 - **(rst): Named hyperlink references and `replace::` substitutions read as docutils renders them.**
   `` `the docs`_ `` became inline code, `Python_` kept its underscore and `|project|` stayed literal; a reference now reads as its text, linked to the `.. _name: url` target of that name, and a substitution is replaced by its definition wherever that appears.
+- **(typst): Comments are left out of the text, and an escape reads as the character it stands for.**
+  `// ...` and `/* ... */` comments reached the text (a block comment's `*` even became bold), and `\#`, `\*` or `\u{1F600}` kept their backslash; a comment line also no longer ends the paragraph around it.
 - **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
   IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
 - **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
