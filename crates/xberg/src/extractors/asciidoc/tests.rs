@@ -263,15 +263,56 @@ fn should_drop_the_backslash_of_an_escaped_reference_without_any_attributes() {
 fn should_leave_unterminated_references_as_written() {
     assert_eq!(
         paragraphs("<<a <<b,the text>> <<c and xref:x[y xref:z[w] and pass:[p pass:[q]."),
-        ["<<a the text <<c and xref:x[y w and pass:[p q."]
+        ["<<a the text <<c and y xref:z[w and p pass:[q."]
     );
 }
 
 #[test]
 fn should_read_many_unterminated_openers_in_linear_time() {
-    // Each opener scans only up to the next one; a scan to the end per opener would take
-    // billions of comparisons here
+    // Missing closing delimiters must not trigger a suffix scan for every opener. ~keep
     let source = "<<a xref:b[ pass:[ ".repeat(20_000);
     let text = paragraphs(&source).concat();
     assert_eq!(text, source.trim_end());
+}
+
+#[test]
+fn should_preserve_literal_macro_names_inside_passthroughs() {
+    for (source, expected) in [
+        ("pass:[text pass:word]", "text pass:word"),
+        ("pass:q[text pass:word]", "text pass:word"),
+        ("pass:[text pass:q,word]", "text pass:q,word"),
+        ("pass:[text pass:[word]]", "text pass:[word]"),
+        (":name: value\n\npass:[text pass:word {name}]", "text pass:word {name}"),
+        (":name: value\n\npass:a[text pass:word {name}]", "text pass:word value"),
+    ] {
+        assert_eq!(paragraphs(source), [expected]);
+    }
+}
+
+#[test]
+fn should_preserve_literal_macro_names_inside_cross_reference_labels() {
+    for (source, expected) in [
+        ("xref:id[text xref:word]", "text xref:word"),
+        ("xref:id[text xref:part:word]", "text xref:part:word"),
+        ("xref:chapter:section[text xref:word]", "text xref:word"),
+        ("xref:id[label xref:other[inside]]", "label xref:other[inside]"),
+        ("<<id,label <<literal>>", "label <<literal"),
+    ] {
+        assert_eq!(paragraphs(source), [expected]);
+    }
+}
+
+#[test]
+fn should_preserve_repeated_invalid_targets_with_a_late_closing_delimiter() {
+    for (prefix, opening, closing) in [
+        ("", "<<bad ", ">>"),
+        ("", "<<,", ">>"),
+        ("", "xref:[", "]"),
+        ("", "xref:(", "]"),
+        ("", "xref:(", "] ["),
+        ("[x] ", "xref:(", "] ["),
+    ] {
+        let source = format!("{prefix}{}{closing}", opening.repeat(20_000));
+        assert_eq!(paragraphs(&source), [source]);
+    }
 }

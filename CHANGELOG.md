@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **(asciidoc): Cross references, passthroughs, escapes and hard line breaks read as Asciidoctor renders them.**
-  `<<install,the guide>>`, `xref:faq[the FAQ]` and `pass:[...]` stayed as raw macros, `\*not bold*` kept its backslash, `\{name}` was still substituted, and a line ending in `+` kept the `+`; each now reads as its text, and `+` ends the line.
+  `<<install,the guide>>`, `xref:faq[the FAQ]` and `pass:[...]` stayed as raw macros, `\*not bold*` kept its backslash, `\{name}` was still substituted, and a line ending in a space followed by `+` kept the `+`; each now reads as its text, and `+` ends the line. Macro names written inside reference labels or passthrough text stay literal.
 - **(doc): Legacy Word tables retain their cell and row structure.**
   Table cells no longer run into adjacent paragraphs. Configured table-cell limits also bound padded table output,
   and styles inside table cells no longer suppress headings in the surrounding document.

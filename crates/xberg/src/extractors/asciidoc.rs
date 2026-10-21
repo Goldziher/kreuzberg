@@ -39,9 +39,9 @@ use std::borrow::Cow;
 
 mod syntax;
 use syntax::{
-    MathNotation, count_columns, is_delimiter, list_marker, parse_attribute_entry, parse_block_attributes,
-    parse_block_title, parse_constrained_span, parse_cross_reference, parse_link_macro, parse_math_macro,
-    parse_passthrough, section_level, single_attribute, split_inline_admonition, split_table_row,
+    MathNotation, can_close_macro, count_columns, is_delimiter, list_marker, macro_delimiters, parse_attribute_entry,
+    parse_block_attributes, parse_block_title, parse_constrained_span, parse_cross_reference, parse_link_macro,
+    parse_math_macro, parse_passthrough, section_level, single_attribute, split_inline_admonition, split_table_row,
 };
 
 /// Inline admonition labels recognised in the `LABEL: text` form.
@@ -532,7 +532,7 @@ impl<'a> AsciiDocParser<'a> {
             if !text.is_empty() && !text.ends_with('\n') {
                 text.push(' ');
             }
-            // A line ending in ` +` ends with a hard line break
+            // A line ending in ` +` ends with a hard line break ~keep
             match trimmed.strip_suffix(" +") {
                 Some(line) => {
                     text.push_str(line);
@@ -665,16 +665,18 @@ impl<'a> AsciiDocParser<'a> {
         }
         let mut out = String::with_capacity(text.len());
         let mut rest = text;
-        // A passthrough macro opens a word, as in `parse_inline`
+        let last_delimiters = macro_delimiters(text);
+        // A passthrough macro opens a word, as in `parse_inline` ~keep
         let mut at_boundary = true;
         while let Some(ch) = rest.chars().next() {
-            // A passthrough keeps `{name}` unless it asks for attributes (`pass:a[...]`)
+            // A passthrough keeps `{name}` unless it asks for attributes (`pass:a[...]`) ~keep
             if (rest.starts_with("+++") || (at_boundary && rest.starts_with("pass:")))
+                && can_close_macro(rest, text.len() - rest.len(), last_delimiters)
                 && let Some(passthrough) = parse_passthrough(rest)
             {
                 let source = &rest[..passthrough.consumed];
                 if passthrough.substitutes_attributes {
-                    // `pass:a[` and `]` around the substituted text
+                    // `pass:a[` and `]` around the substituted text ~keep
                     out.push_str(&source[..source.len() - passthrough.text.len() - 1]);
                     out.push_str(&self.substitute_attributes(&passthrough.text));
                     out.push(']');
@@ -685,7 +687,7 @@ impl<'a> AsciiDocParser<'a> {
                 at_boundary = false;
                 continue;
             }
-            // `\{name}` is an escaped reference; `parse_inline` drops the backslash
+            // `\{name}` is an escaped reference; `parse_inline` drops the backslash ~keep
             if let Some(after) = rest.strip_prefix("\\{") {
                 out.push_str("\\{");
                 rest = after;
@@ -719,6 +721,7 @@ impl<'a> AsciiDocParser<'a> {
         let mut out = String::with_capacity(substituted.len());
         let mut annotations = Vec::new();
         let mut rest = substituted.as_str();
+        let last_delimiters = macro_delimiters(&substituted);
         // An AsciiDoc constrained span may only open at the start of the text or after
         // whitespace / an opening bracket, so `midword*not*bold` stays literal.
         let mut at_boundary = true;
@@ -737,7 +740,7 @@ impl<'a> AsciiDocParser<'a> {
                 at_boundary = false;
                 continue;
             }
-            // A backslash before markup keeps the markup character literal: `\*not bold*`
+            // A backslash before markup keeps the markup character literal: `\*not bold*` ~keep
             if let Some(after) = rest.strip_prefix('\\')
                 && let Some(escaped) = after.chars().next()
                 && "*_`#^~+<[{".contains(escaped)
@@ -747,9 +750,10 @@ impl<'a> AsciiDocParser<'a> {
                 at_boundary = false;
                 continue;
             }
-            // The `pass:` and `xref:` macros open a word, so `bypass:[x]` stays literal
+            // The `pass:` and `xref:` macros open a word, so `bypass:[x]` stays literal ~keep
             let macro_allowed = at_boundary || !(rest.starts_with("pass:") || rest.starts_with("xref:"));
             if macro_allowed
+                && can_close_macro(rest, substituted.len() - rest.len(), last_delimiters)
                 && let Some((consumed, text)) = parse_passthrough(rest)
                     .map(|passthrough| (passthrough.consumed, passthrough.text))
                     .or_else(|| parse_cross_reference(rest))

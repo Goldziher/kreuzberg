@@ -226,35 +226,53 @@ pub(super) fn parse_link_macro(rest: &str) -> Option<(usize, String, String)> {
     Some((url.len(), url.clone(), url))
 }
 
-/// Byte offset of the first `close` in `text`, scanning no further than the next `opener`. An
-/// opener without a close of its own then costs only the stretch up to the next opener, so a run
-/// of unterminated openers in untrusted input is read in linear time.
-fn find_close(text: &str, close: &str, opener: &str) -> Option<usize> {
-    for (index, _) in text.char_indices() {
-        let rest = &text[index..];
-        if rest.starts_with(close) {
-            return Some(index);
-        }
-        if rest.starts_with(opener) {
-            return None;
-        }
+// An xref needs an opening bracket before a closing one; either bound alone permits failed suffix rescans. ~keep
+pub(super) fn macro_delimiters(text: &str) -> (Option<usize>, Option<usize>, Option<usize>) {
+    let bracket_close = text.rfind(']');
+    let xref_open = bracket_close.and_then(|close| text[..close].rfind('['));
+    (bracket_close, text.rfind(">>"), xref_open)
+}
+
+pub(super) fn can_close_macro(
+    rest: &str,
+    offset: usize,
+    (bracket_close, reference_close, xref_open): (Option<usize>, Option<usize>, Option<usize>),
+) -> bool {
+    if rest.starts_with("+++") {
+        return true;
     }
-    None
+    let last_close = if rest.starts_with("<<") {
+        reference_close
+    } else if rest.starts_with("xref:") {
+        xref_open
+    } else {
+        bracket_close
+    };
+    last_close.is_some_and(|close| close > offset)
 }
 
 /// Parse a cross reference at `rest`'s start, `<<id>>`, `<<id,text>>` or `xref:id[text]`,
 /// into the bytes consumed and the text it shows: its own text, or the target id without one.
 pub(super) fn parse_cross_reference(rest: &str) -> Option<(usize, String)> {
     let (target, text, consumed) = if let Some(inner) = rest.strip_prefix("<<") {
-        let close = find_close(inner, ">>", "<<")?;
+        let (target_end, boundary) = inner.char_indices().find(|&(index, character)| {
+            character == ',' || character.is_whitespace() || inner[index..].starts_with(">>")
+        })?;
+        if target_end == 0 || boundary.is_whitespace() {
+            return None;
+        }
+        let close = inner.find(">>")?;
         let (target, text) = inner[..close].split_once(',').unwrap_or((&inner[..close], ""));
         (target, text, close + 4)
     } else {
         let inner = rest.strip_prefix("xref:")?;
-        // The id runs up to `[` and holds no whitespace
+        // The id runs up to `[` and holds no whitespace ~keep
         let open = inner.find(|c: char| c == '[' || c.is_whitespace())?;
+        if open == 0 {
+            return None;
+        }
         let after_open = inner[open..].strip_prefix('[')?;
-        let close = find_close(after_open, "]", "xref:")?;
+        let close = after_open.find(']')?;
         (
             &inner[..open],
             &after_open[..close],
@@ -290,10 +308,10 @@ pub(super) fn parse_passthrough(rest: &str) -> Option<Passthrough> {
         });
     }
     let inner = rest.strip_prefix("pass:")?;
-    // Only substitution names such as `q` or `q,a` may sit between `pass:` and `[`
+    // Only substitution names such as `q` or `q,a` may sit between `pass:` and `[` ~keep
     let open = inner.find(|c: char| !(c.is_ascii_alphabetic() || c == ','))?;
     let after_open = inner[open..].strip_prefix('[')?;
-    let close = find_close(after_open, "]", "pass:")?;
+    let close = after_open.find(']')?;
     let subs = &inner[..open];
     Some(Passthrough {
         consumed: "pass:".len() + open + 1 + close + 1,
