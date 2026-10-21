@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rendering): Plain-text output writes the footnotes of LaTeX, Markdown, reST, Org, Typst, Djot, DocBook, FictionBook, EPUB and PPT documents.**
+  Their definitions were left on the body layer, so plain output kept the `[^1]` marker and dropped the note; definitions now always sit on the footnote layer, JSON output appends them after the body as it does for DOCX and ODT, and styled HTML renders footnote-layer definitions, which it previously dropped for DOCX and ODT as well.
 - **(html): Inline MathML keeps paragraph placement, and bold table text preserves literal asterisks.**
   Break-only presentation tables are omitted, and links in preformatted content retain their destinations.
 - **(odt): Spaces written as `text:s` and text after a nested span, space or tab are no longer dropped.**

@@ -256,7 +256,11 @@ fn render_elements(doc: &InternalDocument, p: &str, buf: &mut String) {
     let mut list_ordered_stack: Vec<bool> = Vec::new();
 
     for elem in &doc.elements {
-        if !matches!(elem.layer, ContentLayer::Body) {
+        // Footnote definitions live on the footnote layer; they are rendered once, where
+        // they were pushed, like the body-layer definitions of formats that kept them there.
+        let footnote_definition =
+            elem.kind == ElementKind::FootnoteDefinition && matches!(elem.layer, ContentLayer::Footnote);
+        if !matches!(elem.layer, ContentLayer::Body) && !footnote_definition {
             continue;
         }
 
@@ -685,6 +689,25 @@ mod tests {
 
     fn render(config: HtmlOutputConfig, doc: &InternalDocument) -> String {
         StyledHtmlRenderer::new(config).unwrap().render(doc).unwrap()
+    }
+
+    /// A definition on the footnote layer (where `push_footnote_definition` puts it, and
+    /// where DOCX and ODT always moved theirs) is rendered once, next to its reference.
+    #[test]
+    fn footnote_layer_definition_is_rendered_once_with_its_reference() {
+        let mut b = crate::types::internal_builder::InternalDocumentBuilder::new("test");
+        b.push_paragraph("Body", vec![], None, None);
+        b.push_footnote_ref("1", "fn1", None);
+        b.push_footnote_definition("FOOT", "fn1", None);
+        let doc = b.build();
+        let out = render(HtmlOutputConfig::default(), &doc);
+        assert!(out.contains(r##"href="#fn-fn1""##), "reference missing: {out}");
+        assert_eq!(
+            out.matches(r#"id="fn-fn1""#).count(),
+            1,
+            "definition not rendered once: {out}"
+        );
+        assert!(out.contains(">FOOT</aside>"), "definition text missing: {out}");
     }
 
     #[test]

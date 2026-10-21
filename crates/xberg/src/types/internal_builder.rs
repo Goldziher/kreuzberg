@@ -306,8 +306,13 @@ impl InternalDocumentBuilder {
     }
 
     /// Push a footnote definition element with `anchor = key`.
+    ///
+    /// A definition is note furniture, not body flow, so it is placed on
+    /// [`ContentLayer::Footnote`], where the plain-text and JSON renderers
+    /// collect definitions. On the body layer the plain-text renderer wrote the
+    /// reference's `[^n]` marker but never the definition it points at.
     pub fn push_footnote_definition(&mut self, text: &str, key: &str, page: Option<u32>) -> u32 {
-        self.push_simple(
+        let idx = self.push_simple(
             ElementKind::FootnoteDefinition,
             text,
             page,
@@ -315,7 +320,9 @@ impl InternalDocumentBuilder {
             Vec::new(),
             None,
             Some(key),
-        )
+        );
+        self.set_layer(idx, ContentLayer::Footnote);
+        idx
     }
 
     /// Push a comment reference marker (e.g. a DOCX reviewer comment anchor).

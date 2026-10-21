@@ -619,6 +619,20 @@ mod tests {
         assert!(out.contains("A note."), "got: {}", out);
     }
 
+    /// LaTeX, Markdown, reST, Org, Typst, Djot, DocBook, FictionBook, EPUB and
+    /// PPT pushed their definitions without moving them to the footnote layer,
+    /// so plain output kept the `[^1]` marker and dropped the note it names.
+    #[test]
+    fn should_write_a_definition_pushed_without_an_explicit_layer() {
+        let mut b = InternalDocumentBuilder::new("test");
+        b.push_paragraph("Main text", vec![], None, None);
+        b.push_footnote_ref("1", "fn1", None);
+        b.push_footnote_definition("A note.", "fn1", None);
+        let doc = b.build();
+        assert_eq!(doc.elements[2].layer, ContentLayer::Footnote);
+        assert_eq!(render_plain(&doc), "Main text[^1]\n\n\n[^1]: A note.");
+    }
+
     #[test]
     fn should_write_footnote_markers_and_label_referenced_definitions_in_plain() {
         let mut b = InternalDocumentBuilder::new("test");
