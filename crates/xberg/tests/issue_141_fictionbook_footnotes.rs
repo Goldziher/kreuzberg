@@ -91,8 +91,9 @@ async fn should_resolve_footnote_reference_to_matching_definition_by_id() {
         .elements
         .iter()
         .find(|e| e.kind == ElementKind::Paragraph && e.text.contains("main text"))
-        .expect("expected the main body paragraph fragment before the footnote ref");
-    assert_eq!(main_paragraph.text, "This is the main text with a footnote");
+        .expect("expected the main body paragraph");
+    // The reference does not split the sentence it sits in
+    assert_eq!(main_paragraph.text, "This is the main text with a footnote in it.");
 }
 
 /// The resolved footnote text must also make it into rendered markdown output, proving
@@ -171,6 +172,32 @@ async fn should_preserve_unresolved_footnote_reference_marker_without_panicking(
         .elements
         .iter()
         .find(|e| e.kind == ElementKind::Paragraph && e.text.contains("Dangling reference"))
-        .expect("expected the paragraph fragment preceding the dangling reference");
-    assert_eq!(main_paragraph.text, "Dangling reference");
+        .expect("expected the paragraph holding the dangling reference");
+    assert_eq!(main_paragraph.text, "Dangling reference with no definition.");
+}
+
+/// A note section's `<title>` is its number, which the reference already shows; the
+/// definition is the note's body.
+#[tokio::test]
+async fn should_leave_the_note_title_out_of_the_footnote_definition() {
+    let fb2 = br##"<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <body><section><p>Text<a type="note" href="#n1">1</a> here.</p></section></body>
+  <body name="notes">
+    <section id="n1"><title><p>1</p></title><p>The footnote.</p></section>
+  </body>
+</FictionBook>"##;
+
+    let extractor = xberg::extractors::fictionbook::FictionBookExtractor;
+    let doc = extractor
+        .extract_content(fb2, "application/x-fictionbook+xml", &ExtractionConfig::default())
+        .await
+        .expect("extraction should succeed");
+
+    let definition = doc
+        .elements
+        .iter()
+        .find(|e| e.kind == ElementKind::FootnoteDefinition)
+        .expect("expected a FootnoteDefinition element");
+    assert_eq!(definition.text, "The footnote.");
 }

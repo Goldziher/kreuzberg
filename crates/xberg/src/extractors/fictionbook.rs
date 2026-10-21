@@ -835,9 +835,10 @@ impl FictionBookExtractor {
     /// `<a xlink:href="#id">marker</a>`) are resolved by `id` and pushed as their own
     /// `FootnoteRef` element via `builder`, so the renderer can later link them to the
     /// matching `FootnoteDefinition` pushed from the `<body name="notes">` section (see
-    /// `build_internal_document`). Any text collected before the reference is flushed as
-    /// a paragraph fragment first, preserving reading order. References whose `href` does
-    /// not start with `#` (regular hyperlinks) are left untouched and their label text
+    /// `build_internal_document`). The references are pushed after the paragraph, as the
+    /// Markdown extractor does: pushing the text before each one as a paragraph of its own
+    /// split the sentence around it (`brown fox[^1]` / `jumps.`). References whose `href`
+    /// does not start with `#` (regular hyperlinks) are left untouched and their label text
     /// flows into the surrounding paragraph as before.
     fn extract_paragraph_with_annotations(
         reader: &mut EntityReader<'_>,
@@ -850,6 +851,8 @@ impl FictionBookExtractor {
         let mut annotations = Vec::new();
         let mut depth = 0;
         let mut format_stack: Vec<(String, u32)> = Vec::new();
+        // (marker, key) of each note reference, pushed once the paragraph is complete
+        let mut note_refs: Vec<(String, String)> = Vec::new();
 
         loop {
             budget.step()?;
@@ -871,12 +874,8 @@ impl FictionBookExtractor {
                         }
                         if let Some(key) = href.strip_prefix('#').filter(|k| !k.is_empty()) {
                             let key = key.to_string();
-                            if !text.is_empty() {
-                                builder.push_paragraph(&text, std::mem::take(&mut annotations), None, None);
-                                text.clear();
-                            }
                             let marker = Self::extract_inline_label(reader, budget)?;
-                            builder.push_footnote_ref(&marker, &key, None);
+                            note_refs.push((marker, key));
                             continue;
                         }
                     }
@@ -958,6 +957,9 @@ impl FictionBookExtractor {
         if !trimmed.is_empty() {
             builder.push_paragraph(trimmed, annotations, None, None);
         }
+        for (marker, key) in note_refs {
+            builder.push_footnote_ref(&marker, &key, None);
+        }
 
         Ok(())
     }
@@ -1010,6 +1012,8 @@ impl FictionBookExtractor {
     fn extract_footnote_text(reader: &mut EntityReader<'_>, budget: &mut SecurityBudget) -> Result<String> {
         let mut text = String::new();
         let mut section_depth = 1;
+        // A note's `<title>` is its number or symbol, already shown by the reference
+        let mut title_depth = 0_u32;
 
         loop {
             budget.step()?;
@@ -1020,6 +1024,8 @@ impl FictionBookExtractor {
                     let tag = crate::utils::xml_tag_name(name.as_ref());
                     if tag == "section" {
                         section_depth += 1;
+                    } else if tag == "title" {
+                        title_depth += 1;
                     }
                 }
                 Ok(Event::End(e)) => {
@@ -1031,6 +1037,8 @@ impl FictionBookExtractor {
                         if section_depth == 0 {
                             break;
                         }
+                    } else if tag == "title" {
+                        title_depth = title_depth.saturating_sub(1);
                     }
                 }
                 Ok(Event::Text(t)) => {
@@ -1038,7 +1046,7 @@ impl FictionBookExtractor {
                     budget.check_entity(&decoded)?;
                     budget.account_text(decoded.len())?;
                     let trimmed = decoded.trim();
-                    if !trimmed.is_empty() {
+                    if !trimmed.is_empty() && title_depth == 0 {
                         if !text.is_empty() {
                             text.push(' ');
                         }
