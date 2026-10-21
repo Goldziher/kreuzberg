@@ -89,7 +89,7 @@ pub(crate) fn extract_env_name(line: &str) -> Option<String> {
 ///
 /// Handles common LaTeX escape sequences like \\&, \\#, \\\_, etc.
 pub(crate) fn clean_text(text: &str) -> String {
-    text.to_string()
+    tie_to_nbsp(text)
         .replace("\\\\", "\n")
         .replace("\\&", "&")
         .replace("\\#", "#")
@@ -99,6 +99,92 @@ pub(crate) fn clean_text(text: &str) -> String {
         .replace("\\%", "%")
         .trim()
         .to_string()
+}
+
+/// `\~` is an accent command, so only unescaped ties become no-break spaces. ~keep
+fn tie_to_nbsp(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut escaped = false;
+    let mut verbatim_end = 0;
+    for (index, ch) in text.char_indices() {
+        if index < verbatim_end {
+            out.push(ch);
+            continue;
+        }
+        if ch == '\\'
+            && !escaped
+            && let Some(len) = verb_span_len(&text[index..])
+        {
+            verbatim_end = index + len;
+            out.push(ch);
+            continue;
+        }
+        if ch == '~' && !escaped {
+            out.push('\u{a0}');
+        } else {
+            out.push(ch);
+        }
+        escaped = ch == '\\' && !escaped;
+    }
+    out
+}
+
+/// Match the inline parser's `\verb` delimiter rules so its literal contents survive. ~keep
+fn verb_span_len(text: &str) -> Option<usize> {
+    let after_verb = text.strip_prefix("\\verb")?;
+    let delim = after_verb.chars().next()?;
+    if delim.is_alphabetic() || delim == '{' {
+        return None;
+    }
+    let end = after_verb[delim.len_utf8()..].find(delim)?;
+    Some("\\verb".len() + 2 * delim.len_utf8() + end)
+}
+
+/// Remove an unescaped `%` comment from the end of `text`. Returns true when `text` ~keep
+/// ended in a comment, which in LaTeX also swallows the line break after it. ~keep
+pub(crate) fn strip_trailing_comment(text: &mut String) -> bool {
+    let mut escaped = false;
+    let mut comment_at = None;
+    // Inside the argument of `\url` or `\href`, `%` is part of the address (`%20`). ~keep
+    let mut url_depth = 0usize;
+    // `\verb|...|` is literal too, so a `%` inside it is not a comment. ~keep
+    let mut verbatim_end = 0;
+    for (index, ch) in text.char_indices() {
+        if index < verbatim_end {
+            continue;
+        }
+        if ch == '\\'
+            && !escaped
+            && let Some(len) = verb_span_len(&text[index..])
+        {
+            verbatim_end = index + len;
+            continue;
+        }
+        if url_depth > 0 {
+            match ch {
+                '{' => url_depth += 1,
+                '}' => url_depth -= 1,
+                _ => {}
+            }
+            continue;
+        }
+        if ch == '{' && (text[..index].ends_with("\\url") || text[..index].ends_with("\\href")) {
+            url_depth = 1;
+            continue;
+        }
+        if ch == '%' && !escaped {
+            comment_at = Some(index);
+            break;
+        }
+        escaped = ch == '\\' && !escaped;
+    }
+    match comment_at {
+        Some(index) => {
+            text.truncate(index);
+            true
+        }
+        None => false,
+    }
 }
 
 /// Returns true if a line inside a table-like environment (`tabular`,

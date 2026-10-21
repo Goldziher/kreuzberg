@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
   Line blocks also retain their footnote and cross-reference relationships.
   `| Line one` / `| Line two` ran together as `| Line one | Line two`, and `Example::` read `Example`; a line block is now one line per `|` line, and `Text::` reads `Text:` while `Text ::` reads `Text`, as in docutils.
+- **(latex): Source lines wrapped at a fixed width form one paragraph, and `~` reads as a no-break space.**
+  Every source line was its own paragraph, so a wrapped sentence was split apart and a `\footnote{...}` spanning two lines was not parsed; paragraphs now end at a blank line or a block-level line, comments follow LaTeX's rules (but not inside `\verb|...|`, whose contents stay literal), paragraphs stop at `\bye` and `\end{document}`, and `Dr.~Smith` no longer keeps the tilde.
 - **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
   A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**
