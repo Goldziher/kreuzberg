@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **(latex): Source lines wrapped at a fixed width form one paragraph, and `~` reads as a no-break space.**
-  Every source line was its own paragraph, so a wrapped sentence was split apart and a `\footnote{...}` spanning two lines was not parsed; paragraphs now end at a blank line or a block-level line, comments follow LaTeX's rules, and `Dr.~Smith` no longer keeps the tilde.
+  Every source line was its own paragraph, so a wrapped sentence was split apart and a `\footnote{...}` spanning two lines was not parsed; paragraphs now end at a blank line or a block-level line, comments follow LaTeX's rules (but not inside `\verb|...|`, whose contents stay literal), paragraphs stop at `\bye` and `\end{document}`, and `Dr.~Smith` no longer keeps the tilde.
 - **(doc): Fields spanning paragraph boundaries retain their displayed text without leaking instructions.** (#2184)
 - **(ppt): Speaker notes are referenced from their own slides in rendered Markdown.** (#2186)
 - **(ios): Native libraries link with bundled ONNX Runtime’s CoreML backend.**

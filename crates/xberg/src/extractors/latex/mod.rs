@@ -103,7 +103,12 @@ impl LatexExtractor {
             if bytes[pos] == b'\\' {
                 if let Some((kind, content, new_pos)) = Self::try_parse_inline_command(&input[pos..]) {
                     let start = output.len() as u32;
-                    let (inner_text, inner_anns) = Self::strip_inline_commands(&content);
+                    // `\verb` contents are literal; the other commands hold more markup.
+                    let (inner_text, inner_anns) = if input[pos..].starts_with("\\verb") {
+                        (content, Vec::new())
+                    } else {
+                        Self::strip_inline_commands(&content)
+                    };
                     output.push_str(&inner_text);
                     let end = output.len() as u32;
                     for mut ann in inner_anns {
@@ -746,7 +751,12 @@ impl LatexExtractor {
                 *i += 1;
                 continue;
             }
-            if next.is_empty() || Self::starts_block(next, heading_map) {
+            // The document ends at `\bye` or `\end{document}` wherever it sits on the line.
+            if next.is_empty()
+                || next.contains("\\bye")
+                || next.contains("\\end{document}")
+                || Self::starts_block(next, heading_map)
+            {
                 break;
             }
             let glued = utilities::strip_trailing_comment(&mut text);
@@ -1619,5 +1629,27 @@ Plain body text.
             document.elements[0].text,
             "Dr.\u{a0}Smith keeps going onand glued. See https://example.com/a%20b here."
         );
+    }
+
+    #[test]
+    fn should_keep_verb_contents_literal_when_joining_lines() {
+        let latex = "\\begin{document}\nBody \\verb|a%b~c| tail\nnext line.\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+
+        assert_eq!(texts, ["Body a%b~c tail next line."]);
+    }
+
+    #[test]
+    fn should_stop_a_paragraph_at_the_end_of_the_document() {
+        let plain = "Body\n\\bye\nIgnored after document end";
+        let document = LatexExtractor::build_internal_document(plain, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+        assert_eq!(texts, ["Body"]);
+
+        let latex = "\\begin{document}\nBody\nLast words. \\end{document}\nIgnored";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+        assert_eq!(texts, ["Body"]);
     }
 }

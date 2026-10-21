@@ -106,7 +106,20 @@ pub(crate) fn clean_text(text: &str) -> String {
 fn tie_to_nbsp(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut escaped = false;
-    for ch in text.chars() {
+    let mut verbatim_end = 0;
+    for (index, ch) in text.char_indices() {
+        if index < verbatim_end {
+            out.push(ch);
+            continue;
+        }
+        if ch == '\\'
+            && !escaped
+            && let Some(len) = verb_span_len(&text[index..])
+        {
+            verbatim_end = index + len;
+            out.push(ch);
+            continue;
+        }
         if ch == '~' && !escaped {
             out.push('\u{a0}');
         } else {
@@ -117,6 +130,18 @@ fn tie_to_nbsp(text: &str) -> String {
     out
 }
 
+/// Byte length of the `\verb` span that `text` starts with, delimiters included, read the
+/// way the inline parser reads it. Its contents are literal: no tie, no comment.
+fn verb_span_len(text: &str) -> Option<usize> {
+    let after_verb = text.strip_prefix("\\verb")?;
+    let delim = after_verb.chars().next()?;
+    if delim.is_alphabetic() || delim == '{' {
+        return None;
+    }
+    let end = after_verb[delim.len_utf8()..].find(delim)?;
+    Some("\\verb".len() + 2 * delim.len_utf8() + end)
+}
+
 /// Remove an unescaped `%` comment from the end of `text`. Returns true when `text`
 /// ended in a comment, which in LaTeX also swallows the line break after it.
 pub(crate) fn strip_trailing_comment(text: &mut String) -> bool {
@@ -124,7 +149,19 @@ pub(crate) fn strip_trailing_comment(text: &mut String) -> bool {
     let mut comment_at = None;
     // Inside the argument of `\url` or `\href`, `%` is part of the address (`%20`).
     let mut url_depth = 0usize;
+    // `\verb|...|` is literal too, so a `%` inside it is not a comment.
+    let mut verbatim_end = 0;
     for (index, ch) in text.char_indices() {
+        if index < verbatim_end {
+            continue;
+        }
+        if ch == '\\'
+            && !escaped
+            && let Some(len) = verb_span_len(&text[index..])
+        {
+            verbatim_end = index + len;
+            continue;
+        }
         if url_depth > 0 {
             match ch {
                 '{' => url_depth += 1,
