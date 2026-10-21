@@ -540,6 +540,14 @@ impl TextParser {
         match next_ch {
             '\n' | '\r' => self.handle_line_break(next_ch, chars),
             '\\' | '{' | '}' => self.handle_literal(next_ch, chars),
+            // Control symbols: a non-breaking space and a non-breaking hyphen are
+            // text, an optional hyphen only marks where a word may break.
+            '~' => self.handle_literal('\u{a0}', chars),
+            '_' => self.handle_literal('\u{2011}', chars),
+            '-' => {
+                chars.next();
+                self.scope.expect_destination = false;
+            }
             '\'' => self.handle_hex_escape(chars),
             '*' => {
                 chars.next();
@@ -570,6 +578,14 @@ impl TextParser {
         }
         self.capture_auxiliary_character(next_ch);
         if self.scope.skip_depth > 0 || self.scope.hidden_stack.last().copied().unwrap_or(false) {
+            return;
+        }
+        // Inside a table row the character belongs to the current cell, as a
+        // hex-escaped one does.
+        if let Some(state) = self.output.table_state.as_mut()
+            && state.in_row
+        {
+            state.current_cell.push(next_ch);
             return;
         }
         if self.scope.pending_boundary_space

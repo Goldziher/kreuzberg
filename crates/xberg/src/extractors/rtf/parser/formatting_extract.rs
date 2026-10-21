@@ -263,6 +263,14 @@ impl FormattingParser {
         };
         match next_ch {
             '\\' | '{' | '}' => self.handle_literal(next_ch, chars),
+            // Control symbols: a non-breaking space and a non-breaking hyphen are
+            // text, an optional hyphen only marks where a word may break.
+            '~' => self.handle_literal('\u{a0}', chars),
+            '_' => self.handle_literal('\u{2011}', chars),
+            '-' => {
+                chars.next();
+                self.scope.expect_destination = false;
+            }
             '\'' => self.handle_hex_escape(chars),
             '*' => {
                 chars.next();
