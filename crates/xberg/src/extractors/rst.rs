@@ -70,24 +70,91 @@ use crate::extraction::latex_shape::wrap_aligned_math;
 /// definition appears.
 #[cfg(feature = "office")]
 #[derive(Default)]
-struct RstReferences {
+struct RstReferences<'a> {
     /// Target name (normalized) -> URL, from `.. _name: url`.
     targets: AHashMap<String, String>,
     /// Substitution name (normalized) -> replacement text, from `.. |name| replace:: text`.
     substitutions: AHashMap<String, String>,
+    /// Charged for the text substitutions add, so their expansion stays within the content limit
+    budget: Option<std::cell::RefCell<&'a mut SecurityBudget>>,
+    /// The limit an expansion ran into; the document is then refused
+    exceeded: std::cell::RefCell<Option<crate::extractors::security::SecurityError>>,
 }
 
 #[cfg(feature = "office")]
-impl RstReferences {
+impl RstReferences<'_> {
     /// Reference names match case-insensitively and with whitespace collapsed, as in docutils.
     fn normalize(name: &str) -> String {
         name.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
     }
 
+    /// Whether `len` more bytes of expanded text fit the budget. The first refusal is kept and
+    /// makes the extraction fail.
+    fn charge(&self, len: usize) -> bool {
+        if self.exceeded.borrow().is_some() {
+            return false;
+        }
+        let Some(budget) = &self.budget else {
+            return true;
+        };
+        match budget.borrow_mut().account_text(len) {
+            Ok(()) => true,
+            Err(error) => {
+                self.exceeded.replace(Some(error));
+                false
+            }
+        }
+    }
+
+    /// Whether `trimmed` (a line without its indentation) starts an RST comment: `..` alone, or
+    /// followed by text that is not a directive, target, substitution, footnote or citation.
+    fn is_comment(trimmed: &str) -> bool {
+        let Some(rest) = trimmed.strip_prefix("..") else {
+            return false;
+        };
+        if rest.is_empty() {
+            return true;
+        }
+        let Some(rest) = rest.strip_prefix(' ') else {
+            return false;
+        };
+        let rest = rest.trim_start();
+        let is_directive = rest
+            .split_once("::")
+            .is_some_and(|(name, _)| !name.is_empty() && !name.contains(char::is_whitespace));
+        !(is_directive || rest.starts_with(['_', '|', '[']))
+    }
+
+    /// Whether the indented block after `trimmed` is not RST markup: the literal block after a
+    /// paragraph ending in `::`, the body of a code or raw directive, or a comment.
+    fn opens_inactive_block(trimmed: &str) -> bool {
+        let is_literal_intro = trimmed.ends_with("::") && !trimmed.starts_with("..");
+        let is_code_directive = ["code", "code-block", "sourcecode", "raw", "math"]
+            .iter()
+            .any(|name| trimmed.starts_with(&format!(".. {name}::")));
+        is_literal_intro || is_code_directive || Self::is_comment(trimmed)
+    }
+
     fn collect(lines: &[&str]) -> Self {
         let mut references = Self::default();
+        // The indentation of the line that opened a literal, code or comment block: the lines
+        // indented deeper belong to it, and a definition shown there is not in effect
+        let mut inactive_indent: Option<usize> = None;
         for (index, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
+            let indent = line.len() - line.trim_start().len();
+            if let Some(block_indent) = inactive_indent {
+                if trimmed.is_empty() || indent > block_indent {
+                    continue;
+                }
+                inactive_indent = None;
+            }
+            if Self::opens_inactive_block(trimmed) {
+                inactive_indent = Some(indent);
+                if Self::is_comment(trimmed) {
+                    continue;
+                }
+            }
             if let Some(rest) = trimmed.strip_prefix(".. _") {
                 // `.. _name: url`, or `` .. _`name: with a colon`: url ``
                 let target = match rest.strip_prefix('`') {
@@ -624,14 +691,18 @@ impl RstExtractor {
                 && name.trim() == name
                 && let Some(replacement) = references.substitutions.get(&RstReferences::normalize(name))
             {
-                let (text, inner_annotations) = Self::parse_inline_markup(replacement, &RstReferences::default());
                 let start = out.len() as u32;
-                out.push_str(&text);
-                annotations.extend(inner_annotations.into_iter().map(|mut annotation| {
-                    annotation.start += start;
-                    annotation.end += start;
-                    annotation
-                }));
+                // Expansion is charged before anything is built or appended: the definition's
+                // length bounds the text it reads as. Past the limit the document is refused.
+                if references.charge(replacement.len()) {
+                    let (text, inner_annotations) = Self::parse_inline_markup(replacement, &RstReferences::default());
+                    out.push_str(&text);
+                    annotations.extend(inner_annotations.into_iter().map(|mut annotation| {
+                        annotation.start += start;
+                        annotation.end += start;
+                        annotation
+                    }));
+                }
                 i += close + 2;
                 if bytes.get(i) == Some(&b'_') {
                     i += if bytes.get(i + 1) == Some(&b'_') { 2 } else { 1 };
@@ -884,10 +955,22 @@ impl RstExtractor {
     ///
     /// Handles sections, paragraphs, code blocks, tables, footnotes, citations,
     /// and cross-references.
+    #[cfg(test)]
     pub(crate) fn build_internal_document(content: &str, inject_placeholders: bool) -> InternalDocument {
+        Self::build_internal_document_within(content, inject_placeholders, None)
+            .expect("without a budget the build cannot fail")
+    }
+
+    /// Build the document, charging `budget` (when given) for the text substitutions add.
+    fn build_internal_document_within(
+        content: &str,
+        inject_placeholders: bool,
+        budget: Option<&mut SecurityBudget>,
+    ) -> Result<InternalDocument> {
         let mut b = InternalDocumentBuilder::new("rst");
         let lines: Vec<&str> = content.lines().collect();
-        let references = RstReferences::collect(&lines);
+        let mut references = RstReferences::collect(&lines);
+        references.budget = budget.map(std::cell::RefCell::new);
         let mut heading_char_order: Vec<char> = Vec::new();
         let mut has_overline_heading = false;
         let mut highlight_lang: Option<String> = None;
@@ -1447,7 +1530,10 @@ impl RstExtractor {
             i += 1;
         }
 
-        b.build()
+        if let Some(error) = references.exceeded.take() {
+            return Err(error.into());
+        }
+        Ok(b.build())
     }
 
     /// Extract RST cross-reference roles (`:ref:`, `:doc:`, etc.) and emit relationships.
@@ -1666,7 +1752,7 @@ impl InternalDocumentExtractor for RstExtractor {
         // `extract_tables` pass used to raw-push the same tables again, adding an unreferenced
         // (and, for grid tables, less accurate) entry to `doc.tables` for every table without
         // contributing anything to rendered output.
-        let mut doc = Self::build_internal_document(&text, inject_placeholders);
+        let mut doc = Self::build_internal_document_within(&text, inject_placeholders, Some(&mut budget))?;
         doc.mime_type = mime_type.to_string();
         doc.metadata = metadata;
 
@@ -1955,6 +2041,47 @@ Second paragraph.
                 vec![]
             )
         );
+    }
+
+    #[test]
+    fn should_ignore_definitions_shown_in_literal_code_and_comment_blocks() {
+        let rst = "See |project| at site_ and |inner|.\n\n\
+                   .. |project| replace:: REAL\n\
+                   .. _site: https://real.example\n\n\
+                   Example::\n\n    .. |project| replace:: SPOOF\n\n\
+                   .. code-block:: rst\n\n    .. _site: https://spoof.example\n\n\
+                   .. a comment\n   .. |project| replace:: COMMENT\n\n\
+                   .. note::\n\n   .. |inner| replace:: INNER\n";
+        let paragraphs = paragraph_links(rst);
+
+        assert_eq!(
+            paragraphs[0],
+            (
+                "See REAL at site and INNER.".to_string(),
+                vec!["site=https://real.example".to_string()]
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn should_charge_substitution_expansion_to_the_content_budget() {
+        use crate::plugins::InternalDocumentExtractor;
+
+        let rst = format!(".. |big| replace:: {}\n\n{}\n", "x".repeat(256), "|big| ".repeat(48));
+        let config = ExtractionConfig {
+            security_limits: Some(crate::extractors::security::SecurityLimits {
+                max_content_size: 4 * rst.len(),
+                ..Default::default()
+            }),
+            ..ExtractionConfig::default()
+        };
+
+        let error = RstExtractor::new()
+            .extract_content(rst.as_bytes(), "text/x-rst", &config)
+            .await
+            .expect_err("expanded substitutions must consume the security budget");
+
+        assert!(error.to_string().contains("Content too large"), "got: {error}");
     }
 
     #[test]
