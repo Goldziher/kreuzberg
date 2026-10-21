@@ -359,53 +359,49 @@ const PARAGRAPH_MARK: char = '\r';
 /// Operates on the *raw* text so that character positions still line up with
 /// `main_fcs`; each paragraph's text is normalized individually afterwards.
 /// `content` is still produced by normalizing the whole main text in one pass,
-/// so it stays byte-identical to what this module produced before #1550 --
-/// `normalize_doc_text` carries a field stack across the whole string, and a
-/// field that opens before a paragraph mark and closes after it would
-/// normalize differently piecewise. No document in the corpus does that, but
-/// deriving `content` from these paragraphs would make that an unstated
-/// assumption rather than a measured one. ~keep
+/// so it stays byte-identical to what this module produced before #1550.
+///
+/// Fields are matched over the whole text too, before it is split: a field
+/// can open before a paragraph mark and close after it -- Word ends a
+/// hyperlink laid over a whole paragraph after that paragraph's mark, and a
+/// `TOC` result holds every entry's paragraph -- and on its own the paragraph
+/// holding the begin would see it unterminated and keep the instruction as
+/// text. ~keep
 fn split_main_paragraphs(main: &str, main_fc_ends: &[u32], list_tables: &papx::ListTables) -> Vec<DocParagraph> {
+    let markup = field_markup_mask(main);
     let mut paragraphs = Vec::new();
-    let mut start = 0usize;
+    let mut raw = String::new();
+    let mut after_last_mark = false;
+    let mut char_count = 0usize;
 
-    for (i, c) in main.chars().enumerate() {
-        if c != PARAGRAPH_MARK {
+    for (i, (c, is_markup)) in main.chars().zip(markup).enumerate() {
+        char_count = i + 1;
+        if c == PARAGRAPH_MARK {
+            push_paragraph(&mut paragraphs, &raw, main_fc_ends.get(i).copied(), list_tables);
+            raw.clear();
+            after_last_mark = false;
             continue;
         }
-        push_paragraph(
-            &mut paragraphs,
-            main,
-            start,
-            i,
-            main_fc_ends.get(i).copied(),
-            list_tables,
-        );
-        start = i + 1;
+        after_last_mark = true;
+        if !is_markup {
+            raw.push(c);
+        }
     }
 
-    let char_count = main.chars().count();
-    if start < char_count {
+    if after_last_mark {
         // A final run with no paragraph mark still has properties keyed on the
         // FC one past its last character.
         let last_fc = main_fc_ends.get(char_count.saturating_sub(1)).copied();
-        push_paragraph(&mut paragraphs, main, start, char_count, last_fc, list_tables);
+        push_paragraph(&mut paragraphs, &raw, last_fc, list_tables);
     }
 
     paragraphs
 }
 
-/// Normalize one paragraph's raw text and record it when it survives.
-fn push_paragraph(
-    out: &mut Vec<DocParagraph>,
-    main: &str,
-    start: usize,
-    end: usize,
-    mark_fc_end: Option<u32>,
-    list_tables: &papx::ListTables,
-) {
-    let raw: String = main.chars().skip(start).take(end.saturating_sub(start)).collect();
-    let content = normalize_doc_text(&raw);
+/// Normalize one paragraph's raw text, field markup already taken out, and
+/// record it when it survives.
+fn push_paragraph(out: &mut Vec<DocParagraph>, raw: &str, mark_fc_end: Option<u32>, list_tables: &papx::ListTables) {
+    let content = normalize_doc_text(raw);
     if content.is_empty() {
         return;
     }
@@ -601,15 +597,15 @@ fn normalize_doc_text(text: &str) -> String {
     collapse_excess_newlines(&stripped).trim().to_string()
 }
 
-/// Strip field instructions and convert DOC's special control characters to their
-/// plain-text equivalents.
+/// Mark, for each character of `text`, whether it is field markup rather than
+/// document text: a field marker, or part of a field instruction.
 ///
 /// Field handling (#1460): the text between [`FIELD_BEGIN`] and [`FIELD_SEPARATOR`]
 /// is the field instruction and is markup, not document text, so it is dropped;
 /// the result between [`FIELD_SEPARATOR`] and [`FIELD_END`] is kept. A terminated
 /// field with no separator has no result and therefore contributes nothing.
-fn strip_doc_field_instructions(text: &str) -> String {
-    let mut result = String::with_capacity(text.len());
+fn field_markup_mask(text: &str) -> Vec<bool> {
+    let mut markup = Vec::with_capacity(text.len());
 
     let begin_terminated = scan_field_begin_termination(text);
     let mut begin_ordinal = 0usize;
@@ -631,7 +627,7 @@ fn strip_doc_field_instructions(text: &str) -> String {
                     field_stack.push(true);
                     instruction_depth += 1;
                 }
-                continue;
+                markup.push(true);
             }
             FIELD_SEPARATOR => {
                 if let Some(in_instruction) = field_stack.last_mut()
@@ -640,7 +636,7 @@ fn strip_doc_field_instructions(text: &str) -> String {
                     *in_instruction = false;
                     instruction_depth -= 1;
                 }
-                continue;
+                markup.push(true);
             }
             FIELD_END => {
                 if let Some(in_instruction) = field_stack.pop()
@@ -648,12 +644,22 @@ fn strip_doc_field_instructions(text: &str) -> String {
                 {
                     instruction_depth -= 1;
                 }
-                continue;
+                markup.push(true);
             }
-            _ => {}
+            _ => markup.push(instruction_depth > 0),
         }
+    }
 
-        if instruction_depth > 0 {
+    markup
+}
+
+/// Strip field instructions and convert DOC's special control characters to their
+/// plain-text equivalents (see [`field_markup_mask`] for what a field leaves).
+fn strip_doc_field_instructions(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+
+    for (c, is_markup) in text.chars().zip(field_markup_mask(text)) {
+        if is_markup {
             continue;
         }
 

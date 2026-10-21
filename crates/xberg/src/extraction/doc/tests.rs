@@ -717,3 +717,52 @@ pub(crate) fn build_synthetic_doc(spec: &SyntheticDoc) -> Vec<u8> {
 
     build_doc_ole(&word_doc, &table_stream)
 }
+
+fn paragraph_texts(result: &DocExtractionResult) -> Vec<&str> {
+    result.paragraphs.iter().map(|p| p.content.as_str()).collect()
+}
+
+/// Word ends a hyperlink laid over a whole paragraph after that paragraph's
+/// mark, so the paragraph holding the field's begin does not hold its end.
+#[test]
+fn should_drop_a_hyperlink_instruction_whose_field_ends_in_the_next_paragraph() {
+    let text = "Rules\r\x13 HYPERLINK \"http://example.com/rules\" \x01\x14The rules (2023)\r\x15Next paragraph.\r";
+
+    let result = extract_doc_text(&build_utf16_doc(text)).expect("DOC extraction should succeed");
+
+    assert_eq!(
+        paragraph_texts(&result),
+        ["Rules", "The rules (2023)", "Next paragraph."]
+    );
+    assert!(!result.content.contains("HYPERLINK"), "{}", result.content);
+}
+
+/// A `TOC` field's result is one paragraph per entry, so its instruction opens
+/// in the first entry's paragraph and the field ends after the last one.
+#[test]
+fn should_drop_a_toc_instruction_from_the_paragraphs_it_spans() {
+    let text = concat!(
+        "\x13 TOC \\o \"1-3\" \\h \\z \\u \x14",
+        "\x13 PAGEREF _Toc101 \\h \x141\x15\tIntroduction\r",
+        "\x13 PAGEREF _Toc102 \\h \x142\x15\tMethods\r",
+        "\x15Body text.\r"
+    );
+
+    let result = extract_doc_text(&build_utf16_doc(text)).expect("DOC extraction should succeed");
+
+    assert_eq!(
+        paragraph_texts(&result),
+        ["1\tIntroduction", "2\tMethods", "Body text."]
+    );
+}
+
+/// An unterminated begin still degrades instead of swallowing the paragraphs
+/// after it.
+#[test]
+fn should_keep_the_paragraphs_after_an_unterminated_field_begin() {
+    let text = "Intro.\r\x13PAGEREF _Toc1 \\h \x14Tail\rLast.\r";
+
+    let result = extract_doc_text(&build_utf16_doc(text)).expect("DOC extraction should succeed");
+
+    assert_eq!(paragraph_texts(&result), ["Intro.", "PAGEREF _Toc1 \\h Tail", "Last."]);
+}
