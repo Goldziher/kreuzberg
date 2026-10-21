@@ -12,6 +12,10 @@
 //! agreeing on nothing but the intermediates, and what would let a third
 //! format (DrawingML, EMF) join them without touching the matching at all.
 
+// The flat ODF front end names its nodes and edges outright and uses none of the
+// geometry below, which only the SVG and PDF front ends match on. ~keep
+#![cfg_attr(not(any(feature = "svg", feature = "pdf")), allow(dead_code))]
+
 #[cfg(feature = "xml")]
 pub(crate) mod odf;
 #[cfg(feature = "pdf")]

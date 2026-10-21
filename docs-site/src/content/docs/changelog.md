@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(build): The `xml` feature compiles without `svg` or `pdf`.**
+  The flat ODF drawing recovery in the XML extractor calls `extraction::diagram::odf`, but the `diagram` module was only built with `svg` and `xml` together or with `pdf`, so `--no-default-features --features xml` (and `office,xml`) failed with `cannot find diagram in extraction`.
 - **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
   IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
 - **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
