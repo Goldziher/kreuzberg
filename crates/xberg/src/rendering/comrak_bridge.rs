@@ -1307,7 +1307,11 @@ pub(crate) fn build_comrak_ast<'a>(doc: &InternalDocument, arena: &'a comrak::Ar
                 let text = elem_text.trim_end_matches('\n');
                 let merged = parent.last_child().is_some_and(|last| {
                     if let NodeValue::Raw(previous) = &mut last.data.borrow_mut().value {
-                        *previous = format!("{}\n{text}\n\n", previous.trim_end_matches('\n'));
+                        // Appended in place: rebuilding the run per line would copy it each time
+                        previous.truncate(previous.trim_end_matches('\n').len());
+                        previous.push('\n');
+                        previous.push_str(text);
+                        previous.push_str("\n\n");
                         true
                     } else {
                         false
@@ -2815,6 +2819,17 @@ mod tests {
             markdown,
             "Intro.\n\n<div class=\"note\">\nRaw HTML block\n</div>\n\n# Heading\n\n<Badge />\n\n- item\n"
         );
+    }
+
+    #[test]
+    fn should_render_a_long_run_of_raw_blocks_in_linear_time() {
+        // A long HTML block reaches the renderer one raw block per line
+        let mut builder = InternalDocumentBuilder::new("test");
+        for _ in 0..20_000 {
+            builder.push_raw_block("html", "<td>cell</td>", None);
+        }
+        let markdown = crate::rendering::render_markdown(&builder.build());
+        assert_eq!(markdown.matches("<td>cell</td>\n").count(), 20_000);
     }
 
     #[test]
