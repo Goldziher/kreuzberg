@@ -112,6 +112,13 @@ impl DjotExtractor {
                     heading_text.clear();
                     heading_annotations.clear();
                 }
+                // A list item's paragraphs share its text: a space keeps the last word of one
+                // from running into the first word of the next, as in the Markdown extractor
+                Event::Start(Container::Paragraph, _) if in_list_item > 0 => {
+                    if !list_item_text.is_empty() && !list_item_text.ends_with(char::is_whitespace) {
+                        list_item_text.push(' ');
+                    }
+                }
                 Event::Start(Container::Paragraph, _)
                     if !in_heading && in_list_item == 0 && !in_description_term && !in_description_details =>
                 {
@@ -956,6 +963,20 @@ mod tests {
     ///
     /// Against the unfixed code this assertion fails: `list_items(&doc).len()` is `1`
     /// (only `[("L3", false, 3)]`) instead of the expected 3 levels.
+    /// A list item with two paragraphs: the second one's first word must not run into the
+    /// first one's last word.
+    #[tokio::test]
+    async fn should_separate_the_paragraphs_of_a_list_item_djot() {
+        let djot = b"- one\n- two\n\n  continued paragraph in item\n- three\n";
+        let doc = DjotExtractor::new()
+            .extract_content(djot, "text/djot", &ExtractionConfig::default())
+            .await
+            .expect("djot list should extract");
+
+        let items: Vec<String> = list_items(&doc).into_iter().map(|(text, _, _)| text).collect();
+        assert_eq!(items, ["one", "two continued paragraph in item", "three"]);
+    }
+
     #[tokio::test]
     async fn test_nested_list_preserves_all_ancestor_text_djot() {
         // Djot requires a blank line between a list item's own content and a nested
