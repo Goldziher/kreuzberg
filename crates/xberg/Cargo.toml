@@ -1613,7 +1613,7 @@ xberg-paddle-ocr = { path = "../xberg-paddle-ocr", version = "1.3.11", optional 
 # SSL_CERT_DIR — satisfying corporate TLS-MITM proxies (#1146). hf-hub is declared once in the
 # target-independent `not(wasm32)` block below (1.0 uses its own reqwest/rustls stack).
 [target.'cfg(all(not(target_os = "windows"), not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
-ureq = { version = "3.4", default-features = false, features = [
+ureq = { version = "3.5", default-features = false, features = [
     "rustls",
     "platform-verifier",
     "json",
@@ -1638,7 +1638,7 @@ liter-llm = { workspace = true, optional = true, features = [
 # Keep tokenizers' separate `http` client disabled; Xberg uses the shared hf-hub 1 resolver.
 tokenizers = { version = "0.23", default-features = false, features = ["fancy-regex"], optional = true }
 # ureq on Windows: ring-backed rustls + platform-verifier (WinCrypt OS trust store, no openssl).
-ureq = { version = "3.4", default-features = false, features = [
+ureq = { version = "3.5", default-features = false, features = [
     "rustls",
     "platform-verifier",
     "json",
@@ -1755,7 +1755,7 @@ xberg-tesseract = { path = "../xberg-tesseract", default-features = false, featu
 # trust (#1146) is a desktop/server concern; mobile apps ship their own trust configuration.
 # hf-hub is declared in the target-independent `not(wasm32)` block above.
 [target.'cfg(target_os = "android")'.dependencies]
-ureq = { version = "3.4", default-features = false, features = ["rustls", "json"], optional = true }
+ureq = { version = "3.5", default-features = false, features = ["rustls", "json"], optional = true }
 
 # ort CoreML EP (macOS only): Cargo unions this dependency's `features` additively with the
 # base `ort` declaration above for the matching platform, so this only adds `coreml` to the

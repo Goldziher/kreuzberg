@@ -248,4 +248,4 @@ xberg = { workspace = true, features = ["tokio-runtime", "simd-utf8"] }
 [dev-dependencies]
 bytes = { workspace = true }
 tempfile = { workspace = true }
-ureq = { version = "3.4", features = ["json"] }
+ureq = { version = "3.5", features = ["json"] }

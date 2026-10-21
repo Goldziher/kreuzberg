@@ -2808,7 +2808,7 @@ dependencies = [
  "parking_lot",
  "skeptic",
  "thiserror 2.0.21",
- "ureq 3.4.2",
+ "ureq 3.5.0",
  "zip 9.0.5",
 ]
 
@@ -6421,7 +6421,7 @@ dependencies = [
  "ort-sys",
  "smallvec",
  "tracing",
- "ureq 3.4.2",
+ "ureq 3.5.0",
 ]
 
 [[package]]
@@ -6432,7 +6432,7 @@ checksum = "4af4763e553f916650b0bfe4b8d217d61c28607f6117e48b8ab5584d1138f22f"
 dependencies = [
  "hmac-sha256",
  "lzma-rust2 0.15.8",
- "ureq 3.4.2",
+ "ureq 3.5.0",
 ]
 
 [[package]]
@@ -8637,17 +8637,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "socks"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c3dbbd9ae980613c6dd8e28a9407b50509d3803b57624d5dfe8315218cd58b"
-dependencies = [
- "byteorder",
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "spin"
 version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10222,7 +10211,7 @@ dependencies = [
  "tracing",
  "tree-sitter",
  "tree-sitter-language",
- "ureq 3.4.2",
+ "ureq 3.5.0",
  "zstd",
 ]
 
@@ -10531,9 +10520,9 @@ dependencies = [
 
 [[package]]
 name = "ureq"
-version = "3.4.2"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a7ac20be9b7726e0bbdbf974c059676d9acb1cd414961f570a4e8231cacd7fc"
+checksum = "cde93ff05758a36a851a398a772b0b79a82fbe3c186a46f2696baaeaf84c966b"
 dependencies = [
  "base64 0.23.1",
  "cookie_store",
@@ -10547,7 +10536,6 @@ dependencies = [
  "rustls-platform-verifier",
  "serde",
  "serde_json",
- "socks",
  "ureq-proto",
  "utf8-zero",
  "webpki-root-certs",
@@ -11617,7 +11605,7 @@ dependencies = [
  "typst-syntax",
  "unhwp",
  "unicode-normalization",
- "ureq 3.4.2",
+ "ureq 3.5.0",
  "url",
  "urlencoding",
  "usvg",
@@ -11678,7 +11666,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tree-sitter-language-pack",
- "ureq 3.4.2",
+ "ureq 3.5.0",
  "xberg",
 ]
 
