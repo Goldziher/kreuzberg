@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(vtt): Numeric character references and `&quot;`/`&apos;` in cue text are decoded, and ruby text is left out of the line.**
+  Only the six named escapes were decoded, so `It&#39;s` and `&quot;fine&quot;` reached the text as written; references are now decoded in one pass, and other named ones stay as written. The `<rt>` reading printed over a ruby base was glued into the line (`漢kan字ji`); it is now dropped, also when `</ruby>` closes it.
 - **(rst): Internal underscores in Unicode words remain intact when resolving named references.**
 - **(rendering): Markdown output ends raw HTML and JSX blocks before the next block.**
   A raw block was written with no line break, so an HTML block's lines ran together and the block after it was glued on (`</div># Heading`, `<Badge />- item`), which turned the heading or list into raw text; consecutive raw blocks now form one run, one line each, followed by a blank line. Source blank lines between raw fragments remain intact.
