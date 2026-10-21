@@ -656,9 +656,28 @@ impl TypstExtractor {
         let mut index = 0;
         // One entry per open `(` or `[`: whether it is code (a call's arguments) or markup
         let mut modes: Vec<bool> = Vec::new();
+        // A `#let`, `#set`, `#show`, `#import` or `#include` statement is code to the end of
+        // its line, outside any bracket opened in it
+        let mut statement_depth: Option<usize> = None;
         while index < bytes.len() {
-            let in_code = modes.last().copied().unwrap_or(false);
+            if statement_depth.is_some_and(|depth| depth == modes.len()) && matches!(bytes[index], b'\n' | b';') {
+                statement_depth = None;
+            }
+            let in_code = modes.last().copied().unwrap_or(statement_depth.is_some());
             match bytes[index] {
+                b'#' if !in_code && Self::starts_statement(&bytes[index + 1..]) => {
+                    statement_depth = Some(modes.len());
+                    index += 1;
+                }
+                // `#"..."` is a string expression in markup
+                b'#' if !in_code && bytes.get(index + 1) == Some(&b'"') => {
+                    index += 1;
+                    let mut cursor = index + 1;
+                    while cursor < bytes.len() && bytes[cursor] != b'"' {
+                        cursor += if bytes[cursor] == b'\\' { 2 } else { 1 };
+                    }
+                    index = (cursor + 1).min(bytes.len());
+                }
                 b'`' => {
                     // Raw text runs to a closing run of as many backticks
                     let run = bytes[index..].iter().take_while(|&&byte| byte == b'`').count();
@@ -678,7 +697,9 @@ impl TypstExtractor {
                     index = (cursor + 1).min(bytes.len());
                 }
                 b'(' => {
-                    modes.push(in_code || Self::follows_call_name(bytes, index));
+                    // `#name(...)` and `#(...)` open code
+                    let opens_code = Self::follows_call_name(bytes, index) || (index > 0 && bytes[index - 1] == b'#');
+                    modes.push(in_code || opens_code);
                     index += 1;
                 }
                 b'[' => {
@@ -720,6 +741,16 @@ impl TypstExtractor {
         }
         out.push(&content[copied..]);
         out.text
+    }
+
+    /// Whether `after_hash` (the source after a `#`) starts a statement keyword.
+    fn starts_statement(after_hash: &[u8]) -> bool {
+        ["let", "set", "show", "import", "include"].iter().any(|keyword| {
+            after_hash.starts_with(keyword.as_bytes())
+                && !after_hash
+                    .get(keyword.len())
+                    .is_some_and(|&next| next.is_ascii_alphanumeric() || matches!(next, b'_' | b'-'))
+        })
     }
 
     /// Whether the `(` at `open` follows `#name`, which makes its contents a call's arguments.
@@ -1976,6 +2007,16 @@ Actual content"#;
                 "Visit https://x.org/a//b after, or the page"
             ]
         );
+    }
+
+    #[test]
+    fn should_treat_strings_in_statements_and_code_expressions_as_strings() {
+        assert_eq!(typst_paragraphs("#let marker = \"/*\"\nVisible."), ["Visible."]);
+        assert_eq!(
+            typst_paragraphs("Text #(\"/*\")\nVisible after."),
+            ["Text #(\"/*\") Visible after."]
+        );
+        assert_eq!(typst_paragraphs("Note #\"//\" here // gone\n"), ["Note #\"//\" here"]);
     }
 
     #[test]
