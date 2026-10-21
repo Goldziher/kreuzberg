@@ -766,3 +766,125 @@ fn should_keep_the_paragraphs_after_an_unterminated_field_begin() {
 
     assert_eq!(paragraph_texts(&result), ["Intro.", "PAGEREF _Toc1 \\h Tail", "Last."]);
 }
+
+/// Build a `.doc` whose body is `text` in one uncompressed piece, with one
+/// `PapxFkp` page giving each run of characters (`start..end`, char indices,
+/// together covering `text`) the paragraph-property grpprl beside it.
+fn build_utf16_doc_with_papx(text: &str, runs: &[(std::ops::Range<usize>, &[u8])]) -> Vec<u8> {
+    const TEXT_OFFSET: usize = 900;
+    let units: Vec<u16> = text.encode_utf16().collect();
+    let fc = |char_index: usize| (TEXT_OFFSET + char_index * 2) as u32;
+    let page_offset = (TEXT_OFFSET + units.len() * 2).div_ceil(512) * 512;
+
+    let mut word_doc = build_fib(page_offset + 512, units.len() as u32, 0, 0, 0);
+    for (i, unit) in units.iter().enumerate() {
+        write_u16(&mut word_doc, TEXT_OFFSET + i * 2, *unit);
+    }
+
+    // PapxFkp: crun+1 FCs, crun 13-byte BxPap entries, then the PAPXs, each
+    // a cb byte and 2*cb-1 bytes of istd (0) plus grpprl; crun in the last byte.
+    let page = &mut word_doc[page_offset..page_offset + 512];
+    let crun = runs.len();
+    let mut papx_at = 256usize;
+    for (i, (range, grpprl)) in runs.iter().enumerate() {
+        page[i * 4..i * 4 + 4].copy_from_slice(&fc(range.start).to_le_bytes());
+        page[(i + 1) * 4..(i + 2) * 4].copy_from_slice(&fc(range.end).to_le_bytes());
+        page[(crun + 1) * 4 + i * 13] = (papx_at / 2) as u8;
+        let cb = (2 + grpprl.len() + 1).div_ceil(2);
+        page[papx_at] = cb as u8;
+        page[papx_at + 3..papx_at + 3 + grpprl.len()].copy_from_slice(grpprl);
+        papx_at += (1 + cb * 2 - 1).div_ceil(2) * 2;
+    }
+    page[511] = crun as u8;
+
+    let plc_pcd = build_plc_pcd(&[TestPiece {
+        cp_start: 0,
+        cp_end: units.len() as u32,
+        fc_raw: TEXT_OFFSET as u32,
+    }]);
+    let mut table_stream = build_table_stream(&mut word_doc, &plc_pcd);
+    // PlcfBtePapx: the FCs the one page covers, then its page number.
+    let plcf_at = table_stream.len();
+    table_stream.extend_from_slice(&fc(0).to_le_bytes());
+    table_stream.extend_from_slice(&fc(units.len()).to_le_bytes());
+    table_stream.extend_from_slice(&((page_offset / 512) as u32).to_le_bytes());
+    let pair = test_rg_fc_lcb_offset() + 13 * 8;
+    write_u32(&mut word_doc, pair, plcf_at as u32);
+    write_u32(&mut word_doc, pair + 4, 12);
+
+    build_doc_ole(&word_doc, &table_stream)
+}
+
+const IN_TABLE: &[u8] = &[0x16, 0x24, 0x01];
+const ROW_END: &[u8] = &[0x16, 0x24, 0x01, 0x17, 0x24, 0x01];
+
+fn table_marks(result: &DocExtractionResult) -> Vec<(&str, Option<(bool, bool)>)> {
+    result
+        .paragraphs
+        .iter()
+        .map(|p| (p.content.as_str(), p.table.map(|t| (t.cell_end, t.row_end))))
+        .collect()
+}
+
+/// A table's cell marks end paragraphs, so each cell is a paragraph of its own
+/// and each row ends with an empty row-end paragraph. The cells of a row share
+/// one FKP run, so membership is looked up by range.
+#[test]
+fn should_split_table_cells_and_rows_at_their_marks() {
+    let text = "Intro\rA1\x07B1\x07\x07A2\x07\x07\x07After\r";
+    let runs: &[(std::ops::Range<usize>, &[u8])] = &[
+        (0..6, &[]),
+        (6..12, IN_TABLE),
+        (12..13, ROW_END),
+        (13..17, IN_TABLE),
+        (17..18, ROW_END),
+        (18..24, &[]),
+    ];
+
+    let result = extract_doc_text(&build_utf16_doc_with_papx(text, runs)).expect("DOC extraction should succeed");
+
+    let cell = Some((true, false));
+    let row = Some((false, true));
+    assert_eq!(
+        table_marks(&result),
+        [
+            ("Intro", None),
+            ("A1", cell),
+            ("B1", cell),
+            ("", row),
+            ("A2", cell),
+            ("", cell),
+            ("", row),
+            ("After", None),
+        ]
+    );
+}
+
+/// A cell of several paragraphs: all but the last end with paragraph marks.
+#[test]
+fn should_keep_the_paragraphs_of_a_cell_in_the_table() {
+    let text = "x\ry\x07\x07";
+    let runs: &[(std::ops::Range<usize>, &[u8])] = &[(0..4, IN_TABLE), (4..5, ROW_END)];
+
+    let result = extract_doc_text(&build_utf16_doc_with_papx(text, runs)).expect("DOC extraction should succeed");
+
+    assert_eq!(
+        table_marks(&result),
+        [
+            ("x", Some((false, false))),
+            ("y", Some((true, false))),
+            ("", Some((false, true)))
+        ]
+    );
+}
+
+/// A cell mark in a paragraph that is not in a table does not end it.
+#[test]
+fn should_leave_a_cell_mark_outside_a_table_as_a_tab() {
+    let text = "A\x07B\r";
+    let runs: &[(std::ops::Range<usize>, &[u8])] = &[(0..4, &[])];
+
+    let result = extract_doc_text(&build_utf16_doc_with_papx(text, runs)).expect("DOC extraction should succeed");
+
+    assert_eq!(table_marks(&result), [("A\tB", None)]);
+}
