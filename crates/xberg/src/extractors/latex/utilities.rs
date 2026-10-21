@@ -140,50 +140,55 @@ fn verb_span_len(text: &str) -> Option<usize> {
     Some("\\verb".len() + 2 * delim.len_utf8() + end)
 }
 
-/// Remove an unescaped `%` comment from the end of `text`. Returns true when `text` ~keep
-/// ended in a comment, which in LaTeX also swallows the line break after it. ~keep
-pub(crate) fn strip_trailing_comment(text: &mut String) -> bool {
-    let mut escaped = false;
-    let mut comment_at = None;
-    // Inside the argument of `\url` or `\href`, `%` is part of the address (`%20`). ~keep
-    let mut url_depth = 0usize;
-    // `\verb|...|` is literal too, so a `%` inside it is not a comment. ~keep
-    let mut verbatim_end = 0;
-    for (index, ch) in text.char_indices() {
-        if index < verbatim_end {
-            continue;
-        }
-        if ch == '\\'
-            && !escaped
-            && let Some(len) = verb_span_len(&text[index..])
-        {
-            verbatim_end = index + len;
-            continue;
-        }
-        if url_depth > 0 {
-            match ch {
-                '{' => url_depth += 1,
-                '}' => url_depth -= 1,
-                _ => {}
+/// Comment parsing state retained across physical source lines. ~keep
+#[derive(Default)]
+pub(super) struct CommentState {
+    escaped: bool,
+    url_depth: usize,
+}
+
+impl CommentState {
+    /// Scan newly appended text only; rescanning the growing paragraph is quadratic. ~keep
+    pub(super) fn strip_new_comment(&mut self, text: &mut String, start: usize) -> bool {
+        let mut comment_at = None;
+        let mut verbatim_end = 0;
+        for (relative, ch) in text[start..].char_indices() {
+            let index = start + relative;
+            if index < verbatim_end {
+                continue;
             }
-            continue;
+            if ch == '\\'
+                && !self.escaped
+                && let Some(len) = verb_span_len(&text[index..])
+            {
+                verbatim_end = index + len;
+                continue;
+            }
+            if self.url_depth > 0 {
+                match ch {
+                    '{' => self.url_depth += 1,
+                    '}' => self.url_depth -= 1,
+                    _ => {}
+                }
+                continue;
+            }
+            if ch == '{' && (text[..index].ends_with("\\url") || text[..index].ends_with("\\href")) {
+                self.url_depth = 1;
+                continue;
+            }
+            if ch == '%' && !self.escaped {
+                comment_at = Some(index);
+                break;
+            }
+            self.escaped = ch == '\\' && !self.escaped;
         }
-        if ch == '{' && (text[..index].ends_with("\\url") || text[..index].ends_with("\\href")) {
-            url_depth = 1;
-            continue;
+        match comment_at {
+            Some(index) => {
+                text.truncate(index);
+                true
+            }
+            None => false,
         }
-        if ch == '%' && !escaped {
-            comment_at = Some(index);
-            break;
-        }
-        escaped = ch == '\\' && !escaped;
-    }
-    match comment_at {
-        Some(index) => {
-            text.truncate(index);
-            true
-        }
-        None => false,
     }
 }
 

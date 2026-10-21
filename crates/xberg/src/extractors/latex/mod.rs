@@ -739,6 +739,8 @@ impl LatexExtractor {
         heading_map: &ahash::AHashMap<&'static str, u8>,
     ) -> String {
         let mut text = first.to_string();
+        let mut comments = utilities::CommentState::default();
+        let mut glued = comments.strip_new_comment(&mut text, 0);
         while *i + 1 < lines.len() {
             let next = lines[*i + 1].trim();
             if next.starts_with('%') {
@@ -753,14 +755,14 @@ impl LatexExtractor {
             {
                 break;
             }
-            let glued = utilities::strip_trailing_comment(&mut text);
+            let start = text.len();
             if !glued {
                 text.push(' ');
             }
             text.push_str(next);
+            glued = comments.strip_new_comment(&mut text, start);
             *i += 1;
         }
-        utilities::strip_trailing_comment(&mut text);
         text
     }
 
@@ -1639,5 +1641,21 @@ Plain body text.
         let document = LatexExtractor::build_internal_document(latex, false);
         let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
         assert_eq!(texts, ["Body"]);
+    }
+
+    #[test]
+    fn should_preserve_comment_context_across_wrapped_url_arguments() {
+        let lines = [
+            r"See \url{https://example.com/first",
+            r"next%20piece} and \verb|a%b~c| end% discarded",
+            "glued.",
+        ];
+        let mut index = 0;
+        let joined = LatexExtractor::join_paragraph_lines(lines[0], &lines, &mut index, &ahash::AHashMap::default());
+        assert_eq!(index, 2);
+        assert_eq!(
+            joined,
+            r"See \url{https://example.com/first next%20piece} and \verb|a%b~c| endglued."
+        );
     }
 }
