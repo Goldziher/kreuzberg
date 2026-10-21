@@ -645,135 +645,41 @@ impl TypstExtractor {
         None
     }
 
-    /// The source without its comments: a `//` comment up to the end of its line and a
-    /// (nestable) `/* */` comment. Raw text, an escaped character, a string in code (the
-    /// arguments of `#name(...)`) and a bare `http(s)://` URL are not comments; quotes in
-    /// markup, parenthesized or not, are smart quotes and protect nothing.
+    /// Remove Typst comment tokens while preserving literals and code/markup boundaries.
     fn strip_comments(content: &str) -> String {
-        let bytes = content.as_bytes();
+        let root = typst_syntax::parse(content);
+        let mut stack = vec![(root.children(), 0_usize)];
         let mut out = CommentFreeText::with_capacity(content.len());
         let mut copied = 0;
-        let mut index = 0;
-        // One entry per open `(`, `[` or code `{`: whether it is code (a call's arguments, a ~keep
-        // code block) or markup, and whether a `}` closes it ~keep
-        let mut modes: Vec<(bool, bool)> = Vec::new();
-        // A statement (`#let`, `#set`, `#if`, ...) is code to the end of its line, outside any ~keep
-        // bracket or block opened in it ~keep
-        let mut statement_depth: Option<usize> = None;
-        while index < bytes.len() {
-            if statement_depth.is_some_and(|depth| depth == modes.len()) && matches!(bytes[index], b'\n' | b';') {
-                statement_depth = None;
-            }
-            let in_code = modes.last().map_or(statement_depth.is_some(), |&(code, _)| code);
-            match bytes[index] {
-                b'#' if !in_code && Self::starts_statement(&bytes[index + 1..]) => {
-                    statement_depth = Some(modes.len());
-                    index += 1;
+        // Syntax nodes cover source bytes, including recovered input; visit each once in order. ~keep
+        while let Some((children, offset)) = stack.last_mut() {
+            let Some(node) = children.next() else {
+                stack.pop();
+                continue;
+            };
+            let start = *offset;
+            *offset += node.len();
+            if matches!(
+                node.kind(),
+                typst_syntax::SyntaxKind::LineComment | typst_syntax::SyntaxKind::BlockComment
+            ) {
+                out.push(&content[copied..start]);
+                let mut end = start + node.len();
+                let skip_carriage_return =
+                    node.kind() == typst_syntax::SyntaxKind::LineComment && content[end..].starts_with("\r\n");
+                let skip_duplicate_space = node.kind() == typst_syntax::SyntaxKind::BlockComment
+                    && out.text.ends_with(' ')
+                    && content.as_bytes().get(end) == Some(&b' ');
+                if skip_carriage_return || skip_duplicate_space {
+                    end += 1;
                 }
-                // `#"..."` is a string expression in markup ~keep
-                b'#' if !in_code && bytes.get(index + 1) == Some(&b'"') => {
-                    index += 1;
-                    let mut cursor = index + 1;
-                    while cursor < bytes.len() && bytes[cursor] != b'"' {
-                        cursor += if bytes[cursor] == b'\\' { 2 } else { 1 };
-                    }
-                    index = (cursor + 1).min(bytes.len());
-                }
-                b'`' => {
-                    // Raw text runs to a closing run of as many backticks ~keep
-                    let run = bytes[index..].iter().take_while(|&&byte| byte == b'`').count();
-                    let fence = &content[index..index + run];
-                    index = content[index + run..]
-                        .find(fence)
-                        .map_or(bytes.len(), |offset| index + run + offset + run);
-                }
-                b'\\' => {
-                    index += 1 + content[index + 1..].chars().next().map_or(0, char::len_utf8);
-                }
-                b'"' if in_code => {
-                    let mut cursor = index + 1;
-                    while cursor < bytes.len() && bytes[cursor] != b'"' {
-                        cursor += if bytes[cursor] == b'\\' { 2 } else { 1 };
-                    }
-                    index = (cursor + 1).min(bytes.len());
-                }
-                b'(' => {
-                    // `#name(...)` and `#(...)` open code ~keep
-                    let opens_code = Self::follows_call_name(bytes, index) || (index > 0 && bytes[index - 1] == b'#');
-                    modes.push((in_code || opens_code, false));
-                    index += 1;
-                }
-                b'[' => {
-                    // A content block is markup again, also inside code ~keep
-                    modes.push((false, false));
-                    index += 1;
-                }
-                // A code block, in code or as `#{...}`; in markup a brace is text ~keep
-                b'{' if in_code || (index > 0 && bytes[index - 1] == b'#') => {
-                    modes.push((true, true));
-                    index += 1;
-                }
-                b'}' if modes.last().is_some_and(|&(_, brace)| brace) => {
-                    modes.pop();
-                    index += 1;
-                }
-                b')' | b']' => {
-                    modes.pop();
-                    index += 1;
-                }
-                b'h' if !in_code
-                    && (bytes[index..].starts_with(b"http://") || bytes[index..].starts_with(b"https://"))
-                    && !(index > 0 && bytes[index - 1].is_ascii_alphanumeric()) =>
-                {
-                    // A bare URL runs to the next whitespace, `//` included ~keep
-                    index = content[index..]
-                        .find(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '[' | ']' | '"'))
-                        .map_or(bytes.len(), |offset| index + offset);
-                }
-                b'/' if bytes[index..].starts_with(b"//") => {
-                    out.push(&content[copied..index]);
-                    index = content[index..].find('\n').map_or(bytes.len(), |offset| index + offset);
-                    index = out.drop_comment_line(content, index);
-                    copied = index;
-                }
-                b'/' if bytes[index..].starts_with(b"/*") => {
-                    out.push(&content[copied..index]);
-                    index = Self::skip_typst_comment(bytes, index).unwrap_or(bytes.len());
-                    // `b /* gone */ c` reads `b c`, as Typst renders it ~keep
-                    if out.text.ends_with(' ') && bytes.get(index) == Some(&b' ') {
-                        index += 1;
-                    }
-                    index = out.drop_comment_line(content, index);
-                    copied = index;
-                }
-                _ => index += 1,
+                copied = out.drop_comment_line(content, end);
+            } else if node.children().len() > 0 {
+                stack.push((node.children(), start));
             }
         }
         out.push(&content[copied..]);
         out.text
-    }
-
-    /// Whether `after_hash` (the source after a `#`) starts a statement keyword.
-    fn starts_statement(after_hash: &[u8]) -> bool {
-        [
-            "let", "set", "show", "import", "include", "if", "for", "while", "context",
-        ]
-        .iter()
-        .any(|keyword| {
-            after_hash.starts_with(keyword.as_bytes())
-                && !after_hash
-                    .get(keyword.len())
-                    .is_some_and(|&next| next.is_ascii_alphanumeric() || matches!(next, b'_' | b'-'))
-        })
-    }
-
-    /// Whether the `(` at `open` follows `#name`, which makes its contents a call's arguments.
-    fn follows_call_name(bytes: &[u8], open: usize) -> bool {
-        let name_start = bytes[..open]
-            .iter()
-            .rposition(|&byte| !(byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.')))
-            .map_or(0, |position| position + 1);
-        name_start < open && name_start > 0 && bytes[name_start - 1] == b'#'
     }
 
     /// Skip a Typst line or nested block comment starting at `index`.
@@ -2049,6 +1955,62 @@ Actual content"#;
         );
         // In markup a brace is text, and a comment after it is still one ~keep
         assert_eq!(typst_paragraphs("Set {a} here // gone"), ["Set {a} here"]);
+    }
+
+    #[test]
+    fn should_use_typst_comment_tokens_after_escaped_hashes_and_inline_code() {
+        for (source, expected) in [
+            (
+                "\\#{before \"/* hidden */\" after}\nVisible.",
+                "\\#{before \"\" after}\nVisible.",
+            ),
+            (
+                "\\#call(\"/* hidden */\") after\nVisible.",
+                "\\#call(\"\") after\nVisible.",
+            ),
+            (
+                "#if true { \"ok\" } Before \"/* hidden */\" after.\nVisible.",
+                "#if true { \"ok\" } Before \"\" after.\nVisible.",
+            ),
+            (
+                "#{ [Before (\"/* hidden */\") after.] }\nVisible.",
+                "#{ [Before (\"\") after.] }\nVisible.",
+            ),
+        ] {
+            assert_eq!(TypstExtractor::strip_comments(source), expected);
+        }
+    }
+
+    #[test]
+    fn should_preserve_strings_in_loop_and_context_code_blocks() {
+        for (source, expected) in [
+            (
+                "#while false {\n  let marker = \"/*\"\n}\nVisible.",
+                "#while false {\n  let marker = \"/*\"\n}\nVisible.",
+            ),
+            (
+                "#for x in (1, 2) {\n  let marker = \"/*\"\n}\nVisible.",
+                "#for x in (1, 2) {\n  let marker = \"/*\"\n}\nVisible.",
+            ),
+            (
+                "#context {\n  let marker = \"/*\"\n}\nVisible.",
+                "#context {\n  let marker = \"/*\"\n}\nVisible.",
+            ),
+        ] {
+            assert_eq!(TypstExtractor::strip_comments(source), expected);
+        }
+    }
+
+    #[test]
+    fn should_keep_comment_line_boundaries_and_incomplete_literal_text() {
+        for (source, expected) in [
+            ("First\r\n// gone\r\nSecond", "First\r\nSecond"),
+            ("λ /* gone */ μ", "λ μ"),
+            ("Before /* unclosed", "Before "),
+            ("Before `/* raw", "Before `/* raw"),
+        ] {
+            assert_eq!(TypstExtractor::strip_comments(source), expected);
+        }
     }
 
     #[test]

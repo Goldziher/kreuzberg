@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(rst): Named hyperlink references and `replace::` substitutions read as docutils renders them.**
   `` `the docs`_ `` became inline code, `Python_` kept its underscore and `|project|` stayed literal; a reference now reads as its text, linked to the `.. _name: url` target of that name, and a substitution is replaced by its definition wherever that appears.
 - **(typst): Comments are left out of the text, and an escape reads as the character it stands for.**
+  Strings, raw literals and escaped hash characters retain their code or markup boundaries.
   `// ...` and `/* ... */` comments reached the text (a block comment's `*` even became bold), and `\#`, `\*` or `\u{1F600}` kept their backslash; a comment line also no longer ends the paragraph around it.
 - **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
   IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
