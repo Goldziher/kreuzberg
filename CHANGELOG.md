@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(rst): Named hyperlink references and `replace::` substitutions read as docutils renders them.**
   `` `the docs`_ `` became inline code, `Python_` kept its underscore and `|project|` stayed literal; a reference now reads as its text, linked to the `.. _name: url` target of that name, and a substitution is replaced by its definition wherever that appears.
+- **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
+  IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
+- **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
+  Line blocks also retain their footnote and cross-reference relationships.
+  `| Line one` / `| Line two` ran together as `| Line one | Line two`, and `Example::` read `Example`; a line block is now one line per `|` line, and `Text::` reads `Text:` while `Text ::` reads `Text`, as in docutils.
+- **(latex): Source lines wrapped at a fixed width form one paragraph, and `~` reads as a no-break space.**
+  Every source line was its own paragraph, so a wrapped sentence was split apart and a `\footnote{...}` spanning two lines was not parsed; paragraphs now end at a blank line or a block-level line, comments follow LaTeX's rules (but not inside `\verb|...|`, whose contents stay literal), paragraphs stop at `\bye` and `\end{document}`, and `Dr.~Smith` no longer keeps the tilde.
 - **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
   A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**
