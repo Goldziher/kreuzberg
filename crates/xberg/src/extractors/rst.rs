@@ -66,6 +66,65 @@ pub struct RstExtractor;
 #[cfg(feature = "office")]
 use crate::extraction::latex_shape::wrap_aligned_math;
 
+/// Hyperlink targets and `replace::` substitutions, which a reference may use before the
+/// definition appears.
+#[cfg(feature = "office")]
+#[derive(Default)]
+struct RstReferences {
+    /// Target name (normalized) -> URL, from `.. _name: url`.
+    targets: AHashMap<String, String>,
+    /// Substitution name (normalized) -> replacement text, from `.. |name| replace:: text`.
+    substitutions: AHashMap<String, String>,
+}
+
+#[cfg(feature = "office")]
+impl RstReferences {
+    /// Reference names match case-insensitively and with whitespace collapsed, as in docutils.
+    fn normalize(name: &str) -> String {
+        name.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+    }
+
+    fn collect(lines: &[&str]) -> Self {
+        let mut references = Self::default();
+        for (index, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix(".. _") {
+                // `.. _name: url`, or `` .. _`name: with a colon`: url ``
+                let target = match rest.strip_prefix('`') {
+                    Some(quoted) => quoted.split_once("`:"),
+                    None => rest.split_once(": "),
+                };
+                // A URL ending in `_` names another target (an alias), not an address
+                if let Some((name, url)) = target
+                    && let url = url.trim()
+                    && !name.is_empty()
+                    && !url.is_empty()
+                    && !url.ends_with('_')
+                {
+                    references.targets.insert(Self::normalize(name), url.to_string());
+                }
+            } else if let Some(rest) = trimmed.strip_prefix(".. |")
+                && let Some((name, directive)) = rest.split_once('|')
+                && let Some(text) = directive.trim_start().strip_prefix("replace::")
+            {
+                let mut text = text.trim().to_string();
+                for next in lines[index + 1..]
+                    .iter()
+                    .take_while(|next| next.starts_with([' ', '\t']))
+                {
+                    if next.trim().is_empty() {
+                        break;
+                    }
+                    text.push(' ');
+                    text.push_str(next.trim());
+                }
+                references.substitutions.insert(Self::normalize(name), text);
+            }
+        }
+        references
+    }
+}
+
 #[cfg(feature = "office")]
 impl RstExtractor {
     /// Create a new RST extractor.
@@ -415,7 +474,7 @@ impl RstExtractor {
     ///
     /// Handles: `**strong**` (bold), `*emphasis*` (italic), ``` ``literal`` ``` (code),
     /// and `` `interpreted` `` (code).
-    fn parse_inline_markup(raw: &str) -> (String, Vec<TextAnnotation>) {
+    fn parse_inline_markup(raw: &str, references: &RstReferences) -> (String, Vec<TextAnnotation>) {
         let mut out = String::with_capacity(raw.len());
         let mut annotations = Vec::new();
         let bytes = raw.as_bytes();
@@ -487,6 +546,12 @@ impl RstExtractor {
                 let inner = &raw[i + 1..end];
                 let after_close = end + 1;
                 if after_close < len && bytes[after_close] == b'_' {
+                    // `__` ends an anonymous reference
+                    let reference_end = if bytes.get(after_close + 1) == Some(&b'_') {
+                        after_close + 2
+                    } else {
+                        after_close + 1
+                    };
                     if let Some(angle_start) = inner.rfind('<')
                         && let Some(angle_end) = inner.rfind('>')
                         && angle_end > angle_start
@@ -503,20 +568,26 @@ impl RstExtractor {
                                 kind: AnnotationKind::Link { url, title: None },
                             });
                         }
-                        i = after_close + 1;
+                        i = reference_end;
                         continue;
                     }
+                    // A named reference reads as its text, linked to the target of that name
                     let start = out.len() as u32;
                     out.push_str(inner);
                     let end_off = out.len() as u32;
-                    if start < end_off {
+                    if start < end_off
+                        && let Some(url) = references.targets.get(&RstReferences::normalize(inner))
+                    {
                         annotations.push(TextAnnotation {
                             start,
                             end: end_off,
-                            kind: AnnotationKind::Code,
+                            kind: AnnotationKind::Link {
+                                url: url.clone(),
+                                title: None,
+                            },
                         });
                     }
-                    i = after_close + 1;
+                    i = reference_end;
                     continue;
                 }
                 let start = out.len() as u32;
@@ -545,12 +616,79 @@ impl RstExtractor {
                     continue;
                 }
             }
+            // `|name|` is replaced by its `replace::` text; `|name|_` also links it to the target `name`
+            if bytes[i] == b'|'
+                && let Some(close) = raw[i + 1..].find('|')
+                && let name = &raw[i + 1..i + 1 + close]
+                && !name.is_empty()
+                && name.trim() == name
+                && let Some(replacement) = references.substitutions.get(&RstReferences::normalize(name))
+            {
+                let (text, inner_annotations) = Self::parse_inline_markup(replacement, &RstReferences::default());
+                let start = out.len() as u32;
+                out.push_str(&text);
+                annotations.extend(inner_annotations.into_iter().map(|mut annotation| {
+                    annotation.start += start;
+                    annotation.end += start;
+                    annotation
+                }));
+                i += close + 2;
+                if bytes.get(i) == Some(&b'_') {
+                    i += if bytes.get(i + 1) == Some(&b'_') { 2 } else { 1 };
+                    if let Some(url) = references.targets.get(&RstReferences::normalize(name))
+                        && start < out.len() as u32
+                    {
+                        annotations.push(TextAnnotation {
+                            start,
+                            end: out.len() as u32,
+                            kind: AnnotationKind::Link {
+                                url: url.clone(),
+                                title: None,
+                            },
+                        });
+                    }
+                }
+                continue;
+            }
+            // `name_` is a reference to the target `name`. Only a defined target counts, so an
+            // identifier such as `value_` in prose keeps its underscore.
+            if bytes[i] == b'_'
+                && !bytes
+                    .get(i + 1)
+                    .is_some_and(|&next| next == b'_' || next.is_ascii_alphanumeric())
+                && let Some(name) = Self::simple_reference_name(&raw[..i])
+                && out.ends_with(name)
+                && let Some(url) = references.targets.get(&RstReferences::normalize(name))
+            {
+                annotations.push(TextAnnotation {
+                    start: (out.len() - name.len()) as u32,
+                    end: out.len() as u32,
+                    kind: AnnotationKind::Link {
+                        url: url.clone(),
+                        title: None,
+                    },
+                });
+                i += 1;
+                continue;
+            }
             let ch = raw[i..].chars().next().unwrap();
             out.push(ch);
             i += ch.len_utf8();
         }
 
         (out, annotations)
+    }
+
+    /// The simple reference name `before` ends with: words joined by single `-`, `_`, `.`, `:` or `+`.
+    fn simple_reference_name(before: &str) -> Option<&str> {
+        let start = before
+            .char_indices()
+            .rev()
+            .take_while(|&(_, c)| c.is_alphanumeric() || matches!(c, '-' | '_' | '.' | ':' | '+'))
+            .last()
+            .map(|(index, _)| index)?;
+        let name = before[start..].trim_start_matches(|c: char| !c.is_alphanumeric());
+        (!name.is_empty() && name.ends_with(char::is_alphanumeric)).then_some(name)
     }
 
     /// Find the position of a closing marker substring starting from `from`.
@@ -749,6 +887,7 @@ impl RstExtractor {
     pub(crate) fn build_internal_document(content: &str, inject_placeholders: bool) -> InternalDocument {
         let mut b = InternalDocumentBuilder::new("rst");
         let lines: Vec<&str> = content.lines().collect();
+        let references = RstReferences::collect(&lines);
         let mut heading_char_order: Vec<char> = Vec::new();
         let mut has_overline_heading = false;
         let mut highlight_lang: Option<String> = None;
@@ -902,7 +1041,7 @@ impl RstExtractor {
                     i += 1;
                 }
                 if !caption_text.is_empty() {
-                    let (stripped, annotations) = Self::parse_inline_markup(&caption_text);
+                    let (stripped, annotations) = Self::parse_inline_markup(&caption_text, &references);
                     b.push_paragraph(&stripped, annotations, None, None);
                 }
                 continue;
@@ -1118,7 +1257,7 @@ impl RstExtractor {
                     i += 1;
                 }
                 if is_directive && !body_text.is_empty() {
-                    let (stripped, annotations) = Self::parse_inline_markup(&body_text);
+                    let (stripped, annotations) = Self::parse_inline_markup(&body_text, &references);
                     b.push_paragraph(&stripped, annotations, None, None);
                 }
                 continue;
@@ -1196,7 +1335,7 @@ impl RstExtractor {
                         full_text.push_str(lines[i].trim());
                         i += 1;
                     }
-                    let (parsed_text, item_annotations) = Self::parse_inline_markup(&full_text);
+                    let (parsed_text, item_annotations) = Self::parse_inline_markup(&full_text, &references);
                     b.push_list_item(&parsed_text, is_ordered, item_annotations, None, None);
                 }
                 b.end_list();
@@ -1207,7 +1346,7 @@ impl RstExtractor {
                 if let Some(display_text) = trimmed.strip_suffix("::")
                     && !display_text.is_empty()
                 {
-                    let (stripped, annotations) = Self::parse_inline_markup(display_text);
+                    let (stripped, annotations) = Self::parse_inline_markup(display_text, &references);
                     b.push_paragraph(&stripped, annotations, None, None);
                 }
                 i += 1;
@@ -1294,7 +1433,7 @@ impl RstExtractor {
                     i += 1;
                 }
                 let footnote_refs = Self::find_footnote_references(&para_text);
-                let (stripped, annotations) = Self::parse_inline_markup(&para_text);
+                let (stripped, annotations) = Self::parse_inline_markup(&para_text, &references);
                 let idx = b.push_paragraph(&stripped, annotations, None, None);
 
                 for fref in &footnote_refs {
@@ -1767,6 +1906,76 @@ Second paragraph.
             1,
             "the simple table must still be extracted: {:?}",
             doc.tables
+        );
+    }
+
+    /// Each paragraph's text with the URL of every link annotation in it.
+    fn paragraph_links(rst: &str) -> Vec<(String, Vec<String>)> {
+        RstExtractor::build_internal_document(rst, false)
+            .elements
+            .iter()
+            .filter(|e| matches!(e.kind, crate::types::internal::ElementKind::Paragraph))
+            .map(|e| {
+                let urls = e
+                    .annotations
+                    .iter()
+                    .filter_map(|a| match &a.kind {
+                        AnnotationKind::Link { url, .. } => {
+                            Some(format!("{}={url}", &e.text[a.start as usize..a.end as usize]))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                (e.text.clone(), urls)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn should_resolve_named_references_to_their_targets() {
+        let rst = "See Python_, `the docs`_, `Anonymous <https://a.example>`__ and missing_.\n\n\
+                   Keep value_ and snake_case_name as written; `Unknown name`_ is plain.\n\n\
+                   .. _python: https://python.org\n\
+                   .. _`The  Docs`: https://docs.example\n";
+        let paragraphs = paragraph_links(rst);
+
+        assert_eq!(paragraphs[0].0, "See Python, the docs, Anonymous and missing_.");
+        assert_eq!(
+            paragraphs[0].1,
+            [
+                "Python=https://python.org",
+                "the docs=https://docs.example",
+                "Anonymous=https://a.example"
+            ]
+        );
+        assert_eq!(
+            paragraphs[1],
+            (
+                "Keep value_ and snake_case_name as written; Unknown name is plain.".to_string(),
+                vec![]
+            )
+        );
+    }
+
+    #[test]
+    fn should_replace_substitutions_defined_anywhere() {
+        let rst = "Built with |project| and |Link|_; |unknown| stays.\n\n\
+                   | Not | a substitution\n\n\
+                   .. |project| replace:: *Xberg*\n   the extractor\n\
+                   .. |link| replace:: the site\n\
+                   .. _link: https://site.example\n";
+        let paragraphs = paragraph_links(rst);
+
+        assert_eq!(
+            paragraphs[0],
+            (
+                "Built with Xberg the extractor and the site; |unknown| stays.".to_string(),
+                vec!["the site=https://site.example".to_string()]
+            )
+        );
+        assert!(
+            paragraphs[1].0.contains("| Not | a substitution"),
+            "got: {paragraphs:?}"
         );
     }
 

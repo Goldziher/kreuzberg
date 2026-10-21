@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(rst): Named hyperlink references and `replace::` substitutions read as docutils renders them.**
+  `` `the docs`_ `` became inline code, `Python_` kept its underscore and `|project|` stayed literal; a reference now reads as its text, linked to the `.. _name: url` target of that name, and a substitution is replaced by its definition wherever that appears.
 - **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
   A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**
