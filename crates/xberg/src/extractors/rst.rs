@@ -1261,7 +1261,7 @@ impl RstExtractor {
             }
 
             // A line block keeps its line breaks. Each line starts with `| ` (a bare `|` is an
-            // empty line), and a line indented past the `|` continues the line above.
+            // empty line), and a line indented past the `|` continues the line above. ~keep
             if trimmed == "|" || trimmed.starts_with("| ") {
                 let indent = line.len() - line.trim_start().len();
                 let mut block_lines: Vec<String> = Vec::new();
@@ -1284,7 +1284,11 @@ impl RstExtractor {
                 let block_text = block_lines.join("\n");
                 let (stripped, annotations) = Self::parse_inline_markup(block_text.trim_matches('\n'));
                 if !stripped.is_empty() {
-                    b.push_paragraph(&stripped, annotations, None, None);
+                    let idx = b.push_paragraph(&stripped, annotations, None, None);
+                    for fref in Self::find_footnote_references(&block_text) {
+                        b.push_footnote_ref(&format!("[{fref}]"), &fref, None);
+                    }
+                    Self::extract_rst_cross_refs(&block_text, idx, &mut b);
                 }
                 continue;
             }
@@ -1881,6 +1885,41 @@ Second paragraph.
             rst_warnings(&doc).is_empty(),
             "a document without .. include:: must not warn, got {:?}",
             rst_warnings(&doc)
+        );
+    }
+
+    #[test]
+    fn should_retain_footnote_reference_relationship_in_a_line_block() {
+        let source = "| First [1]_\n| Second\n\n.. [1] A note.\n";
+        let doc = RstExtractor::build_internal_document(source, false);
+
+        assert_eq!(
+            doc.elements
+                .iter()
+                .filter(|element| matches!(element.kind, crate::types::internal::ElementKind::FootnoteRef))
+                .count(),
+            1
+        );
+        assert_eq!(
+            doc.relationships
+                .iter()
+                .filter(|relationship| relationship.kind == RelationshipKind::FootnoteReference)
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn should_retain_cross_reference_relationship_in_a_line_block() {
+        let source = "| See :ref:`target`\n| Another line\n";
+        let doc = RstExtractor::build_internal_document(source, false);
+
+        assert_eq!(
+            doc.relationships
+                .iter()
+                .filter(|relationship| relationship.kind == RelationshipKind::CrossReference)
+                .count(),
+            1
         );
     }
 }
