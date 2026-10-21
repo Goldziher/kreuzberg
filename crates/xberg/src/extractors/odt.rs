@@ -1285,6 +1285,9 @@ fn collect_inline_run(
             "tab" => {
                 text.push('\t');
             }
+            "s" => {
+                text.extend(std::iter::repeat_n(' ', odf_space_run(child)));
+            }
             "line-break" => {
                 text.push('\n');
             }
@@ -1340,11 +1343,19 @@ fn collect_inline_run(
                 }
             }
             _ => {
-                if let Some(t) = child.text() {
-                    text.push_str(t);
+                if child.is_text() {
+                    text.push_str(child.text().unwrap_or_default());
+                } else if child.children().all(|grandchild| grandchild.is_text()) {
+                    // A leaf element holds nothing but text, so it is read in
+                    // place without spending a nesting level.
+                    for grandchild in child.children() {
+                        text.push_str(grandchild.text().unwrap_or_default());
+                    }
                 } else {
-                    // Unknown wrapper element (e.g. `text:ruby`,
-                    // `text:meta`): recurse rather than drop its subtree.
+                    // Unknown wrapper element (e.g. `text:ruby`, `text:meta`,
+                    // `text:bookmark-ref`): recurse rather than keep only its
+                    // first text node, which drops everything after a nested
+                    // element.
                     with_nested_budget(budget, |budget| {
                         collect_inline_run(child, style_map, text, annotations, uris, budget)
                     })?;
@@ -1353,6 +1364,22 @@ fn collect_inline_run(
         }
     }
     Ok(())
+}
+
+/// Upper bound on the spaces one `text:s` element expands to. `text:c` is an
+/// unbounded integer, so a few bytes of XML could otherwise ask for gigabytes.
+const MAX_ODF_SPACE_RUN: usize = 256;
+
+/// Number of spaces a `text:s` element stands for: its `text:c` count, 1 when
+/// the attribute is absent or not a positive number, capped at
+/// [`MAX_ODF_SPACE_RUN`].
+fn odf_space_run(node: roxmltree::Node) -> usize {
+    node.attribute(("urn:oasis:names:tc:opendocument:xmlns:text:1.0", "c"))
+        .or_else(|| node.attribute("text:c"))
+        .and_then(|count| count.trim().parse::<usize>().ok())
+        .filter(|&count| count > 0)
+        .unwrap_or(1)
+        .min(MAX_ODF_SPACE_RUN)
 }
 
 /// ODF pagination field elements whose cached display text must not be emitted
@@ -1478,6 +1505,9 @@ pub(crate) fn extract_node_text(node: roxmltree::Node) -> Option<String> {
             "tab" => {
                 text_parts.push("\t".to_string());
             }
+            "s" => {
+                text_parts.push(" ".repeat(odf_space_run(child)));
+            }
             "line-break" => {
                 text_parts.push("\n".to_string());
             }
@@ -1504,11 +1534,13 @@ pub(crate) fn extract_node_text(node: roxmltree::Node) -> Option<String> {
                 }
             }
             _ => {
-                if let Some(text) = child.text() {
-                    text_parts.push(text.to_string());
+                if child.is_text() {
+                    text_parts.push(child.text().unwrap_or_default().to_string());
                 } else if child.has_children()
                     && let Some(text) = extract_node_text(child)
                 {
+                    // A span or link is read whole: its first text node alone
+                    // loses whatever follows a nested span, space or tab.
                     text_parts.push(text);
                 }
             }
@@ -2358,5 +2390,75 @@ mod tests {
             "a repeated empty cell must not warn, got {:?}",
             odt_warnings(&doc)
         );
+    }
+
+    /// A space run (`text:s`) and every text node of a span or link reach the
+    /// document, in a paragraph, a list item and a table cell alike. Before,
+    /// `text:s` was dropped (`a<text:s text:c="3"/>b` read `ab`), and list
+    /// items and cells kept only a span's first text node, so everything
+    /// after a nested span, space or tab was lost.
+    #[test]
+    fn test_space_runs_and_nested_spans_are_read_in_paragraphs_lists_and_cells() {
+        let content = r#"<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content
+  xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+  xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+  xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+ <office:body><office:text>
+  <text:p>a<text:s text:c="3"/>b and non<text:s/>space</text:p>
+  <text:list><text:list-item><text:p><text:span>Bold<text:span>Inner</text:span>After</text:span> tail</text:p></text:list-item></text:list>
+  <table:table table:name="T"><table:table-column/>
+   <table:table-row><table:table-cell><text:p><text:span>Total<text:s/>amount<text:tab/>due</text:span></text:p></table:table-cell></table:table-row>
+   <table:table-row><table:table-cell><text:p>see <text:a xlink:href="https://example.com">the <text:span>docs</text:span> page</text:a> now</text:p></table:table-cell></table:table-row>
+  </table:table>
+ </office:text></office:body></office:document-content>"#;
+
+        let mut buffer = Vec::new();
+        {
+            let mut writer = zip::ZipWriter::new(Cursor::new(&mut buffer));
+            writer
+                .start_file("content.xml", zip::write::SimpleFileOptions::default())
+                .unwrap();
+            std::io::Write::write_all(&mut writer, content.as_bytes()).unwrap();
+            writer.finish().unwrap();
+        }
+
+        let mut archive = zip::ZipArchive::new(Cursor::new(buffer)).unwrap();
+        let mut budget = SecurityBudget::with_defaults();
+        let doc = build_internal_document(&mut archive, &mut budget).expect("extracts");
+        let texts: Vec<&str> = doc.elements.iter().map(|e| e.text.as_str()).collect();
+        let cells = format!("{:?}", doc.tables);
+
+        assert!(texts.contains(&"a   b and non space"), "space runs dropped: {texts:?}");
+        assert!(
+            texts.contains(&"BoldInnerAfter tail"),
+            "list item lost a nested span: {texts:?}"
+        );
+        assert!(
+            cells.contains(r#""Total amount\tdue""#),
+            "cell lost text after a space run: {cells}"
+        );
+        assert!(
+            cells.contains(r#""see the docs page now""#),
+            "cell lost text inside a link: {cells}"
+        );
+    }
+
+    #[test]
+    fn test_odf_space_run_reads_text_c_with_a_floor_and_a_cap() {
+        const NS: &str = r#"xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0""#;
+        for (attribute, expected) in [
+            ("", 1),
+            (r#"text:c="3""#, 3),
+            (r#"text:c="0""#, 1),
+            (r#"text:c="-2""#, 1),
+            (r#"text:c="x""#, 1),
+            (r#"text:c="999999999999""#, MAX_ODF_SPACE_RUN),
+        ] {
+            let xml = format!("<text:s {NS} {attribute}/>");
+            let doc = roxmltree::Document::parse(&xml).unwrap();
+            assert_eq!(odf_space_run(doc.root_element()), expected, "for {attribute:?}");
+        }
     }
 }

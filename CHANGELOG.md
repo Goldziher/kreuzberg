@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(odt): Spaces written as `text:s` and text after a nested span, space or tab are no longer dropped.**
+  `a<text:s text:c="3"/>b` reads `a   b`, and list items and table cells keep a styled link's or span's full text.
 - **(rtf): Non-breaking spaces and hyphens (`\~`, `\_`) read as those characters, and escaped braces and backslashes stay in their table cell.**
   `5\~kg` no longer reads `5~kg`, and `set \{x\} here` in a cell no longer loses its braces to the body text.
 - **(doc): Fields spanning paragraph boundaries retain their displayed text without leaking instructions.** (#2184)
