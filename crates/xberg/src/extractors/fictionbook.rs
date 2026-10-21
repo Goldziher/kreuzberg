@@ -679,6 +679,8 @@ impl FictionBookExtractor {
         let mut is_notes_body = false;
         let mut section_depth: u8 = 0;
         let mut footnote_counter: u32 = 0;
+        // Note id -> the marker its reference shows, to recognize a note title that repeats it ~keep
+        let mut note_markers: ahash::AHashMap<String, String> = ahash::AHashMap::new();
 
         loop {
             budget.step()?;
@@ -724,7 +726,12 @@ impl FictionBookExtractor {
                             _ => {}
                         }
                     } else if (tag == "p" || tag == "v") && in_body && !is_notes_body {
-                        let _ = Self::extract_paragraph_with_annotations(&mut reader, budget, &mut builder);
+                        let _ = Self::extract_paragraph_with_annotations(
+                            &mut reader,
+                            budget,
+                            &mut builder,
+                            &mut note_markers,
+                        );
                     } else if tag == "subtitle" && in_body && !is_notes_body {
                         match Self::extract_text_content(&mut reader, budget) {
                             Ok(text) if !text.is_empty() => {
@@ -767,7 +774,17 @@ impl FictionBookExtractor {
                             }
                         }
                         match Self::extract_footnote_text(&mut reader, budget) {
-                            Ok(text) if !text.is_empty() => {
+                            Ok((title, body)) if !title.is_empty() || !body.is_empty() => {
+                                // The note's own title is left out only when it repeats the ~keep
+                                // marker its reference shows (`1`); any other title is content ~keep
+                                let repeats_marker = !title.is_empty() && note_markers.get(&note_id) == Some(&title);
+                                let text = if repeats_marker || title.is_empty() {
+                                    body
+                                } else if body.is_empty() {
+                                    title
+                                } else {
+                                    format!("{title} {body}")
+                                };
                                 // Prefer the note section's own `id` so this definition can be
                                 // matched to its `<a href="#id">` reference in the body (#141).
                                 // Fall back to a synthetic key only when the source document
@@ -835,14 +852,16 @@ impl FictionBookExtractor {
     /// `<a xlink:href="#id">marker</a>`) are resolved by `id` and pushed as their own
     /// `FootnoteRef` element via `builder`, so the renderer can later link them to the
     /// matching `FootnoteDefinition` pushed from the `<body name="notes">` section (see
-    /// `build_internal_document`). Any text collected before the reference is flushed as
-    /// a paragraph fragment first, preserving reading order. References whose `href` does
-    /// not start with `#` (regular hyperlinks) are left untouched and their label text
+    /// `build_internal_document`). The references are pushed after the paragraph, as the
+    /// Markdown extractor does: pushing the text before each one as a paragraph of its own
+    /// split the sentence around it (`brown fox[^1]` / `jumps.`). References whose `href`
+    /// does not start with `#` (regular hyperlinks) are left untouched and their label text
     /// flows into the surrounding paragraph as before.
     fn extract_paragraph_with_annotations(
         reader: &mut EntityReader<'_>,
         budget: &mut SecurityBudget,
         builder: &mut InternalDocumentBuilder,
+        note_markers: &mut ahash::AHashMap<String, String>,
     ) -> Result<()> {
         use crate::types::document_structure::{AnnotationKind, TextAnnotation};
 
@@ -850,6 +869,8 @@ impl FictionBookExtractor {
         let mut annotations = Vec::new();
         let mut depth = 0;
         let mut format_stack: Vec<(String, u32)> = Vec::new();
+        // (marker, key) of each note reference, pushed once the paragraph is complete ~keep
+        let mut note_refs: Vec<(String, String)> = Vec::new();
 
         loop {
             budget.step()?;
@@ -871,12 +892,8 @@ impl FictionBookExtractor {
                         }
                         if let Some(key) = href.strip_prefix('#').filter(|k| !k.is_empty()) {
                             let key = key.to_string();
-                            if !text.is_empty() {
-                                builder.push_paragraph(&text, std::mem::take(&mut annotations), None, None);
-                                text.clear();
-                            }
                             let marker = Self::extract_inline_label(reader, budget)?;
-                            builder.push_footnote_ref(&marker, &key, None);
+                            note_refs.push((marker, key));
                             continue;
                         }
                     }
@@ -958,6 +975,10 @@ impl FictionBookExtractor {
         if !trimmed.is_empty() {
             builder.push_paragraph(trimmed, annotations, None, None);
         }
+        for (marker, key) in note_refs {
+            builder.push_footnote_ref(&marker, &key, None);
+            note_markers.entry(key).or_insert(marker);
+        }
 
         Ok(())
     }
@@ -1006,10 +1027,15 @@ impl FictionBookExtractor {
         Ok(label.trim().to_string())
     }
 
-    /// Extract footnote text from a notes-body section.
-    fn extract_footnote_text(reader: &mut EntityReader<'_>, budget: &mut SecurityBudget) -> Result<String> {
+    /// Extract footnote text from a notes-body section: the text of the section's own
+    /// `<title>` (a direct child, usually the note's number) and the rest of its text.
+    fn extract_footnote_text(reader: &mut EntityReader<'_>, budget: &mut SecurityBudget) -> Result<(String, String)> {
+        let mut title = String::new();
         let mut text = String::new();
         let mut section_depth = 1;
+        // Elements open inside the note section, and the depth of its own `<title>` if open ~keep
+        let mut depth = 0_u32;
+        let mut own_title_depth: Option<u32> = None;
 
         loop {
             budget.step()?;
@@ -1020,17 +1046,23 @@ impl FictionBookExtractor {
                     let tag = crate::utils::xml_tag_name(name.as_ref());
                     if tag == "section" {
                         section_depth += 1;
+                    } else if tag == "title" && depth == 0 && section_depth == 1 && title.is_empty() {
+                        own_title_depth = Some(depth);
                     }
+                    depth += 1;
                 }
                 Ok(Event::End(e)) => {
                     budget.leave();
                     let name = e.name();
                     let tag = crate::utils::xml_tag_name(name.as_ref());
+                    depth = depth.saturating_sub(1);
                     if tag == "section" {
                         section_depth -= 1;
                         if section_depth == 0 {
                             break;
                         }
+                    } else if own_title_depth == Some(depth) {
+                        own_title_depth = None;
                     }
                 }
                 Ok(Event::Text(t)) => {
@@ -1039,10 +1071,15 @@ impl FictionBookExtractor {
                     budget.account_text(decoded.len())?;
                     let trimmed = decoded.trim();
                     if !trimmed.is_empty() {
-                        if !text.is_empty() {
-                            text.push(' ');
+                        let target = if own_title_depth.is_some() {
+                            &mut title
+                        } else {
+                            &mut text
+                        };
+                        if !target.is_empty() {
+                            target.push(' ');
                         }
-                        text.push_str(trimmed);
+                        target.push_str(trimmed);
                     }
                 }
                 Ok(Event::Eof) => break,
@@ -1051,7 +1088,7 @@ impl FictionBookExtractor {
             }
         }
 
-        Ok(text.trim().to_string())
+        Ok((title.trim().to_string(), text.trim().to_string()))
     }
 }
 
