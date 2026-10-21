@@ -392,6 +392,11 @@ impl OrgModeExtractor {
 
         while i < lines.len() {
             let trimmed = lines[i].trim();
+            // A comment line (`#` alone or followed by whitespace) is not document text
+            if Self::is_comment_line(trimmed) {
+                i += 1;
+                continue;
+            }
 
             if !trimmed.is_empty()
                 && (pending_caption.is_some() || pending_name.is_some())
@@ -574,6 +579,8 @@ impl OrgModeExtractor {
                     .or_else(|| trimmed.split_whitespace().next().unwrap_or("").strip_prefix("#+begin_"))
                     .unwrap_or("UNKNOWN")
                     .to_string();
+                // A comment block is never exported
+                let is_comment = block_type.eq_ignore_ascii_case("COMMENT");
                 let end_marker_upper = format!("#+END_{}", block_type);
                 let end_marker_lower = end_marker_upper.to_lowercase();
                 i += 1;
@@ -590,7 +597,9 @@ impl OrgModeExtractor {
                     block_content.push_str(lines[i]);
                     i += 1;
                 }
-                b.push_raw_block("orgmode", block_content.trim_end(), None);
+                if !is_comment {
+                    b.push_raw_block("orgmode", block_content.trim_end(), None);
+                }
                 continue;
             }
 
@@ -1002,6 +1011,10 @@ impl OrgModeExtractor {
         if trimmed == ":PROPERTIES:" || trimmed == ":END:" {
             return true;
         }
+        // A comment line is an element of its own, so it ends the paragraph above it
+        if Self::is_comment_line(trimmed) {
+            return true;
+        }
         if trimmed.starts_with('|') && trimmed.ends_with('|') {
             return true;
         }
@@ -1012,6 +1025,15 @@ impl OrgModeExtractor {
             return true;
         }
         false
+    }
+
+    /// Check if a trimmed line is an Org comment: `#` alone or followed by whitespace.
+    /// `#+KEYWORD` lines and `#tag`-like text are not comments.
+    fn is_comment_line(trimmed: &str) -> bool {
+        trimmed == "#"
+            || trimmed
+                .strip_prefix('#')
+                .is_some_and(|rest| rest.starts_with([' ', '\t']))
     }
 
     /// Check if a line is an Org list item.
@@ -1768,5 +1790,17 @@ mod tests {
             "a document without #+INCLUDE must not warn, got {:?}",
             orgmode_warnings(&doc)
         );
+    }
+
+    /// A comment line (`#` alone or followed by whitespace, indented or not) and a
+    /// `#+BEGIN_COMMENT` block are not exported by Org. Before, a comment line was
+    /// joined into the paragraph around it and a comment block came out as text.
+    #[test]
+    fn should_leave_out_comment_lines_and_comment_blocks() {
+        let org_text = "* H\ntext one\n# a comment line\n#\ntext two\n#+BEGIN_COMMENT\nHIDDEN BLOCK\n#+END_COMMENT\n  # indented comment\n#notacomment\nend\n";
+        let document = OrgModeExtractor::build_internal_document(org_text);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+
+        assert_eq!(texts, ["H", "text one", "text two", "#notacomment end"]);
     }
 }

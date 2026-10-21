@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
+  A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
 - **(doc): Fields spanning paragraph boundaries retain their displayed text without leaking instructions.** (#2184)
 - **(ppt): Speaker notes are referenced from their own slides in rendered Markdown.** (#2186)
 - **(ios): Native libraries link with bundled ONNX Runtime’s CoreML backend.**
