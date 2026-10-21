@@ -20,7 +20,28 @@ pub(super) fn extract_formula_latex(reader: &mut EntityReader<'_>, budget: &mut 
     )
 }
 
+/// JATS elements that are blocks of their own inside the element whose text is read; a
+/// space sets their text apart. Any other element (`italic`, `sub`, `sup`, `xref`, ...) is
+/// inline, and its text joins the text around it as written.
+const BLOCK_ELEMENTS: &[&str] = &[
+    "p",
+    "title",
+    "label",
+    "caption",
+    "list-item",
+    "tr",
+    "td",
+    "th",
+    "sec",
+    "term",
+    "def",
+    "break",
+];
+
 /// Extract text content from a JATS element and its children.
+///
+/// Inline markup keeps its text inside the word or sentence it belongs to (`CO<sub>2</sub>`
+/// reads `CO2`, not `CO 2`), and runs of whitespace from the XML layout collapse to one space.
 pub(super) fn extract_text_content(reader: &mut EntityReader<'_>, budget: &mut SecurityBudget) -> Result<String> {
     let mut text = String::new();
     let mut depth = 0;
@@ -32,23 +53,25 @@ pub(super) fn extract_text_content(reader: &mut EntityReader<'_>, budget: &mut S
                 budget.enter()?;
                 depth += 1;
             }
-            Ok(Event::End(_)) => {
+            Ok(Event::End(e)) => {
                 budget.leave();
                 if depth == 0 {
                     break;
                 }
                 depth -= 1;
-                if !text.is_empty() && !text.ends_with('\n') {
+                if BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) {
                     text.push(' ');
                 }
             }
+            Ok(Event::Empty(e)) if BLOCK_ELEMENTS.contains(&e.local_name().as_ref()) => {
+                text.push(' ');
+            }
             Ok(Event::Text(t)) => {
                 let decoded = t.as_ref().to_string();
-                if !decoded.trim().is_empty() {
+                if !decoded.is_empty() {
                     budget.check_entity(&decoded)?;
                     budget.account_text(decoded.len())?;
                     text.push_str(&decoded);
-                    text.push(' ');
                 }
             }
             Ok(Event::CData(t)) => {
@@ -57,7 +80,7 @@ pub(super) fn extract_text_content(reader: &mut EntityReader<'_>, budget: &mut S
                     budget.check_entity(&decoded)?;
                     budget.account_text(decoded.len())?;
                     text.push_str(&decoded);
-                    text.push('\n');
+                    text.push(' ');
                 }
             }
             Ok(Event::Eof) => break,
@@ -68,7 +91,7 @@ pub(super) fn extract_text_content(reader: &mut EntityReader<'_>, budget: &mut S
         }
     }
 
-    Ok(text.trim().to_string())
+    Ok(text.split_whitespace().collect::<Vec<_>>().join(" "))
 }
 
 /// Extract a formatted citation string from a `<ref>` element.

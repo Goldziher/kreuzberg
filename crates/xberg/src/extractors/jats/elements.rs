@@ -236,7 +236,8 @@ pub(super) fn extract_jats_all_in_one(content: &str) -> Result<(JatsMetadataExtr
                     "tbody" if in_table => {
                         in_tbody = true;
                     }
-                    "tr" if (in_thead || in_tbody) && in_table => {
+                    // A row can sit in `thead`, `tbody` or `tfoot`, or directly in `table` ~keep
+                    "tr" if in_table => {
                         in_row = true;
                         current_row.clear();
                     }
