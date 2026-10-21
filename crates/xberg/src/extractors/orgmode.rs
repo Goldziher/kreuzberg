@@ -392,6 +392,11 @@ impl OrgModeExtractor {
 
         while i < lines.len() {
             let trimmed = lines[i].trim();
+            // A comment line (`#` alone or followed by whitespace) is not document text
+            if Self::is_comment_line(trimmed) {
+                i += 1;
+                continue;
+            }
 
             if !trimmed.is_empty()
                 && (pending_caption.is_some() || pending_name.is_some())
@@ -562,6 +567,19 @@ impl OrgModeExtractor {
                     i += 1;
                 }
                 b.push_code(block_content.trim_end(), None, None, None);
+                continue;
+            }
+
+            // A comment block is never exported. Its delimiters match in any case, and only an
+            // exact `#+END_COMMENT` line closes it; without one the opener is not a block and
+            // the lines after it are read as usual.
+            if trimmed
+                .split_whitespace()
+                .next()
+                .is_some_and(|word| word.eq_ignore_ascii_case("#+BEGIN_COMMENT"))
+            {
+                let close = (i + 1..lines.len()).find(|&j| lines[j].trim().eq_ignore_ascii_case("#+END_COMMENT"));
+                i = close.map_or(i + 1, |j| j + 1);
                 continue;
             }
 
@@ -1002,6 +1020,10 @@ impl OrgModeExtractor {
         if trimmed == ":PROPERTIES:" || trimmed == ":END:" {
             return true;
         }
+        // A comment line is an element of its own, so it ends the paragraph above it
+        if Self::is_comment_line(trimmed) {
+            return true;
+        }
         if trimmed.starts_with('|') && trimmed.ends_with('|') {
             return true;
         }
@@ -1012,6 +1034,15 @@ impl OrgModeExtractor {
             return true;
         }
         false
+    }
+
+    /// Check if a trimmed line is an Org comment: `#` alone or followed by whitespace.
+    /// `#+KEYWORD` lines and `#tag`-like text are not comments.
+    fn is_comment_line(trimmed: &str) -> bool {
+        trimmed == "#"
+            || trimmed
+                .strip_prefix('#')
+                .is_some_and(|rest| rest.starts_with([' ', '\t']))
     }
 
     /// Check if a line is an Org list item.
@@ -1768,5 +1799,38 @@ mod tests {
             "a document without #+INCLUDE must not warn, got {:?}",
             orgmode_warnings(&doc)
         );
+    }
+
+    /// A comment line (`#` alone or followed by whitespace, indented or not) and a
+    /// `#+BEGIN_COMMENT` block are not exported by Org. Before, a comment line was
+    /// joined into the paragraph around it and a comment block came out as text.
+    #[test]
+    fn should_leave_out_comment_lines_and_comment_blocks() {
+        let org_text = "* H\ntext one\n# a comment line\n#\ntext two\n#+BEGIN_COMMENT\nHIDDEN BLOCK\n#+END_COMMENT\n  # indented comment\n#notacomment\nend\n";
+        let document = OrgModeExtractor::build_internal_document(org_text);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+
+        assert_eq!(texts, ["H", "text one", "text two", "#notacomment end"]);
+    }
+
+    /// Comment delimiters match in any case and the closer must be the whole line; an
+    /// opener that is never closed is not a block, so the text after it stays.
+    #[test]
+    fn should_match_comment_block_delimiters_exactly_and_keep_text_after_an_unclosed_one() {
+        let texts = |org: &str| {
+            OrgModeExtractor::build_internal_document(org)
+                .elements
+                .iter()
+                .map(|e| e.text.clone())
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(texts("#+begin_comment\nHIDDEN\n#+END_COMMENT\nVisible\n"), ["Visible"]);
+        assert_eq!(texts("#+BEGIN_COMMENT\nHIDDEN\n#+end_Comment\nVisible\n"), ["Visible"]);
+        assert_eq!(
+            texts("#+BEGIN_COMMENT\nHIDDEN\n#+END_COMMENTARY\nSTILL HIDDEN\n#+END_COMMENT\nVisible\n"),
+            ["Visible"]
+        );
+        assert_eq!(texts("#+BEGIN_COMMENT\nNever closed\n"), ["Never closed"]);
     }
 }
