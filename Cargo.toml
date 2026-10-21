@@ -63,7 +63,7 @@ cc = "1.9"
 cfb = "0.15"
 chrono = "0.4"
 clap = { version = "4.6", features = ["derive", "color", "suggestions"] }
-comrak = { version = "0.56", default-features = false }
+comrak = { version = "0.57", default-features = false }
 console_error_panic_hook = "0.1"
 crawlberg = { version = "1.11.1", default-features = false }
 criterion = { version = "0.8", features = ["html_reports"] }
@@ -73,7 +73,7 @@ fs2 = "0.4.3"
 futures = "0.3"
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
 hex = "0.4.3"
-html-to-markdown-rs = { version = "3.18.4", default-features = false }
+html-to-markdown-rs = { version = "3.18.5", default-features = false }
 image = { version = "0.25.10", default-features = false }
 itertools = "0.15"
 js-sys = "0.3"

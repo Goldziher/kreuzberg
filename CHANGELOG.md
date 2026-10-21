@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **(pdf): `PdfError` accepts errors from Lopdf 0.46 while preserving its Lopdf 0.45 conversion.**
 - **(llm): Rust exposes failed structured-response usage through `xberg::llm::usage::usage_from_error`.** (#2139)
 
 ### Security
@@ -22,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(html): Inline MathML keeps paragraph placement, and bold table text preserves literal asterisks.**
+  Break-only presentation tables are omitted, and links in preformatted content retain their destinations.
 - **(odt): Spaces written as `text:s` and text after a nested span, space or tab are no longer dropped.**
   `a<text:s text:c="3"/>b` reads `a   b`, and list items and table cells keep a styled link's or span's full text.
 - **(rtf): Non-breaking spaces and hyphens (`\~`, `\_`) read as those characters, and escaped braces and backslashes stay in their table cell.**

@@ -66,6 +66,16 @@ impl From<lopdf::Error> for PdfError {
     }
 }
 
+// Preserve the conversion accepted by 1.3.10 while extraction uses the current lopdf release. ~keep
+impl From<lopdf_compat::Error> for PdfError {
+    fn from(err: lopdf_compat::Error) -> Self {
+        match err {
+            lopdf_compat::Error::IO(io_err) => PdfError::IOError(io_err.to_string()),
+            _ => PdfError::InvalidPdf(err.to_string()),
+        }
+    }
+}
+
 /// Convenience `Result` alias for PDF extraction operations.
 pub type Result<T> = std::result::Result<T, PdfError>;
 
