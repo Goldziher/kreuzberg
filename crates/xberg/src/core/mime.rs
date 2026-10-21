@@ -292,7 +292,6 @@ pub(crate) const SQLITE_MIME_TYPE: &str = "application/vnd.sqlite3";
 pub(crate) const GEOPACKAGE_MIME_TYPE: &str = "application/geopackage+sqlite3";
 pub(crate) const XML_MIME_TYPE: &str = "application/xml";
 pub(crate) const KML_MIME_TYPE: &str = "application/vnd.google-earth.kml+xml";
-#[cfg(feature = "tree-sitter")]
 pub(crate) const SOURCE_CODE_MIME_TYPE: &str = "text/x-source-code";
 
 pub(crate) const EXCEL_MIME_TYPE: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";

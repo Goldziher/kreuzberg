@@ -203,6 +203,24 @@ fn should_preserve_preexisting_alias_return_values() {
     }
 }
 
+#[test]
+fn should_canonicalize_registered_client_mime_aliases() {
+    for (alias, canonical) in [
+        ("application/x-tex", "application/x-latex"),
+        ("application/x-sh", "text/x-source-code"),
+        ("text/x-sh", "text/x-source-code"),
+        ("text/x-shellscript", "text/x-source-code"),
+        ("application/vnd.apple.pages", "application/x-iwork-pages-sffpages"),
+        (
+            "application/vnd.apple.numbers",
+            "application/x-iwork-numbers-sffnumbers",
+        ),
+        ("application/vnd.apple.keynote", "application/x-iwork-keynote-sffkey"),
+    ] {
+        assert_eq!(validate_mime_type(alias).unwrap(), canonical);
+    }
+}
+
 #[tokio::test]
 async fn should_detect_octet_stream_with_bare() {
     assert_generic_detection("application/octet-stream").await;
