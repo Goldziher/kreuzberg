@@ -411,8 +411,10 @@ fn build_docbook_internal_document(
                     "note" | "warning" | "tip" | "caution" | "important" => {
                         let admonition_text = extract_element_text(&mut reader, budget)?;
                         if !admonition_text.is_empty() {
-                            builder.push_admonition(tag, None, None);
-                            builder.push_paragraph(&admonition_text, vec![], None, None);
+                            // The body is the admonition's own text, as in the other extractors;
+                            // a paragraph after it rendered outside the callout, under the kind
+                            let idx = builder.push_admonition(tag, None, None);
+                            builder.set_text(idx, &admonition_text);
                         }
                     }
                     "figure" => {
@@ -1637,6 +1639,32 @@ mod tests {
             "expected warning admonition, got: {content}"
         );
         assert!(content.contains("**Tip:**"), "expected tip admonition, got: {content}");
+    }
+
+    #[test]
+    fn should_keep_an_admonition_body_inside_the_admonition() {
+        use crate::types::internal::ElementKind;
+        let docbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<article><title>Test</title><note><para>Careful.</para></note><para>After.</para></article>"#;
+
+        let mut budget = SecurityBudget::with_defaults();
+        let doc = build_docbook_internal_document(docbook, false, &mut budget).expect("Parse failed");
+        let elements: Vec<(String, &str)> = doc
+            .elements
+            .iter()
+            .filter(|e| matches!(e.kind, ElementKind::Admonition | ElementKind::Paragraph))
+            .map(|e| (format!("{:?}", e.kind), e.text.as_str()))
+            .collect();
+
+        assert_eq!(
+            elements,
+            [
+                ("Admonition".to_string(), "Careful."),
+                ("Paragraph".to_string(), "After.")
+            ]
+        );
+        let markdown = crate::rendering::render_markdown(&doc);
+        assert!(markdown.contains("> [!NOTE]\n> Careful."), "got: {markdown}");
     }
 
     #[test]

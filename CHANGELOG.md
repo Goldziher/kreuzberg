@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(docbook): An admonition's body is the admonition's text.**
+  `<note>`, `<warning>`, `<tip>`, `<caution>` and `<important>` pushed an admonition whose text was its kind and then the body as a separate paragraph, so Markdown showed `> [!NOTE]` / `> note` with the body outside the callout; the body is now the admonition's text, as in the AsciiDoc, RST and Markdown extractors.
 - **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
   IPython colours every traceback line, so `\u001b[0;31mZeroDivisionError\u001b[0m` reached the text (as `[0;31m...[0m` in Markdown), and a progress bar redrawn with `\r` kept every intermediate state run together; escape sequences are now dropped and a carriage return overwrites the line, as in Jupyter.
 - **(rst): Line blocks keep their line breaks, and the paragraph before a literal block keeps its colon.**
