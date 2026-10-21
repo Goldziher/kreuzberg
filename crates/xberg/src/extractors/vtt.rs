@@ -266,6 +266,7 @@ fn strip_cue_tags(payload: &str) -> (Option<String>, String) {
     let mut rest = payload;
     // Inside `<rt>`: the ruby text printed over its base is an annotation, not part of the line ~keep
     let mut in_ruby_text = false;
+    let mut in_ruby = false;
 
     while let Some(open) = rest.find('<') {
         if !in_ruby_text {
@@ -280,9 +281,13 @@ fn strip_cue_tags(payload: &str) -> (Option<String>, String) {
         let tag = &after[..close];
         let name = tag.split(['.', ' ', '\t']).next().unwrap_or_default();
         match name {
-            "rt" => in_ruby_text = true,
-            // A ruby's end also ends the ruby text its last `<rt>` left open ~keep
-            "/rt" | "/ruby" => in_ruby_text = false,
+            "ruby" => in_ruby = true,
+            "rt" if in_ruby => in_ruby_text = true,
+            "/rt" => in_ruby_text = false,
+            "/ruby" => {
+                in_ruby = false;
+                in_ruby_text = false;
+            }
             _ => {}
         }
         if speaker.is_none()
@@ -320,19 +325,12 @@ fn parse_voice_tag(tag: &str) -> Option<String> {
 /// Decode the character references in a cue payload: the named ones WebVTT lists, `&quot;` and
 /// `&apos;`, and numeric ones such as `&#39;` or `&#x2014;`. Any other `&` stays as written.
 fn decode_escapes(text: &str) -> String {
-    /// The longest reference decoded, `&#x10FFFF;`; looking no further keeps the scan linear
-    const MAX_REFERENCE_LEN: usize = 10;
-
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(amp) = rest.find('&') {
         out.push_str(&rest[..amp]);
         let candidate = &rest[amp..];
-        let decoded = candidate
-            .char_indices()
-            .take(MAX_REFERENCE_LEN)
-            .find(|&(_, c)| c == ';')
-            .and_then(|(semicolon, _)| Some((decode_reference(&candidate[1..semicolon])?, semicolon + 1)));
+        let decoded = reference_len(candidate).and_then(|len| Some((decode_reference(&candidate[1..len - 1])?, len)));
         match decoded {
             Some((character, len)) => {
                 out.push(character);
@@ -346,6 +344,41 @@ fn decode_escapes(text: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+/// Numeric references can have arbitrarily many leading zeros. Stop at the first non-digit,
+/// so an invalid opener never scans across the next ampersand. ~keep
+fn reference_len(candidate: &str) -> Option<usize> {
+    const MAX_NAMED_REFERENCE_LEN: usize = 6;
+    if candidate.starts_with("&#") {
+        let prefix_len = if candidate
+            .as_bytes()
+            .get(2)
+            .is_some_and(|&byte| byte == b'x' || byte == b'X')
+        {
+            3
+        } else {
+            2
+        };
+        let hex = prefix_len == 3;
+        let digits = candidate.as_bytes()[prefix_len..]
+            .iter()
+            .take_while(|byte| {
+                if hex {
+                    byte.is_ascii_hexdigit()
+                } else {
+                    byte.is_ascii_digit()
+                }
+            })
+            .count();
+        let end = prefix_len + digits;
+        return (digits != 0 && candidate.as_bytes().get(end) == Some(&b';')).then_some(end + 1);
+    }
+    candidate
+        .char_indices()
+        .take(MAX_NAMED_REFERENCE_LEN)
+        .find(|&(_, character)| character == ';')
+        .map(|(end, _)| end + 1)
 }
 
 /// The character `name` (a reference between `&` and `;`) stands for.
@@ -367,7 +400,25 @@ fn decode_reference(name: &str) -> Option<char> {
             _ => None,
         };
     };
-    // A NUL or a surrogate is not a character a reference can produce ~keep
+    numeric_reference_character(code)
+}
+
+/// HTML numeric references use the Windows-1252 replacements for the C1 range. ~keep
+fn numeric_reference_character(code: u32) -> Option<char> {
+    const C1_START: u32 = 0x80;
+    const REPLACEMENTS: [char; 32] = [
+        '\u{20ac}', '\u{81}', '\u{201a}', '\u{192}', '\u{201e}', '\u{2026}', '\u{2020}', '\u{2021}', '\u{2c6}',
+        '\u{2030}', '\u{160}', '\u{2039}', '\u{152}', '\u{8d}', '\u{17d}', '\u{8f}', '\u{90}', '\u{2018}', '\u{2019}',
+        '\u{201c}', '\u{201d}', '\u{2022}', '\u{2013}', '\u{2014}', '\u{2dc}', '\u{2122}', '\u{161}', '\u{203a}',
+        '\u{153}', '\u{9d}', '\u{17e}', '\u{178}',
+    ];
+    if let Some(&character) = code
+        .checked_sub(C1_START)
+        .and_then(|index| usize::try_from(index).ok())
+        .and_then(|index| REPLACEMENTS.get(index))
+    {
+        return Some(character);
+    }
     char::from_u32(code).filter(|&character| character != '\0')
 }
 
@@ -559,6 +610,35 @@ mod tests {
     fn should_decode_references_in_linear_time() {
         let (_, text) = strip_cue_tags(&"&".repeat(200_000));
         assert_eq!(text.len(), 200_000);
+    }
+
+    #[test]
+    fn should_normalize_c1_numeric_references_as_html_does() {
+        let (_, text) = strip_cue_tags("&#128; &#x82; &#145; &#x9f; &#129;");
+        assert_eq!(text, "€ ‚ ‘ Ÿ \u{81}");
+    }
+
+    #[test]
+    fn should_preserve_signed_numeric_references_as_literal_text() {
+        let (_, text) = strip_cue_tags("&#+39; &#x+41; &#+0; &#-1;");
+        assert_eq!(text, "&#+39; &#x+41; &#+0; &#-1;");
+    }
+
+    #[test]
+    fn should_decode_zero_padded_numeric_references() {
+        let zeros = "0".repeat(200_000);
+        let source = format!("&#{zeros}39; &#x{zeros}41; &amp;lt;");
+        assert_eq!(strip_cue_tags(&source).1, "' A &lt;");
+        let malformed = "&#000000000000000x".repeat(20_000);
+        assert_eq!(strip_cue_tags(&malformed).1, malformed);
+    }
+
+    #[test]
+    fn should_keep_text_in_rt_tags_outside_ruby() {
+        for source in ["outside <rt>kept</rt> end", "outside <rt.small>kept</rt> end"] {
+            assert_eq!(strip_cue_tags(source).1, "outside kept end");
+        }
+        assert_eq!(strip_cue_tags("<ruby>A<rt>x</ruby><rt>kept</rt> B").1, "Akept B");
     }
 
     #[test]
