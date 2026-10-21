@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(docbook): An admonition's body is the admonition's text.**
+  `<note>`, `<warning>`, `<tip>`, `<caution>` and `<important>` pushed an admonition whose text was its kind and then the body as a separate paragraph, so Markdown showed `> [!NOTE]` / `> note` with the body outside the callout; the body is now the admonition's text, as in the AsciiDoc, RST and Markdown extractors.
 - **(build): The `xml` feature compiles without `svg` or `pdf`.**
   The flat ODF drawing recovery in the XML extractor calls `extraction::diagram::odf`, but the `diagram` module was only built with `svg` and `xml` together or with `pdf`, so `--no-default-features --features xml` (and `office,xml`) failed with `cannot find diagram in extraction`.
 - **(jupyter): Stream and error outputs read as the notebook shows them, without ANSI escape codes.**
