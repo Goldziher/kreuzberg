@@ -44,7 +44,6 @@ fn should_emit_a_node_for_every_previously_dropped_element_kind() {
         json!([
             { "type": "page_break" },
             { "type": "footnote_ref", "number": 1, "id": "fn1" },
-            { "type": "footnote_definition", "text": "A footnote body.", "id": "fn1" },
             { "type": "citation", "text": "Smith 2024", "id": "smith2024" },
             { "type": "slide", "number": 3, "title": "Third Slide" },
             { "type": "definition_term", "text": "Rust" },
@@ -52,6 +51,8 @@ fn should_emit_a_node_for_every_previously_dropped_element_kind() {
             { "type": "admonition", "kind": "warning", "title": "Be careful", "text": "Be careful" },
             { "type": "raw_block", "text": "\\LaTeX{}", "format": "tex" },
             { "type": "metadata_block", "entries": [{ "key": "Author", "value": "Alice" }] },
+            // Definitions live on the footnote layer and are appended after the body
+            { "type": "footnote_definition", "text": "A footnote body.", "id": "fn1" },
         ]),
         "every previously-dropped element kind must round-trip into the JSON body"
     );

@@ -689,6 +689,42 @@ def test_swift_static_library_builds_disable_host_extension_symbol_lookup() -> N
     assert "targets: ${{ matrix.target }}" in swift
 
 
+def assert_swift_package_disables_host_extension_symbol_lookup(workflow: str) -> None:
+    swift = job_block(workflow, "swift-package")
+    setups = re.findall(r"(?ms)^      - uses: xberg-io/actions/setup-rust@[^\n]+\n(.*?)(?=^      - |\Z)", swift)
+    assert len(setups) == 1, "one Swift package Rust setup step must be examined"
+    settings = re.findall(r'^          macos-dynamic-lookup: "false"$', setups[0], re.MULTILINE)
+    assert settings == ['          macos-dynamic-lookup: "false"'], "Swift package must disable host extension lookup"
+
+
+def test_swift_package_build_preserves_selective_callback_symbol_lookup() -> None:
+    workflow = WORKFLOW.read_text()
+    assert_swift_package_disables_host_extension_symbol_lookup(workflow)
+    swift = job_block(workflow, "swift-package")
+    setting = '          macos-dynamic-lookup: "false"'
+    assert swift.count(setting) == 1
+    for replacement in ["", '          macos-dynamic-lookup: "true"']:
+        broken_swift = swift.replace(setting, replacement, 1)
+        broken = workflow.replace(swift, broken_swift, 1)
+        assert broken != workflow
+        error_message = None
+        try:
+            assert_swift_package_disables_host_extension_symbol_lookup(broken)
+        except AssertionError as error:
+            error_message = str(error)
+        assert error_message == "Swift package must disable host extension lookup"
+    misplaced_swift = swift.replace(setting, "", 1).replace(
+        "          package-dir: packages/swift", f"{setting}\n          package-dir: packages/swift", 1
+    )
+    assert misplaced_swift != swift
+    error_message = None
+    try:
+        assert_swift_package_disables_host_extension_symbol_lookup(workflow.replace(swift, misplaced_swift, 1))
+    except AssertionError as error:
+        error_message = str(error)
+    assert error_message == "Swift package must disable host extension lookup"
+
+
 def test_kotlin_e2e_native_build_uses_thin_lto() -> None:
     workflow = (WORKFLOW.parent / "ci-e2e.yaml").read_text()
     job = job_block(workflow, "e2e-tests")
@@ -792,6 +828,7 @@ def test_dart_e2e_freshness_resolves_package_language_version() -> None:
 
 
 if __name__ == "__main__":
+    test_swift_package_build_preserves_selective_callback_symbol_lookup()
     test_dart_e2e_freshness_resolves_package_language_version()
     test_kotlin_e2e_native_build_uses_thin_lto()
     test_macos_onnx_action_forwards_rpath_option_only_to_macos()

@@ -13,10 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **(pdf): `PdfError` accepts errors from Lopdf 0.46 while preserving its Lopdf 0.45 conversion.**
 - **(llm): Rust exposes failed structured-response usage through `xberg::llm::usage::usage_from_error`.** (#2139)
 
 ### Security
 
+- **(llama-index): The standalone node-parser lock uses NLTK 3.10.4 with guarded model-file access.**
 - **(tls): Reject distrusted emSign certificate intermediates by updating rustls-webpki to 0.103.16.**
   Resolves RUSTSEC-2026-0382.
 - **(excel): ZIP-backed spreadsheets reject mismatched local headers, duplicate member names, and overlapping entries.**
@@ -26,6 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(latex): Source lines wrapped at a fixed width form one paragraph, and `~` reads as a no-break space.**
   Every source line was its own paragraph, so a wrapped sentence was split apart and a `\footnote{...}` spanning two lines was not parsed; paragraphs now end at a blank line or a block-level line, comments follow LaTeX's rules (but not inside `\verb|...|`, whose contents stay literal), paragraphs stop at `\bye` and `\end{document}`, and `Dr.~Smith` no longer keeps the tilde.
+- **(orgmode): Comment lines and `#+BEGIN_COMMENT` blocks are left out of the text.**
+  A `# ...` line was joined into the paragraph around it and a comment block's content was emitted, although Org never exports either.
+- **(swift): Package release builds avoid conflicting dynamic-lookup linker flags.**
+- **(rendering): Plain-text output writes the footnotes of LaTeX, Markdown, reST, Org, Typst, Djot, DocBook, FictionBook, EPUB and PPT documents.**
+  Their definitions were left on the body layer, so plain output kept the `[^1]` marker and dropped the note; definitions now always sit on the footnote layer, JSON output appends them after the body as it does for DOCX and ODT, and styled HTML renders footnote-layer definitions, which it previously dropped for DOCX and ODT as well.
+- **(html): Inline MathML keeps paragraph placement, and bold table text preserves literal asterisks.**
+  Break-only presentation tables are omitted, and links in preformatted content retain their destinations.
+- **(odt): Spaces written as `text:s` and text after a nested span, space or tab are no longer dropped.**
+  `a<text:s text:c="3"/>b` reads `a   b`, and list items and table cells keep a styled link's or span's full text.
+- **(rtf): Non-breaking spaces and hyphens (`\~`, `\_`) read as those characters, and escaped braces and backslashes stay in their table cell.**
+  `5\~kg` no longer reads `5~kg`, and `set \{x\} here` in a cell no longer loses its braces to the body text.
 - **(doc): Fields spanning paragraph boundaries retain their displayed text without leaking instructions.** (#2184)
 - **(ppt): Speaker notes are referenced from their own slides in rendered Markdown.** (#2186)
 - **(ios): Native libraries link with bundled ONNX Runtime’s CoreML backend.**

@@ -3051,6 +3051,8 @@ jobs:
 
           submodules: false
       - uses: xberg-io/actions/setup-rust@v1
+        with:
+          macos-dynamic-lookup: "false"
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-deps

@@ -58,3 +58,33 @@ fn test_annotation_without_atnid_falls_back_to_counter_label() {
     assert!(text.contains("[Comment 1]: First comment"), "got: {text:?}");
     assert!(text.contains("[Comment 2]: Second comment"), "got: {text:?}");
 }
+
+/// `\~` (non-breaking space) and `\_` (non-breaking hyphen) are control
+/// symbols, not control words. The control-word parser found no letters in
+/// them and left the `~` or `_` to be read as text, so `5\~kg` came out as
+/// `5~kg`. `\-` (optional hyphen) only marks a possible break.
+#[test]
+fn test_control_symbols_read_as_the_characters_they_stand_for() {
+    let rtf = r"{\rtf1\ansi 5\~kg, non\_stop, co\-operate\par}";
+    let (text, _tables, _images, _para_metas, _fmt) = extract_text_from_rtf(rtf, false);
+
+    assert_eq!(text.trim(), "5\u{a0}kg, non\u{2011}stop, cooperate");
+}
+
+/// An escaped `\{`, `\}` or `\\` inside a table row went to the body text
+/// instead of the cell, so `set \{x\} here` filled the cell as `set x here`.
+#[test]
+fn test_escaped_literals_stay_in_their_table_cell() {
+    let rtf = r"{\rtf1\ansi\trowd\cellx1000\cellx2000 set \{x\} here\cell C:\\tmp, 5\~kg\cell\row}";
+    let (text, tables, _images, _para_metas, _fmt) = extract_text_from_rtf(rtf, false);
+
+    assert_eq!(tables.len(), 1, "expected one table, got: {tables:?}");
+    assert_eq!(
+        tables[0].cells,
+        vec![vec!["set {x} here".to_string(), "C:\\tmp, 5\u{a0}kg".to_string()]]
+    );
+    assert!(
+        !text.contains('{') && !text.contains("C:\\"),
+        "cell text leaked into the body: {text:?}"
+    );
+}
