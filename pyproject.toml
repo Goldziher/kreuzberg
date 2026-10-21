@@ -61,7 +61,7 @@ bench-paddleocr-python = [
 ]
 bench-pymupdf4llm = ["pillow>=12.3.0", "pymupdf==2.0", "pymupdf-layout==2.0", "pymupdf4llm==2.0"]
 bench-rapidocr = ["numpy>=2.0", "onnxruntime==1.31.0", "pillow>=12.3.0", "pymupdf==2.0", "rapidocr==3.10.0"]
-bench-unstructured = ["unstructured[docx,pdf,pptx,xlsx,md,odt,rtf,epub,org,rst]==0.27.30", "transformers>=5.10.0"]
+bench-unstructured = ["unstructured[docx,pdf,pptx,xlsx,md,odt,rtf,epub,org,rst]==0.27.32", "transformers>=5.10.0"]
 
 [tool.uv]
 package = false
