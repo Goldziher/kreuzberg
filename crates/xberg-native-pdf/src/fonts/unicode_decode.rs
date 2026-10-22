@@ -45,11 +45,11 @@ pub(crate) struct DecodePolicy {
 #[derive(Debug, Default)]
 pub(crate) struct GlyphDropTally {
     count: usize,
-    first: Option<(&'static str, u32, u16)>,
+    first: Option<(&'static str, u32, u32)>,
 }
 
 impl GlyphDropTally {
-    pub(crate) fn record(&mut self, reason: &'static str, char_code: u32, gid: u16) {
+    pub(crate) fn record(&mut self, reason: &'static str, char_code: u32, gid: u32) {
         self.count += 1;
         self.first.get_or_insert((reason, char_code, gid));
     }

@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(pdf): Bound font lookup preprocessing and reject malformed lookup types.**
+  Extended glyph IDs stay intact through rendering and diagnostics, preventing unrelated glyphs from being painted.
+  The public 16-bit glyph-count API remains compatible.
 - **(integrations): CrewAI and LlamaIndex use Pillow 13.0.0 on Python 3.11 and later for image security fixes.**
   Python 3.10 retains Pillow 12.3.0; other branches with upstream caps remain affected.
 - **(integrations): Development environments use virtualenv 21.14.12 to prevent shell expansion in generated launchers.**
