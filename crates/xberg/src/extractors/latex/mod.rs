@@ -1846,4 +1846,96 @@ Schr{\"o}dinger and {\o}ster, \~n\^o\=a\.z\u{g}\k{a}\r{u}, Mr.\ Smith.
             assert_eq!((annotations[0].start, annotations[0].end), (0, 2));
         }
     }
+
+    #[test]
+    fn should_keep_references_on_a_standalone_footnote_definition() {
+        let latex = concat!(
+            "\\begin{document}\n",
+            "\\section{Target}\\label{sec:a}\n",
+            "\\footnote{See \\ref{sec:a} and \\cite{inside}.}\n",
+            "\\end{document}",
+        );
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let kinds: Vec<_> = document.elements.iter().map(|element| element.kind).collect();
+        assert_eq!(
+            kinds,
+            [
+                crate::types::internal::ElementKind::Heading { level: 1 },
+                crate::types::internal::ElementKind::FootnoteRef,
+                crate::types::internal::ElementKind::FootnoteDefinition,
+            ]
+        );
+        let references: Vec<_> = document
+            .relationships
+            .iter()
+            .map(|relationship| (relationship.source, relationship.target.clone(), relationship.kind))
+            .collect();
+        assert_eq!(
+            references,
+            [
+                (
+                    1,
+                    RelationshipTarget::Key(document.elements[2].anchor.clone().unwrap()),
+                    RelationshipKind::FootnoteReference
+                ),
+                (
+                    2,
+                    RelationshipTarget::Key("sec:a".into()),
+                    RelationshipKind::CrossReference
+                ),
+                (
+                    2,
+                    RelationshipTarget::Key("inside".into()),
+                    RelationshipKind::CitationReference
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn should_keep_paragraph_and_footnote_reference_owners_separate() {
+        let latex = concat!(
+            "\\begin{document}\n",
+            "\\section{Target}\\label{sec:a}\n",
+            "Host \\ref{sec:a}\\footnote{See \\ref{sec:a} and \\cite{inside}.}.\n",
+            "\\end{document}",
+        );
+        let document = LatexExtractor::build_internal_document(latex, false);
+        assert_eq!(document.elements.len(), 4);
+        assert_eq!(document.elements[1].text, "Host sec:a.");
+        assert_eq!(
+            document.elements[3].kind,
+            crate::types::internal::ElementKind::FootnoteDefinition
+        );
+        let references: Vec<_> = document
+            .relationships
+            .iter()
+            .map(|relationship| (relationship.source, relationship.target.clone(), relationship.kind))
+            .collect();
+        assert_eq!(
+            references,
+            [
+                (
+                    1,
+                    RelationshipTarget::Key("sec:a".into()),
+                    RelationshipKind::CrossReference
+                ),
+                (
+                    2,
+                    RelationshipTarget::Key(document.elements[3].anchor.clone().unwrap()),
+                    RelationshipKind::FootnoteReference
+                ),
+                (
+                    3,
+                    RelationshipTarget::Key("sec:a".into()),
+                    RelationshipKind::CrossReference
+                ),
+                (
+                    3,
+                    RelationshipTarget::Key("inside".into()),
+                    RelationshipKind::CitationReference
+                ),
+            ]
+        );
+    }
 }
