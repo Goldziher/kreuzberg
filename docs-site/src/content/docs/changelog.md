@@ -27,12 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(integrations): CrewAI and LlamaIndex use Pillow 13.0.0 on Python 3.11 and later for image security fixes.**
+  Python 3.10 retains Pillow 12.3.0; other branches with upstream caps remain affected.
 - **(integrations): Development environments use virtualenv 21.14.12 to prevent shell expansion in generated launchers.**
   Resolves CVE-2026-113722; recreate existing environments to replace vulnerable launchers.
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
   Replaces the yanked 1.54.0 release across all Rust dependency graphs.
 - **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
-  Docling and MinerU retain Pillow 12.3.0 until their upstream constraints allow the update.
+  Docling dependencies and MinerU's Gradio dependency retain Pillow 12.3.0 under published upper bounds.
 - **(llama-index): The standalone node-parser lock uses NLTK 3.10.4 with guarded model-file access.**
 - **(tls): Reject distrusted emSign certificate intermediates by updating rustls-webpki to 0.103.16.**
   Resolves RUSTSEC-2026-0382.
