@@ -8093,10 +8093,11 @@ wheels = [
 
 [[package]]
 name = "unstructured"
-version = "0.27.32"
+version = "0.27.33"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
+    { name = "certifi" },
     { name = "charset-normalizer" },
     { name = "emoji" },
     { name = "filelock" },
@@ -8122,9 +8123,9 @@ dependencies = [
     { name = "unstructured-client" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/e5/4d54ed162e345aed8f3ed293be135c5bb3eb20451f38314c78ee4bbe2e9d/unstructured-0.27.32.tar.gz", hash = "sha256:0371e88dac07405662dda30389dc4800e1e302bf9af53325675cad3569d7d863", size = 1602635, upload-time = "2026-10-20T23:14:19.147Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/67/3f/ef8ef078d596eac9be0fdee3ea26e5133cf323c5d5bd7fe53deadbf06fbb/unstructured-0.27.33.tar.gz", hash = "sha256:9a90af9d95645e7e74e92e5fead3f49d177316aeb9f22fb168e526e75d76a3d1", size = 1603549, upload-time = "2026-10-22T00:01:47.351Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/db/1bcee8a007063ac12b410830d5c436083743a66d0f768d169641badb60e2/unstructured-0.27.32-py3-none-any.whl", hash = "sha256:c30acc2fc2e388773d5f37e878f20ea9ec55051437c941af895368dc8ec9d5ef", size = 1664228, upload-time = "2026-10-20T23:14:16.611Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/c1/66be8a2d5ccc6858b9f4269adcc44470b1af34eef2e3024958edfaa7783f/unstructured-0.27.33-py3-none-any.whl", hash = "sha256:e34dfdab88524c9a41153a985bf1082c2957bf8c25ed05836d49b7651d4edf94", size = 1665059, upload-time = "2026-10-22T00:01:44.758Z" },
 ]
 
 [package.optional-dependencies]
@@ -8691,7 +8692,7 @@ bench-rapidocr = [
 ]
 bench-unstructured = [
     { name = "transformers", specifier = ">=5.10.0" },
-    { name = "unstructured", extras = ["docx", "pdf", "pptx", "xlsx", "md", "odt", "rtf", "epub", "org", "rst"], specifier = "==0.27.32" },
+    { name = "unstructured", extras = ["docx", "pdf", "pptx", "xlsx", "md", "odt", "rtf", "epub", "org", "rst"], specifier = "==0.27.33" },
 ]
 dev = [
     { name = "covdefaults", specifier = ">=2.3.0" },
