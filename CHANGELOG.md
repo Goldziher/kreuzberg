@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
   Replaces the yanked 1.54.0 release across all Rust dependency graphs.
 - **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
-  Docling dependencies and MinerU's Gradio dependency retain Pillow 12.3.0 under published upper bounds.
+  MinerU's Gradio dependency retains Pillow 12.3.0 under its published upper bound.
 - **(llama-index): The standalone node-parser lock uses NLTK 3.10.4 with guarded model-file access.**
 - **(tls): Reject distrusted emSign certificate intermediates by updating rustls-webpki to 0.103.16.**
   Resolves RUSTSEC-2026-0382.
