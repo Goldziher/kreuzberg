@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(latex): Print accent commands, letter commands and control spaces as the characters they stand for.**
+  `Schr\"odinger`, `\'Ecole` and `Garc\'\i a` kept their backslash, with `\'` turned into a curly quote, and `\ss` and
+  `\o` were dropped, in paragraphs, headings and list items alike. They now read Schrödinger, École, García, ß and ø,
+  a group such as `Schr{\"o}dinger` prints without its braces, and `Mr.\ Smith` reads `Mr. Smith`.
 - **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
   The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
   encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
