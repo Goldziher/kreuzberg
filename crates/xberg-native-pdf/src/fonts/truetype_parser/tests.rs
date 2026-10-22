@@ -610,3 +610,32 @@ fn test_parse_random_bytes() {
     let result = TrueTypeFont::parse(&random_data);
     assert!(result.is_err(), "Random bytes should fail to parse as font");
 }
+
+#[test]
+fn should_preserve_u16_glyph_count_at_upstream_count_boundaries() {
+    let data = load_dejavu_sans().expect("bundled font must be available");
+    let mut font = TrueTypeFont::parse(&data).unwrap();
+    for (reported, expected) in [
+        (0, 0),
+        (u32::from(u16::MAX) - 1, u16::MAX - 1),
+        (u32::from(u16::MAX), u16::MAX),
+        (u32::from(u16::MAX) + 1, u16::MAX),
+        (u32::MAX, u16::MAX),
+    ] {
+        font.metrics.glyph_count = reported;
+        let count: u16 = font.num_glyphs();
+        assert_eq!(count, expected, "upstream glyph count {reported}");
+    }
+}
+
+#[test]
+fn should_bound_width_table_to_the_public_glyph_range() {
+    let data = load_dejavu_sans().expect("bundled font must be available");
+    let mut font = TrueTypeFont::parse(&data).unwrap();
+    font.metrics.glyph_count = u32::MAX;
+    font.glyph_widths.clear();
+    font.build_width_table();
+    assert_eq!(font.glyph_widths.len(), usize::from(u16::MAX));
+    assert!(font.glyph_widths.contains_key(&(u16::MAX - 1)));
+    assert!(!font.glyph_widths.contains_key(&u16::MAX));
+}

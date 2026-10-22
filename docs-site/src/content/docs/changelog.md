@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(pdf): `PdfError` accepts errors from Lopdf 0.46 while preserving its Lopdf 0.45 conversion.**
 - **(llm): Rust exposes failed structured-response usage through `xberg::llm::usage::usage_from_error`.** (#2139)
 
+### Changed
+
+- **(pdf): Native font metrics retain their 16-bit glyph-count API with the updated font parser.**
+  `TrueTypeFont::num_glyphs()` caps larger upstream counts at 65,535; width-table work stays bounded to that range.
+  Font ascenders and descenders use normalized above/below-baseline signs.
+
 ### Security
 
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**

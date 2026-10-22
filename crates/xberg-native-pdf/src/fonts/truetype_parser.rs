@@ -130,7 +130,7 @@ impl<'a> TrueTypeFont<'a> {
         }
         let glyph_metrics = GlyphMetrics::new(&self.font, Size::unscaled(), LocationRef::default());
 
-        for glyph_id in 0..self.metrics.glyph_count {
+        for glyph_id in 0..self.num_glyphs() {
             let advance = glyph_metrics
                 .advance_width(GlyphId::from(glyph_id))
                 .unwrap_or(0.0)
@@ -220,9 +220,9 @@ impl<'a> TrueTypeFont<'a> {
         self.glyph_id(codepoint).map(|gid| self.glyph_width(gid)).unwrap_or(500)
     }
 
-    /// Get the number of glyphs in the font.
+    /// Get the glyph count, saturating at `u16::MAX` for the 16-bit glyph API.
     pub fn num_glyphs(&self) -> u16 {
-        self.metrics.glyph_count
+        u16::try_from(self.metrics.glyph_count).unwrap_or(u16::MAX)
     }
 
     /// Get the raw font data for embedding.

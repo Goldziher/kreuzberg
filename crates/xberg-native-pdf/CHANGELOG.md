@@ -12,6 +12,12 @@ and in the upstream project itself.
 
 ## [Unreleased]
 
+### Changed
+
+- **(pdf): Native font metrics retain their 16-bit glyph-count API with the updated font parser.**
+  `TrueTypeFont::num_glyphs()` caps larger upstream counts at 65,535; width-table work stays bounded to that range.
+  Font ascenders and descenders use normalized above/below-baseline signs.
+
 ## [1.0.1] - 2026-08-20
 
 Vendoring-preparation release. Everything here is in service of moving this crate into the
