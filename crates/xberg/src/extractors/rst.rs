@@ -1803,7 +1803,7 @@ impl InternalDocumentExtractor for RstExtractor {
             .as_ref()
             .map(|img| img.inject_placeholders)
             .unwrap_or(true);
-        let text = String::from_utf8_lossy(content).into_owned();
+        let text = crate::utils::strip_bom(&String::from_utf8_lossy(content)).to_owned();
 
         let (_extracted_text, metadata) = Self::extract_text_and_metadata(&text);
 
