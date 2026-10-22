@@ -5303,7 +5303,15 @@ CRAWLBERG_ALLOW_PRIVATE_NETWORK = "true"
 RUST_MIN_STACK = "16777216"
 
 [crates.e2e.format]
-dart = "cd {dir} && dart format ."
+# Registry test apps reference an unpublished package until release; formatting must
+# not resolve it. Committed E2E suites still require locked dependency resolution. ~keep
+dart = '''
+cd {dir} &&
+case "$PWD" in
+  */test_apps/dart) dart format --language-version=latest . ;;
+  *) dart pub get --enforce-lockfile && dart format . ;;
+esac
+'''
 python = "uv run --no-sync ruff check --fix {dir} && uv run --no-sync ruff format {dir}"
 go = "gofmt -w {dir}"
 rust = "(cd {dir} && cargo fmt --all)"

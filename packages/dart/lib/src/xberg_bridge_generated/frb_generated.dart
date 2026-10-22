@@ -17169,8 +17169,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Map<String, String> dco_decode_Map_String_String_None(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return Map.fromEntries(
-      dco_decode_list_record_string_string(raw)
-          .map((e) => MapEntry(e.$1, e.$2)),
+      dco_decode_list_record_string_string(
+        raw,
+      ).map((e) => MapEntry(e.$1, e.$2)),
     );
   }
 
@@ -17196,8 +17197,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return Map.fromEntries(
-      dco_decode_list_record_string_list_string(raw)
-          .map((e) => MapEntry(e.$1, e.$2)),
+      dco_decode_list_record_string_list_string(
+        raw,
+      ).map((e) => MapEntry(e.$1, e.$2)),
     );
   }
 
@@ -17207,8 +17209,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return Map.fromEntries(
-      dco_decode_list_record_string_list_prim_u_8_strict(raw)
-          .map((e) => MapEntry(e.$1, e.$2)),
+      dco_decode_list_record_string_list_prim_u_8_strict(
+        raw,
+      ).map((e) => MapEntry(e.$1, e.$2)),
     );
   }
 
