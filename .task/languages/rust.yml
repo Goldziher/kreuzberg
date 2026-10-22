@@ -150,6 +150,12 @@ tasks:
       - cmd: bash scripts/ci/rust/run-unit-tests.sh
         platforms: [linux, darwin]
 
+  test:mime:
+    desc: "Verify MIME declaration handling without tree-sitter"
+    cmds:
+      - cmd: bash scripts/ci/rust/run-mime-tests.sh
+        platforms: [linux, darwin]
+
   test:quick:
     desc: "Run fast Rust tests (unit tests only)"
     cmds:

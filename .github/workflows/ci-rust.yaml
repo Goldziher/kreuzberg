@@ -169,6 +169,10 @@ jobs:
         run: task rust:clean
         shell: bash
 
+      - name: Verify MIME handling without tree-sitter
+        run: task rust:test:mime
+        shell: bash
+
       - name: Run tests
         # ~keep `task rust:test:ci` is gated on its exit code alone, which cannot distinguish a
         # real pass from a run that executed nothing: a feature-gating typo that drops an entire
