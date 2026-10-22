@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(build): Root workspace installs reject registry metadata naming a different package.**
+  pnpm 12.15.0 keeps install-script permissions tied to the requested dependency.
 - **(pdf): Bound font lookup preprocessing and reject malformed lookup types.**
   Extended glyph IDs stay intact through rendering and diagnostics, preventing unrelated glyphs from being painted.
   The public 16-bit glyph-count API remains compatible.
@@ -38,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
   Replaces the yanked 1.54.0 release across all Rust dependency graphs.
 - **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
-  Docling dependencies and MinerU's Gradio dependency retain Pillow 12.3.0 under published upper bounds.
+  MinerU's Gradio dependency retains Pillow 12.3.0 under its published upper bound.
 - **(llama-index): The standalone node-parser lock uses NLTK 3.10.4 with guarded model-file access.**
 - **(tls): Reject distrusted emSign certificate intermediates by updating rustls-webpki to 0.103.16.**
   Resolves RUSTSEC-2026-0382.
@@ -50,8 +52,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
   The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
   encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
+- **(markup): Read Markdown, Djot, MDX, Org, reStructuredText, Typst, RTF, DocTags and Jupyter documents that start with a UTF-8 byte order mark.**
+  The mark stayed in front of the first line, so a leading heading came out as a paragraph with its `#`, `*` or `=`
+  marker, the mark leaked into the text, and a notebook failed with a JSON parse error. It is now skipped, as the
+  plain text, CSV and AsciiDoc extractors already did.
 - **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
   Their libc selections match Crawlberg 1.11.1's published iOS constraint.
+- **(excel): Round float cells to Excel's 15 significant digits when the result stays finite.**
+  A formula result carried the binary noise of its double into the output, so `=0.1+0.2` read `0.30000000000000004`
+  and `=100*1.19` read `118.99999999999999` where Excel shows `0.3` and `119`.
+  Finite boundary values retain their original representation when rounding would overflow.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
