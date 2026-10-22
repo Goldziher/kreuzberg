@@ -1190,7 +1190,7 @@ impl InternalDocumentExtractor for OrgModeExtractor {
         tracing::debug!(format = "orgmode", size_bytes = content.len(), "extraction starting");
         let mut budget = SecurityBudget::from_config(config);
         budget.account_text(content.len())?;
-        let org_text = String::from_utf8_lossy(content).into_owned();
+        let org_text = crate::utils::strip_bom(&String::from_utf8_lossy(content)).to_owned();
 
         let lines: Vec<String> = org_text.lines().map(|s| s.to_string()).collect();
         let org = Org::from_vec(&lines)?;
