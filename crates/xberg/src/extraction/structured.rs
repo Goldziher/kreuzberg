@@ -523,19 +523,43 @@ pub(crate) fn parse_toml(data: &[u8]) -> Result<StructuredDataResult> {
     let content = toml_str.to_string();
 
     // Convert to a canonical `serde_json::Value` so the extractor can render document
-    // structure (headings/lists) the same way as JSON/YAML/JSONL (xberg-io/xberg#155).
-    // `toml::Value` round-trips through `serde_json::Value` for every value this parser
-    // produces; `None` here just means the extractor falls back to a raw code block. ~keep
-    let json_value = serde_json::to_value(&value).ok();
+    // structure (headings/lists) the same way as JSON/YAML/JSONL (xberg-io/xberg#155). ~keep
+    let json_value = toml_to_json(&value);
 
     Ok(StructuredDataResult {
         content,
         format: Cow::Borrowed("toml"),
         metadata,
         text_fields,
-        value: json_value,
+        value: Some(json_value),
         flattened,
     })
+}
+
+/// The TOML document as a `serde_json::Value`, with each date or time as its TOML text, such as
+/// `2025-02-05` or `1979-05-27T07:32:00Z`.
+///
+/// `serde_json::to_value` turned a `toml::Value::Datetime` into
+/// `{"$__toml_private_datetime": "2025-02-05"}`, the marker the `toml` crate uses to carry a
+/// datetime through serde, and the structured renderer printed that key as part of the text. A
+/// float that JSON cannot hold (`nan`, `inf`) becomes `null`, as `serde_json::to_value` made it.
+fn toml_to_json(value: &toml::Value) -> serde_json::Value {
+    match value {
+        toml::Value::String(s) => serde_json::Value::String(s.clone()),
+        toml::Value::Integer(i) => serde_json::Value::from(*i),
+        toml::Value::Float(f) => {
+            serde_json::Number::from_f64(*f).map_or(serde_json::Value::Null, serde_json::Value::Number)
+        }
+        toml::Value::Boolean(b) => serde_json::Value::Bool(*b),
+        toml::Value::Datetime(d) => serde_json::Value::String(d.to_string()),
+        toml::Value::Array(items) => serde_json::Value::Array(items.iter().map(toml_to_json).collect()),
+        toml::Value::Table(table) => serde_json::Value::Object(
+            table
+                .iter()
+                .map(|(key, value)| (key.clone(), toml_to_json(value)))
+                .collect(),
+        ),
+    }
 }
 
 fn extract_from_toml_value(
@@ -711,6 +735,30 @@ mod tests {
         let result = parse_toml(toml.as_bytes()).unwrap();
         assert!(result.content.contains("name = \"Alice\""));
         assert!(result.content.contains("email = \"alice@example.com\""));
+    }
+
+    /// Against the unfixed code every date and time came out as
+    /// `{"$__toml_private_datetime": "..."}`.
+    #[test]
+    fn test_parse_toml_datetimes_are_their_toml_text() {
+        let toml = "created = 2025-02-05\n\
+                    published = 1979-05-27T07:32:00Z\n\
+                    local = 1979-05-27T07:32:00\n\
+                    alarm = 07:32:00\n\
+                    [[releases]]\n\
+                    on = 2024-12-31T23:59:59.5-08:00\n\
+                    ratio = nan\n";
+        let value = parse_toml(toml.as_bytes()).unwrap().value.expect("TOML value");
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "created": "2025-02-05",
+                "published": "1979-05-27T07:32:00Z",
+                "local": "1979-05-27T07:32:00",
+                "alarm": "07:32:00",
+                "releases": [{"on": "2024-12-31T23:59:59.5-08:00", "ratio": null}],
+            })
+        );
     }
 
     #[test]

@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(toml): Print a date or time as its TOML text instead of under a `$__toml_private_datetime` key.**
+  The TOML value went through `serde_json::to_value`, which turned every datetime into
+  `{"$__toml_private_datetime": "2025-02-05"}`, so the text read `created_date` and then
+  `$__toml_private_datetime: 2025-02-05`. It now reads `created_date: 2025-02-05`.
 - **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
   The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
   encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
