@@ -356,6 +356,13 @@ fn test_format_cell_value_float_drops_binary_noise_past_fifteen_digits() {
 }
 
 #[test]
+fn test_format_cell_value_float_keeps_the_finite_limits_finite() {
+    // 15 significant digits of either limit round past it, which parses as infinity
+    assert_eq!(format_cell_to_string(&Data::Float(f64::MAX)), f64::MAX.to_string());
+    assert_eq!(format_cell_to_string(&Data::Float(f64::MIN)), f64::MIN.to_string());
+}
+
+#[test]
 fn test_format_cell_value_bool_false() {
     let result = format_cell_to_string(&Data::Bool(false));
     assert_eq!(result, "false");

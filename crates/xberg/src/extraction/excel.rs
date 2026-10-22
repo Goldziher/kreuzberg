@@ -754,11 +754,16 @@ fn format_cell_to_string(data: &Data) -> String {
 /// `118.99999999999999`, which Excel shows as `0.3` and `119`. Rounding to 15 significant
 /// digits before printing the shortest form drops that noise and keeps every digit a typed
 /// value can have. Rust's `{}` already prints a whole number without a trailing decimal point.
+/// Near `f64::MAX` the rounded form overflows to infinity, so the value is kept as it is.
 fn format_excel_float(value: f64) -> String {
     if !value.is_finite() {
         return format!("{value}");
     }
-    let rounded = format!("{value:.14e}").parse::<f64>().unwrap_or(value);
+    let rounded = format!("{value:.14e}")
+        .parse::<f64>()
+        .ok()
+        .filter(|rounded| rounded.is_finite())
+        .unwrap_or(value);
     format!("{rounded}")
 }
 
