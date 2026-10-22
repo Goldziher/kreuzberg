@@ -787,6 +787,9 @@ impl InternalDocumentExtractor for StructuredExtractor {
         mime_type: &str,
         config: &ExtractionConfig,
     ) -> Result<InternalDocument> {
+        // A UTF-8 byte order mark is not part of the data. `serde_json` and the YAML parser reject
+        // it, so a document saved with one fell back to plain text.
+        let content = content.strip_prefix(b"\xEF\xBB\xBF".as_slice()).unwrap_or(content);
         let is_geojson = matches!(mime_type, GEOJSON_MIME_TYPE | "application/vnd.geo+json");
         let summarize_geojson = is_geojson
             && !config
