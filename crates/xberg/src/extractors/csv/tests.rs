@@ -434,7 +434,7 @@ fn strip_comment_lines_drops_lines_whose_trimmed_start_matches_a_prefix() {
 }
 
 /// A cell's `|` used to go into the table's Markdown as written, which added a column
-/// boundary to its row. It is escaped as `\|`, as every other table renders it.
+/// boundary to its row. It is escaped as `\|`, as every other table renders it. ~keep
 #[tokio::test]
 async fn should_escape_a_pipe_in_the_table_markdown() {
     let extractor = CsvExtractor::new();
@@ -466,7 +466,7 @@ async fn should_escape_a_pipe_in_the_table_markdown() {
 
 /// A cell with an embedded newline (RFC 4180 permits one inside a quoted field) used to
 /// split its row in the table's Markdown. The break is rendered as `<br>`, as every other
-/// table renders it, so the row stays one line.
+/// table renders it, so the row stays one line. ~keep
 #[tokio::test]
 async fn should_keep_a_cell_with_an_embedded_newline_on_one_table_row() {
     let extractor = CsvExtractor::new();
