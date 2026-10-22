@@ -671,6 +671,21 @@ fn test_head_title_is_not_body_text() {
 }
 
 #[test]
+fn should_skip_many_unclosed_elements_in_linear_time() {
+    // A search of the whole rest of the document per unclosed opener would take billions of steps ~keep
+    for opener in ["<script>", "<style>", "<title>", "<video>", "<audio>", "<math>"] {
+        let html = format!(
+            "<html><head>{}</head><body><p>end</p></body></html>",
+            format!("{opener}x ").repeat(20_000)
+        );
+        let doc = build_document_structure(&html);
+        let text: String = doc.nodes.iter().filter_map(|node| node.content.text()).collect();
+        assert_eq!(text.matches('x').count(), 20_000, "{opener}");
+        assert!(text.ends_with("end"), "{opener}: {text:?}");
+    }
+}
+
+#[test]
 fn test_strikethrough_annotation() {
     let html = "<p>Some <del>deleted</del> text</p>";
     let doc = build_document_structure(html);

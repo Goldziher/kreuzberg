@@ -290,9 +290,24 @@ impl HtmlWalker<'_, '_> {
         }
     }
 
+    /// Offset of `close_tag` from the walker's position. Every unclosed `<script>`, `<style>`,
+    /// `<title>`, `<video>`, `<audio>` or `<math>` used to search the rest of the document for its
+    /// closing tag again, so a run of them took quadratic time. A closing tag that is missing once
+    /// is now not searched for again.
+    fn find_close_tag(&mut self, close_tag: &str) -> Option<usize> {
+        if self.missing_close_tags.iter().any(|missing| missing == close_tag) {
+            return None;
+        }
+        let found = self.src[self.pos..].find(close_tag);
+        if found.is_none() {
+            self.missing_close_tags.push(close_tag.to_string());
+        }
+        found
+    }
+
     fn handle_open_raw_block(&mut self, tag: &str) {
         let close_tag = format!("</{tag}>");
-        if let Some(close_pos) = self.src[self.pos..].find(&close_tag) {
+        if let Some(close_pos) = self.find_close_tag(&close_tag) {
             let block_content = &self.src[self.pos..self.pos + close_pos];
             self.pos += close_pos + close_tag.len();
             if !block_content.trim().is_empty() {
@@ -303,7 +318,7 @@ impl HtmlWalker<'_, '_> {
 
     fn handle_open_media(&mut self, tag: &str) {
         let close_tag = format!("</{tag}>");
-        if let Some(close_pos) = self.src[self.pos..].find(&close_tag) {
+        if let Some(close_pos) = self.find_close_tag(&close_tag) {
             self.pos += close_pos + close_tag.len();
         }
     }
@@ -314,7 +329,7 @@ impl HtmlWalker<'_, '_> {
             return;
         }
         let close_tag = "</math>";
-        let Some(close_pos) = self.src[self.pos..].find(close_tag) else {
+        let Some(close_pos) = self.find_close_tag(close_tag) else {
             return;
         };
         let inner = &self.src[self.pos..self.pos + close_pos];

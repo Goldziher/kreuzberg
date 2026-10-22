@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(email, epub): Skip a run of unclosed `<script>`, `<style>`, `<title>`, `<video>`, `<audio>` or `<math>` elements in linear time.**
+  The HTML structure walker searched the rest of the document for the closing tag again at every such opener,
+  so 20,000 of them in an email body took seconds. A closing tag that is missing is now searched for once.
 - **(email): Leave the style sheets, scripts, `<meta>` tags and `<title>` of an HTML body out of the message text.**
   The HTML part of an Outlook message came out with its whole style sheet (`@font-face`, `p.MsoNormal`, …),
   `Generator: Microsoft Word 15 (filtered medium)` and its title as paragraphs, and a `<script>` with its code.
