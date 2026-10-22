@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **(url): Preserve Rust configuration compatibility by constraining Crawlberg to 1.11.1.**
+  The 1.12.0 release adds fields to configuration types exposed by Xberg, breaking existing exhaustive
+  struct construction and patterns. The compatible upgrade and libc pin removal remain pending.
 - **(pdf): Native font metrics retain their 16-bit glyph-count API with the updated font parser.**
   `TrueTypeFont::num_glyphs()` caps larger upstream counts at 65,535; width-table work stays bounded to that range.
   Font ascenders and descenders use normalized above/below-baseline signs.
@@ -46,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
+- **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
+  Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
+  and formats report processing warnings. (#2210)
+- **(html): Preserve word separators carried by whitespace-only formatted links.**
+  A blank formatted link label no longer joins the words on either side in Markdown output.
 - **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**
   Newly supported aliases resolve to their existing canonical formats. Shell aliases extract as plain text
   when `tree-sitter` is disabled; existing aliases keep their spelling and feature requirements. (#2205, #2208)

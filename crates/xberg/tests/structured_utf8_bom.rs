@@ -1,6 +1,6 @@
 //! A UTF-8 byte order mark in front of a JSON, JSON Lines, YAML, TOML or GeoJSON document must not
 //! stop the structured parse. `serde_json` and the YAML parser rejected it, so these documents fell
-//! back to plain text with a `parse-fallback` warning.
+//! back to plain text with a `parse-fallback` warning. ~keep
 
 use xberg::core::config::ExtractionConfig;
 
