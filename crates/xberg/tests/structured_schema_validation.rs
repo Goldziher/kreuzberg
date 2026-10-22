@@ -63,7 +63,7 @@ fn structured_config(server: &MockServer, schema: Value, strict: bool) -> Extrac
 }
 
 async fn run_case(schema: Value, text: &str, strict: bool) -> xberg::ExtractionResult {
-    let server = MockServer::start().await;
+    let server = MockServer::builder().start().await;
     mount_response(&server, text).await;
     let config = structured_config(&server, schema.clone(), strict);
     let output = extract(
@@ -106,7 +106,14 @@ fn assert_rejected(output: &xberg::ExtractionResult) {
         .filter(|warning| warning.source == "structured_extraction")
         .collect();
     assert_eq!(warnings.len(), 1);
-    assert!(warnings[0].message.contains("schema validation failed"));
+    assert!(
+        warnings[0].message.contains("schema validation failed"),
+        "unexpected structured warning: {}",
+        warnings[0]
+            .message
+            .replace(PRIVATE_VALUE, "[redacted]")
+            .replace("synthetic-local-key", "[redacted]")
+    );
     assert!(!warnings[0].message.contains(PRIVATE_VALUE));
     assert!(!warnings[0].message.contains("synthetic-local-key"));
 }
