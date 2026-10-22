@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
+  Replaces the yanked 1.54.0 release across all Rust dependency graphs.
 - **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
   Docling and MinerU retain Pillow 12.3.0 until their upstream constraints allow the update.
 - **(llama-index): The standalone node-parser lock uses NLTK 3.10.4 with guarded model-file access.**

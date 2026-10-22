@@ -131,7 +131,7 @@ thiserror = "2.0.21"
 # `net`/`os-poll`/`os-ext`, which fails to build on wasm32 regardless). These OS-dependent
 # features are re-added only on consuming crates' `[target.'cfg(not(target_arch =
 # "wasm32"))'.dependencies]` blocks (see crates/xberg/Cargo.toml and crates/xberg-cli/Cargo.toml).
-tokio = { version = "1.54.0", features = [
+tokio = { version = "1.54.1", features = [
     "rt",
     "macros",
     "sync",
