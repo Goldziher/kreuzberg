@@ -39,15 +39,15 @@ urls.Homepage = "https://github.com/xberg-io/xberg/tree/main/integrations/python
 urls.Repository = "https://github.com/xberg-io/xberg/tree/main/integrations/python/crewai"
 
 [dependency-groups]
-dev = ["mypy>=2.4.0", "pre-commit>=4", "pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0"]
+dev = ["pyrefly>=1.4", "pre-commit>=4", "pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0"]
 
 [tool.hatch]
 build.targets.sdist.include = ["src/crewai_xberg", "CHANGELOG.md", "LICENSE", "README.md", "pyproject.toml"]
 build.targets.wheel.packages = ["src/crewai_xberg"]
 
-[tool.mypy]
-python_version = "3.10"
-strict = true
+[tool.pyrefly]
+python-version = "3.10"
+preset = "strict"
 
 [tool.pytest]
 ini_options.testpaths = ["tests"]

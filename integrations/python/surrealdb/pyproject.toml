@@ -68,16 +68,15 @@ urls.Repository = "https://github.com/xberg-io/xberg/tree/main/integrations/pyth
 urls.SurrealDB = "https://surrealdb.com"
 
 [dependency-groups]
-dev = ["mypy>=2.4.0", "pre-commit>=4", "pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0"]
+dev = ["pyrefly>=1.4", "pre-commit>=4", "pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0"]
 
 [tool.hatch]
 build.targets.sdist.include = ["src/surrealdb_xberg", "CHANGELOG.md", "LICENSE", "README.md", "pyproject.toml"]
 build.targets.wheel.packages = ["src/surrealdb_xberg"]
 
-[tool.mypy]
-python_version = "3.10"
-strict = true
-exclude = ["examples/"]
+[tool.pyrefly]
+python-version = "3.10"
+preset = "strict"
 
 [tool.pytest]
 ini_options.testpaths = ["tests"]

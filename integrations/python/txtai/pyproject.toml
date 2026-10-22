@@ -56,15 +56,15 @@ urls.Issues = "https://github.com/xberg-io/xberg/issues"
 urls.Repository = "https://github.com/xberg-io/xberg/tree/main/integrations/python/txtai"
 
 [dependency-groups]
-dev = ["mypy>=2.4.0", "pre-commit>=4.5.1", "pytest>=9.1.1", "pytest-cov>=7.1.0"]
+dev = ["pyrefly>=1.4", "pre-commit>=4.5.1", "pytest>=9.1.1", "pytest-cov>=7.1.0"]
 
 [tool.hatch]
 build.targets.sdist.include = ["src/txtai_xberg", "CHANGELOG.md", "LICENSE", "README.md", "pyproject.toml"]
 build.targets.wheel.packages = ["src/txtai_xberg"]
 
-[tool.mypy]
-python_version = "3.10"
-strict = true
+[tool.pyrefly]
+python-version = "3.10"
+preset = "strict"
 
 [tool.pytest]
 ini_options.testpaths = ["tests"]

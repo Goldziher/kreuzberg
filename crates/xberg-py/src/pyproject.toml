@@ -30,7 +30,7 @@ urls.repository = "https://github.com/xberg-io/xberg"
 homepage = "https://xberg.io"
 
 [dependency-groups]
-dev = ["mypy>=1.19"]
+dev = ["pyrefly>=1.4"]
 
 [tool.maturin]
 module-name = "xberg._xberg"
@@ -45,19 +45,6 @@ python-packages = ["xberg"]
 # missing from the tarball and the source build fails. ~keep
 include = [{ path = "../../crates/xberg/**/*", format = "sdist" }]
 
-[tool.mypy]
-python_version = "3.10"
-strict = true
-show_error_codes = true
-implicit_reexport = false
-namespace_packages = true
-overrides = [
-  # The alef-emitted `api.py` wrapper has a structural mismatch between its
-  # `options.*` dataclass signatures and the `_internal_bindings.*` pyclass
-  # types pyo3 accepts/returns at runtime. pyo3 reconciles them dynamically via
-  # FromPyObject — the Python e2e suite exercises the runtime path — but mypy
-  # sees only the static-type discrepancy. Disable the four error codes the
-  # discrepancy raises until the codegen emits matching `_to_rust_*` calls and
-  # casts the return values. ~keep
-  { module = "xberg.api", disable_error_code = ["call-arg", "arg-type", "return-value", "attr-defined"] },
-]
+[tool.pyrefly]
+python-version = "3.10"
+preset = "strict"
