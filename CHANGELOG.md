@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(html): Preserve word separators carried by whitespace-only formatted links.**
+  A blank formatted link label no longer joins the words on either side in Markdown output.
 - **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**
   Newly supported aliases resolve to their existing canonical formats. Shell aliases extract as plain text
   when `tree-sitter` is disabled; existing aliases keep their spelling and feature requirements. (#2205, #2208)

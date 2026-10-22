@@ -286,6 +286,46 @@ mod tests {
     }
 
     #[test]
+    fn should_preserve_word_separator_from_whitespace_only_link_labels() {
+        for label in [
+            "<i> </i>",
+            "<em> </em>",
+            "<strong> </strong>",
+            "<b><i> </i></b>",
+            "<span>&nbsp;</span>",
+        ] {
+            let html = format!("<p><i>employees</i><a href=\"https://example.com\">{label}</a><i>other</i></p>");
+            let actual = convert_html_to_markdown(&html, None, None).expect("HTML conversion succeeds");
+            assert_eq!(actual, "*employees* [](https://example.com)*other*\n", "label: {label}");
+        }
+    }
+
+    #[test]
+    fn should_preserve_word_separator_link_boundaries() {
+        for (html, expected) in [
+            ("<p>a <a href=/x><i> </i></a>b</p>", "a [](/x)b\n"),
+            ("<p><a href=/x><i> </i></a>b</p>", "[](/x)b\n"),
+            ("<p>a<a href=\"#here\"><i> </i></a>b</p>", "ab\n"),
+            ("<p>a<a href=/x><i></i></a>b</p>", "a[](/x)b\n"),
+            ("<p>a<a href=/x><i>text</i></a>b</p>", "a[*text*](/x)b\n"),
+        ] {
+            let actual = convert_html_to_markdown(html, None, None).expect("HTML conversion succeeds");
+            assert_eq!(actual, expected, "HTML: {html}");
+        }
+    }
+
+    #[test]
+    fn should_preserve_word_separator_strict_whitespace_options() {
+        let options = ConversionOptions {
+            whitespace_mode: super::super::types::WhitespaceMode::Strict,
+            ..Default::default()
+        };
+        let actual = convert_html_to_markdown("<p>a<a href=/x><i> </i></a>b</p>", Some(options), None)
+            .expect("HTML conversion succeeds");
+        assert_eq!(actual, "a[](/x)b\n");
+    }
+
+    #[test]
     fn test_html_config_heading_style() {
         let html = "<h1>Heading</h1>";
         let options = ConversionOptions {

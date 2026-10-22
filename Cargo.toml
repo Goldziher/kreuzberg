@@ -73,7 +73,7 @@ fs2 = "0.4.3"
 futures = "0.3"
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
 hex = "0.4.3"
-html-to-markdown-rs = { version = "3.18.5", default-features = false }
+html-to-markdown-rs = { version = "3.18.6", default-features = false }
 image = { version = "0.25.10", default-features = false }
 itertools = "0.15"
 js-sys = "0.3"
