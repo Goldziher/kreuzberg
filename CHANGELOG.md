@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Schr\"odinger`, `\'Ecole` and `Garc\'\i a` kept their backslash, with `\'` turned into a curly quote, and `\ss` and
   `\o` were dropped, in paragraphs, headings and list items alike. They now read Schrödinger, École, García, ß and ø,
   a group such as `Schr{\"o}dinger` prints without its braces, and `Mr.\ Smith` reads `Mr. Smith`.
+- **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
+  Their libc selections match Crawlberg 1.11.1's published iOS constraint.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
