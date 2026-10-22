@@ -93,7 +93,15 @@ impl LatexExtractor {
     ///
     /// Handles: `\textbf`, `\emph`, `\textit`, `\underline`, `\texttt`, `\href`.
     fn strip_inline_commands(input: &str) -> (String, Vec<TextAnnotation>) {
-        let resolved = utilities::resolve_text_symbols(input);
+        Self::strip_inline_commands_with_symbols(input, true)
+    }
+
+    fn strip_inline_commands_with_symbols(input: &str, decode_symbols: bool) -> (String, Vec<TextAnnotation>) {
+        let resolved = if decode_symbols {
+            utilities::resolve_text_symbols(input)
+        } else {
+            input.to_string()
+        };
         let input = resolved.as_str();
         let mut output = String::with_capacity(input.len());
         let mut annotations = Vec::new();
@@ -109,7 +117,8 @@ impl LatexExtractor {
                     let (inner_text, inner_anns) = if input[pos..].starts_with("\\verb") {
                         (content, Vec::new())
                     } else {
-                        Self::strip_inline_commands(&content)
+                        let decode_inner = decode_symbols && !input[pos..].starts_with("\\url{");
+                        Self::strip_inline_commands_with_symbols(&content, decode_inner)
                     };
                     output.push_str(&inner_text);
                     let end = output.len() as u32;
@@ -133,7 +142,7 @@ impl LatexExtractor {
 
                 if let Some((plain, consumed)) = Self::try_skip_unknown_command(&input[pos..]) {
                     if !plain.is_empty() {
-                        let (inner_text, inner_anns) = Self::strip_inline_commands(&plain);
+                        let (inner_text, inner_anns) = Self::strip_inline_commands_with_symbols(&plain, decode_symbols);
                         let start = output.len() as u32;
                         output.push_str(&inner_text);
                         for mut ann in inner_anns {
@@ -1702,6 +1711,61 @@ Schr{\"o}dinger and {\o}ster, \~n\^o\=a\.z\u{g}\k{a}\r{u}, Mr.\ Smith.
         for unit in ["{\\'{", "\\\"{", "{\\o", "\\c "] {
             let text = unit.repeat(20_000);
             assert!(!utilities::resolve_text_symbols(&text).is_empty());
+        }
+    }
+
+    #[test]
+    fn should_preserve_text_symbols_inside_math_delimiters() {
+        for input in [
+            r#"$$\"o$$"#,
+            r#"$x + \$ + \"o$"#,
+            r#"$$x + \$ + \"o$$"#,
+            r#"\[\"o + \o\]"#,
+            r#"\(\~x + \o\)"#,
+            r#"$\text{caf\'e}$"#,
+        ] {
+            assert_eq!(utilities::resolve_text_symbols(input), input);
+        }
+    }
+
+    #[test]
+    fn should_preserve_link_targets_while_decoding_visible_accents() {
+        for (body, expected_text) in [
+            (r#"\href{https://example.org/\~user}{Caf\'e}"#, "Café"),
+            (
+                r#"\url{https://example.org/\~user} Caf\'e"#,
+                "https://example.org/~user Café",
+            ),
+        ] {
+            let input = format!("\\begin{{document}}\n{body}\n\\end{{document}}");
+            let document = LatexExtractor::build_internal_document(&input, false);
+            assert_eq!(document.uris.len(), 1);
+            assert_eq!(document.uris[0].url, r"https://example.org/\~user");
+            assert_eq!(document.elements.len(), 1);
+            assert_eq!(document.elements[0].text, expected_text);
+        }
+    }
+
+    #[test]
+    fn should_keep_required_command_braces_around_a_single_accent() {
+        for (body, expected) in [
+            (r#"\textbf{\'e}"#, AnnotationKind::Bold),
+            (
+                r#"\href{https://example.org}{\'e}"#,
+                AnnotationKind::Link {
+                    url: "https://example.org".to_string(),
+                    title: None,
+                },
+            ),
+        ] {
+            let input = format!("\\begin{{document}}\n{body}\n\\end{{document}}");
+            let document = LatexExtractor::build_internal_document(&input, false);
+            assert_eq!(document.elements.len(), 1);
+            assert_eq!(document.elements[0].text, "é");
+            let annotations = &document.elements[0].annotations;
+            assert_eq!(annotations.len(), 1);
+            assert_eq!(annotations[0].kind, expected);
+            assert_eq!((annotations[0].start, annotations[0].end), (0, 2));
         }
     }
 }

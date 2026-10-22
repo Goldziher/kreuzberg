@@ -213,10 +213,74 @@ fn symbol_command(text: &str) -> Option<(String, usize)> {
     Some((letter.to_string(), 1 + command_len + terminator))
 }
 
-/// Replace the commands `symbol_command` reads with the text they print. A group that holds only
-/// one of them, as in `Schr{\"o}dinger`, prints just that text. Math between `$` signs and
-/// `\verb` text are copied as they are, and every other command is left for the command
-/// parser. ~keep
+fn opening_argument_len(text: &str) -> usize {
+    let spaces = text.len() - text.trim_start_matches(char::is_whitespace).len();
+    if text[spaces..].starts_with('{') { spaces + 1 } else { 0 }
+}
+
+fn math_span_len(text: &str) -> Option<usize> {
+    let (open, close) = [("$$", "$$"), ("$", "$"), ("\\[", "\\]"), ("\\(", "\\)")]
+        .into_iter()
+        .find(|(open, _)| text.starts_with(open))?;
+    let mut escaped = false;
+    for (index, ch) in text[open.len()..].char_indices() {
+        if !escaped && text[open.len() + index..].starts_with(close) {
+            return Some(open.len() + index + close.len());
+        }
+        escaped = ch == '\\' && !escaped;
+    }
+    Some(text.len())
+}
+
+/// Link targets are literal; only the following `\href` label may decode text symbols. ~keep
+fn url_span_len(text: &str) -> Option<usize> {
+    let command = ["\\url", "\\href"].into_iter().find(|command| {
+        text.strip_prefix(command)
+            .is_some_and(|after| !after.starts_with(|c: char| c.is_ascii_alphabetic()))
+    })?;
+    let argument = opening_argument_len(&text[command.len()..]);
+    if argument == 0 {
+        return None;
+    }
+    let start = command.len() + argument;
+    let mut depth = 1;
+    for (index, ch) in text[start..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => depth -= 1,
+            _ => {}
+        }
+        if depth == 0 {
+            let end = start + index + 1;
+            return Some(if command == "\\href" {
+                end + opening_argument_len(&text[end..])
+            } else {
+                end
+            });
+        }
+    }
+    Some(text.len())
+}
+
+/// Preserve an argument's opening brace so a sole accent does not erase its command syntax. ~keep
+fn unchanged_command_len(text: &str) -> usize {
+    let after = &text[1..];
+    let word_len = after.len() - after.trim_start_matches(|c: char| c.is_ascii_alphabetic()).len();
+    let command_len = if word_len > 0 {
+        word_len
+    } else {
+        after.chars().next().map_or(0, char::len_utf8)
+    };
+    let argument = if word_len > 0 {
+        opening_argument_len(&after[command_len..])
+    } else {
+        0
+    };
+    1 + command_len + argument
+}
+
+/// Standalone symbol groups collapse, while command arguments, math, URLs and verbatim keep
+/// the syntax their downstream parsers require. ~keep
 pub(crate) fn resolve_text_symbols(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut index = 0;
@@ -224,10 +288,12 @@ pub(crate) fn resolve_text_symbols(text: &str) -> String {
         out.push_str(&text[index..index + offset]);
         index += offset;
         let rest = &text[index..];
-        if let Some(math) = rest.strip_prefix('$') {
-            let end = math.find('$').map_or(rest.len(), |close| close + 2);
-            out.push_str(&rest[..end]);
-            index += end;
+        if let Some(len) = math_span_len(rest)
+            .or_else(|| verb_span_len(rest))
+            .or_else(|| url_span_len(rest))
+        {
+            out.push_str(&rest[..len]);
+            index += len;
             continue;
         }
         if let Some(group) = rest.strip_prefix('{') {
@@ -243,25 +309,14 @@ pub(crate) fn resolve_text_symbols(text: &str) -> String {
             }
             continue;
         }
-        if let Some(len) = verb_span_len(rest) {
-            out.push_str(&rest[..len]);
-            index += len;
-            continue;
-        }
         if let Some((printed, len)) = symbol_command(rest) {
             out.push_str(&printed);
             index += len;
             continue;
         }
-        let after = &rest[1..];
-        let word_len = after.len() - after.trim_start_matches(|c: char| c.is_ascii_alphabetic()).len();
-        let command_len = if word_len > 0 {
-            word_len
-        } else {
-            after.chars().next().map_or(0, char::len_utf8)
-        };
-        out.push_str(&rest[..1 + command_len]);
-        index += 1 + command_len;
+        let len = unchanged_command_len(rest);
+        out.push_str(&rest[..len]);
+        index += len;
     }
     out.push_str(&text[index..]);
     out
