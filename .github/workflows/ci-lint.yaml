@@ -283,6 +283,13 @@ jobs:
         uses: xberg-io/actions/install-task@v1
       - name: Verify Poly formatter scopes
         run: task poly:verify:tool-scopes
+      - name: Setup Rust for Alef metadata
+        uses: xberg-io/actions/setup-rust@cc89740654cef67b752113ddd87d4f0d23dda3f5
+        with:
+          components: rust-src, rustfmt, clippy
+          use-sccache: "false"
+          disable-cache: "true"
+          install-llvm-cov: "false"
       # install-alef reads alef.toml's [workspace] alef_version and installs that
       # exact pinned build, so this job doesn't go red every time alef cuts a
       # release -- same hermeticity guarantee install-task gives the Task binary. ~keep
