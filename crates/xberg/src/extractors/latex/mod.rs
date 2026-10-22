@@ -1019,14 +1019,14 @@ impl LatexExtractor {
         let mut line_text = trimmed.to_string();
         // Pushed after the line's paragraph: renderers attach a `FootnoteRef` to the block it
         // follows, so a reference pushed first showed up on the previous paragraph.
-        let mut notes: Vec<(String, String)> = Vec::new();
+        let mut notes: Vec<(String, String, String)> = Vec::new();
         while let Some(fn_start) = line_text.find("\\footnote{") {
             let after = &line_text[fn_start + "\\footnote{".len()..];
             if let Some((fn_text, consumed)) = Self::read_braced_content(after) {
                 let fn_stripped = utilities::clean_text(&fn_text);
                 if !fn_stripped.is_empty() {
                     let fn_key = format!("fn:{}", fn_stripped.chars().take(20).collect::<String>());
-                    notes.push((fn_stripped, fn_key));
+                    notes.push((fn_stripped, fn_key, fn_text));
                 }
                 let end = fn_start + "\\footnote{".len() + consumed;
                 line_text = format!("{}{}", &line_text[..fn_start], &line_text[end..]);
@@ -1052,13 +1052,16 @@ impl LatexExtractor {
                 if let Some(lbl) = Self::extract_label(line_text) {
                     b.set_anchor(idx, &lbl);
                 }
-                Self::extract_refs(trimmed, idx, b);
+                Self::extract_refs(line_text, idx, b);
             }
         }
 
-        for (note, key) in &notes {
+        // A reference inside a footnote belongs to the footnote, also on a line that holds
+        // nothing but the footnote and so pushes no paragraph. ~keep
+        for (note, key, source) in &notes {
             b.push_footnote_ref(note, key, None);
-            b.push_footnote_definition(note, key, None);
+            let idx = b.push_footnote_definition(note, key, None);
+            Self::extract_refs(source, idx, b);
         }
     }
 
@@ -1347,6 +1350,57 @@ mod tests {
                 (1, RelationshipKind::CrossReference),
                 (1, RelationshipKind::CitationReference),
                 (1, RelationshipKind::CitationReference),
+            ]
+        );
+    }
+
+    #[test]
+    fn should_attach_the_references_in_a_footnote_to_the_footnote() {
+        use crate::types::internal::ElementKind;
+
+        let latex = "\\begin{document}\nSee \\ref{sec:a}.\\footnote{Compare \\cite{knuth}.}\n\n\
+                     \\footnote{As in \\ref{sec:b} and \\cite{lamport}.}\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let references: Vec<(ElementKind, &str, RelationshipKind, &str)> = document
+            .relationships
+            .iter()
+            .filter(|relationship| {
+                matches!(
+                    relationship.kind,
+                    RelationshipKind::CrossReference | RelationshipKind::CitationReference
+                )
+            })
+            .map(|relationship| {
+                let RelationshipTarget::Key(key) = &relationship.target else {
+                    panic!("unresolved reference expected, got {relationship:?}");
+                };
+                let source = &document.elements[relationship.source as usize];
+                let first_word = source.text.split_whitespace().next().unwrap_or_default();
+                (source.kind, first_word, relationship.kind, key.as_str())
+            })
+            .collect();
+        assert_eq!(
+            references,
+            [
+                (ElementKind::Paragraph, "See", RelationshipKind::CrossReference, "sec:a"),
+                (
+                    ElementKind::FootnoteDefinition,
+                    "Compare",
+                    RelationshipKind::CitationReference,
+                    "knuth"
+                ),
+                (
+                    ElementKind::FootnoteDefinition,
+                    "As",
+                    RelationshipKind::CrossReference,
+                    "sec:b"
+                ),
+                (
+                    ElementKind::FootnoteDefinition,
+                    "As",
+                    RelationshipKind::CitationReference,
+                    "lamport"
+                ),
             ]
         );
     }
