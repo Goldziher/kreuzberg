@@ -116,6 +116,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Device and simulator builds include the matching Apple compiler availability runtime.
 - **(html): Whitespace-only inline formatting and blank Word-exported HTML paragraphs no longer panic.**
   Surrounding paragraph content is preserved. (#2182)
+- **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
+  The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
+  `1. Install:` followed by a fenced code block came out with the code first.
 - **(markdown): Separate paragraphs inside a list item retain paragraph breaks and annotation offsets.** (#2181)
 - **(code): Graphviz `.dot` files and Graphviz/PlantUML MIME aliases now extract as source code.**
   Binary Word templates retain Word extraction. (#2180)
