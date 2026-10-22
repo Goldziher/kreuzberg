@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(html): Read a page that is not UTF-8 in the encoding its byte order mark or `<meta>` declares.**
+  Every non-UTF-8 page was decoded as UTF-8, so a `<meta charset>` or `<meta http-equiv>` declaration was ignored
+  and each non-ASCII character of a windows-1252, Latin-1 or Shift_JIS page became U+FFFD, with a lossy-decode
+  warning. A page without a declaration is still decoded and flagged as before.
 - **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
   Their libc selections match Crawlberg 1.11.1's published iOS constraint.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**

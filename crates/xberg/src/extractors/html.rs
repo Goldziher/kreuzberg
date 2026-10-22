@@ -615,16 +615,50 @@ impl Plugin for HtmlExtractor {
     }
 }
 
+/// A `<meta charset>`, or a `charset=` in a `<meta http-equiv>` `content`, as a browser's
+/// prescan finds it in the first 1024 bytes. ~keep
+static META_CHARSET_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r#"(?i)<meta\b[^>]*?charset\s*=\s*["']?\s*([a-z0-9_.:-]+)"#).expect("valid regex")
+});
+
+/// The encoding a non-UTF-8 HTML page declares: its byte order mark, or else a `<meta>` charset
+/// in its first 1024 bytes. As in the HTML standard's prescan, a declared UTF-16 is read as
+/// UTF-8 (it could not have been declared in ASCII) and `x-user-defined` as windows-1252. ~keep
+fn declared_html_encoding(content: &[u8]) -> Option<&'static encoding_rs::Encoding> {
+    if let Some((encoding, _)) = encoding_rs::Encoding::for_bom(content) {
+        return Some(encoding);
+    }
+    let head = String::from_utf8_lossy(&content[..content.len().min(1024)]);
+    let label = META_CHARSET_RE.captures(&head)?.get(1)?.as_str();
+    let encoding = encoding_rs::Encoding::for_label(label.as_bytes())?;
+    Some(
+        if encoding == encoding_rs::UTF_16LE || encoding == encoding_rs::UTF_16BE {
+            encoding_rs::UTF_8
+        } else if encoding == encoding_rs::X_USER_DEFINED {
+            encoding_rs::WINDOWS_1252
+        } else {
+            encoding
+        },
+    )
+}
+
 impl SyncExtractor for HtmlExtractor {
     fn extract_sync(&self, content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<InternalDocument> {
         let _span = tracing::debug_span!("extract_html", element_count = tracing::field::Empty,).entered();
 
-        // A non-UTF-8 page still extracts, but every undecodable byte has already become
-        // U+FFFD by the time anything downstream sees it. Remember that here so the caller
-        // is told the text was mangled instead of being handed silent mojibake (#171).
+        // A page that is not UTF-8 is decoded in the encoding its byte order mark or `<meta>`
+        // declares. Without a declaration it still extracts, but every undecodable byte has
+        // become U+FFFD by the time anything downstream sees it, so the caller is told the text
+        // was mangled instead of being handed silent mojibake (#171). ~keep
         let (html, decoded_lossily) = match utf8_validation::from_utf8(content) {
             Ok(valid) => (valid.to_string(), false),
-            Err(_) => (String::from_utf8_lossy(content).into_owned(), true),
+            Err(_) => match declared_html_encoding(content) {
+                Some(encoding) => {
+                    let (text, _, had_errors) = encoding.decode(content);
+                    (text.into_owned(), had_errors)
+                }
+                None => (String::from_utf8_lossy(content).into_owned(), true),
+            },
         };
 
         let html_options =
