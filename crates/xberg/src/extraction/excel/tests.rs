@@ -346,6 +346,16 @@ fn test_format_cell_value_float_decimal() {
 }
 
 #[test]
+fn test_format_cell_value_float_drops_binary_noise_past_fifteen_digits() {
+    // `=0.1+0.2` and `=100*1.19` as Excel stores their results
+    assert_eq!(format_cell_to_string(&Data::Float(0.1 + 0.2)), "0.3");
+    assert_eq!(format_cell_to_string(&Data::Float(100.0 * 1.19)), "119");
+    assert_eq!(format_cell_to_string(&Data::Float(1.0 / 3.0)), "0.333333333333333");
+    assert_eq!(format_cell_to_string(&Data::Float(-2.675)), "-2.675");
+    assert_eq!(format_cell_to_string(&Data::Float(1e21)), "1000000000000000000000");
+}
+
+#[test]
 fn test_format_cell_value_bool_false() {
     let result = format_cell_to_string(&Data::Bool(false));
     assert_eq!(result, "false");

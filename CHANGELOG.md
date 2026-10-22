@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(excel): Show a float cell with at most the 15 significant digits Excel keeps.**
+  A formula result carried the binary noise of its double into the output, so `=0.1+0.2` read `0.30000000000000004`
+  and `=100*1.19` read `118.99999999999999` where Excel shows `0.3` and `119`.
 - **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
   Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
   and formats report processing warnings. (#2210)

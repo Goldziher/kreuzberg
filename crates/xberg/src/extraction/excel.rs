@@ -725,14 +725,13 @@ fn generate_markdown_and_cells(
 ///
 /// Float values that are whole numbers (e.g. 1.0, 42.0) are formatted without the
 /// trailing decimal point (e.g. "1", "42") so that numeric ground-truth comparisons
-/// produce correct F1 scores.  Rust's default `{}` formatter already does this for
-/// `f64`, so we simply delegate to it for every float case.
+/// produce correct F1 scores; see [`format_excel_float`].
 #[inline]
 fn format_cell_to_string(data: &Data) -> String {
     match data {
         Data::Empty => String::new(),
         Data::String(s) => s.clone(),
-        Data::Float(f) => format!("{}", f),
+        Data::Float(f) => format_excel_float(*f),
         Data::Int(i) => format!("{}", i),
         Data::Bool(b) => {
             if *b {
@@ -746,6 +745,21 @@ fn format_cell_to_string(data: &Data) -> String {
         Data::DateTimeIso(s) => s.clone(),
         Data::DurationIso(s) => format!("DURATION: {}", s),
     }
+}
+
+/// Format a float with at most the 15 significant digits Excel keeps.
+///
+/// A formula result is the double the calculation produced, with its binary noise past
+/// those digits: `=0.1+0.2` is `0.30000000000000004` and `=100*1.19` is
+/// `118.99999999999999`, which Excel shows as `0.3` and `119`. Rounding to 15 significant
+/// digits before printing the shortest form drops that noise and keeps every digit a typed
+/// value can have. Rust's `{}` already prints a whole number without a trailing decimal point.
+fn format_excel_float(value: f64) -> String {
+    if !value.is_finite() {
+        return format!("{value}");
+    }
+    let rounded = format!("{value:.14e}").parse::<f64>().unwrap_or(value);
+    format!("{rounded}")
 }
 
 /// Stand-in for a line break inside a spreadsheet cell (Alt+Enter). A raw

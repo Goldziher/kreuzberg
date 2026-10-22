@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(excel): Show a float cell with at most the 15 significant digits Excel keeps.**
+  A formula result carried the binary noise of its double into the output, so `=0.1+0.2` read `0.30000000000000004`
+  and `=100*1.19` read `118.99999999999999` where Excel shows `0.3` and `119`.
 - **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**
   Newly supported aliases resolve to their existing canonical formats. Shell aliases extract as plain text
   when `tree-sitter` is disabled; existing aliases keep their spelling and feature requirements. (#2205, #2208)
