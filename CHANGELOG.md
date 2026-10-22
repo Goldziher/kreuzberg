@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
+  `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
+  `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
 - **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
   Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
   and formats report processing warnings. (#2210)
