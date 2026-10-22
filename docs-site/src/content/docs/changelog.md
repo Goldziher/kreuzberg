@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(email): Decode a base64 body or attachment that holds a character outside the base64 alphabet.**
+  `mail-parser` gives up on such a part, for example one with a stray `>` or a line of plain text, and keeps
+  the encoded text, which then came out as the body or as the text of the attachment (`JVBERi0x…` for a PDF).
+  The part is now decoded without those characters, as RFC 2045 asks.
 - **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
   The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
   encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
