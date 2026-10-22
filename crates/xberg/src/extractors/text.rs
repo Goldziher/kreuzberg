@@ -148,7 +148,7 @@ impl InternalDocumentExtractor for PlainTextExtractor {
         Ok(doc)
     }
 
-    /// Only `text/plain`.
+    /// Plain text, plus unparsed source code when the code extractor is unavailable.
     ///
     /// This extractor used to also claim `text/asciidoc`, `text/x-asciidoc`, `text/vtt`,
     /// `text/troff`, `text/x-mdoc`, `text/x-pod` and `text/x-dokuwiki` while doing nothing
@@ -162,7 +162,11 @@ impl InternalDocumentExtractor for PlainTextExtractor {
     /// DokuWiki were dropped from the format catalogue entirely rather than advertised
     /// with no implementation behind them.
     fn supported_mime_types(&self) -> &[&str] {
-        &["text/plain"]
+        &[
+            "text/plain",
+            #[cfg(not(feature = "tree-sitter"))]
+            crate::core::mime::SOURCE_CODE_MIME_TYPE,
+        ]
     }
 
     fn priority(&self) -> i32 {

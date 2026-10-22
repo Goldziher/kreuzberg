@@ -145,7 +145,7 @@ pub(crate) async fn extract_bytes(
 fn resolve_validated_mime(content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<String> {
     use crate::core::mime;
 
-    let validated_mime = if mime_type == "application/octet-stream" {
+    let validated_mime = if mime::is_generic_mime_type(mime_type) {
         #[cfg(feature = "tree-sitter")]
         {
             if config.tree_sitter.is_some() {
@@ -223,3 +223,6 @@ async fn run_byte_extraction(content: &[u8], mime_type: &str, config: &Extractio
 
     Box::pin(extract_bytes_with_extractor(content, &validated_mime, config)).await
 }
+
+#[cfg(test)]
+mod declared_type_tests;

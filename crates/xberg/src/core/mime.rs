@@ -1049,7 +1049,24 @@ pub fn detect_mime_type(path: impl AsRef<Path>, check_exists: bool) -> Result<St
 ///
 /// # Returns
 ///
-/// The validated MIME type (may be normalized).
+/// The registered MIME spelling, without parameters. Matching ignores letter case and
+/// surrounding whitespace. Existing aliases retain their registered spelling for
+/// backward compatibility: for example, `text/x-tex`, `audio/mp3`, `text/x-python`,
+/// `image/jpg`, and `text/yaml` are returned as those aliases, not their canonical types.
+/// Extraction results may therefore retain the declared alias in `mime_type`.
+///
+/// Seven newer client spellings instead return their canonical routing types:
+/// `application/x-tex` becomes `application/x-latex`; `application/x-sh`, `text/x-sh`,
+/// and `text/x-shellscript` become `text/x-source-code`; and `application/vnd.apple.pages`,
+/// `application/vnd.apple.numbers`, and `application/vnd.apple.keynote` become
+/// `application/x-iwork-pages-sffpages`, `application/x-iwork-numbers-sffnumbers`, and
+/// `application/x-iwork-keynote-sffkey`, respectively.
+///
+/// Validation checks the format catalogue, not whether this build has an extractor.
+/// Without `tree-sitter`, canonical `text/x-source-code` and the three shell spellings
+/// mapped to it above use plain-text extraction. With that feature, the code extractor
+/// handles them. Legacy aliases retain their extractor feature requirements: for example,
+/// `text/x-python` still requires `tree-sitter`.
 ///
 /// # Errors
 ///
@@ -1085,7 +1102,7 @@ fn normalize_registered_mime_type(mime_type: &str) -> &str {
     }
 }
 
-fn is_generic_mime_type(mime_type: &str) -> bool {
+pub(crate) fn is_generic_mime_type(mime_type: &str) -> bool {
     mime_type
         .trim()
         .parse::<mime::Mime>()
