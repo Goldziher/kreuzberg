@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
   Their libc selections match Crawlberg 1.11.1's published iOS constraint.
+- **(excel): Round float cells to Excel's 15 significant digits when the result stays finite.**
+  A formula result carried the binary noise of its double into the output, so `=0.1+0.2` read `0.30000000000000004`
+  and `=100*1.19` read `118.99999999999999` where Excel shows `0.3` and `119`.
+  Finite boundary values retain their original representation when rounding would overflow.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
