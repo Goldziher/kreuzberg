@@ -367,6 +367,8 @@ impl InternalDocumentExtractor for RtfExtractor {
         tracing::debug!(format = "rtf", size_bytes = content.len(), "extraction starting");
         let mut budget = SecurityBudget::from_config(config);
         budget.account_text(content.len())?;
+        // A UTF-8 byte order mark is not part of the document. ~keep
+        let content = content.strip_prefix(b"\xEF\xBB\xBF".as_slice()).unwrap_or(content);
         let normalized_content = expand_binary_payloads(content, &mut budget)?;
         let rtf_content = String::from_utf8_lossy(&normalized_content);
         let plain = true;

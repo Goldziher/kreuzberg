@@ -991,7 +991,7 @@ impl InternalDocumentExtractor for TypstExtractor {
         config: &ExtractionConfig,
     ) -> Result<InternalDocument> {
         let _ = config;
-        let typst_str = String::from_utf8_lossy(content).into_owned();
+        let typst_str = crate::utils::strip_bom(&String::from_utf8_lossy(content)).to_owned();
         let (_text, metadata) = Self::extract_from_typst(&typst_str);
 
         let mut doc = Self::build_internal_document(&typst_str);

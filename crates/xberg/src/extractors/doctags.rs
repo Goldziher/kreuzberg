@@ -63,7 +63,8 @@ impl InternalDocumentExtractor for DocTagsExtractor {
         budget.account_text(content.len())?;
 
         let text = String::from_utf8_lossy(content);
-        Ok(crate::extraction::doctags::parse_doctags(&text))
+        let text = crate::utils::strip_bom(&text);
+        Ok(crate::extraction::doctags::parse_doctags(text))
     }
 
     fn supported_mime_types(&self) -> &[&str] {

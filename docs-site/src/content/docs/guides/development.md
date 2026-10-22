@@ -249,6 +249,7 @@ The repository uses pre-commit hooks that enforce conventional commit messages, 
 ## Working with Documentation
 
 Docs are an Astro Starlight site under `docs-site/`.
+Building the documentation site requires Node.js 22.23.4 or newer; CI uses Node.js 24.
 
 ### Building Locally
 

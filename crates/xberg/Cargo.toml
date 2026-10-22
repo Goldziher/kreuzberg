@@ -164,6 +164,7 @@ office = [
     "dep:quick-xml",
     "dep:biblatex",
     "dep:biblib",
+    "dep:unicode-normalization",
     "dep:org",
     "dep:dbase",
     "dep:typst-syntax",
