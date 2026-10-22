@@ -75,6 +75,8 @@ impl DjotExtractor {
         let mut table_row: Vec<String> = Vec::new();
         let mut table_cell = String::new();
         let mut in_table_cell = false;
+        let mut table_caption = String::new();
+        let mut in_table_caption = false;
         let mut in_description_term = false;
         let mut description_term_text = String::new();
         let mut in_description_details = false;
@@ -89,6 +91,14 @@ impl DjotExtractor {
         let mut annotation_starts: Vec<(u8, u32, Option<String>)> = Vec::new();
 
         for event in events {
+            let typographic;
+            let event = match typographic_text(event) {
+                Some(text) => {
+                    typographic = Event::Str(text);
+                    &typographic
+                }
+                None => event,
+            };
             match event {
                 Event::Start(Container::Heading { level, .. }, _) => {
                     heading_text.clear();
@@ -587,6 +597,13 @@ impl DjotExtractor {
                 }
                 Event::Start(Container::Table, _) => {
                     table_rows.clear();
+                    table_caption.clear();
+                }
+                Event::Start(Container::Caption, _) => {
+                    in_table_caption = true;
+                }
+                Event::End(Container::Caption) => {
+                    in_table_caption = false;
                 }
                 Event::Start(Container::TableRow { .. }, _) => {
                     table_row.clear();
@@ -603,11 +620,22 @@ impl DjotExtractor {
                     table_rows.push(std::mem::take(&mut table_row));
                 }
                 Event::End(Container::Table) if !table_rows.is_empty() => {
-                    b.push_table_from_cells(&std::mem::take(&mut table_rows), None, None);
+                    let table_idx = b.push_table_from_cells(&std::mem::take(&mut table_rows), None, None);
                     pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Table);
+                    let caption = std::mem::take(&mut table_caption);
+                    if !caption.trim().is_empty() {
+                        let caption_idx = b.push_paragraph(caption.trim(), vec![], None, None);
+                        b.push_relationship(
+                            caption_idx,
+                            RelationshipTarget::Index(table_idx),
+                            RelationshipKind::Caption,
+                        );
+                    }
                 }
                 Event::Str(s) => {
-                    if in_table_cell {
+                    if in_table_caption {
+                        table_caption.push_str(s);
+                    } else if in_table_cell {
                         table_cell.push_str(s);
                     } else if in_image {
                         image_alt.push_str(s);
@@ -634,6 +662,8 @@ impl DjotExtractor {
                 Event::Softbreak => {
                     if in_code_block {
                         code_text.push('\n');
+                    } else if in_table_caption {
+                        table_caption.push(' ');
                     } else if in_heading {
                         heading_text.push(' ');
                     } else if in_list_item > 0 {
@@ -660,6 +690,25 @@ impl DjotExtractor {
 
         b.build()
     }
+}
+
+/// The characters jotdown's own HTML renderer writes for the events that stand for one: smart
+/// quotes, dashes, the ellipsis, a non-breaking space and a `:symbol:`. jotdown reports them as
+/// events of their own, between the `Str` events around them, so without this an apostrophe,
+/// a quote or a dash dropped out of the text (`Here's` came out as `Heres`).
+fn typographic_text<'s>(event: &Event<'s>) -> Option<std::borrow::Cow<'s, str>> {
+    Some(match event {
+        Event::LeftSingleQuote => "\u{2018}".into(),
+        Event::RightSingleQuote => "\u{2019}".into(),
+        Event::LeftDoubleQuote => "\u{201C}".into(),
+        Event::RightDoubleQuote => "\u{201D}".into(),
+        Event::Ellipsis => "\u{2026}".into(),
+        Event::EnDash => "\u{2013}".into(),
+        Event::EmDash => "\u{2014}".into(),
+        Event::NonBreakingSpace => "\u{A0}".into(),
+        Event::Symbol(symbol) => format!(":{symbol}:").into(),
+        _ => return None,
+    })
 }
 
 impl Default for DjotExtractor {
@@ -1108,5 +1157,62 @@ mod tests {
             !stray_paragraph,
             "trailing list-item text must not be emitted as a bare Paragraph element"
         );
+    }
+
+    /// jotdown reports smart quotes, dashes and the ellipsis as events of their own. Against the
+    /// unfixed code every one of them was dropped, so `Don't` came out as `Dont`.
+    #[tokio::test]
+    async fn should_keep_smart_punctuation_in_every_block_djot() {
+        let djot = b"# Don't panic\n\nIt's \"fine\" -- mostly... or---not.\n\n- Here's an item\n\n| Cell |\n|------|\n| Here's a cell |\n";
+        let doc = DjotExtractor::new()
+            .extract_content(djot, "text/djot", &ExtractionConfig::default())
+            .await
+            .expect("djot with smart punctuation should extract");
+
+        let texts: Vec<&str> = doc.elements.iter().map(|e| e.text.as_str()).collect();
+        for expected in [
+            "Don\u{2019}t panic",
+            "It\u{2019}s \u{201C}fine\u{201D} \u{2013} mostly\u{2026} or\u{2014}not.",
+            "Here\u{2019}s an item",
+        ] {
+            assert!(texts.contains(&expected), "expected {expected:?} in {texts:?}");
+        }
+        assert_eq!(doc.tables[0].cells[1], vec!["Here\u{2019}s a cell"]);
+    }
+
+    /// A `^ caption` line under a table was dropped.
+    #[tokio::test]
+    async fn should_attach_a_table_caption_to_its_table_djot() {
+        let djot = b"| Name | Age |\n|------|-----|\n| Alice | 30 |\n\n^ Ages of the _team_\nmembers.\n\nAfter.\n";
+        let doc = DjotExtractor::new()
+            .extract_content(djot, "text/djot", &ExtractionConfig::default())
+            .await
+            .expect("djot table with caption should extract");
+
+        let table_idx = doc
+            .elements
+            .iter()
+            .position(|e| matches!(e.kind, ElementKind::Table { .. }))
+            .expect("table element");
+        let caption_idx = doc
+            .elements
+            .iter()
+            .position(|e| e.text == "Ages of the team members.")
+            .unwrap_or_else(|| panic!("caption paragraph missing from {:?}", doc.elements));
+        assert!(
+            doc.relationships.contains(&crate::types::internal::Relationship {
+                source: caption_idx as u32,
+                target: RelationshipTarget::Index(table_idx as u32),
+                kind: RelationshipKind::Caption,
+            }),
+            "caption must point at its table, got {:?}",
+            doc.relationships
+        );
+        let after_idx = doc
+            .elements
+            .iter()
+            .position(|e| e.text == "After.")
+            .expect("paragraph after");
+        assert!(table_idx < caption_idx && caption_idx < after_idx);
     }
 }

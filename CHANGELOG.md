@@ -49,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(djot): Keep apostrophes, quotes, dashes and ellipses, and read table captions.**
+  jotdown reports smart punctuation as events of their own, which the extractor skipped in every block, so
+  `Don't` came out as `Dont`, `"fine"` as `fine` and `1--2` as `12`. They now come out as the characters
+  jotdown's HTML renderer writes (`’`, `“`, `”`, `–`, `—`, `…`). The `^ caption` line of a table was dropped and
+  is now a paragraph after the table, linked to it as its caption.
 - **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
   The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
   encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
