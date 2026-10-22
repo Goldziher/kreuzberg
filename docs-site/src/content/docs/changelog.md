@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(csv): Escape `|` and line breaks in a CSV table's Markdown.**
+  `Table::markdown` for CSV and TSV wrote each cell as it was, so a `|` added a column to its row and an embedded
+  newline split the row. Cells are now escaped as every other table renders them (`\|`, `<br>`), and the
+  `csv` warning about the unescaped characters is gone.
 - **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**
   Newly supported aliases resolve to their existing canonical formats. Shell aliases extract as plain text
   when `tree-sitter` is disabled; existing aliases keep their spelling and feature requirements. (#2205, #2208)

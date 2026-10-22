@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(csv): Escape `|` and line breaks in a CSV table's Markdown.**
+  `Table::markdown` for CSV and TSV wrote each cell as it was, so a `|` added a column to its row and an embedded
+  newline split the row. Cells are now escaped as every other table renders them (`\|`, `<br>`), and the
+  `csv` warning about the unescaped characters is gone.
 - **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
   Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
   and formats report processing warnings. (#2210)

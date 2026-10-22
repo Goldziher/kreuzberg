@@ -480,7 +480,7 @@ const CELL_LINE_BREAK: &str = "<br>";
 /// Push `content` into `out`, escaping every character that would let a cell
 /// break out of its row. Avoids allocation when there is nothing to escape (the
 /// common case for table cell content).
-fn push_escaped_cell(out: &mut String, content: &str) {
+pub(crate) fn push_escaped_cell(out: &mut String, content: &str) {
     if memchr::memchr3(b'|', b'\n', b'\r', content.as_bytes()).is_none() {
         out.push_str(content);
         return;
