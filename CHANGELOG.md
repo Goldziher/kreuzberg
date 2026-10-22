@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
+  Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
+  and formats report processing warnings. (#2210)
 - **(html): Preserve word separators carried by whitespace-only formatted links.**
   A blank formatted link label no longer joins the words on either side in Markdown output.
 - **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**

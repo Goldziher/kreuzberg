@@ -5,12 +5,18 @@
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::core::mime::LEGACY_WORD_MIME_TYPE;
-use crate::extraction::doc::{DocParagraph, DocSubdocument, DocSubdocumentKind, DocTableMark, extract_doc_text};
+use crate::extraction::doc::{
+    DocParagraph, DocPicture, DocSubdocument, DocSubdocumentKind, DocTableMark, DocWithImages, extract_doc_text,
+    extract_doc_with_images,
+};
 use crate::extractors::security::SecurityBudget;
 use crate::plugins::{InternalDocumentExtractor, Plugin};
 use crate::types::document_structure::ContentLayer;
 use crate::types::internal::{ElementKind, InternalDocument, InternalElement};
 use crate::types::{Metadata, Table};
+mod images;
+use images::{parse_doc, push_doc_image, push_paragraph_runs};
+
 use ahash::AHashMap;
 use async_trait::async_trait;
 use std::borrow::Cow;
@@ -68,9 +74,12 @@ impl InternalDocumentExtractor for DocExtractor {
         mime_type: &str,
         config: &ExtractionConfig,
     ) -> Result<InternalDocument> {
-        let result = {
+        let image_limits = config
+            .needs_image_data()
+            .then(|| config.security_limits.clone().unwrap_or_default());
+        let extracted = {
             #[cfg(feature = "tokio-runtime")]
-            if crate::core::batch_mode::is_batch_mode() {
+            if crate::core::batch_mode::is_batch_mode() || image_limits.is_some() {
                 if config.cancel_token.as_ref().map(|t| t.is_cancelled()).unwrap_or(false) {
                     return Err(crate::error::XbergError::Cancelled);
                 }
@@ -78,12 +87,12 @@ impl InternalDocumentExtractor for DocExtractor {
                 let span = tracing::Span::current();
                 tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
                     let _guard = span.entered();
-                    extract_doc_text(&content_owned)
+                    parse_doc(&content_owned, image_limits.as_ref())
                 })
                 .await
                 .map_err(|e| crate::error::XbergError::parsing(format!("DOC extraction task failed: {e}")))?
             } else {
-                extract_doc_text(content)
+                parse_doc(content, image_limits.as_ref())
             }
 
             #[cfg(not(feature = "tokio-runtime"))]
@@ -91,11 +100,14 @@ impl InternalDocumentExtractor for DocExtractor {
                 if config.cancel_token.as_ref().map(|t| t.is_cancelled()).unwrap_or(false) {
                     return Err(crate::error::XbergError::Cancelled);
                 }
-                extract_doc_text(content)
+                parse_doc(content, image_limits.as_ref())
             }
         }?;
 
+        let result = extracted.text;
+        let pictures = extracted.pictures;
         let mut doc = InternalDocument::new("doc");
+        doc.images = pictures.iter().map(|picture| picture.image.clone()).collect();
         doc.mime_type = mime_type.to_string();
         doc.processing_warnings.extend(result.processing_warnings);
 
@@ -106,11 +118,17 @@ impl InternalDocumentExtractor for DocExtractor {
         // documents that carry no paragraph properties at all (Word 6/95, or
         // the contiguous fallback), where there is nothing finer to use; those
         // paths have no subdocuments either.
-        if result.paragraphs.is_empty() && result.subdocuments.is_empty() {
+        if result.paragraphs.is_empty() && result.subdocuments.is_empty() && pictures.is_empty() {
             push_blank_line_chunks(&mut doc, &result.content);
         } else {
             let mut budget = SecurityBudget::from_config(config);
-            push_paragraph_elements(&mut doc, &result.paragraphs, &mut budget)?;
+            push_paragraph_elements_with_images(
+                &mut doc,
+                &result.paragraphs,
+                &pictures,
+                config.wants_own_bytes_in_result(),
+                &mut budget,
+            )?;
             push_subdocuments(&mut doc, &result.subdocuments, config.content_filter.as_ref());
         }
 
@@ -213,9 +231,20 @@ fn push_blank_line_chunks(doc: &mut InternalDocument, content: &str) {
 ///
 /// Consecutive table paragraphs become one `Table`, cell by cell and row by
 /// row, the way the DOCX path reads `w:tbl`. ~keep
+#[cfg(test)]
 fn push_paragraph_elements(
     doc: &mut InternalDocument,
     paragraphs: &[DocParagraph],
+    budget: &mut SecurityBudget,
+) -> Result<()> {
+    push_paragraph_elements_with_images(doc, paragraphs, &[], true, budget)
+}
+
+fn push_paragraph_elements_with_images(
+    doc: &mut InternalDocument,
+    paragraphs: &[DocParagraph],
+    pictures: &[DocPicture],
+    visible_images: bool,
     budget: &mut SecurityBudget,
 ) -> Result<()> {
     // The switch is "does this document EMIT styled headings", which is
@@ -237,8 +266,22 @@ fn push_paragraph_elements(
     // One entry per open container, holding whether it is ordered.
     let mut open: Vec<bool> = Vec::new();
     let mut table = PendingTable::default();
+    let mut picture_cursor = 0;
 
     for (i, paragraph) in paragraphs.iter().enumerate() {
+        let start = picture_cursor;
+        while pictures
+            .get(picture_cursor)
+            .is_some_and(|picture| picture.paragraph_index == i)
+        {
+            picture_cursor += 1;
+        }
+        let paragraph_pictures = &pictures[start..picture_cursor];
+        for picture in paragraph_pictures.iter().filter(|picture| picture.standalone) {
+            table.flush(doc, budget)?;
+            close_lists(doc, &mut open, 0);
+            push_doc_image(doc, picture, visible_images);
+        }
         let text = paragraph.content.trim();
         if let Some(mark) = paragraph.table {
             close_lists(doc, &mut open, 0);
@@ -256,36 +299,48 @@ fn push_paragraph_elements(
                 Some(level) => ElementKind::Heading { level },
                 None => ElementKind::Paragraph,
             };
-            doc.push_element(InternalElement::text(kind, text, 0));
+            push_paragraph_runs(doc, kind, text, paragraph_pictures, visible_images);
             continue;
         };
 
-        let depth = usize::from(list.level) + 1;
-        close_lists(doc, &mut open, depth);
-        if open.len() == depth && open.last() != Some(&list.ordered) {
-            close_lists(doc, &mut open, depth - 1);
-        }
-        while open.len() < depth {
-            let element_depth = u16::try_from(open.len()).unwrap_or(u16::MAX);
-            doc.push_element(InternalElement::text(
-                ElementKind::ListStart { ordered: list.ordered },
-                "",
-                element_depth,
-            ));
-            open.push(list.ordered);
-        }
-
-        let element_depth = u16::try_from(open.len()).unwrap_or(u16::MAX);
-        doc.push_element(InternalElement::text(
-            ElementKind::ListItem { ordered: list.ordered },
-            text,
-            element_depth,
-        ));
+        push_list_paragraph(doc, &mut open, list, text);
     }
 
     table.flush(doc, budget)?;
     close_lists(doc, &mut open, 0);
+    for picture in &pictures[picture_cursor..] {
+        push_doc_image(doc, picture, visible_images);
+    }
     Ok(())
+}
+
+fn push_list_paragraph(
+    doc: &mut InternalDocument,
+    open: &mut Vec<bool>,
+    list: crate::extraction::doc::DocListMembership,
+    text: &str,
+) {
+    let depth = usize::from(list.level) + 1;
+    close_lists(doc, open, depth);
+    if open.len() == depth && open.last() != Some(&list.ordered) {
+        close_lists(doc, open, depth - 1);
+    }
+    while open.len() < depth {
+        let element_depth = u16::try_from(open.len()).unwrap_or(u16::MAX);
+        doc.push_element(InternalElement::text(
+            ElementKind::ListStart { ordered: list.ordered },
+            "",
+            element_depth,
+        ));
+        open.push(list.ordered);
+    }
+
+    let element_depth = u16::try_from(open.len()).unwrap_or(u16::MAX);
+    doc.push_element(InternalElement::text(
+        ElementKind::ListItem { ordered: list.ordered },
+        text,
+        element_depth,
+    ));
 }
 
 /// Emit header, footer, footnote, comment and text-box text after the body, the

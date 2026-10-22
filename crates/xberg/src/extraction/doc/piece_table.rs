@@ -31,6 +31,7 @@ pub(super) fn extract_text_word97(
     word_doc: &[u8],
     table_stream: &[u8],
     warnings: &mut Vec<ProcessingWarning>,
+    picture_limits: Option<&crate::extractors::security::SecurityLimits>,
 ) -> Result<MainText> {
     let fib_base_size = 32;
     let csw_offset = fib_base_size;
@@ -60,6 +61,7 @@ pub(super) fn extract_text_word97(
     let lcb_clx = read_u32_checked(word_doc, lcb_clx_offset, "fcClx/lcbClx")? as usize;
 
     if fc_clx == 0 || lcb_clx == 0 {
+        images::warn_unsupported_fallback(picture_limits.is_some(), warnings, "contiguous-text fallback");
         return extract_text_contiguous(word_doc, ccp_text).map(MainText::text_only);
     }
 
@@ -84,6 +86,7 @@ pub(super) fn extract_text_word97(
             let tables = DocTables {
                 lists: papx::ListTables::build(word_doc, table_stream, rg_fc_lcb_offset),
                 stories: StoryTables::read(word_doc, table_stream, rg_fc_lcb_offset, &subdoc_ranges),
+                picture_limits,
             };
             return extract_text_from_piece_table(word_doc, plc_pcd, &subdoc_ranges, total_cp, warnings, &tables);
         } else if clxt == 0x01 {
@@ -98,6 +101,7 @@ pub(super) fn extract_text_word97(
         }
     }
 
+    images::warn_unsupported_fallback(picture_limits.is_some(), warnings, "unavailable-piece-table fallback");
     extract_text_fallback(word_doc, ccp_text).map(MainText::text_only)
 }
 
@@ -341,7 +345,7 @@ fn extract_text_from_piece_table(
     ranges: &SubdocRanges,
     total_cp: usize,
     warnings: &mut Vec<ProcessingWarning>,
-    tables: &DocTables,
+    tables: &DocTables<'_>,
 ) -> Result<MainText> {
     let plc_size = plc_pcd.len();
     if plc_size < 16 {
@@ -395,15 +399,24 @@ fn extract_text_from_piece_table(
         }
     }
 
+    let (paragraphs, picture_positions) =
+        split_paragraphs_and_pictures(&text.main, &text.main_fc_ends, &tables.lists, tables.picture_limits)?;
+    let unsupported_pictures = text.main.contains('\x08')
+        || [&text.footnote, &text.header, &text.annotation, &text.textbox]
+            .iter()
+            .any(|story| story.contains(['\x01', '\x08']));
     Ok(MainText {
-        paragraphs: split_main_paragraphs(&text.main, &text.main_fc_ends, &tables.lists),
+        paragraphs,
+        picture_positions,
+        unsupported_pictures,
         subdocuments: collect_subdocuments(&text, &tables.stories, warnings),
         content,
     })
 }
 
 /// Table-stream structures the piece-table walk resolves text against.
-struct DocTables {
+struct DocTables<'a> {
+    picture_limits: Option<&'a crate::extractors::security::SecurityLimits>,
     lists: papx::ListTables,
     stories: StoryTables,
 }

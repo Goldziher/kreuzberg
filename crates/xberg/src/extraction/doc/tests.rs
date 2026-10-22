@@ -166,7 +166,7 @@ fn write_u16(buf: &mut [u8], offset: usize, val: u16) {
     buf[offset..offset + 2].copy_from_slice(&val.to_le_bytes());
 }
 
-fn write_u32(buf: &mut [u8], offset: usize, val: u32) {
+pub(super) fn write_u32(buf: &mut [u8], offset: usize, val: u32) {
     buf[offset..offset + 4].copy_from_slice(&val.to_le_bytes());
 }
 
@@ -179,21 +179,21 @@ fn test_rg_lw_offset() -> usize {
 }
 
 /// `rg_fc_lcb_offset` for the layout built by `build_fib`.
-fn test_rg_fc_lcb_offset() -> usize {
+pub(super) fn test_rg_fc_lcb_offset() -> usize {
     let cbrgfclcb_offset = test_rg_lw_offset() + TEST_CSLW * 4;
     cbrgfclcb_offset + 2
 }
 
 /// `fc_clx_offset` for the layout built by `build_fib` (`lcb_clx_offset`
 /// is always `fc_clx_offset + 4`).
-fn test_fc_clx_offset() -> usize {
+pub(super) fn test_fc_clx_offset() -> usize {
     test_rg_fc_lcb_offset() + FIB_FC_LCB_IDX_CLX * 8
 }
 
 /// Build a `len`-byte WordDocument-stream FIB header with the given
 /// `ccp*` fields set. `len` must be large enough to hold the header
 /// (at least `test_fc_clx_offset() + 8`) plus any text placed after it.
-fn build_fib(len: usize, ccp_text: u32, ccp_ftn: u32, ccp_atn: u32, ccp_txbx: u32) -> Vec<u8> {
+pub(super) fn build_fib(len: usize, ccp_text: u32, ccp_ftn: u32, ccp_atn: u32, ccp_txbx: u32) -> Vec<u8> {
     let mut buf = vec![0u8; len];
     write_u16(&mut buf, 0, 0xA5EC); // wIdent
     write_u16(&mut buf, 2, 0x00C1); // Word 97 nFib ~keep
@@ -209,14 +209,14 @@ fn build_fib(len: usize, ccp_text: u32, ccp_ftn: u32, ccp_atn: u32, ccp_txbx: u3
     buf
 }
 
-struct TestPiece {
-    cp_start: u32,
-    cp_end: u32,
-    fc_raw: u32,
+pub(super) struct TestPiece {
+    pub(super) cp_start: u32,
+    pub(super) cp_end: u32,
+    pub(super) fc_raw: u32,
 }
 
 /// Build a `PlcPcd` (piece table) from a run of contiguous pieces.
-fn build_plc_pcd(pieces: &[TestPiece]) -> Vec<u8> {
+pub(super) fn build_plc_pcd(pieces: &[TestPiece]) -> Vec<u8> {
     let mut buf = Vec::new();
     for p in pieces {
         buf.extend_from_slice(&p.cp_start.to_le_bytes());
@@ -232,7 +232,7 @@ fn build_plc_pcd(pieces: &[TestPiece]) -> Vec<u8> {
 
 /// Wire a piece table's `fcClx`/`lcbClx` into `word_doc` and return the
 /// matching `1Table`-stream bytes.
-fn build_table_stream(word_doc: &mut [u8], plc_pcd: &[u8]) -> Vec<u8> {
+pub(super) fn build_table_stream(word_doc: &mut [u8], plc_pcd: &[u8]) -> Vec<u8> {
     const FC_CLX: u32 = 8;
     let mut clx = vec![0x02u8]; // Pcdt marker
     clx.extend_from_slice(&0u32.to_le_bytes()); // lcb (unused by the reader)
@@ -249,12 +249,12 @@ fn build_table_stream(word_doc: &mut [u8], plc_pcd: &[u8]) -> Vec<u8> {
 
 /// A compressed (CP1252, 1 byte/char) FC pointing at `byte_offset` in the
 /// WordDocument stream.
-fn compressed_fc(byte_offset: u32) -> u32 {
+pub(super) fn compressed_fc(byte_offset: u32) -> u32 {
     0x4000_0000 | (byte_offset * 2)
 }
 
 /// Assemble a minimal `.doc` OLE container from prebuilt streams.
-fn build_doc_ole(word_doc: &[u8], table_stream: &[u8]) -> Vec<u8> {
+pub(super) fn build_doc_ole(word_doc: &[u8], table_stream: &[u8]) -> Vec<u8> {
     let cursor = Cursor::new(Vec::new());
     let mut comp = cfb::CompoundFile::create(cursor).expect("create CFB container");
     {
