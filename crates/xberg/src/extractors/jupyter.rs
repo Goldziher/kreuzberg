@@ -1427,6 +1427,8 @@ impl InternalDocumentExtractor for JupyterExtractor {
     ) -> Result<InternalDocument> {
         let mut budget = SecurityBudget::from_config(config);
         budget.account_text(content.len())?;
+        // A UTF-8 byte order mark is not part of the JSON, and `serde_json` rejects it. ~keep
+        let content = content.strip_prefix(b"\xEF\xBB\xBF".as_slice()).unwrap_or(content);
         let notebook = serde_json::from_slice(content)
             .map_err(|error| crate::XbergError::parsing(format!("Failed to parse JSON: {error}")))?;
         Self::render_notebook_json(notebook, mime_type, config, &mut budget)

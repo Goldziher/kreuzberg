@@ -957,7 +957,7 @@ impl InternalDocumentExtractor for MarkdownExtractor {
         tracing::debug!(format = "markdown", size_bytes = content.len(), "extraction starting");
         let mut budget = SecurityBudget::from_config(config);
         budget.account_text(content.len())?;
-        let text = String::from_utf8_lossy(content).into_owned();
+        let text = crate::utils::strip_bom(&String::from_utf8_lossy(content)).to_owned();
 
         let (yaml, remaining_content, frontmatter_warning) = extract_frontmatter_with_warning(&text);
 
