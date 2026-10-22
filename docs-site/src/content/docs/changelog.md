@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(email): Leave the style sheets, scripts, `<meta>` tags and `<title>` of an HTML body out of the message text.**
+  The HTML part of an Outlook message came out with its whole style sheet (`@font-face`, `p.MsoNormal`, …),
+  `Generator: Microsoft Word 15 (filtered medium)` and its title as paragraphs, and a `<script>` with its code.
+  Only the body text remains, as in the text of an HTML file.
 - **(markup): Read Markdown, Djot, MDX, Org, reStructuredText, Typst, RTF, DocTags and Jupyter documents that start with a UTF-8 byte order mark.**
   The mark stayed in front of the first line, so a leading heading came out as a paragraph with its `#`, `*` or `=`
   marker, the mark leaked into the text, and a notebook failed with a JSON parse error. It is now skipped, as the

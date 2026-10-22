@@ -42,6 +42,9 @@ impl HtmlWalker<'_, '_> {
             "div" | "section" | "article" | "main" | "aside" | "header" | "footer" | "nav" | "details" | "summary" => {
                 self.flush_paragraph();
             }
+            // The head's `<title>` names the document, in a browser tab, and is not part of its
+            // text. The `<title>` of an inline SVG is its accessible name and stays (#140). ~keep
+            "title" if self.in_head => self.handle_open_media(tag),
             "span" | "html" | "body" | "title" | "link" => {}
             _ => {}
         }

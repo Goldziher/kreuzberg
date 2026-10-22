@@ -320,15 +320,10 @@ fn process_node(
             crate::types::NodeContent::Formula { text } => {
                 builder.push_formula(text.as_str(), None, None);
             }
-            crate::types::NodeContent::MetadataBlock { entries } => {
-                builder.push_metadata_block(
-                    &entries
-                        .iter()
-                        .map(|entry| (entry.key.clone(), entry.value.clone()))
-                        .collect::<Vec<_>>(),
-                    None,
-                );
-            }
+            // The `<meta>` tags of the part's head describe the HTML document (its generator, its
+            // viewport), and its `<script>` and `<style>` blocks are code: none of it is message
+            // text, and no mail client shows it. ~keep
+            crate::types::NodeContent::MetadataBlock { .. } | crate::types::NodeContent::RawBlock { .. } => {}
             crate::types::NodeContent::Quote => {
                 builder.push_quote_start();
                 for &child_idx in &node.children {
@@ -1169,6 +1164,63 @@ Content-Type: text/html; charset=utf-8
             vec![1, 2, 1],
             "the sublist's item must sit one level deeper than the outer list's items"
         );
+    }
+
+    /// An HTML part as Outlook writes it: a `Generator` meta tag, a style sheet in an HTML
+    /// comment and a `<title>` in the head. Against the unfixed code the style sheet, the
+    /// script, `Generator: Microsoft Word 15 (filtered medium)` and the title all came out as
+    /// paragraphs of the message.
+    #[test]
+    fn test_html_head_and_script_are_not_message_text() {
+        let eml = r#"From: Alice <alice@example.com>
+To: Bob <bob@example.com>
+Subject: Quarterly figures
+Content-Type: multipart/alternative; boundary="boundary"
+
+--boundary
+Content-Type: text/plain; charset=utf-8
+
+Hello Bob, the figures are attached.
+
+--boundary
+Content-Type: text/html; charset=utf-8
+
+<html><head><meta name="Generator" content="Microsoft Word 15 (filtered medium)"><style><!--
+/* Font Definitions */
+@font-face {font-family:"Cambria Math";}
+p.MsoNormal {margin:0cm; font-size:11.0pt;}
+--></style><title>Quarterly figures</title></head>
+<body><p class=MsoNormal>Hello Bob, the figures are attached.</p><script>track();</script><style>.footer {color: grey;}</style></body></html>
+--boundary--
+"#;
+        let doc = EmailExtractor::new()
+            .extract_sync(eml.as_bytes(), "message/rfc822", &ExtractionConfig::default())
+            .unwrap();
+
+        for text in [
+            crate::rendering::render_plain(&doc),
+            crate::rendering::render_markdown(&doc),
+        ] {
+            assert!(text.contains("Hello Bob, the figures are attached."), "got: {text:?}");
+            for leaked in [
+                "font-family",
+                "Cambria Math",
+                "Generator",
+                "Microsoft Word",
+                "track();",
+                ".footer",
+            ] {
+                assert!(
+                    !text.contains(leaked),
+                    "{leaked:?} leaked into the message text: {text:?}"
+                );
+            }
+            assert_eq!(
+                text.matches("Quarterly figures").count(),
+                1,
+                "the subject header only, not the HTML title: {text:?}"
+            );
+        }
     }
 
     #[test]

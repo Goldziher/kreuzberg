@@ -661,6 +661,16 @@ fn test_script_becomes_raw_block() {
 }
 
 #[test]
+fn test_head_title_is_not_body_text() {
+    let html = "<html><head><title>Page name</title></head><body><p>Content</p>\
+                <svg><title>Sales by quarter</title><rect width=\"1\" height=\"1\"/></svg></body></html>";
+    let doc = build_document_structure(html);
+    assert!(doc.validate().is_ok());
+    let texts: Vec<&str> = doc.nodes.iter().filter_map(|node| node.content.text()).collect();
+    assert_eq!(texts, vec!["Content", "Sales by quarter"]);
+}
+
+#[test]
 fn test_strikethrough_annotation() {
     let html = "<p>Some <del>deleted</del> text</p>";
     let doc = build_document_structure(html);
