@@ -433,20 +433,10 @@ fn strip_comment_lines_drops_lines_whose_trimmed_start_matches_a_prefix() {
     assert_eq!(filtered, "a,b,c\n1,2,3\n");
 }
 
-fn csv_warnings(doc: &crate::types::internal::InternalDocument) -> Vec<String> {
-    doc.processing_warnings
-        .iter()
-        .filter(|w| w.source == CSV_WARNING_SOURCE)
-        .map(|w| w.message.to_string())
-        .collect()
-}
-
-/// #171: `build_markdown_table` interpolates cell text into `| ... |` rows
-/// with no escaping. A cell containing a literal `|` inserts a phantom
-/// column boundary into the rendered Markdown, even though `Table::cells`
-/// (the underlying data) is untouched.
+/// A cell's `|` used to go into the table's Markdown as written, which added a column
+/// boundary to its row. It is escaped as `\|`, as every other table renders it. ~keep
 #[tokio::test]
-async fn should_warn_when_a_cell_contains_an_unescaped_pipe() {
+async fn should_escape_a_pipe_in_the_table_markdown() {
     let extractor = CsvExtractor::new();
     let config = ExtractionConfig::default();
     let csv_data = b"Name,Note\nAlice,\"a | b\"\n";
@@ -456,13 +446,15 @@ async fn should_warn_when_a_cell_contains_an_unescaped_pipe() {
         .await
         .expect("CSV extraction should succeed");
 
-    let warnings = csv_warnings(&result);
-    assert_eq!(warnings.len(), 1, "expected exactly one csv warning, got {warnings:?}");
-    assert!(
-        warnings[0].contains("'|'") && warnings[0].contains("misaligned"),
-        "warning must describe the unescaped pipe corruption, got {warnings:?}"
+    assert_eq!(
+        result.tables[0].markdown,
+        "| Name | Note |\n| --- | --- |\n| Alice | a \\| b |\n"
     );
-    // The underlying cell data is untouched -- only the rendered Markdown is at risk.
+    assert!(
+        result.processing_warnings.is_empty(),
+        "an escaped cell needs no warning, got {:?}",
+        result.processing_warnings
+    );
     assert_eq!(
         result.tables[0].cells,
         vec![
@@ -472,11 +464,11 @@ async fn should_warn_when_a_cell_contains_an_unescaped_pipe() {
     );
 }
 
-/// #171: a cell containing an embedded newline (RFC 4180 permits this inside a
-/// quoted field) breaks the one-row-per-line Markdown table structure the same
-/// way an unescaped `|` does.
+/// A cell with an embedded newline (RFC 4180 permits one inside a quoted field) used to
+/// split its row in the table's Markdown. The break is rendered as `<br>`, as every other
+/// table renders it, so the row stays one line. ~keep
 #[tokio::test]
-async fn should_warn_when_a_cell_contains_an_embedded_newline() {
+async fn should_keep_a_cell_with_an_embedded_newline_on_one_table_row() {
     let extractor = CsvExtractor::new();
     let config = ExtractionConfig::default();
     let csv_data = b"Name,Note\nAlice,\"line one\nline two\"\n";
@@ -486,8 +478,11 @@ async fn should_warn_when_a_cell_contains_an_embedded_newline() {
         .await
         .expect("CSV extraction should succeed");
 
-    let warnings = csv_warnings(&result);
-    assert_eq!(warnings.len(), 1, "expected exactly one csv warning, got {warnings:?}");
+    assert_eq!(
+        result.tables[0].markdown,
+        "| Name | Note |\n| --- | --- |\n| Alice | line one<br>line two |\n"
+    );
+    assert!(result.processing_warnings.is_empty());
 }
 
 /// An ordinary CSV file with no pipes or embedded newlines in any cell must not warn.
@@ -503,8 +498,8 @@ async fn plain_csv_with_no_pipes_or_newlines_produces_zero_warnings() {
         .expect("CSV extraction should succeed");
 
     assert!(
-        csv_warnings(&result).is_empty(),
+        result.processing_warnings.is_empty(),
         "an ordinary CSV file must not warn, got {:?}",
-        csv_warnings(&result)
+        result.processing_warnings
     );
 }

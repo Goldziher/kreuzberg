@@ -188,6 +188,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Extracted text and failure warnings remain available; JSON parse errors omit response content. (#2139)
 - **(pptx): Speaker notes follow each slide’s relationships instead of matching slide filenames.**
   Sparse or independently numbered notes remain attached to the correct slide. (#2138)
+- **(csv): Escape `|` and line breaks in a CSV table's Markdown.**
+  `Table::markdown` for CSV and TSV wrote each cell as it was, so a `|` added a column to its row and an embedded
+  newline split the row. Cells are now escaped as every other table renders them (`\|`, `<br>`), and the
+  `csv` warning about the unescaped characters is gone.
 - **(docx): Table rows that start or end inside the table grid keep their cells under the right columns.**
   `w:gridBefore` and `w:gridAfter` were ignored, so such a row's cells moved left. (#2153)
 - **(packaging): GNU cross-builds use a pinned linker wrapper compatible with Rust 1.99 warnings.**
