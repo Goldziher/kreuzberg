@@ -21,8 +21,6 @@ static DATE_RE_ISO: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(
 static DATE_RE_US: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^\d{1,2}/\d{1,2}/\d{2,4}").unwrap());
 static DATE_RE_EU: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^\d{1,2}\.\d{1,2}\.\d{2,4}").unwrap());
 
-/// `ProcessingWarning::source` for every warning this extractor emits (#171).
-const CSV_WARNING_SOURCE: &str = "csv";
 #[cfg_attr(alef, alef(skip))]
 /// CSV/TSV extractor with proper field parsing.
 ///
@@ -96,19 +94,6 @@ impl InternalDocumentExtractor for CsvExtractor {
         // marker of the loss survives to check for here either. Neither build can be
         // told apart from a clean decode without changing that shared helper (out of
         // this extractor's scope), so no lossy-decode warning is emitted for CSV. ~keep
-
-        if table
-            .cells
-            .iter()
-            .any(|row| row.iter().any(|cell| cell.contains('|') || cell.contains('\n')))
-        {
-            builder.add_warning(crate::core::diagnostics::warning(
-                CSV_WARNING_SOURCE,
-                "A cell contains a '|' or newline character, which is not escaped in the generated \
-                 Markdown table; the rendered table may have misaligned or split columns even though \
-                 the underlying cell data is intact",
-            ));
-        }
 
         let content_text = render_plain_text(&table.cells);
         let table_element = builder.push_table(table, None, None);
@@ -561,7 +546,7 @@ fn build_markdown_table(rows: &[Vec<String>], has_header: bool) -> String {
         for j in 0..col_count {
             let cell = row.get(j).map(|s| s.trim()).unwrap_or("");
             markdown.push(' ');
-            markdown.push_str(cell);
+            crate::rendering::common::push_escaped_cell(&mut markdown, cell);
             markdown.push_str(" |");
         }
         markdown.push('\n');

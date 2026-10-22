@@ -21,12 +21,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **(url): Preserve Rust configuration compatibility by constraining Crawlberg to 1.11.1.**
+  The 1.12.0 release adds fields to configuration types exposed by Xberg, breaking existing exhaustive
+  struct construction and patterns. The compatible upgrade and libc pin removal remain pending.
 - **(pdf): Native font metrics retain their 16-bit glyph-count API with the updated font parser.**
   `TrueTypeFont::num_glyphs()` caps larger upstream counts at 65,535; width-table work stays bounded to that range.
   Font ascenders and descenders use normalized above/below-baseline signs.
 
 ### Security
 
+- **(pdf): Bound font lookup preprocessing and reject malformed lookup types.**
+  Extended glyph IDs stay intact through rendering and diagnostics, preventing unrelated glyphs from being painted.
+  The public 16-bit glyph-count API remains compatible.
 - **(integrations): CrewAI and LlamaIndex use Pillow 13.0.0 on Python 3.11 and later for image security fixes.**
   Python 3.10 retains Pillow 12.3.0; other branches with upstream caps remain affected.
 - **(integrations): Development environments use virtualenv 21.14.12 to prevent shell expansion in generated launchers.**
@@ -46,6 +52,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(excel): Show a float cell with at most the 15 significant digits Excel keeps.**
   A formula result carried the binary noise of its double into the output, so `=0.1+0.2` read `0.30000000000000004`
   and `=100*1.19` read `118.99999999999999` where Excel shows `0.3` and `119`.
+- **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
+  `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
+  `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
+- **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
+  Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
+  and formats report processing warnings. (#2210)
+- **(html): Preserve word separators carried by whitespace-only formatted links.**
+  A blank formatted link label no longer joins the words on either side in Markdown output.
 - **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**
   Newly supported aliases resolve to their existing canonical formats. Shell aliases extract as plain text
   when `tree-sitter` is disabled; existing aliases keep their spelling and feature requirements. (#2205, #2208)
@@ -105,6 +119,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Device and simulator builds include the matching Apple compiler availability runtime.
 - **(html): Whitespace-only inline formatting and blank Word-exported HTML paragraphs no longer panic.**
   Surrounding paragraph content is preserved. (#2182)
+- **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
+  The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
+  `1. Install:` followed by a fenced code block came out with the code first.
 - **(markdown): Separate paragraphs inside a list item retain paragraph breaks and annotation offsets.** (#2181)
 - **(code): Graphviz `.dot` files and Graphviz/PlantUML MIME aliases now extract as source code.**
   Binary Word templates retain Word extraction. (#2180)
@@ -176,6 +193,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Extracted text and failure warnings remain available; JSON parse errors omit response content. (#2139)
 - **(pptx): Speaker notes follow each slide’s relationships instead of matching slide filenames.**
   Sparse or independently numbered notes remain attached to the correct slide. (#2138)
+- **(csv): Escape `|` and line breaks in a CSV table's Markdown.**
+  `Table::markdown` for CSV and TSV wrote each cell as it was, so a `|` added a column to its row and an embedded
+  newline split the row. Cells are now escaped as every other table renders them (`\|`, `<br>`), and the
+  `csv` warning about the unescaped characters is gone.
 - **(docx): Table rows that start or end inside the table grid keep their cells under the right columns.**
   `w:gridBefore` and `w:gridAfter` were ignored, so such a row's cells moved left. (#2153)
 - **(packaging): GNU cross-builds use a pinned linker wrapper compatible with Rust 1.99 warnings.**

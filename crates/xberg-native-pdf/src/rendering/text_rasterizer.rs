@@ -1365,7 +1365,7 @@ impl TextRasterizer {
             let mut pb = PathBuilder::new();
             let mut builder = SkiaOutlineBuilder(&mut pb);
             let mut has_outline = outline_face
-                .outline_glyph(GlyphId::from(glyph_id as u16), &mut builder)
+                .outline_glyph(GlyphId::new(glyph_id), &mut builder)
                 .is_some();
 
             if has_outline && glyph_id != 0 {
@@ -1471,7 +1471,7 @@ impl TextRasterizer {
                     } else {
                         "no outline in font or CJK fallback"
                     };
-                    unicode_dropped.record(reason, char_at_pos as u32, glyph_id as u16);
+                    unicode_dropped.record(reason, char_at_pos as u32, glyph_id);
                 }
             }
 
@@ -1610,7 +1610,7 @@ impl TextRasterizer {
             let char_at_pos = char_str.chars().next().unwrap_or('\0');
 
             if gid == 0 && !char_at_pos.is_whitespace() {
-                dropped.record("no glyph id", u32::from(char_code), gid);
+                dropped.record("no glyph id", u32::from(char_code), u32::from(gid));
             }
             // GH#1632: paint decided by whether there is an outline to draw,
             // NOT by what character the code is inferred to represent. For a
@@ -1630,7 +1630,7 @@ impl TextRasterizer {
                 // A genuine space legitimately has no outline; reporting it as
                 // dropped would bury the real misses in false positives. ~keep
                 if !outlined && !char_at_pos.is_whitespace() {
-                    dropped.record("no outline", u32::from(char_code), gid);
+                    dropped.record("no outline", u32::from(char_code), u32::from(gid));
                 }
                 if outlined {
                     if let Some(path) = pb.finish() {
@@ -2086,6 +2086,107 @@ mod tests {
         let subscriber = tracing_subscriber::registry().with(capture.clone());
         tracing::subscriber::with_default(subscriber, operation);
         capture.0.lock().unwrap().clone()
+    }
+
+    fn font_with_wide_substitution() -> Vec<u8> {
+        // GSUB3 maps A (36) to 65573; narrowing aliases B (37). ~keep
+        const GSUB: &[u8] = &[
+            0, 1, 0, 0, 0, 10, 0, 30, 0, 44, 0, 1, 68, 70, 76, 84, 0, 8, 0, 4, 0, 0, 0, 0, 255, 255, 0, 1, 0, 0, 0, 1,
+            108, 105, 103, 97, 0, 8, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0, 1, 0, 0, 0, 1, 0, 8, 0, 3, 0, 0, 0, 9, 1, 0, 1,
+            0, 1, 0, 1, 0, 36,
+        ];
+        const HEADER_LEN: usize = 12;
+        const RECORD_LEN: usize = 16;
+        let mut font = crate::fonts::bundled::DEJAVU_SANS.to_vec();
+        let count = usize::from(u16::from_be_bytes(font[4..6].try_into().unwrap()));
+        let record = font[HEADER_LEN..HEADER_LEN + count * RECORD_LEN]
+            .as_chunks::<RECORD_LEN>()
+            .0
+            .iter()
+            .position(|record| &record[..4] == b"GSUB")
+            .expect("bundled font has GSUB");
+        let record = HEADER_LEN + record * RECORD_LEN;
+        let offset = u32::try_from(font.len()).unwrap();
+        let mut padded = GSUB.to_vec();
+        padded.resize(padded.len().next_multiple_of(4), 0);
+        let checksum = padded
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .fold(0_u32, |sum, bytes| sum.wrapping_add(u32::from_be_bytes(*bytes)));
+        font[record + 4..record + 8].copy_from_slice(&checksum.to_be_bytes());
+        font[record + 8..record + 12].copy_from_slice(&offset.to_be_bytes());
+        font[record + 12..record + RECORD_LEN].copy_from_slice(&u32::try_from(GSUB.len()).unwrap().to_be_bytes());
+        font.extend_from_slice(&padded);
+        font
+    }
+
+    fn render_shaping_probe(font: Vec<u8>, text: &str) -> (Pixmap, Vec<CapturedEvent>) {
+        let rasterizer = TextRasterizer::with_fontdb(Arc::new(fontdb::Database::new()));
+        let mut pixmap = Pixmap::new(96, 96).unwrap();
+        let gs = GraphicsState {
+            font_size: 24.0,
+            ..Default::default()
+        };
+        let events = capture_events(|| {
+            rasterizer
+                .render_unicode_text(
+                    &mut pixmap,
+                    text,
+                    text.as_bytes(),
+                    None,
+                    None,
+                    Arc::new(font),
+                    0,
+                    &Paint::default(),
+                    Transform::from_scale(1.0, -1.0).post_translate(8.0, 64.0),
+                    &gs,
+                    None,
+                    "synthetic",
+                    false,
+                )
+                .unwrap();
+        });
+        (pixmap, events)
+    }
+
+    #[test]
+    fn should_preserve_wide_shaped_glyph_ids_without_aliasing() {
+        let bytes = font_with_wide_substitution();
+        let font = build_shaping_font(&Arc::new(bytes.clone()), 0).unwrap();
+        let mut buffer = harfrust::Buffer::new();
+        buffer.push_str("A");
+        buffer.guess_segment_properties();
+        harfrust::shape(
+            &harfrust::ShaperFont::new(&font),
+            &mut buffer,
+            harfrust::ShapeOptions::new(),
+        )
+        .unwrap();
+        assert_eq!(buffer.glyph_infos()[0].glyph_id, 65573);
+        let (control, _) = render_shaping_probe(bytes.clone(), "B");
+        assert!(
+            control.data().as_chunks::<4>().0.iter().any(|pixel| pixel[3] != 0),
+            "control B must paint"
+        );
+        let (actual, events) = render_shaping_probe(bytes, "A");
+        assert!(
+            actual.data().as_chunks::<4>().0.iter().all(|pixel| pixel[3] == 0),
+            "missing wide outline must not paint B"
+        );
+        let warnings: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event
+                    .fields
+                    .get("error_code")
+                    .is_some_and(|code| code == "glyph_dropped")
+            })
+            .collect();
+        assert_eq!(warnings.len(), 1);
+        let message = warnings[0].fields.get("message").unwrap();
+        assert!(message.contains("(glyph 65573)"), "{message}");
+        assert!(!message.contains("(glyph 37)"), "{message}");
     }
 
     /// A run with no drops must produce no warning.
