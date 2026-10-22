@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(integrations): Development environments use virtualenv 21.14.12 to prevent shell expansion in generated launchers.**
+  Resolves CVE-2026-113722; recreate existing environments to replace vulnerable launchers.
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
   Replaces the yanked 1.54.0 release across all Rust dependency graphs.
 - **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
