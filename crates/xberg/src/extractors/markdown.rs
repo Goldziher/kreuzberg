@@ -209,9 +209,36 @@ impl MarkdownExtractor {
             }
         }
 
+        // Flush the text of the open list item. A block inside the item (a sublist, a code block,
+        // a table, a heading or a display formula) is pushed as it starts or ends, while the
+        // item's own text waits for `End(Item)`, so without this flush the block would land
+        // before the text of the item that holds it. See GH#1459.
+        macro_rules! flush_list_item_text {
+            () => {
+                if in_list_item > 0 {
+                    let trimmed = list_item_text.trim();
+                    if let Some(ordered) = list_stack.last().copied()
+                        && !trimmed.is_empty()
+                    {
+                        let annotations = adjust_annotations_for_trim(
+                            std::mem::take(&mut list_item_annotations),
+                            &list_item_text,
+                            trimmed,
+                        );
+                        b.push_list_item(trimmed, ordered, annotations, None, None);
+                    }
+                    pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(in_list_item));
+                    list_item_text.clear();
+                    list_item_annotations.clear();
+                    annotation_starts.clear();
+                }
+            };
+        }
+
         for event in events {
             match event {
                 Event::Start(Tag::Heading { level, .. }) => {
+                    flush_list_item_text!();
                     heading_text.clear();
                     heading_annotations.clear();
                     annotation_starts.clear();
@@ -479,11 +506,13 @@ impl MarkdownExtractor {
                     }
                 }
                 Event::Start(Tag::CodeBlock(pulldown_cmark::CodeBlockKind::Fenced(lang))) => {
+                    flush_list_item_text!();
                     code_text.clear();
                     code_lang = normalize_fence_lang(lang);
                     in_code_block = true;
                 }
                 Event::Start(Tag::CodeBlock(_)) => {
+                    flush_list_item_text!();
                     code_text.clear();
                     code_lang = None;
                     in_code_block = true;
@@ -530,23 +559,7 @@ impl MarkdownExtractor {
                     // across multiple events (emphasis/strong/strikethrough/link/code/math/soft-break/
                     // task marker all write into `list_item_text`). `list_stack.last()` is still the
                     // ENCLOSING list here — the sublist itself hasn't been pushed yet. See GH#1459.
-                    if in_list_item > 0 {
-                        let trimmed = list_item_text.trim();
-                        if let Some(ordered) = list_stack.last().copied()
-                            && !trimmed.is_empty()
-                        {
-                            let annotations = adjust_annotations_for_trim(
-                                std::mem::take(&mut list_item_annotations),
-                                &list_item_text,
-                                trimmed,
-                            );
-                            b.push_list_item(trimmed, ordered, annotations, None, None);
-                        }
-                        pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(in_list_item));
-                        list_item_text.clear();
-                        list_item_annotations.clear();
-                        annotation_starts.clear();
-                    }
+                    flush_list_item_text!();
                     let ordered = start.is_some();
                     b.push_list(ordered);
                     list_stack.push(ordered);
@@ -579,6 +592,7 @@ impl MarkdownExtractor {
                     list_item_annotations.clear();
                 }
                 Event::Start(Tag::Table(_)) => {
+                    flush_list_item_text!();
                     table_rows.clear();
                 }
                 Event::End(TagEnd::Table) => {
@@ -791,6 +805,7 @@ impl MarkdownExtractor {
                     }
                 }
                 Event::DisplayMath(s) => {
+                    flush_list_item_text!();
                     let trimmed = s.trim();
                     if !trimmed.is_empty() {
                         let idx = b.push_formula(trimmed, None, None);
@@ -1602,6 +1617,64 @@ nested:
             .map(|annotation| &items[0].text[annotation.start as usize..annotation.end as usize])
             .collect();
         assert_eq!(spans, ["café first", "second paragraph"]);
+    }
+
+    /// List items, code blocks, headings, formulas and tables in document order.
+    fn block_sequence(doc: &crate::types::internal::InternalDocument) -> Vec<String> {
+        use crate::types::internal::ElementKind;
+        doc.elements
+            .iter()
+            .filter_map(|e| match e.kind {
+                ElementKind::ListItem { .. } => Some(format!("item {}", e.text)),
+                ElementKind::Code => Some(format!("code {}", e.text)),
+                ElementKind::Heading { .. } => Some(format!("heading {}", e.text)),
+                ElementKind::Formula => Some(format!("formula {}", e.text)),
+                ElementKind::Table { .. } => Some("table".to_string()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// A code block, table, heading or display formula inside a list item is pushed when it
+    /// starts or ends, while the item's own text waits for `End(Item)`. The block used to land
+    /// before the text of the item that holds it.
+    #[tokio::test]
+    async fn test_list_item_text_precedes_the_blocks_inside_it() {
+        let cases: [(&[u8], &[&str]); 5] = [
+            (
+                b"1. Install:\n\n   ```\n   pip install x\n   ```\n2. Run it\n",
+                &["item Install:", "code pip install x", "item Run it"],
+            ),
+            (
+                b"- item\n\n      indented code\n- next\n",
+                &["item item", "code indented code", "item next"],
+            ),
+            (
+                b"- item\n\n  | a | b |\n  |---|---|\n  | one | two |\n- next\n",
+                &["item item", "table", "item next"],
+            ),
+            (
+                b"- Steps\n\n  # Heading in item\n- next\n",
+                &["item Steps", "heading Heading in item", "item next"],
+            ),
+            (
+                b"- Formula:\n\n  $$x^2$$\n- next\n",
+                &["item Formula:", "formula x^2", "item next"],
+            ),
+        ];
+        let extractor = MarkdownExtractor::new();
+        for (md, expected) in cases {
+            let doc = extractor
+                .extract_content(md, "text/markdown", &ExtractionConfig::default())
+                .await
+                .expect("extraction should succeed");
+            assert_eq!(
+                block_sequence(&doc),
+                expected,
+                "{:?}: the item's text must come before its blocks",
+                String::from_utf8_lossy(md)
+            );
+        }
     }
 
     /// Regression test for GH#1459: a nested list used to silently lose every ancestor

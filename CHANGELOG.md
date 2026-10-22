@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
+  The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
+  `1. Install:` followed by a fenced code block came out with the code first.
 - **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
   Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
   and formats report processing warnings. (#2210)

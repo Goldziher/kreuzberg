@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
+  The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
+  `1. Install:` followed by a fenced code block came out with the code first.
 - **(mime): Standard LaTeX, shell script and Apple iWork MIME aliases are accepted.**
   Newly supported aliases resolve to their existing canonical formats. Shell aliases extract as plain text
   when `tree-sitter` is disabled; existing aliases keep their spelling and feature requirements. (#2205, #2208)
