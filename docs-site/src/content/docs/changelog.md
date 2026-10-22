@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
+  The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
+  encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
