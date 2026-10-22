@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(jupyter): Drop ANSI escape codes from the plain text of `execute_result` and `display_data` outputs.**
+  A kernel that colours its `text/plain`, such as IJulia for a `DataFrame`, left `\x1b[1m` and `\x1b[0m` in the
+  text. These outputs now get the same terminal handling as stream and error outputs.
 - **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
   Their libc selections match Crawlberg 1.11.1's published iOS constraint.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**

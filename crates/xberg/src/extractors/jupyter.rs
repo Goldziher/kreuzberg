@@ -495,8 +495,9 @@ impl JupyterExtractor {
     }
 
     /// Text a kernel wrote for a terminal, as a notebook frontend shows it: ANSI escape sequences
-    /// (the colours of an IPython traceback) are dropped, and a carriage return moves back to the
-    /// start of the line, so the text after it overwrites the text before it, as progress bars expect.
+    /// (the colours of an IPython traceback or of a Julia `DataFrame` in `text/plain`) are dropped,
+    /// and a carriage return moves back to the start of the line, so the text after it overwrites the
+    /// text before it, as progress bars expect.
     fn terminal_text(text: &str) -> String {
         let mut out = String::with_capacity(text.len());
         let mut line: Vec<char> = Vec::new();
@@ -586,7 +587,7 @@ impl JupyterExtractor {
     ) -> Result<()> {
         if let Some(data) = output.get("data").and_then(|d| d.as_object()) {
             if let Some(plain) = data.get("text/plain") {
-                let text = Self::extract_source(plain);
+                let text = Self::terminal_text(&Self::extract_source(plain));
                 if !text.is_empty() {
                     content.push_str(&text);
                     if !text.ends_with('\n') {
@@ -871,7 +872,7 @@ impl JupyterExtractor {
         }
 
         let plain_value = data.get("text/plain")?;
-        let text = Self::extract_source(plain_value);
+        let text = Self::terminal_text(&Self::extract_source(plain_value));
         if text.is_empty() {
             None
         } else {
@@ -1091,7 +1092,7 @@ impl JupyterExtractor {
                 }
             }
         }
-        let text = Self::extract_source(data.get("text/plain")?);
+        let text = Self::terminal_text(&Self::extract_source(data.get("text/plain")?));
         (!text.is_empty()).then_some(text)
     }
 
@@ -1701,6 +1702,51 @@ mod tests {
         assert_eq!(JupyterExtractor::terminal_text("abcdef\rXY"), "XYcdef");
         // A lone ESC before ordinary text, and an unterminated sequence, drop nothing else
         assert_eq!(JupyterExtractor::terminal_text("a\u{1b}\nb\u{1b}[1"), "a\nb");
+    }
+
+    #[test]
+    fn should_drop_ansi_escapes_from_the_plain_text_of_a_rich_output() {
+        // IJulia writes a `DataFrame`'s `text/plain` with bold headers and grey type rows
+        let notebook_json = r#"{
+            "cells": [
+                {
+                    "cell_type": "code",
+                    "source": ["df"],
+                    "execution_count": 1,
+                    "outputs": [
+                        {
+                            "output_type": "display_data",
+                            "data": {"text/plain": ["\u001b[1m2×1 DataFrame\u001b[0m\n\u001b[1m Row \u001b[0m│\u001b[1m region \u001b[0m\n     │\u001b[90m String \u001b[0m"]},
+                            "metadata": {}
+                        },
+                        {
+                            "output_type": "execute_result",
+                            "execution_count": 1,
+                            "data": {"text/plain": ["\u001b[32mok\u001b[39m"]},
+                            "metadata": {}
+                        }
+                    ],
+                    "metadata": {}
+                }
+            ],
+            "metadata": {},
+            "nbformat": 4,
+            "nbformat_minor": 5
+        }"#;
+        let notebook: Value = serde_json::from_str(notebook_json).unwrap();
+
+        let (content, _, _, _, _, _) = JupyterExtractor::extract_notebook(notebook_json.as_bytes(), false).unwrap();
+        let doc = JupyterExtractor::build_internal_document(&notebook, JupyterCellRendering::Both, false).unwrap();
+        let texts: Vec<&str> = doc.elements.iter().map(|e| e.text.as_str()).collect();
+
+        for text in [content.as_str(), &texts.join("\n")] {
+            assert!(!text.contains('\u{1b}') && !text.contains("[1m"), "got: {text:?}");
+            assert!(
+                text.contains("2×1 DataFrame\n Row │ region \n     │ String"),
+                "got: {text:?}"
+            );
+            assert!(text.contains("ok"), "got: {text:?}");
+        }
     }
 
     #[test]
