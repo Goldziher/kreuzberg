@@ -27,7 +27,7 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
   },
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.15.0",
   "pi": {
     "prompts": ["./plugin/.pi/prompts/xberg-extract.md", "./plugin/.pi/prompts/xberg-ocr.md"],
     "skills": [

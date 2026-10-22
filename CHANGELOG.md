@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(build): Root workspace installs reject registry metadata naming a different package.**
+  pnpm 12.15.0 keeps install-script permissions tied to the requested dependency.
 - **(pdf): Bound font lookup preprocessing and reject malformed lookup types.**
   Extended glyph IDs stay intact through rendering and diagnostics, preventing unrelated glyphs from being painted.
   The public 16-bit glyph-count API remains compatible.
