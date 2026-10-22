@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The mark stayed in front of the first line, so a leading heading came out as a paragraph with its `#`, `*` or `=`
   marker, the mark leaked into the text, and a notebook failed with a JSON parse error. It is now skipped, as the
   plain text, CSV and AsciiDoc extractors already did.
+- **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
+  Their libc selections match Crawlberg 1.11.1's published iOS constraint.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
