@@ -45,8 +45,10 @@ pub(crate) fn extract_zip_metadata(bytes: &[u8], limits: &SecurityLimits) -> Res
     let mut total_size = 0u64;
 
     for i in 0..archive.len() {
+        // Listing an entry needs neither its password nor its compression method, so an
+        // encrypted member is listed like any other. ~keep
         let file = archive
-            .by_index(i)
+            .by_index_raw(i)
             .map_err(|e| XbergError::parsing(format!("Failed to read ZIP entry: {}", e)))?;
 
         let path = file
@@ -112,9 +114,16 @@ pub(crate) fn extract_zip_text_content(bytes: &[u8], limits: &SecurityLimits) ->
     let mut total_content_size = 0usize;
 
     for i in 0..archive.len() {
-        let mut file = archive
-            .by_index(i)
-            .map_err(|e| XbergError::parsing(format!("Failed to read ZIP entry: {}", e)))?;
+        // A member that cannot be opened (encrypted, or compressed with a method this build
+        // does not read) is skipped like one that fails to decompress below; the archive
+        // extractor names it. ~keep
+        let mut file = match archive.by_index(i) {
+            Ok(file) => file,
+            Err(error) => {
+                tracing::warn!(index = i, error = %error, "skipping ZIP member: open failed");
+                continue;
+            }
+        };
 
         let path = file
             .name()
@@ -192,9 +201,14 @@ pub(crate) fn extract_zip_file_bytes(bytes: &[u8], limits: &SecurityLimits) -> R
     let mut total_size = 0usize;
 
     for i in 0..archive.len() {
-        let mut file = archive
-            .by_index(i)
-            .map_err(|e| XbergError::parsing(format!("Failed to read ZIP entry: {}", e)))?;
+        // Skipped like an unreadable member; see `extract_zip_text_content`. ~keep
+        let mut file = match archive.by_index(i) {
+            Ok(file) => file,
+            Err(error) => {
+                tracing::warn!(index = i, error = %error, "skipping ZIP member: open failed");
+                continue;
+            }
+        };
 
         if file.is_dir() {
             continue;

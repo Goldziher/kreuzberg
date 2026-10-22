@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
+  The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
+  encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
 - **(markup): Read Markdown, Djot, MDX, Org, reStructuredText, Typst, RTF, DocTags and Jupyter documents that start with a UTF-8 byte order mark.**
   The mark stayed in front of the first line, so a leading heading came out as a paragraph with its `#`, `*` or `=`
   marker, the mark leaked into the text, and a notebook failed with a JSON parse error. It is now skipped, as the
