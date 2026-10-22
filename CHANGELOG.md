@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **(url): Preserve Rust configuration compatibility by constraining Crawlberg to 1.11.1.**
+  The 1.12.0 release adds fields to configuration types exposed by Xberg, breaking existing exhaustive
+  struct construction and patterns. The compatible upgrade and libc pin removal remain pending.
 - **(pdf): Native font metrics retain their 16-bit glyph-count API with the updated font parser.**
   `TrueTypeFont::num_glyphs()` caps larger upstream counts at 65,535; width-table work stays bounded to that range.
   Font ascenders and descenders use normalized above/below-baseline signs.
@@ -41,9 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
-  The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
-  `1. Install:` followed by a fenced code block came out with the code first.
 - **(doc): Extract inline PNG and JPEG pictures from Word 97–2003 documents.**
   Embedded OCR reads their text in source order, including image-only documents. Unsupported picture locations
   and formats report processing warnings. (#2210)
@@ -108,6 +108,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Device and simulator builds include the matching Apple compiler availability runtime.
 - **(html): Whitespace-only inline formatting and blank Word-exported HTML paragraphs no longer panic.**
   Surrounding paragraph content is preserved. (#2182)
+- **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
+  The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
+  `1. Install:` followed by a fenced code block came out with the code first.
 - **(markdown): Separate paragraphs inside a list item retain paragraph breaks and annotation offsets.** (#2181)
 - **(code): Graphviz `.dot` files and Graphviz/PlantUML MIME aliases now extract as source code.**
   Binary Word templates retain Word extraction. (#2180)

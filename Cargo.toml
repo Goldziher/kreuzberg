@@ -65,7 +65,8 @@ chrono = "0.4"
 clap = { version = "4.6", features = ["derive", "color", "suggestions"] }
 comrak = { version = "0.57", default-features = false }
 console_error_panic_hook = "0.1"
-crawlberg = { version = "1.11.1", default-features = false }
+# Preserve exhaustive public config literals; Crawlberg 1.12 adds required struct fields. ~keep
+crawlberg = { version = "=1.11.1", default-features = false }
 criterion = { version = "0.8", features = ["html_reports"] }
 dbase = "0.8"
 flate2 = "1.1"
@@ -79,7 +80,7 @@ itertools = "0.15"
 js-sys = "0.3"
 
 lazy_static = "1.5.1"
-# Crawlberg pins 0.2.189 until sysinfo releases its iOS Mach fix (GuillaumeGomez/sysinfo#1758). ~keep
+# Crawlberg 1.11.1 pins libc; retain it until an API-compatible Crawlberg upgrade. ~keep
 libc = "0.2.189"
 # Builds a bundled zlib from source (`static`) for the target, so the vendored
 # librevenge RVNGZipStream.cpp can `#include <zlib.h>` and link zlib even under

@@ -212,7 +212,7 @@ impl MarkdownExtractor {
         // Flush the text of the open list item. A block inside the item (a sublist, a code block,
         // a table, a heading or a display formula) is pushed as it starts or ends, while the
         // item's own text waits for `End(Item)`, so without this flush the block would land
-        // before the text of the item that holds it. See GH#1459.
+        // before the text of the item that holds it. See GH#1459. ~keep
         macro_rules! flush_list_item_text {
             () => {
                 if in_list_item > 0 {
@@ -1619,7 +1619,6 @@ nested:
         assert_eq!(spans, ["café first", "second paragraph"]);
     }
 
-    /// List items, code blocks, headings, formulas and tables in document order.
     fn block_sequence(doc: &crate::types::internal::InternalDocument) -> Vec<String> {
         use crate::types::internal::ElementKind;
         doc.elements
@@ -1637,7 +1636,7 @@ nested:
 
     /// A code block, table, heading or display formula inside a list item is pushed when it
     /// starts or ends, while the item's own text waits for `End(Item)`. The block used to land
-    /// before the text of the item that holds it.
+    /// before the text of the item that holds it. ~keep
     #[tokio::test]
     async fn test_list_item_text_precedes_the_blocks_inside_it() {
         let cases: [(&[u8], &[&str]); 5] = [
