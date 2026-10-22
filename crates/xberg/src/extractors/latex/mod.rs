@@ -93,6 +93,8 @@ impl LatexExtractor {
     ///
     /// Handles: `\textbf`, `\emph`, `\textit`, `\underline`, `\texttt`, `\href`.
     fn strip_inline_commands(input: &str) -> (String, Vec<TextAnnotation>) {
+        let resolved = utilities::resolve_text_symbols(input);
+        let input = resolved.as_str();
         let mut output = String::with_capacity(input.len());
         let mut annotations = Vec::new();
         let bytes = input.as_bytes();
@@ -1657,5 +1659,49 @@ Plain body text.
             joined,
             r"See \url{https://example.com/first next%20piece} and \verb|a%b~c| endglued."
         );
+    }
+
+    #[test]
+    fn should_print_accent_and_letter_commands_as_their_characters() {
+        let latex = r#"\begin{document}
+Schr\"odinger, \'Ecole, na\"{\i}ve, \c{c}a, Gro\ss e, Garc\'\i a, Erd\H{o}s, Dvo\v{r}\'ak, \L{}\'od\'z, \c c.
+
+Schr{\"o}dinger and {\o}ster, \~n\^o\=a\.z\u{g}\k{a}\r{u}, Mr.\ Smith.
+\end{document}"#;
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+        assert_eq!(
+            texts,
+            [
+                "Schrödinger, École, naïve, ça, Große, García, Erdős, Dvořák, Łódź, ç.",
+                "Schrödinger and øster, ñôāżğąů, Mr. Smith."
+            ]
+        );
+    }
+
+    #[test]
+    fn should_print_accents_in_headings_and_list_items() {
+        let latex = "\\begin{document}\n\\section{\\\"Uber M\\\"unchen}\n\\begin{itemize}\n\\item Caf\\'e \\`a la cr\\`eme\n\\end{itemize}\n\\end{document}";
+        let (content, _, _) = LatexExtractor::extract_from_latex(latex);
+        assert!(content.contains("Über München"), "{content:?}");
+        assert!(content.contains("Café à la crème"), "{content:?}");
+    }
+
+    #[test]
+    fn should_leave_math_verbatim_and_other_commands_to_the_command_parser() {
+        assert_eq!(
+            utilities::resolve_text_symbols(r#"$\"o$ \verb|\"o| a\\b \$5 \'{ab} \'{} \textbf{x} {grouped}"#),
+            r#"$\"o$ \verb|\"o| a\\b \$5 \'{ab} \'{} \textbf{x} {grouped}"#
+        );
+    }
+
+    #[test]
+    fn should_read_repeated_unclosed_accent_groups_in_linear_time() {
+        // Looking for a closing brace through the rest of the text per occurrence would take
+        // millions of steps ~keep
+        for unit in ["{\\'{", "\\\"{", "{\\o", "\\c "] {
+            let text = unit.repeat(20_000);
+            assert!(!utilities::resolve_text_symbols(&text).is_empty());
+        }
     }
 }

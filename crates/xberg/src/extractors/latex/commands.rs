@@ -9,6 +9,7 @@ use super::utilities::read_braced_from_chars;
 ///
 /// Recursively processes nested commands and preserves math mode content.
 pub(crate) fn process_line(line: &str) -> String {
+    let line = super::utilities::resolve_text_symbols(line);
     let mut result = String::new();
     let mut chars = line.chars().peekable();
 
