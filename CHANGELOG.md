@@ -49,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(latex): Attach `\ref` and `\cite` relationships to the paragraph that holds them.**
+  Each reference was pushed as an extra paragraph of its own, `[key]`, so the text showed `[sec:a]` and `[knuth]` as
+  separate paragraphs ahead of the sentence that cites them. The relationships now start at that sentence's paragraph
+  (or display formula), or at the footnote that holds the reference, as the reStructuredText and Org extractors
+  attach theirs.
 - **(latex): Print accent commands, letter commands and control spaces as the characters they stand for.**
   `Schr\"odinger`, `\'Ecole` and `Garc\'\i a` kept their backslash, with `\'` turned into a curly quote, and `\ss` and
   `\o` were dropped, in paragraphs, headings and list items alike. They now read Schrödinger, École, García, ß and ø,

@@ -1006,9 +1006,6 @@ impl LatexExtractor {
         };
         let trimmed = joined.as_str();
 
-        Self::extract_refs(trimmed, b, "\\ref{", RelationshipKind::CrossReference);
-        Self::extract_refs(trimmed, b, "\\cite{", RelationshipKind::CitationReference);
-
         if trimmed.starts_with("\\[") {
             let mut math_content = trimmed.to_string();
             if !trimmed.contains("\\]") {
@@ -1024,7 +1021,8 @@ impl LatexExtractor {
             }
             let formula = math_content.trim_start_matches("\\[").trim_end_matches("\\]").trim();
             if !formula.is_empty() {
-                b.push_formula(formula, None, None);
+                let idx = b.push_formula(formula, None, None);
+                Self::extract_refs(&math_content, idx, b);
             }
             return;
         }
@@ -1032,14 +1030,14 @@ impl LatexExtractor {
         let mut line_text = trimmed.to_string();
         // Pushed after the line's paragraph: renderers attach a `FootnoteRef` to the block it
         // follows, so a reference pushed first showed up on the previous paragraph.
-        let mut notes: Vec<(String, String)> = Vec::new();
+        let mut notes: Vec<(String, String, String)> = Vec::new();
         while let Some(fn_start) = line_text.find("\\footnote{") {
             let after = &line_text[fn_start + "\\footnote{".len()..];
             if let Some((fn_text, consumed)) = Self::read_braced_content(after) {
                 let fn_stripped = utilities::clean_text(&fn_text);
                 if !fn_stripped.is_empty() {
                     let fn_key = format!("fn:{}", fn_stripped.chars().take(20).collect::<String>());
-                    notes.push((fn_stripped, fn_key));
+                    notes.push((fn_stripped, fn_key, fn_text));
                 }
                 let end = fn_start + "\\footnote{".len() + consumed;
                 line_text = format!("{}{}", &line_text[..fn_start], &line_text[end..]);
@@ -1065,12 +1063,16 @@ impl LatexExtractor {
                 if let Some(lbl) = Self::extract_label(line_text) {
                     b.set_anchor(idx, &lbl);
                 }
+                Self::extract_refs(line_text, idx, b);
             }
         }
 
-        for (note, key) in &notes {
+        // A reference inside a footnote belongs to the footnote, also on a line that holds
+        // nothing but the footnote and so pushes no paragraph. ~keep
+        for (note, key, source) in &notes {
             b.push_footnote_ref(note, key, None);
-            b.push_footnote_definition(note, key, None);
+            let idx = b.push_footnote_definition(note, key, None);
+            Self::extract_refs(source, idx, b);
         }
     }
 
@@ -1082,24 +1084,25 @@ impl LatexExtractor {
         Self::read_braced_content(after).map(|(content, _)| content)
     }
 
-    /// Extract `\ref{key}` or `\cite{key}` references and emit relationships.
-    fn extract_refs(text: &str, b: &mut InternalDocumentBuilder, prefix: &str, kind: RelationshipKind) {
-        let mut search_from = 0;
-        while let Some(pos) = text[search_from..].find(prefix) {
-            let abs_pos = search_from + pos;
-            let after = &text[abs_pos + prefix.len()..];
-            if let Some((key, consumed)) = Self::read_braced_content(after) {
-                let keys: Vec<&str> = key.split(',').map(|k| k.trim()).collect();
-                for k in keys {
-                    if !k.is_empty() {
-                        let ref_text = format!("[{}]", k);
-                        let idx = b.push_paragraph(&ref_text, vec![], None, None);
-                        b.push_relationship(idx, RelationshipTarget::Key(k.to_string()), kind);
+    /// Emit a relationship from the element at `source_idx` for every `\ref{key}` and
+    /// `\cite{key}` in its source text, as the RST and Org extractors attach theirs. ~keep
+    fn extract_refs(text: &str, source_idx: u32, b: &mut InternalDocumentBuilder) {
+        for (prefix, kind) in [
+            ("\\ref{", RelationshipKind::CrossReference),
+            ("\\cite{", RelationshipKind::CitationReference),
+        ] {
+            let mut search_from = 0;
+            while let Some(pos) = text[search_from..].find(prefix) {
+                let abs_pos = search_from + pos;
+                let after = &text[abs_pos + prefix.len()..];
+                if let Some((key, consumed)) = Self::read_braced_content(after) {
+                    for k in key.split(',').map(str::trim).filter(|k| !k.is_empty()) {
+                        b.push_relationship(source_idx, RelationshipTarget::Key(k.to_string()), kind);
                     }
+                    search_from = abs_pos + prefix.len() + consumed;
+                } else {
+                    break;
                 }
-                search_from = abs_pos + prefix.len() + consumed;
-            } else {
-                break;
             }
         }
     }
@@ -1336,6 +1339,81 @@ mod tests {
         let latex = r#"\begin{document}\section{Introduction}\end{document}"#;
         let (content, _, _) = LatexExtractor::extract_from_latex(latex);
         assert!(content.contains("Introduction"));
+    }
+
+    #[test]
+    fn should_attach_references_to_the_paragraph_that_cites_them() {
+        let latex = "\\begin{document}\nFirst paragraph.\n\nSee Section~\\ref{sec:a} and \\cite{knuth, lamport}.\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+        assert_eq!(
+            texts,
+            ["First paragraph.", "See Section\u{a0}sec:a and knuth, lamport."]
+        );
+        let relationships: Vec<(u32, RelationshipKind)> = document
+            .relationships
+            .iter()
+            .map(|relationship| (relationship.source, relationship.kind))
+            .collect();
+        assert_eq!(
+            relationships,
+            [
+                (1, RelationshipKind::CrossReference),
+                (1, RelationshipKind::CitationReference),
+                (1, RelationshipKind::CitationReference),
+            ]
+        );
+    }
+
+    #[test]
+    fn should_attach_the_references_in_a_footnote_to_the_footnote() {
+        use crate::types::internal::ElementKind;
+
+        let latex = "\\begin{document}\nSee \\ref{sec:a}.\\footnote{Compare \\cite{knuth}.}\n\n\
+                     \\footnote{As in \\ref{sec:b} and \\cite{lamport}.}\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let references: Vec<(ElementKind, &str, RelationshipKind, &str)> = document
+            .relationships
+            .iter()
+            .filter(|relationship| {
+                matches!(
+                    relationship.kind,
+                    RelationshipKind::CrossReference | RelationshipKind::CitationReference
+                )
+            })
+            .map(|relationship| {
+                let RelationshipTarget::Key(key) = &relationship.target else {
+                    panic!("unresolved reference expected, got {relationship:?}");
+                };
+                let source = &document.elements[relationship.source as usize];
+                let first_word = source.text.split_whitespace().next().unwrap_or_default();
+                (source.kind, first_word, relationship.kind, key.as_str())
+            })
+            .collect();
+        assert_eq!(
+            references,
+            [
+                (ElementKind::Paragraph, "See", RelationshipKind::CrossReference, "sec:a"),
+                (
+                    ElementKind::FootnoteDefinition,
+                    "Compare",
+                    RelationshipKind::CitationReference,
+                    "knuth"
+                ),
+                (
+                    ElementKind::FootnoteDefinition,
+                    "As",
+                    RelationshipKind::CrossReference,
+                    "sec:b"
+                ),
+                (
+                    ElementKind::FootnoteDefinition,
+                    "As",
+                    RelationshipKind::CitationReference,
+                    "lamport"
+                ),
+            ]
+        );
     }
 
     #[test]
@@ -1767,5 +1845,97 @@ Schr{\"o}dinger and {\o}ster, \~n\^o\=a\.z\u{g}\k{a}\r{u}, Mr.\ Smith.
             assert_eq!(annotations[0].kind, expected);
             assert_eq!((annotations[0].start, annotations[0].end), (0, 2));
         }
+    }
+
+    #[test]
+    fn should_keep_references_on_a_standalone_footnote_definition() {
+        let latex = concat!(
+            "\\begin{document}\n",
+            "\\section{Target}\\label{sec:a}\n",
+            "\\footnote{See \\ref{sec:a} and \\cite{inside}.}\n",
+            "\\end{document}",
+        );
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let kinds: Vec<_> = document.elements.iter().map(|element| element.kind).collect();
+        assert_eq!(
+            kinds,
+            [
+                crate::types::internal::ElementKind::Heading { level: 1 },
+                crate::types::internal::ElementKind::FootnoteRef,
+                crate::types::internal::ElementKind::FootnoteDefinition,
+            ]
+        );
+        let references: Vec<_> = document
+            .relationships
+            .iter()
+            .map(|relationship| (relationship.source, relationship.target.clone(), relationship.kind))
+            .collect();
+        assert_eq!(
+            references,
+            [
+                (
+                    1,
+                    RelationshipTarget::Key(document.elements[2].anchor.clone().unwrap()),
+                    RelationshipKind::FootnoteReference
+                ),
+                (
+                    2,
+                    RelationshipTarget::Key("sec:a".into()),
+                    RelationshipKind::CrossReference
+                ),
+                (
+                    2,
+                    RelationshipTarget::Key("inside".into()),
+                    RelationshipKind::CitationReference
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn should_keep_paragraph_and_footnote_reference_owners_separate() {
+        let latex = concat!(
+            "\\begin{document}\n",
+            "\\section{Target}\\label{sec:a}\n",
+            "Host \\ref{sec:a}\\footnote{See \\ref{sec:a} and \\cite{inside}.}.\n",
+            "\\end{document}",
+        );
+        let document = LatexExtractor::build_internal_document(latex, false);
+        assert_eq!(document.elements.len(), 4);
+        assert_eq!(document.elements[1].text, "Host sec:a.");
+        assert_eq!(
+            document.elements[3].kind,
+            crate::types::internal::ElementKind::FootnoteDefinition
+        );
+        let references: Vec<_> = document
+            .relationships
+            .iter()
+            .map(|relationship| (relationship.source, relationship.target.clone(), relationship.kind))
+            .collect();
+        assert_eq!(
+            references,
+            [
+                (
+                    1,
+                    RelationshipTarget::Key("sec:a".into()),
+                    RelationshipKind::CrossReference
+                ),
+                (
+                    2,
+                    RelationshipTarget::Key(document.elements[3].anchor.clone().unwrap()),
+                    RelationshipKind::FootnoteReference
+                ),
+                (
+                    3,
+                    RelationshipTarget::Key("sec:a".into()),
+                    RelationshipKind::CrossReference
+                ),
+                (
+                    3,
+                    RelationshipTarget::Key("inside".into()),
+                    RelationshipKind::CitationReference
+                ),
+            ]
+        );
     }
 }
