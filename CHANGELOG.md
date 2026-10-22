@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(latex): Attach `\ref` and `\cite` relationships to the paragraph that holds them.**
+  Each reference was pushed as an extra paragraph of its own, `[key]`, so the text showed `[sec:a]` and `[knuth]` as
+  separate paragraphs ahead of the sentence that cites them. The relationships now start at that sentence's paragraph
+  (or display formula), as the reStructuredText and Org extractors attach theirs.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.

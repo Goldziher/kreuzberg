@@ -995,9 +995,6 @@ impl LatexExtractor {
         };
         let trimmed = joined.as_str();
 
-        Self::extract_refs(trimmed, b, "\\ref{", RelationshipKind::CrossReference);
-        Self::extract_refs(trimmed, b, "\\cite{", RelationshipKind::CitationReference);
-
         if trimmed.starts_with("\\[") {
             let mut math_content = trimmed.to_string();
             if !trimmed.contains("\\]") {
@@ -1013,7 +1010,8 @@ impl LatexExtractor {
             }
             let formula = math_content.trim_start_matches("\\[").trim_end_matches("\\]").trim();
             if !formula.is_empty() {
-                b.push_formula(formula, None, None);
+                let idx = b.push_formula(formula, None, None);
+                Self::extract_refs(&math_content, idx, b);
             }
             return;
         }
@@ -1054,6 +1052,7 @@ impl LatexExtractor {
                 if let Some(lbl) = Self::extract_label(line_text) {
                     b.set_anchor(idx, &lbl);
                 }
+                Self::extract_refs(trimmed, idx, b);
             }
         }
 
@@ -1071,24 +1070,25 @@ impl LatexExtractor {
         Self::read_braced_content(after).map(|(content, _)| content)
     }
 
-    /// Extract `\ref{key}` or `\cite{key}` references and emit relationships.
-    fn extract_refs(text: &str, b: &mut InternalDocumentBuilder, prefix: &str, kind: RelationshipKind) {
-        let mut search_from = 0;
-        while let Some(pos) = text[search_from..].find(prefix) {
-            let abs_pos = search_from + pos;
-            let after = &text[abs_pos + prefix.len()..];
-            if let Some((key, consumed)) = Self::read_braced_content(after) {
-                let keys: Vec<&str> = key.split(',').map(|k| k.trim()).collect();
-                for k in keys {
-                    if !k.is_empty() {
-                        let ref_text = format!("[{}]", k);
-                        let idx = b.push_paragraph(&ref_text, vec![], None, None);
-                        b.push_relationship(idx, RelationshipTarget::Key(k.to_string()), kind);
+    /// Emit a relationship from the element at `source_idx` for every `\ref{key}` and
+    /// `\cite{key}` in its source text, as the RST and Org extractors attach theirs. ~keep
+    fn extract_refs(text: &str, source_idx: u32, b: &mut InternalDocumentBuilder) {
+        for (prefix, kind) in [
+            ("\\ref{", RelationshipKind::CrossReference),
+            ("\\cite{", RelationshipKind::CitationReference),
+        ] {
+            let mut search_from = 0;
+            while let Some(pos) = text[search_from..].find(prefix) {
+                let abs_pos = search_from + pos;
+                let after = &text[abs_pos + prefix.len()..];
+                if let Some((key, consumed)) = Self::read_braced_content(after) {
+                    for k in key.split(',').map(str::trim).filter(|k| !k.is_empty()) {
+                        b.push_relationship(source_idx, RelationshipTarget::Key(k.to_string()), kind);
                     }
+                    search_from = abs_pos + prefix.len() + consumed;
+                } else {
+                    break;
                 }
-                search_from = abs_pos + prefix.len() + consumed;
-            } else {
-                break;
             }
         }
     }
@@ -1325,6 +1325,30 @@ mod tests {
         let latex = r#"\begin{document}\section{Introduction}\end{document}"#;
         let (content, _, _) = LatexExtractor::extract_from_latex(latex);
         assert!(content.contains("Introduction"));
+    }
+
+    #[test]
+    fn should_attach_references_to_the_paragraph_that_cites_them() {
+        let latex = "\\begin{document}\nFirst paragraph.\n\nSee Section~\\ref{sec:a} and \\cite{knuth, lamport}.\n\\end{document}";
+        let document = LatexExtractor::build_internal_document(latex, false);
+        let texts: Vec<&str> = document.elements.iter().map(|e| e.text.as_str()).collect();
+        assert_eq!(
+            texts,
+            ["First paragraph.", "See Section\u{a0}sec:a and knuth, lamport."]
+        );
+        let relationships: Vec<(u32, RelationshipKind)> = document
+            .relationships
+            .iter()
+            .map(|relationship| (relationship.source, relationship.kind))
+            .collect();
+        assert_eq!(
+            relationships,
+            [
+                (1, RelationshipKind::CrossReference),
+                (1, RelationshipKind::CitationReference),
+                (1, RelationshipKind::CitationReference),
+            ]
+        );
     }
 
     #[test]
