@@ -164,6 +164,7 @@ office = [
     "dep:quick-xml",
     "dep:biblatex",
     "dep:biblib",
+    "dep:unicode-normalization",
     "dep:org",
     "dep:dbase",
     "dep:typst-syntax",
@@ -1446,7 +1447,7 @@ rake = { version = "0.3.6", optional = true }
 rayon = { workspace = true }
 regex = "1.13.1"
 resvg = { workspace = true, optional = true }
-rmcp = { version = "3.6.0", features = [
+rmcp = { version = "3.7.0", features = [
     "server",
     "macros",
     "base64",

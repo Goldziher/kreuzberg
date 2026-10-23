@@ -48,11 +48,9 @@ pub struct StructuredDataResult {
     pub metadata: HashMap<String, String>,
     /// JSON paths of fields that were classified as text-bearing.
     pub text_fields: Vec<String>,
-    /// The parsed document as a canonical `serde_json::Value` tree, when the
-    /// source format could be represented as one. `None` only for TOML inputs
-    /// whose `toml::Value` fails to round-trip through `serde_json::Value`
-    /// (xberg-io/xberg#155): the extractor falls back to a raw code block in
-    /// that case.
+    /// The parsed document as a canonical `serde_json::Value` tree. ~keep
+    /// Successful parsing stores `Some`; TOML dates and times are represented
+    /// as their canonical TOML text strings.
     pub value: Option<serde_json::Value>,
     /// Flattened `path: value` renderings for every leaf field, in traversal
     /// order. Previously computed and discarded (xberg-io/xberg#166); now

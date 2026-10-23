@@ -55,6 +55,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The TOML value went through `serde_json::to_value`, which turned every datetime into
   `{"$__toml_private_datetime": "2025-02-05"}`, so the text read `created_date` and then
   `$__toml_private_datetime: 2025-02-05`. It now reads `created_date: 2025-02-05`.
+- **(images): Render legacy OCR Markdown tables once when the backend also returns structured tables.**
+  Standalone image pipelines preserve the surrounding prose and structured OCR documents.
+- **(latex): Attach `\ref` and `\cite` relationships to the paragraph that holds them.**
+  Each reference was pushed as an extra paragraph of its own, `[key]`, so the text showed `[sec:a]` and `[knuth]` as
+  separate paragraphs ahead of the sentence that cites them. The relationships now start at that sentence's paragraph
+  (or display formula), or at the footnote that holds the reference, as the reStructuredText and Org extractors
+  attach theirs.
+- **(latex): Print accent commands, letter commands and control spaces as the characters they stand for.**
+  `Schr\"odinger`, `\'Ecole` and `Garc\'\i a` kept their backslash, with `\'` turned into a curly quote, and `\ss` and
+  `\o` were dropped, in paragraphs, headings and list items alike. They now read Schrödinger, École, García, ß and ø,
+  a group such as `Schr{\"o}dinger` prints without its braces, and `Mr.\ Smith` reads `Mr. Smith`.
 - **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
   The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
   encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
@@ -196,6 +207,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(ocr): Table reconstruction keeps columns that sit close together.**
   A repeated column edge less than about one space width from its neighbour is no longer merged into the neighbouring cell. (#2140)
 - **(images): TIFF pixel density (`XResolution`, `YResolution`, `ResolutionUnit`) is used as the source DPI instead of assuming 72.** (#2143)
+- **(ocr): Preserve ordered text and explicit HTML raw blocks returned by custom OCR backends.**
+  Single-backend and pipeline image/PDF handoffs retain flat structured contributions, source-image references
+  and PDF box coordinates. Unsupported nested nodes and backend asset/derived-output payloads fail explicitly
+  instead of being flattened or discarded.
 - **(ocr): The standalone image OCR pipeline keeps the tables it returns.**
   Tables embedded as GFM in a backend's text are rendered once. (#2144)
 - **(ocr): PaddleOCR, layout detection, and GLiNER share one ONNX Runtime environment.**
