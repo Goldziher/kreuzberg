@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(benchmarks): Bound pypdf parsing work for malformed PDF references and cross-reference tables.**
+  MinerU and Unstructured benchmark environments use pypdf 6.21.2 to resolve CVE-2026-115572, CVE-2026-115580
+  and CVE-2026-115585.
 - **(benchmarks): Update MinerU's Python Brotli decoder to fix an out-of-bounds write.**
   Resolves CVE-2026-111497 (PYSEC-2026-4322) in the optional benchmark environment.
 - **(crypto): Restore constant-time masks and 32-bit `u128` comparisons with ctutils 0.4.5.**
@@ -36,8 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The public 16-bit glyph-count API remains compatible.
 - **(integrations): CrewAI and LlamaIndex use Pillow 13.0.0 on Python 3.11 and later for image security fixes.**
   Python 3.10 retains the affected Pillow 12.3.0; other branches with upstream caps also remain affected.
-- **(integrations): Development environments use virtualenv 21.14.12 to prevent shell expansion in generated launchers.**
-  Resolves CVE-2026-113722; recreate existing environments to replace vulnerable launchers.
+- **(integrations): Development environments use virtualenv 21.14.13 to prevent launcher and Bash prompt expansion.**
+  Resolves CVE-2026-113722 and CVE-2026-115586; recreate existing environments to replace generated scripts.
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
   Replaces the yanked 1.54.0 release across all Rust dependency graphs.
 - **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
