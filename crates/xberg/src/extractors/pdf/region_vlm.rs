@@ -277,6 +277,49 @@ fn shift_relationship_indices(document: &mut crate::types::internal::InternalDoc
     }
 }
 
+/// Inserts `element` at `at` and returns its final index. The assembly emits page breaks
+/// only between pages with content, so the first element on an empty page (a scan) gets
+/// its own breaks; without them it is attributed to the previous page. Container starts
+/// carry no page, so it goes before any that open the next page, not inside its list.
+fn splice_element(
+    document: &mut crate::types::internal::InternalDocument,
+    mut at: usize,
+    element: crate::types::internal::InternalElement,
+) -> usize {
+    use crate::types::internal::{ElementKind, InternalElement};
+
+    let is_content = |element: &InternalElement| !matches!(element.kind, ElementKind::PageBreak);
+    let first_on_page = element.page.is_some()
+        && !document
+            .elements
+            .iter()
+            .any(|existing| existing.page == element.page && is_content(existing));
+    if first_on_page {
+        while at > 0 && document.elements[at - 1].kind.is_container_start() && document.elements[at - 1].page.is_none()
+        {
+            at -= 1;
+        }
+    }
+    if first_on_page && at > 0 && is_content(&document.elements[at - 1]) {
+        insert_element(document, at, InternalElement::text(ElementKind::PageBreak, "", 0));
+        at += 1;
+    }
+    insert_element(document, at, element);
+    if first_on_page && document.elements.get(at + 1).is_some_and(is_content) {
+        insert_element(document, at + 1, InternalElement::text(ElementKind::PageBreak, "", 0));
+    }
+    at
+}
+
+fn insert_element(
+    document: &mut crate::types::internal::InternalDocument,
+    at: usize,
+    element: crate::types::internal::InternalElement,
+) {
+    shift_relationship_indices(document, at);
+    document.elements.insert(at, element);
+}
+
 /// Inject VLM-extracted region markdown into an `InternalDocument`.
 ///
 /// For each `RegionVlmResult`, splices a paragraph element carrying the VLM markdown
@@ -295,12 +338,12 @@ pub(crate) fn inject_region_results(
     for result in results {
         let page_num = (result.page_index + 1) as u32;
         let insert_at = find_insertion_index(&document.elements, page_num, result.hint.top);
-        shift_relationship_indices(document, insert_at);
-        document.elements.insert(
+        let inserted_at = splice_element(
+            document,
             insert_at,
             InternalElement::text(ElementKind::Paragraph, result.markdown, 0).with_page(page_num),
         );
-        tracing::debug!(page = page_num, insert_at, "injected VLM region result into document");
+        tracing::debug!(page = page_num, inserted_at, "injected VLM region result into document");
     }
 }
 
@@ -451,6 +494,212 @@ mod tests {
 
         assert_eq!(document.elements.len(), 3);
         assert_eq!(document.elements[2].text, "VLM CAPTION");
+    }
+
+    fn page_break() -> crate::types::internal::InternalElement {
+        use crate::types::internal::{ElementKind, InternalElement};
+
+        InternalElement::text(ElementKind::PageBreak, "", 0)
+    }
+
+    fn page_shape(document: &crate::types::internal::InternalDocument) -> Vec<(Option<u32>, bool)> {
+        use crate::types::internal::ElementKind;
+
+        document
+            .elements
+            .iter()
+            .map(|element| (element.page, matches!(element.kind, ElementKind::PageBreak)))
+            .collect()
+    }
+
+    #[test]
+    fn should_break_before_vlm_result_on_trailing_page_with_no_elements() {
+        use crate::types::internal::InternalDocument;
+
+        let mut document = InternalDocument::default();
+        document.elements.push(element_with_bbox(1, 700.0));
+
+        let results = vec![RegionVlmResult {
+            page_index: 1,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![(Some(1), false), (None, true), (Some(2), false)]
+        );
+        assert_eq!(document.elements[2].text, "VLM TABLE");
+    }
+
+    #[test]
+    fn should_give_vlm_result_on_page_with_no_elements_breaks_on_both_sides() {
+        use crate::types::internal::{InternalDocument, Relationship, RelationshipKind, RelationshipTarget};
+
+        let mut document = InternalDocument::default();
+        document.elements.push(element_with_bbox(1, 700.0));
+        document.elements.push(page_break());
+        document.elements.push(element_with_bbox(3, 700.0));
+        document.relationships.push(Relationship {
+            source: 0,
+            target: RelationshipTarget::Index(2),
+            kind: RelationshipKind::InternalLink,
+        });
+
+        let results = vec![
+            RegionVlmResult {
+                page_index: 1,
+                markdown: "VLM FIGURE".to_string(),
+                hint: hint_with_top(600.0),
+            },
+            RegionVlmResult {
+                page_index: 1,
+                markdown: "VLM TABLE".to_string(),
+                hint: hint_with_top(300.0),
+            },
+        ];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (Some(1), false),
+                (None, true),
+                (Some(2), false),
+                (Some(2), false),
+                (None, true),
+                (Some(3), false)
+            ]
+        );
+        assert_eq!(document.elements[2].text, "VLM FIGURE");
+        assert_eq!(document.elements[3].text, "VLM TABLE");
+        assert_eq!(
+            document.relationships[0].target,
+            RelationshipTarget::Index(5),
+            "the page-3 target must follow both results and the added break"
+        );
+    }
+
+    fn list_marker(kind: crate::types::internal::ElementKind) -> crate::types::internal::InternalElement {
+        crate::types::internal::InternalElement::text(kind, "", 0)
+    }
+
+    fn list_item(page: u32) -> crate::types::internal::InternalElement {
+        use crate::types::internal::{ElementKind, InternalElement};
+
+        InternalElement::text(ElementKind::ListItem { ordered: false }, "item", 0).with_page(page)
+    }
+
+    #[test]
+    fn should_place_vlm_result_on_leading_empty_page_before_next_page_list() {
+        use crate::types::internal::{
+            ElementKind, InternalDocument, Relationship, RelationshipKind, RelationshipTarget,
+        };
+
+        let mut document = InternalDocument::default();
+        document
+            .elements
+            .push(list_marker(ElementKind::ListStart { ordered: false }));
+        document.elements.push(list_item(2));
+        document.elements.push(list_marker(ElementKind::ListEnd));
+        document.relationships.push(Relationship {
+            source: 1,
+            target: RelationshipTarget::Index(1),
+            kind: RelationshipKind::InternalLink,
+        });
+
+        let results = vec![RegionVlmResult {
+            page_index: 0,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (Some(1), false),
+                (None, true),
+                (None, false),
+                (Some(2), false),
+                (None, false)
+            ]
+        );
+        assert_eq!(document.elements[0].text, "VLM TABLE");
+        assert!(matches!(document.elements[2].kind, ElementKind::ListStart { .. }));
+        assert_eq!(document.relationships[0].source, 3);
+        assert_eq!(document.relationships[0].target, RelationshipTarget::Index(3));
+    }
+
+    #[test]
+    fn should_place_vlm_result_on_empty_page_before_next_page_list() {
+        use crate::types::internal::{ElementKind, InternalDocument};
+
+        let mut document = InternalDocument::default();
+        document.elements.push(element_with_bbox(1, 700.0));
+        document.elements.push(page_break());
+        document
+            .elements
+            .push(list_marker(ElementKind::ListStart { ordered: false }));
+        document.elements.push(list_item(3));
+
+        let results = vec![RegionVlmResult {
+            page_index: 1,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (Some(1), false),
+                (None, true),
+                (Some(2), false),
+                (None, true),
+                (None, false),
+                (Some(3), false)
+            ]
+        );
+        assert_eq!(document.elements[2].text, "VLM TABLE");
+        assert!(matches!(document.elements[4].kind, ElementKind::ListStart { .. }));
+    }
+
+    #[test]
+    fn should_break_before_vlm_result_after_last_page_closing_list() {
+        use crate::types::internal::{ElementKind, InternalDocument};
+
+        let mut document = InternalDocument::default();
+        document
+            .elements
+            .push(list_marker(ElementKind::ListStart { ordered: false }));
+        document.elements.push(list_item(1));
+        document.elements.push(list_marker(ElementKind::ListEnd));
+
+        let results = vec![RegionVlmResult {
+            page_index: 1,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (None, false),
+                (Some(1), false),
+                (None, false),
+                (None, true),
+                (Some(2), false)
+            ]
+        );
+        assert_eq!(document.elements[4].text, "VLM TABLE");
     }
 
     #[test]

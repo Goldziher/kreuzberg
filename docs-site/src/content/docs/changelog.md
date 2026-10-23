@@ -53,6 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Give a VLM region on a page with no text layer its own page break.**
+  A region answer for a scanned page with no elements was spliced next to a neighbouring page's content with no
+  break between them, so page markers placed it, or the content after it, on the wrong page.
 - **(pdf): Recognise formulas on scanned pages that Tesseract OCRs page by page.**
   In builds with PaddleOCR, a default Tesseract config with `layout.formula_model` set took the per-page pipeline
   branch, which returned before formula recognition, so scanned pages produced no LaTeX.
