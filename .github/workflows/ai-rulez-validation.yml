@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+      - uses: xberg-io/actions/setup-ai-rulez@793d3a4d37a17009d91cce29f2825eda570d2abd
         with:
           ai-rulez-version: "5.3.0"
           source-revision: "bdabc8a6e9211de60ca1e4ad76225ac92fcf218f"

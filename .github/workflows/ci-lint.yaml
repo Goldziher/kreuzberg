@@ -48,9 +48,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install Task
-        uses: xberg-io/actions/install-task@54a96fe62890b0843bb33365f72926b6415c06f9
+        uses: xberg-io/actions/install-task@793d3a4d37a17009d91cce29f2825eda570d2abd
       - name: Install reviewed ai-rulez
-        uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        uses: xberg-io/actions/setup-ai-rulez@793d3a4d37a17009d91cce29f2825eda570d2abd
         with:
           ai-rulez-version: "5.3.0"
           source-revision: "bdabc8a6e9211de60ca1e4ad76225ac92fcf218f"
@@ -92,7 +92,7 @@ jobs:
       # generates them; bump in lockstep with the generator. Regenerate with
       # `task plugin:generate`. ~keep
       - name: Install ai-rulez
-        uses: xberg-io/actions/setup-ai-rulez@98adf87f1ed4c62a57ff56f9010d62faf42d4db6
+        uses: xberg-io/actions/setup-ai-rulez@793d3a4d37a17009d91cce29f2825eda570d2abd
         with:
           ai-rulez-version: "5.3.0"
           source-revision: "bdabc8a6e9211de60ca1e4ad76225ac92fcf218f"
@@ -174,7 +174,7 @@ jobs:
         with:
           submodules: false
       - name: Install Task
-        uses: xberg-io/actions/install-task@54a96fe62890b0843bb33365f72926b6415c06f9
+        uses: xberg-io/actions/install-task@793d3a4d37a17009d91cce29f2825eda570d2abd
       # C# DllImport and Java Panama FunctionDescriptor both restate every native signature
       # by hand, and neither restatement is checked at build time, so a wrong declaration
       # compiles clean and misbehaves only when the call runs. GH#1595 shipped that way in
@@ -284,7 +284,7 @@ jobs:
       - name: Verify Poly formatter scopes
         run: task poly:verify:tool-scopes
       - name: Setup Rust for Alef metadata
-        uses: xberg-io/actions/setup-rust@cc89740654cef67b752113ddd87d4f0d23dda3f5
+        uses: xberg-io/actions/setup-rust@793d3a4d37a17009d91cce29f2825eda570d2abd
         with:
           components: rust-src, rustfmt, clippy
           use-sccache: "false"
