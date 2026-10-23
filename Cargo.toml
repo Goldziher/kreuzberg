@@ -59,7 +59,7 @@ bytes = { version = "1", features = ["serde"] }
 candle-core = { version = "0.11", default-features = false }
 candle-nn = { version = "0.11", default-features = false }
 candle-transformers = { version = "0.11", default-features = false }
-cc = "1.9"
+cc = "1.10"
 cfb = "0.15"
 chrono = "0.4"
 clap = { version = "4.6", features = ["derive", "color", "suggestions"] }

@@ -450,7 +450,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: "3.13"
+          sdk: "3.13.7"
       # Dart infers formatting language rules from package_config.json, created by pub get. ~keep
       - name: Resolve Dart binding dependencies
         working-directory: packages/dart
@@ -521,7 +521,7 @@ jobs:
           # compiles otherwise (110 of the gate's 111 failures). The required floor
           # moves with whichever freezed pub picks, so read the error's own
           # "requires SDK version" rather than assuming the previous floor. ~keep
-          sdk: "3.13"
+          sdk: "3.13.7"
       - name: Setup Elixir
         uses: xberg-io/actions/setup-elixir@v1
         with:

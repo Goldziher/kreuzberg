@@ -23,7 +23,7 @@ dev = [
   "pytest-mock>=3.17.0",
   "pytest-rerunfailures>=16.7",
   "pytest-timeout>=2.4.0",
-  "ruff==0.17.1",
+  "ruff==0.17.2",
   "types-pillow>=10.2.0.20240822",
   "types-psutil>=7.2.2.20260906",
   "validate-pyproject>=0.27",
