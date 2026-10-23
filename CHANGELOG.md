@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(benchmarks): Update MinerU's Python Brotli decoder to fix an out-of-bounds write.**
+  Resolves CVE-2026-111497 (PYSEC-2026-4322) in the optional benchmark environment.
 - **(crypto): Restore constant-time masks and 32-bit `u128` comparisons with ctutils 0.4.5.**
   Resolves RUSTSEC-2026-0385.
 - **(build): Root workspace installs reject registry metadata naming a different package.**
