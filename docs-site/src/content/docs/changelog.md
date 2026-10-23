@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(crypto): Restore constant-time masks and 32-bit `u128` comparisons with ctutils 0.4.5.**
+  Resolves RUSTSEC-2026-0385.
 - **(build): Root workspace installs reject registry metadata naming a different package.**
   pnpm 12.15.0 keeps install-script permissions tied to the requested dependency.
 - **(pdf): Bound font lookup preprocessing and reject malformed lookup types.**
