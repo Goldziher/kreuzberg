@@ -848,6 +848,7 @@ pub(crate) fn extract_all_from_native_document(
             },
         ) {
             Ok(mut structured_doc) if !structured_doc.elements.is_empty() => {
+                extraction_warnings.append(&mut structured_doc.processing_warnings);
                 attach_native_table_grids(&mut structured_doc, &tables, &native_table_grids)?;
                 #[cfg(all(feature = "ocr", feature = "tokio-runtime"))]
                 if image_anchor == ImageAnchor::OcrTextOnly {
@@ -868,7 +869,8 @@ pub(crate) fn extract_all_from_native_document(
                 }
                 Some(structured_doc)
             }
-            Ok(_) => {
+            Ok(mut structured_doc) => {
+                extraction_warnings.append(&mut structured_doc.processing_warnings);
                 tracing::warn!("native structure: rendering produced empty output, falling back to plain text");
                 None
             }
