@@ -51,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): A missing table structure model no longer drops the document's structure.**
+  When layout detection found a table and the configured table model (TATR or SLANeXT) could not be loaded, the
+  extraction fell back to plain text, without its layout-detected tables, headings or layout regions, and with no
+  warning. The structure is now kept, table regions are read without the model, and a `pdf_tables` processing
+  warning names it.
 - **(ocr): `ocr.backend = "vlm"` works on mixed PDFs with layout detection on.**
   Every page the mixed route OCR'd failed with "VLM OCR requires vlm_config to be set", because the one-stage pipeline
   built for layout dropped the OCR config's `vlm_config`.

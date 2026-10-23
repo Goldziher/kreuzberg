@@ -3316,9 +3316,60 @@ fn slanet_variant_for_table_model(table_model: crate::core::config::layout::Tabl
     }
 }
 
+#[cfg(feature = "layout-detection")]
+fn is_table_model_available(
+    table_model: crate::core::config::layout::TableModel,
+    acceleration: Option<&crate::core::config::acceleration::AccelerationConfig>,
+    session_thread_budget: usize,
+) -> bool {
+    use crate::core::config::layout::TableModel;
+
+    match table_model {
+        TableModel::Tatr => crate::layout::is_tatr_available(acceleration, session_thread_budget),
+        TableModel::SlanetWired | TableModel::SlanetWireless | TableModel::SlanetPlus | TableModel::SlanetAuto => {
+            slanet_variant_for_table_model(table_model)
+                .is_some_and(|variant| crate::layout::is_slanet_available(variant, acceleration, session_thread_budget))
+        }
+        TableModel::Disabled => false,
+    }
+}
+
+#[cfg(feature = "layout-detection")]
+fn table_model_unavailable_warning(model_name: &str) -> crate::types::ProcessingWarning {
+    crate::types::ProcessingWarning {
+        source: std::borrow::Cow::Borrowed("pdf_tables"),
+        message: std::borrow::Cow::Owned(format!(
+            "layout detection found table regions but the {model_name} table model is not available; \
+             table structure recognition was skipped; check that the model is downloaded"
+        )),
+    }
+}
+
+#[cfg(feature = "layout-detection")]
 pub(crate) fn extract_document_structure_from_segments(
+    all_page_segments: Vec<Vec<SegmentData>>,
+    config: SegmentStructureConfig<'_>,
+) -> Result<crate::types::internal::InternalDocument> {
+    build_document_structure(all_page_segments, config, is_table_model_available)
+}
+
+#[cfg(not(feature = "layout-detection"))]
+pub(crate) fn extract_document_structure_from_segments(
+    all_page_segments: Vec<Vec<SegmentData>>,
+    config: SegmentStructureConfig<'_>,
+) -> Result<crate::types::internal::InternalDocument> {
+    build_document_structure(all_page_segments, config)
+}
+
+fn build_document_structure(
     mut all_page_segments: Vec<Vec<SegmentData>>,
     config: SegmentStructureConfig<'_>,
+    // A parameter so tests can simulate a missing model without loading one.
+    #[cfg(feature = "layout-detection")] table_model_available: fn(
+        crate::core::config::layout::TableModel,
+        Option<&crate::core::config::acceleration::AccelerationConfig>,
+        usize,
+    ) -> bool,
 ) -> Result<crate::types::internal::InternalDocument> {
     let SegmentStructureConfig {
         k_clusters,
@@ -3391,6 +3442,8 @@ pub(crate) fn extract_document_structure_from_segments(
         .collect();
 
     let mut layout_tables: Vec<crate::types::Table> = Vec::new();
+    #[cfg(feature = "layout-detection")]
+    let mut table_model_warning = None;
     if let Some(hints_pages) = layout_hints {
         struct TablePageData {
             page_idx: usize,
@@ -3484,22 +3537,10 @@ pub(crate) fn extract_document_structure_from_segments(
             };
 
             let has_table_model = if use_model_inference {
-                let available = match table_model {
-                    TableModel::Tatr => crate::layout::is_tatr_available(acceleration, session_thread_budget),
-                    TableModel::SlanetWired
-                    | TableModel::SlanetWireless
-                    | TableModel::SlanetPlus
-                    | TableModel::SlanetAuto => slanet_variant.is_some_and(|variant| {
-                        crate::layout::is_slanet_available(variant, acceleration, session_thread_budget)
-                    }),
-                    TableModel::Disabled => false,
-                };
+                let available = table_model_available(table_model, acceleration, session_thread_budget);
 
                 if !available && !table_pages.is_empty() {
-                    return Err(crate::pdf::error::PdfError::TextExtractionFailed(format!(
-                        "Layout detection found table regions but {model_name} model is not available. \
-                         Ensure the ONNX model is downloaded. Tables cannot be extracted without it."
-                    )));
+                    table_model_warning = Some(table_model_unavailable_warning(model_name));
                 }
                 available
             } else {
@@ -3940,6 +3981,8 @@ pub(crate) fn extract_document_structure_from_segments(
         effective_image_positions,
         &witnesses.hyphens,
     );
+    #[cfg(feature = "layout-detection")]
+    doc.processing_warnings.extend(table_model_warning);
 
     for elem in &mut doc.elements {
         if elem.text.is_empty() {
