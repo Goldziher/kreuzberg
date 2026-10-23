@@ -8,10 +8,8 @@
 
 import 'dart:async';
 import 'dart:convert';
-
 import 'frb_generated.dart';
 import 'lib.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
