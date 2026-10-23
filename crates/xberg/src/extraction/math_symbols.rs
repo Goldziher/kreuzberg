@@ -100,6 +100,9 @@ fn wrap_trailing_atom(cmd: &str, out: &mut String) {
 }
 
 /// Escape a TeX structural character appearing as literal content.
+///
+/// Math mode has no escape for `^` and `~`: raw they start a superscript or set a space, so each becomes the
+/// glyph it shows.
 pub(crate) fn escape_tex_structural(ch: char) -> Option<&'static str> {
     match ch {
         '{' => Some("\\{"),
@@ -110,6 +113,8 @@ pub(crate) fn escape_tex_structural(ch: char) -> Option<&'static str> {
         '$' => Some("\\$"),
         '_' => Some("\\_"),
         '\\' => Some("\\backslash "),
+        '^' => Some("\\hat{}"),
+        '~' => Some("\\sim "),
         _ => None,
     }
 }

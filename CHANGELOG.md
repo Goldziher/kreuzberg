@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(mathml): Write `^` and `~` from math text as `\hat{}` and `\sim`.**
+  A `^` or `~` in element text reached the LaTeX raw, where TeX reads them as a superscript and a space, so
+  `<msup><mi>x</mi><mo>^</mo></msup>` gave `x^{^}`, which does not parse. They are now escaped where math text is
+  written, which covers DOCX equations too, since they share that escape.
 - **(mathml): Drop invisible operators from the LaTeX.**
   Function application, invisible times, separator and plus (U+2061 to U+2064) were copied into the LaTeX, which TeX
   engines reject. They are now spaces in math and dropped from `mtext` and `ms`, and an `mfenced` that holds one groups

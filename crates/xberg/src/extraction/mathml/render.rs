@@ -404,9 +404,9 @@ struct ScriptMark {
 /// literal spacing or combining characters (`<mover><mi>x</mi><mo>^</mo></mover>`).
 fn script_mark(script: &MmlNode) -> Option<ScriptMark> {
     let (over, under, standalone) = match script_leaf_text(script)? {
-        "^" => (Some("\\hat"), None, Some("\\hat{}")),
+        "^" => (Some("\\hat"), None, None),
         "\u{02C6}" | "\u{0302}" => (Some("\\hat"), None, Some("\\hat{}")),
-        "~" => (Some("\\tilde"), None, Some("\\sim ")),
+        "~" => (Some("\\tilde"), None, None),
         "\u{02DC}" | "\u{0303}" => (Some("\\tilde"), None, Some("\\tilde{}")),
         "\u{223C}" => (Some("\\tilde"), None, Some("\\sim ")),
         "\u{02D9}" | "\u{0307}" => (Some("\\dot"), None, Some("\\dot{}")),

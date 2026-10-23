@@ -563,6 +563,28 @@ fn test_script_accent_is_read_through_grouping() {
     );
 }
 
+/// A `^` or `~` from element text sets a superscript or a space in TeX, so every path writes its glyph instead.
+#[test]
+fn test_caret_and_tilde_text_is_escaped_on_every_path() {
+    for (xml, expected) in [
+        ("<msup><mi>x</mi><mo>^</mo></msup>", "x^{\\hat{}}"),
+        ("<msub><mi>f</mi><mo>~</mo></msub>", "f_{\\sim }"),
+        (
+            "<mmultiscripts><mi>x</mi><mo>^</mo><none/></mmultiscripts>",
+            "x_{\\hat{}}",
+        ),
+        (
+            "<mover><mi>x</mi><mrow><mo>^</mo><mspace/></mrow></mover>",
+            "\\overset{\\hat{} }{x}",
+        ),
+        ("<mover><mi>x</mi><mo>^^</mo></mover>", "\\overset{\\hat{}\\hat{}}{x}"),
+        ("<mi>a</mi><mo>~</mo><mi>b</mi>", "a\\sim b"),
+        ("<mtext>a~b^c</mtext>", "\\text{a\\textasciitilde b\\textasciicircum c}"),
+    ] {
+        assert_script_case(xml, expected);
+    }
+}
+
 /// The collector unwraps a `semantics` with one presentation child, so the base's `movablelimits` counts there too.
 #[test]
 fn test_semantics_base_keeps_unmovable_limits() {
