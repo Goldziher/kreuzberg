@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Extended glyph IDs stay intact through rendering and diagnostics, preventing unrelated glyphs from being painted.
   The public 16-bit glyph-count API remains compatible.
 - **(integrations): CrewAI and LlamaIndex use Pillow 13.0.0 on Python 3.11 and later for image security fixes.**
-  Python 3.10 retains Pillow 12.3.0; other branches with upstream caps remain affected.
+  Python 3.10 retains the affected Pillow 12.3.0; other branches with upstream caps also remain affected.
 - **(integrations): Development environments use virtualenv 21.14.12 to prevent shell expansion in generated launchers.**
   Resolves CVE-2026-113722; recreate existing environments to replace vulnerable launchers.
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
@@ -144,8 +144,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(ppt): Speaker notes are referenced from their own slides in rendered Markdown.** (#2186)
 - **(ios): Native libraries link with bundled ONNX Runtime’s CoreML backend.**
   Device and simulator builds include the matching Apple compiler availability runtime.
-- **(html): Whitespace-only inline formatting and blank Word-exported HTML paragraphs no longer panic.**
-  Surrounding paragraph content is preserved. (#2182)
+- **(html): Extract whitespace-only formatted paragraphs and headings without panicking.**
+  Blank lines in Word-exported HTML no longer abort Markdown extraction; surrounding paragraphs are preserved. (#2182)
 - **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
   The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
   `1. Install:` followed by a fenced code block came out with the code first.
