@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(ocr): `ocr.backend = "vlm"` works on mixed PDFs with layout detection on.**
+  Every page the mixed route OCR'd failed with "VLM OCR requires vlm_config to be set", because the one-stage pipeline
+  built for layout dropped the OCR config's `vlm_config`.
 - **(toml): Print a date or time as its TOML text instead of under a `$__toml_private_datetime` key.**
   The TOML value went through `serde_json::to_value`, which turned every datetime into
   `{"$__toml_private_datetime": "2025-02-05"}`, so the text read `created_date` and then

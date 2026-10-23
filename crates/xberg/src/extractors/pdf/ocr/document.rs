@@ -642,7 +642,8 @@ pub(super) fn build_pipeline_ocr_page_document(
 /// [`extract_with_ocr_for_page`]'s pixel-space layout classification -- instead of this
 /// route's own raw `backend.process_image_owned` fast path, which never accepted layout
 /// detections at all (#665: `--layout` alone produced byte-identical mixed-route output).
-/// Mirrors the `classical_stage` construction in [`crate::core::config::ocr::OcrConfig::effective_pipeline`].
+/// Mirrors the `classical_stage` construction in [`crate::core::config::ocr::OcrConfig::effective_pipeline`],
+/// except that it keeps the configured `vlm_config`, which the runner copies over the OCR config.
 ///
 /// Only used when this call actually has layout detections to offer (see
 /// `layout_detections_for_mixed` in [`extract_mixed_ocr_native`]); the plain single-backend
@@ -668,7 +669,7 @@ pub(super) fn single_stage_pipeline_for_layout(
             tesseract_config: ocr_config.tesseract_config.clone(),
             paddle_ocr_config: None,
             paddle_ocr_settings: None,
-            vlm_config: None,
+            vlm_config: ocr_config.vlm_config.clone(),
             backend_options: ocr_config.backend_options.clone(),
         }],
         quality_thresholds: ocr_config.effective_thresholds(),

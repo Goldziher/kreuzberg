@@ -6678,6 +6678,30 @@ Name: ___
         );
     }
 
+    /// The pipeline runner replaces the OCR config's `vlm_config` with each stage's own, so a
+    /// stage built without it fails every page with "VLM OCR requires vlm_config to be set".
+    #[cfg(all(
+        feature = "layout-detection",
+        any(feature = "ocr", feature = "ocr-pipeline"),
+        feature = "pdf"
+    ))]
+    #[test]
+    fn single_stage_pipeline_for_layout_keeps_the_vlm_config() {
+        let vlm_config = crate::core::config::LlmConfig {
+            model: "openai/gpt-4o".to_string(),
+            ..Default::default()
+        };
+        let ocr_config = crate::core::config::OcrConfig {
+            backend: "vlm".to_string(),
+            vlm_config: Some(vlm_config.clone()),
+            ..Default::default()
+        };
+
+        let pipeline = single_stage_pipeline_for_layout(&ocr_config);
+
+        assert_eq!(pipeline.stages[0].vlm_config, Some(vlm_config));
+    }
+
     #[cfg(all(feature = "layout-detection", any(feature = "ocr", feature = "ocr-wasm")))]
     fn rotated_ocr_metadata(final_width: u32, final_height: u32, orientation_degrees: i32) -> crate::types::Metadata {
         let mut metadata = crate::types::Metadata::default();
