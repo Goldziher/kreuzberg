@@ -3802,6 +3802,29 @@ pub(super) async fn extract_with_ocr_for_page(
             refill_texts.to_mut()[page_idx] = text_outside_tables;
         }
     }
+    // ~keep Detached PDF pages retain their PDF document; only standalone images reach
+    // this fallback without either PDF source. Remove legacy table transcripts before
+    // paragraph synthesis, preserving the raw OCR text and authoritative public nodes.
+    if content.is_none() && xobject_document.is_none() {
+        for (page_idx, paragraphs) in all_page_paragraphs.iter().enumerate() {
+            let page = (page_index_offset + page_idx + 1) as u32;
+            if paragraphs.as_ref().is_some_and(|paragraphs| !paragraphs.is_empty())
+                || public_ocr_pages.contains_key(&page)
+                || rejected_pages[page_idx]
+            {
+                continue;
+            }
+            let text = &refill_texts[page_idx];
+            let prose = super::strip_embedded_gfm_tables(
+                text,
+                collected_tables.iter().filter(|table| table.page_number == page),
+            );
+            if prose != *text {
+                pages_text_claimed_by_tables[page_idx] = prose.trim().is_empty();
+                refill_texts.to_mut()[page_idx] = prose;
+            }
+        }
+    }
     fill_unstructured_ocr_pages(&mut all_page_paragraphs, &refill_texts, &pages_text_claimed_by_tables);
 
     let (ocr_doc, mut raw_page_paragraphs) = {

@@ -3218,7 +3218,7 @@ impl ImageExtractor {
         // the pipeline's elements, formulas, usage, and — crucially — any processing
         // warnings, so a fallback backend that failed is visible to the caller
         // rather than silently swapped for the classical result (issue #1339).
-        let prose = strip_embedded_gfm_tables(&text, &tables);
+        let prose = crate::extractors::pdf::ocr::strip_embedded_gfm_tables(&text, tables.iter());
         let mut pipeline_doc = pipeline_doc;
         let mut doc = if pipeline_doc.as_ref().is_some_and(|doc| !doc.elements.is_empty()) {
             build_image_ocr_document(pipeline_doc.take(), &prose)
@@ -3528,50 +3528,6 @@ fn build_image_internal_document(
         push_image_placeholder(&mut builder);
     }
     builder.build()
-}
-
-#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
-fn gfm_row_cells(line: &str) -> Option<Vec<String>> {
-    let inner = line.trim().strip_prefix('|')?.strip_suffix('|')?;
-    Some(inner.split('|').map(|cell| cell.trim().to_owned()).collect())
-}
-
-#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
-fn is_gfm_separator_row(cells: &[String]) -> bool {
-    cells
-        .iter()
-        .all(|cell| !cell.is_empty() && cell.trim_matches(':').chars().all(|c| c == '-'))
-}
-
-#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
-/// Remove GFM table blocks from OCR text when `tables` already carries the same cells, so the
-/// structured table renders once instead of also surviving as a collapsed pipe paragraph.
-/// Blocks that match no returned table stay in the text untouched.
-fn strip_embedded_gfm_tables(text: &str, tables: &[crate::types::Table]) -> String {
-    if tables.is_empty() {
-        return text.to_owned();
-    }
-    let lines: Vec<&str> = text.lines().collect();
-    let mut kept: Vec<&str> = Vec::with_capacity(lines.len());
-    let mut index = 0;
-    while index < lines.len() {
-        let mut end = index;
-        let mut rows: Vec<Vec<String>> = Vec::new();
-        while end < lines.len() {
-            let Some(cells) = gfm_row_cells(lines[end]) else { break };
-            if !is_gfm_separator_row(&cells) {
-                rows.push(cells);
-            }
-            end += 1;
-        }
-        if !rows.is_empty() && tables.iter().any(|table| table.cells == rows) {
-            index = end;
-        } else {
-            kept.push(lines[index]);
-            index += 1;
-        }
-    }
-    kept.join("\n")
 }
 
 fn split_ocr_paragraphs(text: &str) -> Vec<String> {
