@@ -19,9 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **(url): Preserve Rust configuration compatibility by constraining Crawlberg to 1.11.1.**
-  The 1.12.0 release adds fields to configuration types exposed by Xberg, breaking existing exhaustive
-  struct construction and patterns. The compatible upgrade and libc pin removal remain pending.
 - **(pdf): Native font metrics retain their 16-bit glyph-count API with the updated font parser.**
   `TrueTypeFont::num_glyphs()` caps larger upstream counts at 65,535; width-table work stays bounded to that range.
   Font ascenders and descenders use normalized above/below-baseline signs.
