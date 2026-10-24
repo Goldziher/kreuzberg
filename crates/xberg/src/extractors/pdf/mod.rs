@@ -1050,7 +1050,19 @@ fn markdown_layout_reusable_for_ocr(
     page_rotations: &[u32],
 ) -> bool {
     decisions.is_none_or(|decisions| decisions.iter().all(|decision| decision.run_layout))
-        && page_rotations.iter().all(|rotation| rotation.is_multiple_of(360))
+        && markdown_layout_usable_for_native(page_rotations)
+}
+
+/// Whether the markdown layout rasters may still feed the native path when OCR cannot reuse
+/// them: a rotated page's detections are in display space, but formula recognition maps them
+/// against the MediaBox (`pdf_page_sizes_pt`).
+#[cfg(all(
+    feature = "pdf",
+    feature = "layout-detection",
+    any(feature = "ocr", feature = "ocr-pipeline")
+))]
+fn markdown_layout_usable_for_native(page_rotations: &[u32]) -> bool {
+    page_rotations.iter().all(|rotation| rotation.is_multiple_of(360))
 }
 
 /// Convert gate decisions into the metadata representation.
@@ -1252,9 +1264,18 @@ async fn run_ocr_with_layout(
                     path,
                     page_ocr_hints,
                     #[cfg(feature = "layout-detection")]
-                    prepared_layout_inputs,
+                    prepared_layout_inputs.as_ref(),
                 ))
                 .await?;
+            #[cfg(feature = "formula-recognition")]
+            let (mut document, mut formulas) = (document, formulas);
+            #[cfg(feature = "formula-recognition")]
+            if let (Some((images, detections)), Some(layout)) =
+                (prepared_layout_inputs.as_ref(), config.layout.as_ref())
+            {
+                recognize_pdf_formula_regions(document.as_mut(), &mut formulas, images, detections, layout, content)
+                    .await;
+            }
             return Ok((
                 text,
                 tables,
@@ -1790,7 +1811,7 @@ fn formula_synthesis_allowed(has_region_geometry: bool, formula_slot_count: usiz
 ///
 /// The page rasters reaching formula recognition are MediaBox-oriented: OCR
 /// rasters are normalized, and markdown rasters survive only when no page is
-/// rotated (`markdown_layout_reusable_for_ocr`).
+/// rotated (`markdown_layout_usable_for_native`).
 #[cfg(all(feature = "formula-recognition", feature = "layout-detection"))]
 fn pdf_page_sizes_pt(content: &[u8], page_count: usize) -> Option<Vec<(f32, f32)>> {
     let doc = xberg_native_pdf::PdfDocument::from_bytes(content.to_vec()).ok()?;
@@ -2385,6 +2406,14 @@ impl PdfExtractor {
             &mut ocr_fallback_warnings,
         );
 
+        // Only formula recognition and VLM regions read the rasters on the native path.
+        #[cfg(all(
+            feature = "pdf",
+            feature = "layout-detection",
+            any(feature = "ocr", feature = "ocr-pipeline"),
+            any(feature = "formula-recognition", feature = "liter-llm")
+        ))]
+        let mut native_only_layout_inputs = None;
         #[cfg(all(
             feature = "pdf",
             feature = "layout-detection",
@@ -2397,9 +2426,23 @@ impl PdfExtractor {
                 .map(|images| crate::pdf::render::get_page_rotations_from_bytes(content, images.len()))
                 .unwrap_or_default();
             if !markdown_layout_reusable_for_ocr(markdown_layout_gate_decisions.as_deref(), &markdown_page_rotations) {
-                markdown_layout_images = None;
-                markdown_layout_detections = None;
+                let native_inputs = (markdown_layout_images.take(), markdown_layout_detections.take());
                 markdown_layout_acceleration_override = None;
+                #[cfg(any(feature = "formula-recognition", feature = "liter-llm"))]
+                {
+                    // Keep the rasters only when this run configures a native reader of them.
+                    let formula_reads = cfg!(feature = "formula-recognition")
+                        && config.layout.as_ref().is_some_and(|l| l.formula_model.is_some());
+                    let vlm_reads = cfg!(feature = "liter-llm")
+                        && config.ocr.as_ref().is_some_and(|o| {
+                            o.vlm_fallback != crate::core::config::VlmFallbackPolicy::Disabled && o.vlm_config.is_some()
+                        });
+                    if (formula_reads || vlm_reads) && markdown_layout_usable_for_native(&markdown_page_rotations) {
+                        native_only_layout_inputs = Some(native_inputs);
+                    }
+                }
+                #[cfg(not(any(feature = "formula-recognition", feature = "liter-llm")))]
+                drop(native_inputs);
             }
         }
 
@@ -2714,6 +2757,11 @@ impl PdfExtractor {
                     (native_text, ExtractionMethod::Native)
                 }
                 ocr::OcrGateOutcome::RunFallback => {
+                    #[cfg(all(
+                        feature = "layout-detection",
+                        any(feature = "formula-recognition", feature = "liter-llm")
+                    ))]
+                    drop(native_only_layout_inputs.take());
                     // `images.run_ocr_on_images` controls whether extracted images are
                     // separately OCR'd (`core/pipeline/mod.rs`); it does not gate this
                     // document-level page OCR fallback. Reading it here made any
@@ -2903,6 +2951,17 @@ impl PdfExtractor {
 
         #[cfg(not(any(feature = "ocr", feature = "ocr-pipeline")))]
         let (mut text, extraction_method) = (native_text, ExtractionMethod::Native);
+
+        #[cfg(all(
+            feature = "pdf",
+            feature = "layout-detection",
+            any(feature = "ocr", feature = "ocr-pipeline"),
+            any(feature = "formula-recognition", feature = "liter-llm")
+        ))]
+        if let Some((images, detections)) = native_only_layout_inputs {
+            markdown_layout_images = images;
+            markdown_layout_detections = detections;
+        }
 
         #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
         // Full-document OCR is authoritative for tables when it produced
@@ -3465,8 +3524,11 @@ impl PdfExtractor {
                 .unwrap_or(false);
 
             if vlm_enabled
-                && let (Some(layout_images), Some(hints)) =
-                    (markdown_layout_images.as_deref(), markdown_layout_hints.as_deref())
+                && let (Some(layout_images), Some(hints), Some(detections)) = (
+                    markdown_layout_images.as_deref(),
+                    markdown_layout_hints.as_deref(),
+                    markdown_layout_detections.as_deref(),
+                )
             {
                 let vlm_cfg = config
                     .ocr
@@ -3474,7 +3536,7 @@ impl PdfExtractor {
                     .and_then(|o| o.vlm_config.as_ref())
                     .expect("vlm_config checked above");
 
-                let region_results = region_vlm::extract_vlm_regions(layout_images, hints, vlm_cfg).await;
+                let region_results = region_vlm::extract_vlm_regions(layout_images, hints, detections, vlm_cfg).await;
                 if !region_results.is_empty() {
                     tracing::debug!(
                         count = region_results.len(),
@@ -3754,6 +3816,21 @@ mod tests {
         ));
         for rotation in [90, 180, 270] {
             assert!(!markdown_layout_reusable_for_ocr(None, &[rotation]));
+        }
+    }
+
+    #[cfg(all(
+        feature = "pdf",
+        feature = "layout-detection",
+        any(feature = "ocr", feature = "ocr-pipeline")
+    ))]
+    #[test]
+    fn gated_markdown_layout_rasters_stay_usable_for_native_unless_rotated() {
+        let gated = [gate_decision(true), gate_decision(false)];
+        assert!(!markdown_layout_reusable_for_ocr(Some(&gated), &[0, 0]));
+        assert!(markdown_layout_usable_for_native(&[0, 360]));
+        for rotation in [90, 180, 270] {
+            assert!(!markdown_layout_usable_for_native(&[0, rotation]));
         }
     }
 
@@ -10158,6 +10235,83 @@ BT /F1 12 Tf 30 30 Td (Beta) Tj ET
         assert_eq!(
             pages_y.total_count, pages_x.total_count,
             "page counts must match between the two configurations"
+        );
+    }
+
+    /// `scanned_math.pdf` plus a prose page the `auto` layout gate skips.
+    #[cfg(all(feature = "ocr", feature = "formula-recognition", feature = "layout-detection"))]
+    fn scanned_math_then_prose_pdf() -> Vec<u8> {
+        use lopdf::{Document, Object, Stream, dictionary};
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ocr/scanned_math.pdf");
+        let bytes = std::fs::read(path).expect("read scanned_math.pdf fixture");
+        let mut document = Document::load_mem(&bytes).expect("scanned_math.pdf must parse");
+        let pages_id = document
+            .catalog()
+            .and_then(|catalog| catalog.get(b"Pages"))
+            .and_then(Object::as_reference)
+            .expect("fixture has a page tree");
+        let font_id = document.add_object(dictionary! {
+            "Type" => "Font",
+            "Subtype" => "Type1",
+            "BaseFont" => "Helvetica",
+        });
+        let mut content = String::from("BT /F1 10 Tf 72 720 Td 14 TL\n");
+        for line in 0..45 {
+            content.push_str(&format!(
+                "(Line {line} of steady single column prose with enough characters to pass the floor.) Tj T*\n"
+            ));
+        }
+        content.push_str("ET");
+        let content_id = document.add_object(Stream::new(dictionary! {}, content.into_bytes()));
+        let page_id = document.add_object(dictionary! {
+            "Type" => "Page",
+            "Parent" => pages_id,
+            "MediaBox" => vec![0.into(), 0.into(), 612.into(), 792.into()],
+            "Resources" => dictionary! { "Font" => dictionary! { "F1" => font_id } },
+            "Contents" => content_id,
+        });
+        let pages = document
+            .get_object_mut(pages_id)
+            .and_then(Object::as_dict_mut)
+            .expect("page tree root is a dictionary");
+        pages
+            .get_mut(b"Kids")
+            .and_then(Object::as_array_mut)
+            .expect("page tree root has kids")
+            .push(page_id.into());
+        pages.set("Count", 2);
+
+        let mut out = Vec::new();
+        document.save_to(&mut out).expect("fixture PDF must serialize");
+        out
+    }
+
+    #[cfg(all(feature = "ocr", feature = "formula-recognition", feature = "layout-detection"))]
+    #[tokio::test]
+    #[ignore = "runs the RT-DETR layout and RapidLaTeXOCR models (~310 MB, downloaded on first use)"]
+    async fn auto_gate_skipping_a_page_keeps_formula_recognition_on_the_pages_it_ran() {
+        let content = scanned_math_then_prose_pdf();
+        let config = ExtractionConfig {
+            use_layout_for_markdown: true,
+            disable_ocr: true,
+            layout: Some(crate::core::config::LayoutDetectionConfig {
+                strategy: crate::core::config::layout::LayoutStrategy::Auto,
+                formula_model: Some(crate::core::config::layout::FormulaModel::LatexOcr),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let doc = PdfExtractor::new()
+            .extract_content(&content, "application/pdf", &config)
+            .await
+            .expect("extraction must not fail");
+
+        assert!(
+            doc.formulas.iter().any(|formula| formula.page == Some(1)),
+            "the gate ran layout on page 1, so its formula regions must be recognised; got {:?}",
+            doc.formulas.iter().map(|f| (f.page, &f.latex)).collect::<Vec<_>>()
         );
     }
 }

@@ -376,6 +376,7 @@ tasks:
   alef:generate:
     desc: "Regenerate all Alef-managed outputs (formatting via poly, no build or snippet validation)"
     cmds:
+      - task: dart:format:context
       - alef all --clean --skip-compile --skip-snippet-validation
 
   alef:verify:
@@ -449,6 +450,7 @@ tasks:
   e2e:generate:
     desc: "Generate E2E tests for all languages from fixtures"
     cmds:
+      - task: dart:format:context
       - alef e2e generate --strict
 
   e2e:mock-server:build:
@@ -486,6 +488,7 @@ tasks:
   e2e:verify:
     desc: "Verify generated e2e tests are up to date"
     cmds:
+      - task: dart:format:context
       - alef e2e generate --strict
       - git diff --exit-code e2e/
 

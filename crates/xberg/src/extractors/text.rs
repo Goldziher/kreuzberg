@@ -256,7 +256,14 @@ mod tests {
         let extractor = PlainTextExtractor::new();
         assert_eq!(extractor.name(), "plain-text-extractor");
         assert_eq!(extractor.version(), env!("CARGO_PKG_VERSION"));
-        assert_eq!(extractor.supported_mime_types(), &["text/plain"]);
+        assert_eq!(
+            extractor.supported_mime_types(),
+            &[
+                "text/plain",
+                #[cfg(not(feature = "tree-sitter"))]
+                crate::core::mime::SOURCE_CODE_MIME_TYPE,
+            ]
+        );
         assert_eq!(extractor.priority(), 50);
     }
 }

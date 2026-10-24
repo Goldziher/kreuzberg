@@ -2,6 +2,12 @@ version: "3"
 internal: true
 
 tasks:
+  format:context:
+    desc: "Resolve Dart package language versions before formatting generated output"
+    cmds:
+      - cd packages/dart && dart pub get
+      - cd e2e/dart && dart pub get --enforce-lockfile
+
   update:
     desc: "Update Dart dependencies within major versions (dart pub upgrade)"
     silent: false

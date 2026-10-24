@@ -18,12 +18,23 @@ enum Payload {
     MarkdownAndTable,
     TableOnly,
     ProseOnly,
+    MarkdownTableOnly,
+    MarkdownWithTrailingProse,
+    MarkdownWithUnmatchedTable,
+    MarkdownWithEmptyTableMarkdown,
 }
 
 impl Payload {
     fn text(self) -> String {
         match self {
-            Self::MarkdownAndTable => format!("{PROSE}\n\n{GFM}"),
+            Self::MarkdownAndTable | Self::MarkdownWithEmptyTableMarkdown => format!("{PROSE}\n\n{GFM}"),
+            Self::MarkdownTableOnly => GFM.to_owned(),
+            Self::MarkdownWithTrailingProse => {
+                format!("{PROSE}\n\n{GFM}\n\nThe unchanged final inventory note remains here.")
+            }
+            Self::MarkdownWithUnmatchedTable => {
+                format!("{PROSE}\n\n{GFM}\n\n| Other | Value |\n| --- | --- |\n| KEEPOTHER2144 | 29 |")
+            }
             Self::TableOnly => String::new(),
             Self::ProseAndTable | Self::ProseOnly => PROSE.to_owned(),
         }
@@ -35,7 +46,11 @@ impl Payload {
         }
         vec![Table {
             cells: expected_cells(),
-            markdown: GFM.to_owned(),
+            markdown: if self == Self::MarkdownWithEmptyTableMarkdown {
+                String::new()
+            } else {
+                GFM.to_owned()
+            },
             page_number: 1,
             ..Default::default()
         }]
@@ -91,7 +106,14 @@ impl OcrBackend for FixedBackend {
     }
 
     fn emits_structured_markdown(&self) -> bool {
-        self.payload == Payload::MarkdownAndTable
+        matches!(
+            self.payload,
+            Payload::MarkdownAndTable
+                | Payload::MarkdownTableOnly
+                | Payload::MarkdownWithTrailingProse
+                | Payload::MarkdownWithUnmatchedTable
+                | Payload::MarkdownWithEmptyTableMarkdown
+        )
     }
 }
 
@@ -184,7 +206,7 @@ fn assert_rendered_once(content: &str, payload: Payload) {
         "table body appears once: {content}"
     );
     assert_eq!(content.matches("READY2144").count(), 1);
-    let expected_prose_count = usize::from(payload != Payload::TableOnly);
+    let expected_prose_count = usize::from(!matches!(payload, Payload::TableOnly | Payload::MarkdownTableOnly));
     assert_eq!(content.matches(PROSE).count(), expected_prose_count);
     let lines: Vec<&str> = content.lines().collect();
     let body_index = lines
@@ -258,4 +280,57 @@ async fn should_preserve_text_when_standalone_image_pipeline_has_no_tables() {
     assert_eq!(pages[0].content.matches(PROSE).count(), 1);
     assert_eq!(result.content.matches("ITEM2144").count(), 0);
     assert_eq!(pages[0].content.matches("ITEM2144").count(), 0);
+}
+
+#[tokio::test]
+async fn should_render_table_once_when_the_legacy_markdown_transcript_is_table_only() {
+    let payload = Payload::MarkdownTableOnly;
+    assert_table_payload_and_rendering(run("ci-legacy-markdown-table-only", payload).await, payload);
+}
+
+#[tokio::test]
+async fn should_keep_both_prose_paragraphs_when_removing_the_duplicate_legacy_table() {
+    let payload = Payload::MarkdownWithTrailingProse;
+    let result = run("ci-legacy-markdown-table-prose", payload).await;
+    for content in [
+        &result.content,
+        &result.pages.as_ref().expect("page requested")[0].content,
+    ] {
+        assert_eq!(
+            content
+                .matches("The unchanged final inventory note remains here.")
+                .count(),
+            1
+        );
+        assert_eq!(content.matches(PROSE).count(), 1);
+        assert!(
+            content.find(PROSE).expect("first prose")
+                < content
+                    .find("The unchanged final inventory note remains here.")
+                    .expect("last prose")
+        );
+    }
+    assert_table_payload_and_rendering(result, payload);
+}
+
+#[tokio::test]
+async fn should_keep_unmatched_legacy_markdown_table_content() {
+    let payload = Payload::MarkdownWithUnmatchedTable;
+    let result = run("ci-legacy-markdown-unmatched-table", payload).await;
+    for content in [
+        &result.content,
+        &result.pages.as_ref().expect("page requested")[0].content,
+    ] {
+        assert_eq!(content.matches("KEEPOTHER2144").count(), 1);
+        assert_eq!(content.matches("Other").count(), 1);
+        assert_eq!(content.matches("Value").count(), 1);
+        assert_eq!(content.matches("29").count(), 1);
+    }
+    assert_table_payload_and_rendering(result, payload);
+}
+
+#[tokio::test]
+async fn should_render_table_cells_once_when_legacy_sidecar_has_no_markdown() {
+    let payload = Payload::MarkdownWithEmptyTableMarkdown;
+    assert_table_payload_and_rendering(run("ci-legacy-markdown-empty-sidecar", payload).await, payload);
 }

@@ -491,9 +491,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sigv4"
-version = "1.6.2"
+version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a3ccec0607ae3839cd76830df5ed62468ac1330acdb3dc4ec0502404113d2b6"
+checksum = "9d3d48355cb86b15ccbb38b8bc6b87500c824ee4ed8cbc10a961b435242b5e16"
 dependencies = [
  "aws-credential-types",
  "aws-smithy-http",
@@ -711,7 +711,7 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "benchmark-harness"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -923,18 +923,18 @@ dependencies = [
 
 [[package]]
 name = "bon"
-version = "3.10.2"
+version = "3.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "214f5df094ce551a10a30ffb9c70243d61f121a3d985a6495933e181dee6a7d2"
+checksum = "a05442cd7005532d0cfedec676b5b9333d2b4c7c3afabe2b1a9ce2742fbe2ee6"
 dependencies = [
  "bon-macros",
 ]
 
 [[package]]
 name = "bon-macros"
-version = "3.10.2"
+version = "3.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2706da6c749998cc555d04184909608956a69ad3f8ab1a076fbc867b4a3c3ce5"
+checksum = "93833e97ac7c46ba97045afcf247238c27057538fcf2f06344662ddd5f567be6"
 dependencies = [
  "darling 0.24.1",
  "ident_case",
@@ -1330,9 +1330,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "877bf67ac8e52449eb2f9e98a344ea163beb70dd1f9eebe3cc5357dcfeaee4df"
+checksum = "86e055fa6e3e40ad6187ba25b6855eeb635d5271f8e0f0e1e9a5826b8d75bea0"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -2124,9 +2124,9 @@ dependencies = [
 
 [[package]]
 name = "ctutils"
-version = "0.4.3"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03bb0e1cc970d482d121d9a1744999169b69a07470b3d644a7894e53fcaf4574"
+checksum = "38d28fb6aa7dd680b3ffd1a3e64e115c177bdba63c0ae7f9cd48129ff05c4fa0"
 dependencies = [
  "cmov",
 ]
@@ -5578,9 +5578,9 @@ dependencies = [
 
 [[package]]
 name = "minijinja"
-version = "3.0.2"
+version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0032a2738ba16d9a8822e4eb2833faeed5c41d767633ea753f33b6becd58cbfc"
+checksum = "90086695417a271bc96e6cb50618555614ca48fa3bb0d9aa96e3468b0f84431e"
 
 [[package]]
 name = "minimal-lexical"
@@ -6925,9 +6925,9 @@ dependencies = [
 
 [[package]]
 name = "psl"
-version = "2.1.244"
+version = "2.1.245"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc3ac0c25b0c40554a755e56dfe268855c53f391bbb7922a1c1fe59b73b163a9"
+checksum = "46cce9bc841c0eeb395275a775d11e3cc91b904e6ab370a9a42369e111b3038e"
 dependencies = [
  "psl-types",
 ]
@@ -7707,9 +7707,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "3.6.0"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceb42e9e47443cd83a834dea57b5816d35481417bae72ade5dc5615c59122e26"
+checksum = "ece64e19631fc38758181e637c15509a2c2709ee53bfde1e1d58f9dc991f919e"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -7740,9 +7740,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp-macros"
-version = "3.6.0"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f55ef2d84752d676d735604548fcb65811504e23330d85670b0eff5f8735144"
+checksum = "967fa7f7935d7d6217d593df0e8e5c9307bcaf256974a5a9ee64476c97735389"
 dependencies = [
  "darling 0.24.1",
  "proc-macro2",
@@ -10545,7 +10545,7 @@ dependencies = [
  "ureq-proto",
  "utf8-zero",
  "webpki-root-certs",
- "webpki-roots 1.0.10",
+ "webpki-roots 1.0.11",
 ]
 
 [[package]]
@@ -10652,9 +10652,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.28.0"
+version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc1186384beb7dd8eedea376413fd654937285ea6c9cfbb928dc3043ea4b606"
+checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -10931,9 +10931,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.10"
+version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58ec80e73fd8baf57bf0d9615554c75348bda990d6d5bbeab964dd068319fecb"
+checksum = "e49d0e65abc00c142e8f9428da991da9f1a250c39be97459901eb12b9b49f62a"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -10944,14 +10944,14 @@ version = "0.26.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
 dependencies = [
- "webpki-roots 1.0.10",
+ "webpki-roots 1.0.11",
 ]
 
 [[package]]
 name = "webpki-roots"
-version = "1.0.10"
+version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c1c8e20c8a38fc7d65abfe74eb7280e4aa667e8eec8bc84996d2874810748d9"
+checksum = "f5f280bbb2b287bc8e7de7e3852945a0ff50d1bbcb5ed42b6c7a568c546df171"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -11484,7 +11484,7 @@ dependencies = [
 
 [[package]]
 name = "xberg"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "aes-gcm",
  "ahash",
@@ -11547,7 +11547,7 @@ dependencies = [
  "memmap2",
  "mime",
  "mime_guess",
- "minijinja 3.0.2",
+ "minijinja 3.0.3",
  "model2vec-rs",
  "moka",
  "ndarray 0.17.2",
@@ -11635,7 +11635,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-candle-ocr"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "base64 0.23.1",
  "candle-core",
@@ -11655,7 +11655,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-cli"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "anstyle",
  "anyhow",
@@ -11678,7 +11678,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-dart"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "async-trait",
  "crawlberg",
@@ -11692,7 +11692,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-ffi"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -11709,7 +11709,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-gliner"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "candle-core",
  "candle-nn",
@@ -11732,7 +11732,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-jni"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -11746,7 +11746,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-libheif"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "cfg-if",
  "enumn",
@@ -11758,7 +11758,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-libwpd"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "cc",
  "flate2",
@@ -11771,7 +11771,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-native-pdf"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "aes",
  "base64 0.23.1",
@@ -11820,7 +11820,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-node"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "async-trait",
  "crawlberg",
@@ -11837,7 +11837,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-paddle-ocr"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "geo-clipper",
  "geo-types",
@@ -11853,7 +11853,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-pdfium-render"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "bindgen",
  "bitflags 2.13.2",
@@ -11871,7 +11871,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-php"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "async-trait",
  "crawlberg",
@@ -11886,7 +11886,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-py"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "async-trait",
  "crawlberg",
@@ -11902,7 +11902,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-swift"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -11920,7 +11920,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-tesseract"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "cc",
  "cmake",
@@ -11938,7 +11938,7 @@ dependencies = [
 
 [[package]]
 name = "xberg-wasm"
-version = "1.3.11"
+version = "1.4.0"
 dependencies = [
  "async-trait",
  "crawlberg",

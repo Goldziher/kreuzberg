@@ -21,39 +21,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **(url): Preserve Rust configuration compatibility by constraining Crawlberg to 1.11.1.**
-  The 1.12.0 release adds fields to configuration types exposed by Xberg, breaking existing exhaustive
-  struct construction and patterns. The compatible upgrade and libc pin removal remain pending.
 - **(pdf): Native font metrics retain their 16-bit glyph-count API with the updated font parser.**
   `TrueTypeFont::num_glyphs()` caps larger upstream counts at 65,535; width-table work stays bounded to that range.
   Font ascenders and descenders use normalized above/below-baseline signs.
 
 ### Security
 
+- **(integrations): File locking uses filelock 4.2.4 on Python 3.11 and later to protect lock-file ownership.**
+  Python 3.10 retains the affected 4.1.0 branch; benchmark environments with upstream caps remain affected.
+- **(integrations): LlamaIndex and txtai use setuptools 84.2.1 to reject invalid legacy-wheel namespace paths.**
+  Resolves GHSA-xmj3-9gf7-h52w without changing supported Python versions.
+- **(benchmarks): Bound pypdf parsing work for malformed PDF references and cross-reference tables.**
+  MinerU and Unstructured benchmark environments use pypdf 6.21.2 to resolve CVE-2026-115572, CVE-2026-115580
+  and CVE-2026-115585.
+- **(benchmarks): Update MinerU's Python Brotli decoder to fix an out-of-bounds write.**
+  Resolves CVE-2026-111497 (PYSEC-2026-4322) in the optional benchmark environment.
+- **(crypto): Restore constant-time masks and 32-bit `u128` comparisons with ctutils 0.4.5.**
+  Resolves RUSTSEC-2026-0385.
+- **(build): Root workspace installs reject registry metadata naming a different package.**
+  pnpm 12.15.0 keeps install-script permissions tied to the requested dependency.
 - **(pdf): Bound font lookup preprocessing and reject malformed lookup types.**
   Extended glyph IDs stay intact through rendering and diagnostics, preventing unrelated glyphs from being painted.
   The public 16-bit glyph-count API remains compatible.
 - **(integrations): CrewAI and LlamaIndex use Pillow 13.0.0 on Python 3.11 and later for image security fixes.**
-  Python 3.10 retains Pillow 12.3.0; other branches with upstream caps remain affected.
-- **(integrations): Development environments use virtualenv 21.14.12 to prevent shell expansion in generated launchers.**
-  Resolves CVE-2026-113722; recreate existing environments to replace vulnerable launchers.
+  Python 3.10 retains the affected Pillow 12.3.0; other branches with upstream caps also remain affected.
+- **(integrations): Development environments use virtualenv 21.14.13 to prevent launcher and Bash prompt expansion.**
+  Resolves CVE-2026-113722 and CVE-2026-115586; recreate existing environments to replace generated scripts.
 - **(runtime): Async timers avoid a data race and use-after-free by updating Tokio to 1.54.1.**
   Replaces the yanked 1.54.0 release across all Rust dependency graphs.
 - **(benchmarks): Compatible Python benchmark groups use Pillow 13.0.0 for its image-decoder security fixes.**
-  Docling dependencies and MinerU's Gradio dependency retain Pillow 12.3.0 under published upper bounds.
+  MinerU's Gradio dependency retains Pillow 12.3.0 under its published upper bound.
 - **(llama-index): The standalone node-parser lock uses NLTK 3.10.4 with guarded model-file access.**
 - **(tls): Reject distrusted emSign certificate intermediates by updating rustls-webpki to 0.103.16.**
   Resolves RUSTSEC-2026-0382.
+  Bundled WebPKI trust stores also omit the emSign C1 and C3 root certificates.
 - **(excel): ZIP-backed spreadsheets reject mismatched local headers, duplicate member names, and overlapping entries.**
   Archive count, size, and compression-ratio limits are checked before header validation or payload reads.
 
 ### Fixed
 
+- **(markdown): Keep bracketed link labels and image alt text in their original sentence position in plain output.**
+  Link and image destinations remain available as URI metadata, and embedded image bytes are retained.
+  Empty image labels no longer leave a doubled word gap. (#2233, #2235)
+
+- **(mathml): Write `^` and `~` from math text as `\hat{}` and `\sim`.**
+  A `^` or `~` in element text reached the LaTeX raw, where TeX reads them as a superscript and a space, so
+  `<msup><mi>x</mi><mo>^</mo></msup>` gave `x^{^}`, which does not parse. They are now escaped where math text is
+  written, which covers DOCX equations too, since they share that escape.
+- **(mathml): Drop invisible operators from the LaTeX.**
+  Function application, invisible times, separator and plus (U+2061 to U+2064) were copied into the LaTeX, which TeX
+  engines reject. They are now spaces in math and dropped from `mtext` and `ms`, and an `mfenced` that holds one groups
+  its children without separators. `mfenced` open and close attributes are trimmed, and private-use characters are
+  stripped from direct text as they already were from element text.
+- **(mathml): Convert `mmultiscripts`.**
+  The element had no conversion, so its scripts ran into the base and a carbon-14 isotope read `C614`. Pre- and
+  post-scripts are now written as `{}_{6}^{14}C` and `R_{i}{}^{j}`.
+- **(mathml): Write limits on big operators and limit-taking names as `_{...}^{...}`.**
+  `munder`, `mover` and `munderover` always stacked, so a sum read `\overset{n}{\underset{i=1}{\sum }}` and `lim` read
+  `\underset{n}{lim}`. They now read `\sum_{i=1}^{n}` and `\lim_{n}`, integrals take `\limits`, and an operator with
+  `movablelimits="false"` keeps its limits stacked. `munderover` now applies accent scripts as `munder` and `mover`
+  already did, an `accent` or `accentunder` of `false` (on the element or its script's `mo`) keeps a script a visible
+  script, a `semantics` wrapper no longer hides `movablelimits="false"`, and content MathML names such as `arg` and
+  `coth` read `\arg` and `\coth`. An overbar or arrow accent no longer renders its base twice, which made nested
+  accents cost 2^depth.
+- **(pdf): A missing table structure model no longer drops the document's structure.**
+  When layout detection found a table and the configured table model (TATR or SLANeXT) could not be loaded, the
+  extraction fell back to plain text, without its layout-detected tables, headings or layout regions, and with no
+  warning. The structure is now kept, table regions are read without the model, and a `pdf_tables` processing
+  warning names it.
+- **(ocr): `ocr.backend = "vlm"` works on mixed PDFs with layout detection on.**
+  Every page the mixed route OCR'd failed with "VLM OCR requires vlm_config to be set", because the one-stage pipeline
+  built for layout dropped the OCR config's `vlm_config`.
+- **(pdf): Crop VLM regions from the detected pixel box.**
+  The crop was cut from the layout hint's PDF-point box read as pixels, so at the default 150 dpi the region came out
+  at about half its size and shifted down the page: one at the top of a Letter page was cut from below the middle. It
+  is now cut from the pixel-space layout detection the hint was converted from.
+- **(pdf): Give a VLM region on a page with no text layer its own page break.**
+  A region answer for a scanned page with no elements was spliced next to a neighbouring page's content with no
+  break between them, so page markers placed it, or the content after it, on the wrong page.
+- **(pdf): Recognise formulas on scanned pages that Tesseract OCRs page by page.**
+  In builds with PaddleOCR, a default Tesseract config with `layout.formula_model` set took the per-page pipeline
+  branch, which returned before formula recognition, so scanned pages produced no LaTeX.
+- **(layout): Run markdown layout detection on the page's CropBox only.**
+  Pages went to the layout model at their full MediaBox, so bleed, trim and registration marks outside a smaller
+  CropBox shrank the page the model saw. Inference now runs on the CropBox and the detections are shifted back into
+  the page raster. Rotated pages and the OCR layout pass are unchanged.
+- **(pdf): Formula and VLM region recognition keep their rasters when the layout gate skips a page.**
+  With the auto layout strategy, a page the gate skipped made the markdown layout rasters unusable for OCR, and they
+  were dropped for the whole document, so formula recognition and VLM regions did nothing on the pages that did run
+  layout. The native path now keeps them when a formula model or VLM regions are configured; a document with any
+  rotated page still drops them.
+- **(toml): Print a date or time as its TOML text instead of under a `$__toml_private_datetime` key.**
+  The TOML value went through `serde_json::to_value`, which turned every datetime into
+  `{"$__toml_private_datetime": "2025-02-05"}`, so the text read `created_date` and then
+  `$__toml_private_datetime: 2025-02-05`. It now reads `created_date: 2025-02-05`.
+- **(images): Render legacy OCR Markdown tables once when the backend also returns structured tables.**
+  Standalone image pipelines preserve the surrounding prose and structured OCR documents.
+- **(latex): Attach `\ref` and `\cite` relationships to the paragraph that holds them.**
+  Each reference was pushed as an extra paragraph of its own, `[key]`, so the text showed `[sec:a]` and `[knuth]` as
+  separate paragraphs ahead of the sentence that cites them. The relationships now start at that sentence's paragraph
+  (or display formula), or at the footnote that holds the reference, as the reStructuredText and Org extractors
+  attach theirs.
+- **(latex): Print accent commands, letter commands and control spaces as the characters they stand for.**
+  `Schr\"odinger`, `\'Ecole` and `Garc\'\i a` kept their backslash, with `\'` turned into a curly quote, and `\ss` and
+  `\o` were dropped, in paragraphs, headings and list items alike. They now read Schrödinger, École, García, ß and ø,
+  a group such as `Schr{\"o}dinger` prints without its braces, and `Mr.\ Smith` reads `Mr. Smith`.
+- **(archive): Extract the other members of a ZIP archive that holds an encrypted member.**
+  The ZIP reader refuses to open a member that needs a password, and that error failed the whole archive. The
+  encrypted member is now listed, skipped and named in the archive warning, like a member that fails its CRC check.
+- **(markup): Read Markdown, Djot, MDX, Org, reStructuredText, Typst, RTF, DocTags and Jupyter documents that start with a UTF-8 byte order mark.**
+  The mark stayed in front of the first line, so a leading heading came out as a paragraph with its `#`, `*` or `=`
+  marker, the mark leaked into the text, and a notebook failed with a JSON parse error. It is now skipped, as the
+  plain text, CSV and AsciiDoc extractors already did.
 - **(jupyter): Drop ANSI escape codes from the plain text of `execute_result` and `display_data` outputs.**
   A kernel that colours its `text/plain`, such as IJulia for a `DataFrame`, left `\x1b[1m` and `\x1b[0m` in the
   text. These outputs now get the same terminal handling as stream and error outputs.
 - **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
   Their libc selections match Crawlberg 1.11.1's published iOS constraint.
+- **(excel): Round float cells to Excel's 15 significant digits when the result stays finite.**
+  A formula result carried the binary noise of its double into the output, so `=0.1+0.2` read `0.30000000000000004`
+  and `=100*1.19` read `118.99999999999999` where Excel shows `0.3` and `119`.
+  Finite boundary values retain their original representation when rounding would overflow.
 - **(structured): Parse JSON, JSON Lines, YAML and GeoJSON documents that start with a UTF-8 byte order mark.**
   `serde_json` and the YAML parser rejected the mark, so these documents fell back to plain text with a
   `parse-fallback` warning. The mark is now skipped before parsing; TOML already accepted it.
@@ -119,8 +207,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(ppt): Speaker notes are referenced from their own slides in rendered Markdown.** (#2186)
 - **(ios): Native libraries link with bundled ONNX Runtime’s CoreML backend.**
   Device and simulator builds include the matching Apple compiler availability runtime.
-- **(html): Whitespace-only inline formatting and blank Word-exported HTML paragraphs no longer panic.**
-  Surrounding paragraph content is preserved. (#2182)
+- **(html): Extract whitespace-only formatted paragraphs and headings without panicking.**
+  Blank lines in Word-exported HTML no longer abort Markdown extraction; surrounding paragraphs are preserved. (#2182)
 - **(markdown): Keep the text of a list item before the code blocks, tables, headings and formulas inside it.**
   The item's text was emitted at the end of the item, after any such block it holds, so an install step such as
   `1. Install:` followed by a fenced code block came out with the code first.
@@ -182,6 +270,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(ocr): Table reconstruction keeps columns that sit close together.**
   A repeated column edge less than about one space width from its neighbour is no longer merged into the neighbouring cell. (#2140)
 - **(images): TIFF pixel density (`XResolution`, `YResolution`, `ResolutionUnit`) is used as the source DPI instead of assuming 72.** (#2143)
+- **(ocr): Preserve ordered text and explicit HTML raw blocks returned by custom OCR backends.**
+  Single-backend and pipeline image/PDF handoffs retain flat structured contributions, source-image references
+  and PDF box coordinates. Unsupported nested nodes and backend asset/derived-output payloads fail explicitly
+  instead of being flattened or discarded.
 - **(ocr): The standalone image OCR pipeline keeps the tables it returns.**
   Tables embedded as GFM in a backend's text are rendered once. (#2144)
 - **(ocr): PaddleOCR, layout detection, and GLiNER share one ONNX Runtime environment.**

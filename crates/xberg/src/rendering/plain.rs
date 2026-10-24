@@ -33,7 +33,12 @@ pub(crate) fn render_plain(doc: &InternalDocument) -> String {
             continue;
         }
         render_element_plain(doc, elem, &mut out, &mut last_heading_depth);
-        after_text_block = !elem.text.is_empty()
+        let plain_text = elem
+            .attributes
+            .as_ref()
+            .and_then(|attributes| attributes.get(crate::types::internal::MARKDOWN_PLAIN_TEXT_ATTRIBUTE))
+            .unwrap_or(&elem.text);
+        after_text_block = !plain_text.is_empty()
             && matches!(
                 elem.kind,
                 ElementKind::Title
@@ -64,6 +69,25 @@ fn render_element_plain(
     out: &mut String,
     heading_depth: &mut Option<u16>,
 ) {
+    let attributes = elem.attributes.as_ref();
+    if attributes
+        .is_some_and(|attributes| attributes.contains_key(crate::types::internal::MARKDOWN_IMAGE_REFERENCE_ATTRIBUTE))
+    {
+        if let ElementKind::Image { image_index } = elem.kind
+            && let Some(text) = image_ocr_text(doc, elem, image_index)
+        {
+            append_block_plain(text, out);
+        }
+        return;
+    }
+    let projected = attributes
+        .and_then(|attributes| attributes.get(crate::types::internal::MARKDOWN_PLAIN_TEXT_ATTRIBUTE))
+        .map(|text| {
+            let mut projected = elem.clone();
+            projected.text.clone_from(text);
+            projected
+        });
+    let elem = projected.as_ref().unwrap_or(elem);
     match elem.kind {
         ElementKind::Title | ElementKind::Heading { .. } | ElementKind::Paragraph => {
             render_text_plain(elem, out, heading_depth)
@@ -450,6 +474,35 @@ mod tests {
         assert_eq!(
             out.trim_end(),
             "[Image: A nice photo]\n\nCrate 17 holds forty blue lanterns"
+        );
+    }
+
+    #[test]
+    fn should_keep_ocr_text_when_an_inline_markdown_image_placeholder_is_hidden() {
+        let mut builder = InternalDocumentBuilder::new("markdown");
+        let image = crate::types::ExtractedImage {
+            description: Some("Logo".to_string()),
+            ocr_result: Some(Box::new(crate::types::ExtractedDocument {
+                content: "Crate 17 holds forty blue lanterns".to_string(),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        let image_index = builder.push_image(Some("Logo"), image, None, None);
+        builder.merge_attribute(
+            image_index,
+            crate::types::internal::MARKDOWN_IMAGE_REFERENCE_ATTRIBUTE,
+            "true",
+        );
+        let paragraph = builder.push_paragraph("alpha  omega", vec![], None, None);
+        builder.merge_attribute(
+            paragraph,
+            crate::types::internal::MARKDOWN_PLAIN_TEXT_ATTRIBUTE,
+            "alpha Logo omega",
+        );
+        assert_eq!(
+            render_plain(&builder.build()),
+            "Crate 17 holds forty blue lanterns\n\nalpha Logo omega"
         );
     }
 

@@ -242,7 +242,7 @@ impl InternalDocumentExtractor for MdxExtractor {
         config: &ExtractionConfig,
     ) -> Result<InternalDocument> {
         let _ = config;
-        let text = String::from_utf8_lossy(content).into_owned();
+        let text = crate::utils::strip_bom(&String::from_utf8_lossy(content)).to_owned();
 
         let (yaml, remaining_content, frontmatter_warning) = extract_frontmatter_with_warning(&text);
 

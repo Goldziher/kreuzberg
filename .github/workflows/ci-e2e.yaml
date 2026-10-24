@@ -190,7 +190,7 @@ jobs:
             # packages/dart's freezed ^4.0.1 resolves to freezed >=4.0.0, which
             # needs SDK >=3.13.0; pub version-solving fails before any test runs
             # otherwise. The floor moves with whichever freezed pub picks. ~keep
-            dart-version: "3.13"
+            dart-version: "3.13.7"
             runs-on: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - lang: kotlin-android
