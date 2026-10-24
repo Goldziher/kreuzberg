@@ -435,3 +435,24 @@ fn should_round_trip_relationship_targets() {
     assert_eq!(restored.relationships[0].kind, RelationshipKind::CrossReference);
     assert_eq!(restored.relationships[1].kind, RelationshipKind::FootnoteReference);
 }
+
+#[test]
+fn should_hide_markdown_plain_projection_attributes_and_preserve_user_attributes() {
+    let mut element = InternalElement::text(ElementKind::Paragraph, "alpha omega", 0);
+    element.attributes = Some(AHashMap::from_iter([
+        (
+            MARKDOWN_PLAIN_TEXT_ATTRIBUTE.to_string(),
+            "alpha Logo omega".to_string(),
+        ),
+        (MARKDOWN_IMAGE_REFERENCE_ATTRIBUTE.to_string(), "true".to_string()),
+        ("class".to_string(), "retained".to_string()),
+    ]));
+    assert_eq!(element.attributes.as_ref().expect("attributes were set").len(), 3);
+    assert_eq!(
+        element.public_attributes(),
+        Some(std::collections::HashMap::from_iter([(
+            "class".to_string(),
+            "retained".to_string()
+        )]))
+    );
+}

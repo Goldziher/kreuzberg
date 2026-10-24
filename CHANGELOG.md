@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(markdown): Keep bracketed link labels and image alt text in their original sentence position in plain output.**
+  Link and image destinations remain available as URI metadata, and embedded image bytes are retained.
+  Empty image labels no longer leave a doubled word gap. (#2233, #2235)
+
 - **(mathml): Write `^` and `~` from math text as `\hat{}` and `\sim`.**
   A `^` or `~` in element text reached the LaTeX raw, where TeX reads them as a superscript and a space, so
   `<msup><mi>x</mi><mo>^</mo></msup>` gave `x^{^}`, which does not parse. They are now escaped where math text is
