@@ -19,6 +19,10 @@ mod cache_policy;
 pub(super) use cache_policy::resolve_ocr_config;
 
 mod document;
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+mod markdown;
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+pub(crate) use markdown::strip_embedded_gfm_tables;
 mod pipeline;
 mod plausibility;
 mod rendering;
@@ -97,3 +101,6 @@ mod plausibility_tests;
 mod recognition_noise_tests;
 #[cfg(all(test, feature = "ocr"))]
 mod tests;
+
+#[cfg(all(test, feature = "tokio-runtime", any(feature = "ocr", feature = "ocr-pipeline")))]
+mod raw_transcript_tests;

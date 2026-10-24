@@ -50,6 +50,7 @@ jobs:
 
       - uses: dart-lang/setup-dart@v1
 
-      - uses: xberg-io/actions/publish-pub@a25ae95253ee755ac5f691f7e1053dcb104cdee7 # v1.8.146
+      - uses: xberg-io/actions/publish-pub@793d3a4d37a17009d91cce29f2825eda570d2abd # v1.27.1
         with:
           package-dir: packages/dart
+          expected-version: ${{ github.ref_name }}

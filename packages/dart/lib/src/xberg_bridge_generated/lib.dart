@@ -18278,11 +18278,9 @@ class StructuredDataResult {
   /// JSON paths of fields that were classified as text-bearing.
   final List<String> textFields;
 
-  /// The parsed document as a canonical `serde_json::Value` tree, when the
-  /// source format could be represented as one. `None` only for TOML inputs
-  /// whose `toml::Value` fails to round-trip through `serde_json::Value`
-  /// (xberg-io/xberg#155): the extractor falls back to a raw code block in
-  /// that case.
+  /// The parsed document as a canonical `serde_json::Value` tree.
+  /// Successful parsing stores `Some`; TOML dates and times are represented
+  /// as their canonical TOML text strings.
   final String? value;
 
   /// Flattened `path: value` renderings for every leaf field, in traversal

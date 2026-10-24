@@ -164,6 +164,37 @@ fn test_run_plain_text() {
 }
 
 #[test]
+fn should_escape_literal_caret_and_tilde_in_math_run() {
+    let latex = omml_to_latex(r#"<m:r><m:t>x^2~y</m:t></m:r>"#);
+    assert_eq!(latex, r"x\hat{}2\sim y");
+}
+
+#[test]
+fn should_escape_entity_decoded_caret_and_tilde_once() {
+    let latex = omml_to_latex(r#"<m:r><m:t>&#94;&#126;_&amp;</m:t></m:r>"#);
+    assert_eq!(latex, r"\hat{}\sim \_\&");
+}
+
+#[test]
+fn should_keep_structural_superscripts_and_accents_when_escaping_run_text() {
+    let latex = omml_to_latex(
+        r#"<m:sSup>
+                <m:e><m:r><m:t>x</m:t></m:r></m:e>
+                <m:sup><m:r><m:t>2</m:t></m:r></m:sup>
+            </m:sSup>
+            <m:acc>
+                <m:accPr><m:chr m:val="^"/></m:accPr>
+                <m:e><m:r><m:t>y</m:t></m:r></m:e>
+            </m:acc>
+            <m:acc>
+                <m:accPr><m:chr m:val="~"/></m:accPr>
+                <m:e><m:r><m:t>z</m:t></m:r></m:e>
+            </m:acc>"#,
+    );
+    assert_eq!(latex, r"x^{2}\hat{y}\tilde{z}");
+}
+
+#[test]
 fn test_run_unicode_pi() {
     let latex = omml_to_latex("<m:r><m:t>\u{03C0}</m:t></m:r>");
     assert_eq!(latex, "\\pi ");

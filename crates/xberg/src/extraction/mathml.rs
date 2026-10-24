@@ -65,15 +65,31 @@ enum MmlNode {
         sep: String,
         elements: Vec<MmlNode>,
     },
-    /// Underscript: `\underset{under}{base}`.
-    Under { base: Box<MmlNode>, under: Box<MmlNode> },
-    /// Overscript: `\overset{over}{base}`.
-    Over { base: Box<MmlNode>, over: Box<MmlNode> },
-    /// Under+overscript: `\overset{over}{\underset{under}{base}}`.
+    /// Underscript: an under-accent (`\underline{base}`), a limit (`\lim_{under}`), or
+    /// `\underset{under}{base}`. `stacked` is set when the base operator has `movablelimits="false"`, and
+    /// `no_accentunder` when `accentunder` resolves to false, which keeps an accent-like script a script.
+    Under {
+        base: Box<MmlNode>,
+        under: Box<MmlNode>,
+        stacked: bool,
+        no_accentunder: bool,
+    },
+    /// Overscript: an accent (`\hat{base}`), a limit (`\sum^{over}`), or `\overset{over}{base}`.
+    /// `no_accent` is set when `accent` resolves to false.
+    Over {
+        base: Box<MmlNode>,
+        over: Box<MmlNode>,
+        stacked: bool,
+        no_accent: bool,
+    },
+    /// Under+overscript: limits (`\sum_{under}^{over}`) or `\overset{over}{\underset{under}{base}}`.
     UnderOver {
         base: Box<MmlNode>,
         under: Box<MmlNode>,
         over: Box<MmlNode>,
+        stacked: bool,
+        no_accent: bool,
+        no_accentunder: bool,
     },
     /// Phantom (invisible but space-occupying): `\phantom{body}`.
     Phantom { body: Box<MmlNode> },
@@ -142,7 +158,7 @@ fn collect_children(parent: Node, budget: &mut SecurityBudget) -> Result<Vec<Mml
             if !text.trim().is_empty() {
                 budget.check_entity(text)?;
                 budget.account_text(text.len())?;
-                nodes.push(MmlNode::Run(text.to_string()));
+                nodes.push(MmlNode::Run(clean_text(text, false)));
             }
         }
     }
@@ -157,6 +173,68 @@ fn collect_nth_child(parent: Node, index: usize, budget: &mut SecurityBudget) ->
         Some(child) => collect_node(child, budget),
         None => Ok(MmlNode::Group { children: Vec::new() }),
     }
+}
+
+/// The value of a boolean attribute, or `None` when it is absent or neither `true` nor `false`.
+fn boolean_attribute(node: Node, name: &str) -> Option<bool> {
+    let value = node.attribute(name)?.trim();
+    if value.eq_ignore_ascii_case("true") {
+        Some(true)
+    } else if value.eq_ignore_ascii_case("false") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// Report whether an under/over element turns off the accent of its script at `script_index`. Its own `attr`
+/// (`accent` or `accentunder`) decides when given, else the `accent` of the script's core `mo` (MathML 3
+/// sections 3.4.4.2, 3.4.5.2, 3.4.6.2). Left to neither, the script-character heuristic stands in for the operator
+/// dictionary, so an explicit `true` changes nothing.
+fn accent_disabled(node: Node, attr: &str, script_index: usize) -> bool {
+    let resolved = boolean_attribute(node, attr).or_else(|| {
+        let script = node.children().filter(|c| c.is_element()).nth(script_index)?;
+        boolean_attribute(core_mo(script)?, "accent")
+    });
+    resolved == Some(false)
+}
+
+/// Report whether the base of an under/over element is an `mo` with `movablelimits="false"`.
+fn base_limits_unmovable(node: Node) -> bool {
+    let base = node.children().find(|c| c.is_element());
+    base.and_then(core_mo)
+        .and_then(|mo| boolean_attribute(mo, "movablelimits"))
+        == Some(false)
+}
+
+/// The `mo` at the core of `element`, looking through single-child grouping and a `semantics` with one
+/// presentation child, as the collector and renderer do.
+fn core_mo<'a, 'input>(element: Node<'a, 'input>) -> Option<Node<'a, 'input>> {
+    let mut current = element;
+    loop {
+        let tag = current.tag_name().name();
+        if tag.eq_ignore_ascii_case("mo") {
+            return Some(current);
+        }
+        let semantics = tag.eq_ignore_ascii_case("semantics");
+        if !semantics && !TRANSPARENT_ELEMENTS.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
+            return None;
+        }
+        let mut children = current
+            .children()
+            .filter(|c| c.is_element() && !(semantics && is_annotation(*c)));
+        current = match (children.next(), children.next()) {
+            (Some(only), None) => only,
+            _ => return None,
+        };
+    }
+}
+
+/// Report whether `node` is an `annotation` or `annotation-xml` element.
+fn is_annotation(node: Node) -> bool {
+    ANNOTATION_ELEMENTS
+        .iter()
+        .any(|&s| s.eq_ignore_ascii_case(node.tag_name().name()))
 }
 
 /// Collect a single MathML element into an `MmlNode`, dispatching on tag name.
@@ -191,7 +269,7 @@ fn tex_annotation(node: Node, budget: &mut SecurityBudget) -> Result<Option<Stri
         {
             continue;
         }
-        let text = collect_text(child, budget)?;
+        let text = collect_text(child, budget, false)?;
         let latex = strip_style_wrapper(crate::extraction::derive::strip_math_delimiters(text.trim()));
         if !latex.is_empty() {
             return Ok(Some(latex.to_string()));
@@ -278,29 +356,6 @@ const INFIX_OPERATORS: &[(&str, &str)] = &[
     ("compose", " \\circ "),
 ];
 
-/// Content MathML operators that render as a named LaTeX function.
-const FUNCTION_OPERATORS: &[(&str, &str)] = &[
-    ("sin", "\\sin"),
-    ("cos", "\\cos"),
-    ("tan", "\\tan"),
-    ("sec", "\\sec"),
-    ("csc", "\\csc"),
-    ("cot", "\\cot"),
-    ("arcsin", "\\arcsin"),
-    ("arccos", "\\arccos"),
-    ("arctan", "\\arctan"),
-    ("sinh", "\\sinh"),
-    ("cosh", "\\cosh"),
-    ("tanh", "\\tanh"),
-    ("exp", "\\exp"),
-    ("ln", "\\ln"),
-    ("log", "\\log"),
-    ("det", "\\det"),
-    ("gcd", "\\gcd"),
-    ("max", "\\max"),
-    ("min", "\\min"),
-];
-
 /// Convert a content-MathML `apply` subtree to LaTeX.
 ///
 /// Content MathML states what a formula *means* (`<apply><plus/><ci>a</ci>…`)
@@ -341,7 +396,7 @@ fn convert_apply(node: Node, budget: &mut SecurityBudget) -> Result<String, Secu
         }
         return Ok(rendered.join(latex));
     }
-    if let Some((_, latex)) = FUNCTION_OPERATORS.iter().find(|(op, _)| *op == name) {
+    if let Some((latex, _)) = crate::extraction::math_symbols::operator_name_to_latex(&name) {
         return Ok(format!("{latex}\\left({}\\right)", rendered.join(", ")));
     }
 
@@ -440,7 +495,7 @@ fn convert_content_node(node: Node, budget: &mut SecurityBudget) -> Result<Strin
     match node.tag_name().name().to_ascii_lowercase().as_str() {
         "apply" => convert_apply(node, budget),
         "ci" | "cn" | "csymbol" => {
-            let text = collect_text(node, budget)?;
+            let text = collect_text(node, budget, false)?;
             let mut out = String::new();
             crate::extraction::math_symbols::render_run_text(text.trim(), &mut out);
             Ok(out)
@@ -504,7 +559,7 @@ fn convert_content_node(node: Node, budget: &mut SecurityBudget) -> Result<Strin
             "false" => Ok("\\text{false}".to_string()),
             "emptyset" => Ok("\\emptyset".to_string()),
             _ => {
-                let text = collect_text(node, budget)?;
+                let text = collect_text(node, budget, false)?;
                 Ok(text.trim().to_string())
             }
         },
@@ -512,16 +567,15 @@ fn convert_content_node(node: Node, budget: &mut SecurityBudget) -> Result<Strin
 }
 
 fn collect_node_inner(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, SecurityError> {
-    let tag = node.tag_name().name();
-
-    if ANNOTATION_ELEMENTS.iter().any(|&s| s.eq_ignore_ascii_case(tag)) {
+    if is_annotation(node) {
         return Ok(MmlNode::Group { children: Vec::new() });
     }
 
-    let tag_lower = tag.to_ascii_lowercase();
+    let tag_lower = node.tag_name().name().to_ascii_lowercase();
     match tag_lower.as_str() {
-        "mi" | "mn" | "ms" | "mo" => Ok(MmlNode::Run(collect_text(node, budget)?)),
-        "mtext" => Ok(MmlNode::Text(collect_text(node, budget)?)),
+        "mi" | "mn" | "mo" => Ok(MmlNode::Run(collect_text(node, budget, false)?)),
+        "ms" => Ok(MmlNode::Run(collect_text(node, budget, true)?)),
+        "mtext" => Ok(MmlNode::Text(collect_text(node, budget, true)?)),
         "mspace" => Ok(MmlNode::Space),
         // Content MathML states meaning rather than layout, so it converts by
         // operator. It appears as a `math` child in content documents and inside
@@ -535,6 +589,7 @@ fn collect_node_inner(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode
         }),
         "mfrac" | "msup" | "msub" | "msubsup" | "msqrt" | "mroot" | "mfenced" | "munder" | "mover" | "munderover"
         | "mphantom" | "mtable" => collect_scripted_node(&tag_lower, node, budget),
+        "mmultiscripts" => collect_multiscripts(node, budget),
         _ => Ok(MmlNode::Group {
             children: collect_children(node, budget)?,
         }),
@@ -551,12 +606,7 @@ fn collect_semantics_node(node: Node, budget: &mut SecurityBudget) -> Result<Mml
     }
     let children = node
         .children()
-        .filter(|c| {
-            c.is_element()
-                && !ANNOTATION_ELEMENTS
-                    .iter()
-                    .any(|&s| s.eq_ignore_ascii_case(c.tag_name().name()))
-        })
+        .filter(|c| c.is_element() && !is_annotation(*c))
         .map(|c| collect_node(c, budget))
         .collect::<Result<Vec<_>, _>>()?;
     // A document may carry only the content branch, in which case the
@@ -605,15 +655,22 @@ fn collect_scripted_node(tag: &str, node: Node, budget: &mut SecurityBudget) -> 
         "munder" => Ok(MmlNode::Under {
             base: Box::new(collect_nth_child(node, 0, budget)?),
             under: Box::new(collect_nth_child(node, 1, budget)?),
+            stacked: base_limits_unmovable(node),
+            no_accentunder: accent_disabled(node, "accentunder", 1),
         }),
         "mover" => Ok(MmlNode::Over {
             base: Box::new(collect_nth_child(node, 0, budget)?),
             over: Box::new(collect_nth_child(node, 1, budget)?),
+            stacked: base_limits_unmovable(node),
+            no_accent: accent_disabled(node, "accent", 1),
         }),
         "munderover" => Ok(MmlNode::UnderOver {
             base: Box::new(collect_nth_child(node, 0, budget)?),
             under: Box::new(collect_nth_child(node, 1, budget)?),
             over: Box::new(collect_nth_child(node, 2, budget)?),
+            stacked: base_limits_unmovable(node),
+            no_accent: accent_disabled(node, "accent", 2),
+            no_accentunder: accent_disabled(node, "accentunder", 1),
         }),
         "mphantom" => Ok(MmlNode::Phantom {
             body: Box::new(MmlNode::Group {
@@ -629,8 +686,83 @@ fn collect_scripted_node(tag: &str, node: Node, budget: &mut SecurityBudget) -> 
     }
 }
 
+/// Collect an `mmultiscripts` element: a base, then sub/sup pairs after it and, past `mprescripts`, before
+/// it. Each pair becomes plain scripts, a prescript on an empty base (`{}_{6}^{14}C`), which is how LaTeX
+/// writes one. A `none` script is left out.
+fn collect_multiscripts(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, SecurityError> {
+    let mut elements = node.children().filter(|c| c.is_element());
+    let mut base = elements.next().map(|first| collect_node(first, budget)).transpose()?;
+    let (mut post, mut pre) = (Vec::new(), Vec::new());
+    let mut in_prescripts = false;
+    for child in elements {
+        budget.step()?;
+        let tag = child.tag_name().name();
+        if tag.eq_ignore_ascii_case("mprescripts") {
+            in_prescripts = true;
+            continue;
+        }
+        // A script that renders to nothing sets nothing either, and kept it would write `R_{i}^{}`.
+        let script = if tag.eq_ignore_ascii_case("none") {
+            None
+        } else {
+            Some(collect_node(child, budget)?).filter(|n| !is_blank_script(n))
+        };
+        if in_prescripts {
+            pre.push(script);
+        } else {
+            post.push(script);
+        }
+    }
+
+    let empty = || MmlNode::Group { children: Vec::new() };
+    let mut children = Vec::new();
+    let mut pre = pre.into_iter();
+    while let Some(sub) = pre.next() {
+        children.push(scripted(empty(), sub, pre.next().flatten()));
+    }
+    let mut post = post.into_iter();
+    while let Some(sub) = post.next() {
+        children.push(scripted(base.take().unwrap_or_else(empty), sub, post.next().flatten()));
+    }
+    children.extend(base);
+    Ok(MmlNode::Group { children })
+}
+
+/// Report whether an `mmultiscripts` script renders to nothing. A blank `mtext` is kept, since `\text{ }` shows.
+fn is_blank_script(node: &MmlNode) -> bool {
+    match node {
+        MmlNode::Run(text) => text.trim().is_empty(),
+        MmlNode::Text(text) => text.is_empty(),
+        MmlNode::Group { children } => children.iter().all(is_blank_script),
+        _ => false,
+    }
+}
+
+/// `base` with the sub and sup of one `mmultiscripts` pair attached, skipping an absent one.
+fn scripted(base: MmlNode, sub: Option<MmlNode>, sup: Option<MmlNode>) -> MmlNode {
+    let base = Box::new(base);
+    match (sub, sup) {
+        (Some(sub), Some(sup)) => MmlNode::SubSup {
+            base,
+            sub: Box::new(sub),
+            sup: Box::new(sup),
+        },
+        (Some(sub), None) => MmlNode::Sub {
+            base,
+            sub: Box::new(sub),
+        },
+        (None, Some(sup)) => MmlNode::Sup {
+            base,
+            sup: Box::new(sup),
+        },
+        (None, None) => *base,
+    }
+}
+
 /// Collect the direct text content of a leaf element (`mi`/`mn`/`mo`/`ms`/`mtext`).
-fn collect_text(node: Node, budget: &mut SecurityBudget) -> Result<String, SecurityError> {
+///
+/// `text_mode` is set for the string content of `ms` and `mtext`; see [`clean_text`].
+fn collect_text(node: Node, budget: &mut SecurityBudget, text_mode: bool) -> Result<String, SecurityError> {
     let mut text = String::new();
     // Only real text nodes — `Node::text()` also returns content for comment
     // nodes, and MathML fixtures commonly annotate entities with a comment
@@ -639,10 +771,29 @@ fn collect_text(node: Node, budget: &mut SecurityBudget) -> Result<String, Secur
         if let Some(t) = child.text() {
             budget.check_entity(t)?;
             budget.account_text(t.len())?;
-            text.extend(t.chars().filter(|c| !is_private_use(*c)));
+            text.push_str(&clean_text(t, text_mode));
         }
     }
     Ok(text)
+}
+
+/// Element text with private use characters removed and invisible operators turned into spaces.
+///
+/// In `text_mode` an invisible operator is dropped instead, since a space inside `\text{...}` shows.
+fn clean_text(text: &str, text_mode: bool) -> String {
+    text.chars()
+        .filter(|c| !is_private_use(*c) && !(text_mode && is_invisible_operator(*c)))
+        .map(|c| if is_invisible_operator(c) { ' ' } else { c })
+        .collect()
+}
+
+/// Report whether `c` is an invisible operator (function application, times, separator, plus).
+///
+/// Sources write `<mo>&#x2061;</mo>` between a function name and its argument so a screen reader can say
+/// "of". It sets nothing, and copied into the LaTeX it is a stray character between `sin` and `x`; removed,
+/// it merges the two into `sinx`. A space keeps the tokens apart and renders as nothing in math mode.
+fn is_invisible_operator(c: char) -> bool {
+    matches!(c, '\u{2061}'..='\u{2064}')
 }
 
 /// Report whether `c` sits in a Unicode private use area.
@@ -660,16 +811,24 @@ fn is_private_use(c: char) -> bool {
 fn collect_fenced(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, SecurityError> {
     // A fence may be a private use codepoint, which OpenOffice writes for the
     // bracket shapes of its own font. It has no meaning to a renderer, so it is
-    // dropped the way it is in element text.
-    let strip = |value: &str| -> String { value.chars().filter(|c| !is_private_use(*c)).collect() };
+    // dropped the way it is in element text. An invisible separator becomes a
+    // space, as it does in element text; an invisible fence is no fence.
+    let strip = |value: &str| -> String { clean_text(value, false).trim().to_string() };
     let open = node.attribute("open").map(strip).unwrap_or_else(|| "(".to_string());
     let close = node.attribute("close").map(strip).unwrap_or_else(|| ")".to_string());
-    let sep = node
-        .attribute("separators")
-        .map(strip)
-        .and_then(|s| s.chars().next())
-        .unwrap_or(',')
-        .to_string();
+    // An invisible operator child means the author wrote the operators, so the
+    // `mfenced` is grouping and takes no separators, as with a visible one. It is
+    // decided on the raw text: collected, it is a blank run like any child whose
+    // text cleans away, and those still take separators.
+    let sep = if node.children().any(is_invisible_operator_element) {
+        String::new()
+    } else {
+        node.attribute("separators")
+            .map(|value| clean_text(value, false))
+            .and_then(|s| s.chars().next())
+            .unwrap_or(',')
+            .to_string()
+    };
 
     let elements = node
         .children()
@@ -683,6 +842,18 @@ fn collect_fenced(node: Node, budget: &mut SecurityBudget) -> Result<MmlNode, Se
         sep,
         elements,
     })
+}
+
+/// Report whether `node` is an `mo` whose text is only invisible operators and whitespace.
+fn is_invisible_operator_element(node: Node) -> bool {
+    let mut chars = node
+        .children()
+        .filter(|c| c.is_text())
+        .filter_map(|c| c.text())
+        .flat_map(str::chars)
+        .filter(|c| !c.is_whitespace())
+        .peekable();
+    node.tag_name().name().eq_ignore_ascii_case("mo") && chars.peek().is_some() && chars.all(is_invisible_operator)
 }
 
 /// Collect an `mtable` element into rows of cells (`mtr` > `mtd`).

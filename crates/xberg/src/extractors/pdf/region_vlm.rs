@@ -17,6 +17,7 @@ use image::{ExtendedColorType, ImageEncoder};
 
 use crate::RegionKind;
 use crate::core::config::LlmConfig;
+use crate::layout::{DetectionResult, LayoutDetection};
 use crate::llm::region_extractor::extract_region_with_vlm;
 use crate::pdf::structure::types::{LayoutHint, LayoutHintClass};
 
@@ -67,13 +68,15 @@ const fn region_kind_for_hint(class_name: LayoutHintClass) -> Option<RegionKind>
 ///
 /// Iterates the layout hints for each page. For hints whose class warrants VLM
 /// extraction ([`LayoutHintClass::Picture`] and, when requested, dense tables),
-/// crops the region from the page raster image, encodes it as PNG, and calls
+/// crops the region from the page raster at the hint's pixel-space detection in
+/// `layout_detections`, encodes it as PNG, and calls
 /// [`extract_region_with_vlm`]. Results from all pages are collected and returned.
 ///
 /// # Arguments
 ///
 /// * `layout_images` — One rasterised `RgbImage` per page (same order as `layout_hints`).
 /// * `layout_hints` — Per-page layout detection results, each a `Vec<LayoutHint>`.
+/// * `layout_detections` — The pixel-space detections each page's hints were converted from, one to one.
 /// * `llm_config` — LLM provider configuration for the VLM calls.
 ///
 /// # Returns
@@ -84,18 +87,22 @@ const fn region_kind_for_hint(class_name: LayoutHintClass) -> Option<RegionKind>
 pub(crate) async fn extract_vlm_regions(
     layout_images: &[image::RgbImage],
     layout_hints: &[Vec<LayoutHint>],
+    layout_detections: &[DetectionResult],
     llm_config: &LlmConfig,
 ) -> Vec<RegionVlmResult> {
     let mut results: Vec<RegionVlmResult> = Vec::new();
 
-    for (page_index, (page_image, hints)) in layout_images.iter().zip(layout_hints.iter()).enumerate() {
-        let img_width = page_image.width();
-        let img_height = page_image.height();
-
-        for hint in hints {
-            if let Some(result) =
-                extract_vlm_region(page_index, page_image, img_width, img_height, hint, llm_config).await
-            {
+    for (page_index, ((page_image, hints), detection)) in layout_images
+        .iter()
+        .zip(layout_hints.iter())
+        .zip(layout_detections.iter())
+        .enumerate()
+    {
+        let Some(detections) = paired_detections(page_index, hints, detection) else {
+            continue;
+        };
+        for (hint, det) in hints.iter().zip(detections) {
+            if let Some(result) = extract_vlm_region(page_index, page_image, hint, det, llm_config).await {
                 results.push(result);
             }
         }
@@ -104,32 +111,22 @@ pub(crate) async fn extract_vlm_regions(
     results
 }
 
-/// Converts a layout hint's PDF-space bounding box (y=0 at page bottom) to a pixel-space
-/// crop rectangle `(x_left, y_top, width, height)` clamped to the page raster's bounds.
-/// Split out of [`extract_vlm_region`] purely to shorten that function.
-fn hint_pixel_crop_rect(hint: &LayoutHint, img_width: u32, img_height: u32) -> (u32, u32, u32, u32) {
-    let pixel_y1 = (img_height as f32 - hint.top).max(0.0).min(img_height as f32) as u32;
-    let pixel_y2 = (img_height as f32 - hint.bottom).max(0.0).min(img_height as f32) as u32;
-    let pixel_x1 = hint.left.max(0.0).min(img_width as f32) as u32;
-    let pixel_x2 = hint.right.max(0.0).min(img_width as f32) as u32;
-
-    let (y_top, y_bot) = if pixel_y1 <= pixel_y2 {
-        (pixel_y1, pixel_y2)
-    } else {
-        (pixel_y2, pixel_y1)
-    };
-    let (x_left, x_right) = if pixel_x1 <= pixel_x2 {
-        (pixel_x1, pixel_x2)
-    } else {
-        (pixel_x2, pixel_x1)
-    };
-
-    (
-        x_left,
-        y_top,
-        x_right.saturating_sub(x_left),
-        y_bot.saturating_sub(y_top),
-    )
+/// Returns a page's layout detections only when they pair one to one with its hints.
+fn paired_detections<'a>(
+    page_index: usize,
+    hints: &[LayoutHint],
+    detection: &'a DetectionResult,
+) -> Option<&'a [LayoutDetection]> {
+    if hints.len() != detection.detections.len() {
+        tracing::warn!(
+            page = page_index,
+            hints = hints.len(),
+            detections = detection.detections.len(),
+            "layout hints and detections disagree; skipping VLM regions on this page"
+        );
+        return None;
+    }
+    Some(&detection.detections)
 }
 
 /// PNG-encodes a cropped region, logging and returning `None` on encode failure so a
@@ -154,25 +151,22 @@ fn encode_region_png(page_index: usize, crop: &image::RgbImage) -> Option<Vec<u8
     Some(png_buf.into_inner())
 }
 
-/// Extracts a single layout hint's region via VLM, or returns `None` if the hint is
-/// below confidence, ineligible for VLM handling, too small to crop, or the VLM call
-/// itself fails or returns empty markdown. Split out of [`extract_vlm_regions`] so a
-/// single page/hint iteration stays a plain loop body.
-async fn extract_vlm_region(
+/// Returns the region kind and the pixel crop `(x, y, w, h)` for `hint`, cut from its detection `det`,
+/// or `None` when the hint is below confidence or ineligible for VLM handling, or the crop is empty
+/// or under `MIN_REGION_PIXEL_AREA`.
+fn region_crop(
     page_index: usize,
     page_image: &image::RgbImage,
-    img_width: u32,
-    img_height: u32,
     hint: &LayoutHint,
-    llm_config: &LlmConfig,
-) -> Option<RegionVlmResult> {
+    det: &LayoutDetection,
+) -> Option<(RegionKind, (u32, u32, u32, u32))> {
     if hint.confidence < MIN_REGION_CONFIDENCE {
         return None;
     }
 
     let region_kind = region_kind_for_hint(hint.class_name)?;
 
-    let (x_left, y_top, crop_w, crop_h) = hint_pixel_crop_rect(hint, img_width, img_height);
+    let (x_left, y_top, crop_w, crop_h) = det.bbox.clamp_to_image(page_image.width(), page_image.height())?;
 
     if crop_w * crop_h < MIN_REGION_PIXEL_AREA {
         tracing::trace!(
@@ -183,6 +177,19 @@ async fn extract_vlm_region(
         );
         return None;
     }
+
+    Some((region_kind, (x_left, y_top, crop_w, crop_h)))
+}
+
+/// Extracts a single layout hint's region via VLM.
+async fn extract_vlm_region(
+    page_index: usize,
+    page_image: &image::RgbImage,
+    hint: &LayoutHint,
+    det: &LayoutDetection,
+    llm_config: &LlmConfig,
+) -> Option<RegionVlmResult> {
+    let (region_kind, (x_left, y_top, crop_w, crop_h)) = region_crop(page_index, page_image, hint, det)?;
 
     let crop = image::imageops::crop_imm(page_image, x_left, y_top, crop_w, crop_h).to_image();
     let crop_bytes = encode_region_png(page_index, &crop)?;
@@ -277,6 +284,49 @@ fn shift_relationship_indices(document: &mut crate::types::internal::InternalDoc
     }
 }
 
+/// Inserts `element` at `at` and returns its final index. The assembly emits page breaks
+/// only between pages with content, so the first element on an empty page (a scan) gets
+/// its own breaks; without them it is attributed to the previous page. Container starts
+/// carry no page, so it goes before any that open the next page, not inside its list.
+fn splice_element(
+    document: &mut crate::types::internal::InternalDocument,
+    mut at: usize,
+    element: crate::types::internal::InternalElement,
+) -> usize {
+    use crate::types::internal::{ElementKind, InternalElement};
+
+    let is_content = |element: &InternalElement| !matches!(element.kind, ElementKind::PageBreak);
+    let first_on_page = element.page.is_some()
+        && !document
+            .elements
+            .iter()
+            .any(|existing| existing.page == element.page && is_content(existing));
+    if first_on_page {
+        while at > 0 && document.elements[at - 1].kind.is_container_start() && document.elements[at - 1].page.is_none()
+        {
+            at -= 1;
+        }
+    }
+    if first_on_page && at > 0 && is_content(&document.elements[at - 1]) {
+        insert_element(document, at, InternalElement::text(ElementKind::PageBreak, "", 0));
+        at += 1;
+    }
+    insert_element(document, at, element);
+    if first_on_page && document.elements.get(at + 1).is_some_and(is_content) {
+        insert_element(document, at + 1, InternalElement::text(ElementKind::PageBreak, "", 0));
+    }
+    at
+}
+
+fn insert_element(
+    document: &mut crate::types::internal::InternalDocument,
+    at: usize,
+    element: crate::types::internal::InternalElement,
+) {
+    shift_relationship_indices(document, at);
+    document.elements.insert(at, element);
+}
+
 /// Inject VLM-extracted region markdown into an `InternalDocument`.
 ///
 /// For each `RegionVlmResult`, splices a paragraph element carrying the VLM markdown
@@ -295,18 +345,19 @@ pub(crate) fn inject_region_results(
     for result in results {
         let page_num = (result.page_index + 1) as u32;
         let insert_at = find_insertion_index(&document.elements, page_num, result.hint.top);
-        shift_relationship_indices(document, insert_at);
-        document.elements.insert(
+        let inserted_at = splice_element(
+            document,
             insert_at,
             InternalElement::text(ElementKind::Paragraph, result.markdown, 0).with_page(page_num),
         );
-        tracing::debug!(page = page_num, insert_at, "injected VLM region result into document");
+        tracing::debug!(page = page_num, inserted_at, "injected VLM region result into document");
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::layout::{BBox, LayoutClass};
     use crate::pdf::structure::types::LayoutHintClass;
 
     fn make_hint(class: LayoutHintClass, confidence: f32) -> LayoutHint {
@@ -371,6 +422,58 @@ mod tests {
     #[test]
     fn should_route_picture_hint_to_figure_region_kind() {
         assert_eq!(region_kind_for_hint(LayoutHintClass::Picture), Some(RegionKind::Figure));
+    }
+
+    #[test]
+    fn should_crop_the_pixel_detection_not_the_pdf_space_hint() {
+        // US Letter (612x792 pt) rendered at 150 dpi.
+        let page_image = image::RgbImage::new(1_275, 1_650);
+        let det = LayoutDetection::new(LayoutClass::Table, 0.9, BBox::new(100.0, 200.0, 700.0, 500.0));
+        let hint = LayoutHint {
+            class_name: LayoutHintClass::Table,
+            confidence: 0.9,
+            left: 48.0,
+            bottom: 552.0,
+            right: 336.0,
+            top: 696.0,
+        };
+
+        let (kind, rect) = region_crop(0, &page_image, &hint, &det).expect("confident table region should be cropped");
+        assert_eq!(kind, RegionKind::DenseTable);
+        assert_eq!(rect, (100, 200, 600, 300));
+    }
+
+    #[test]
+    fn should_skip_detection_boxes_that_clamp_to_nothing() {
+        let page_image = image::RgbImage::new(1_275, 1_650);
+        let hint = make_hint(LayoutHintClass::Table, 0.9);
+        for bbox in [
+            BBox::new(100.0, 200.0, 100.0, 500.0),
+            BBox::new(-500.0, -500.0, -100.0, -100.0),
+        ] {
+            let det = LayoutDetection::new(LayoutClass::Table, 0.9, bbox);
+            assert!(region_crop(0, &page_image, &hint, &det).is_none());
+        }
+    }
+
+    #[test]
+    fn should_skip_page_when_hint_and_detection_counts_disagree() {
+        let hints = [make_hint(LayoutHintClass::Table, 0.9)];
+        let det = LayoutDetection::new(LayoutClass::Table, 0.9, BBox::new(100.0, 200.0, 700.0, 500.0));
+
+        assert!(paired_detections(0, &hints, &DetectionResult::new(1_275, 1_650, vec![])).is_none());
+        assert!(
+            paired_detections(
+                0,
+                &hints,
+                &DetectionResult::new(1_275, 1_650, vec![det.clone(), det.clone()])
+            )
+            .is_none()
+        );
+        assert_eq!(
+            paired_detections(0, &hints, &DetectionResult::new(1_275, 1_650, vec![det])).map(<[_]>::len),
+            Some(1)
+        );
     }
 
     #[test]
@@ -451,6 +554,212 @@ mod tests {
 
         assert_eq!(document.elements.len(), 3);
         assert_eq!(document.elements[2].text, "VLM CAPTION");
+    }
+
+    fn page_break() -> crate::types::internal::InternalElement {
+        use crate::types::internal::{ElementKind, InternalElement};
+
+        InternalElement::text(ElementKind::PageBreak, "", 0)
+    }
+
+    fn page_shape(document: &crate::types::internal::InternalDocument) -> Vec<(Option<u32>, bool)> {
+        use crate::types::internal::ElementKind;
+
+        document
+            .elements
+            .iter()
+            .map(|element| (element.page, matches!(element.kind, ElementKind::PageBreak)))
+            .collect()
+    }
+
+    #[test]
+    fn should_break_before_vlm_result_on_trailing_page_with_no_elements() {
+        use crate::types::internal::InternalDocument;
+
+        let mut document = InternalDocument::default();
+        document.elements.push(element_with_bbox(1, 700.0));
+
+        let results = vec![RegionVlmResult {
+            page_index: 1,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![(Some(1), false), (None, true), (Some(2), false)]
+        );
+        assert_eq!(document.elements[2].text, "VLM TABLE");
+    }
+
+    #[test]
+    fn should_give_vlm_result_on_page_with_no_elements_breaks_on_both_sides() {
+        use crate::types::internal::{InternalDocument, Relationship, RelationshipKind, RelationshipTarget};
+
+        let mut document = InternalDocument::default();
+        document.elements.push(element_with_bbox(1, 700.0));
+        document.elements.push(page_break());
+        document.elements.push(element_with_bbox(3, 700.0));
+        document.relationships.push(Relationship {
+            source: 0,
+            target: RelationshipTarget::Index(2),
+            kind: RelationshipKind::InternalLink,
+        });
+
+        let results = vec![
+            RegionVlmResult {
+                page_index: 1,
+                markdown: "VLM FIGURE".to_string(),
+                hint: hint_with_top(600.0),
+            },
+            RegionVlmResult {
+                page_index: 1,
+                markdown: "VLM TABLE".to_string(),
+                hint: hint_with_top(300.0),
+            },
+        ];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (Some(1), false),
+                (None, true),
+                (Some(2), false),
+                (Some(2), false),
+                (None, true),
+                (Some(3), false)
+            ]
+        );
+        assert_eq!(document.elements[2].text, "VLM FIGURE");
+        assert_eq!(document.elements[3].text, "VLM TABLE");
+        assert_eq!(
+            document.relationships[0].target,
+            RelationshipTarget::Index(5),
+            "the page-3 target must follow both results and the added break"
+        );
+    }
+
+    fn list_marker(kind: crate::types::internal::ElementKind) -> crate::types::internal::InternalElement {
+        crate::types::internal::InternalElement::text(kind, "", 0)
+    }
+
+    fn list_item(page: u32) -> crate::types::internal::InternalElement {
+        use crate::types::internal::{ElementKind, InternalElement};
+
+        InternalElement::text(ElementKind::ListItem { ordered: false }, "item", 0).with_page(page)
+    }
+
+    #[test]
+    fn should_place_vlm_result_on_leading_empty_page_before_next_page_list() {
+        use crate::types::internal::{
+            ElementKind, InternalDocument, Relationship, RelationshipKind, RelationshipTarget,
+        };
+
+        let mut document = InternalDocument::default();
+        document
+            .elements
+            .push(list_marker(ElementKind::ListStart { ordered: false }));
+        document.elements.push(list_item(2));
+        document.elements.push(list_marker(ElementKind::ListEnd));
+        document.relationships.push(Relationship {
+            source: 1,
+            target: RelationshipTarget::Index(1),
+            kind: RelationshipKind::InternalLink,
+        });
+
+        let results = vec![RegionVlmResult {
+            page_index: 0,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (Some(1), false),
+                (None, true),
+                (None, false),
+                (Some(2), false),
+                (None, false)
+            ]
+        );
+        assert_eq!(document.elements[0].text, "VLM TABLE");
+        assert!(matches!(document.elements[2].kind, ElementKind::ListStart { .. }));
+        assert_eq!(document.relationships[0].source, 3);
+        assert_eq!(document.relationships[0].target, RelationshipTarget::Index(3));
+    }
+
+    #[test]
+    fn should_place_vlm_result_on_empty_page_before_next_page_list() {
+        use crate::types::internal::{ElementKind, InternalDocument};
+
+        let mut document = InternalDocument::default();
+        document.elements.push(element_with_bbox(1, 700.0));
+        document.elements.push(page_break());
+        document
+            .elements
+            .push(list_marker(ElementKind::ListStart { ordered: false }));
+        document.elements.push(list_item(3));
+
+        let results = vec![RegionVlmResult {
+            page_index: 1,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (Some(1), false),
+                (None, true),
+                (Some(2), false),
+                (None, true),
+                (None, false),
+                (Some(3), false)
+            ]
+        );
+        assert_eq!(document.elements[2].text, "VLM TABLE");
+        assert!(matches!(document.elements[4].kind, ElementKind::ListStart { .. }));
+    }
+
+    #[test]
+    fn should_break_before_vlm_result_after_last_page_closing_list() {
+        use crate::types::internal::{ElementKind, InternalDocument};
+
+        let mut document = InternalDocument::default();
+        document
+            .elements
+            .push(list_marker(ElementKind::ListStart { ordered: false }));
+        document.elements.push(list_item(1));
+        document.elements.push(list_marker(ElementKind::ListEnd));
+
+        let results = vec![RegionVlmResult {
+            page_index: 1,
+            markdown: "VLM TABLE".to_string(),
+            hint: hint_with_top(600.0),
+        }];
+
+        inject_region_results(&mut document, results);
+
+        assert_eq!(
+            page_shape(&document),
+            vec![
+                (None, false),
+                (Some(1), false),
+                (None, false),
+                (None, true),
+                (Some(2), false)
+            ]
+        );
+        assert_eq!(document.elements[4].text, "VLM TABLE");
     }
 
     #[test]
