@@ -700,6 +700,27 @@ fn test_base64_with_a_stray_character_is_decoded() {
     assert_eq!(note.size, Some(36));
 }
 
+/// The contents of a text part are already decoded with its charset, so a UTF-16 body has to be
+/// recovered from the message's raw bytes.
+#[test]
+fn test_utf16_base64_with_a_stray_character_is_decoded() {
+    // "Hi" in UTF-16LE is `SABpAA==`; the `>` stops mail-parser's decoder
+    let body = "From: alice@example.com\r\nSubject: Hi\r\nMIME-Version: 1.0\r\n\
+                Content-Type: text/plain; charset=utf-16le\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+                SA>BpAA==\r\n";
+    let result = parse_eml_content(body.as_bytes()).unwrap();
+    assert_eq!(result.content.trim(), "Hi");
+
+    let attachment = "From: alice@example.com\r\nSubject: Hi\r\nMIME-Version: 1.0\r\n\
+                      Content-Type: multipart/mixed; boundary=\"BOUNDARY\"\r\n\r\n\
+                      --BOUNDARY\r\nContent-Type: text/plain\r\n\r\nSee the note.\r\n\
+                      --BOUNDARY\r\nContent-Type: text/plain; charset=utf-16le; name=\"hi.txt\"\r\n\
+                      Content-Disposition: attachment; filename=\"hi.txt\"\r\n\
+                      Content-Transfer-Encoding: base64\r\n\r\nSA>BpAA==\r\n--BOUNDARY--\r\n";
+    let result = parse_eml_content(attachment.as_bytes()).unwrap();
+    assert_eq!(result.attachments[0].data.as_deref(), Some(&b"H\0i\0"[..]));
+}
+
 /// An attached message nested deeper than `mail-parser` parses base64 messages is decoded but
 /// not parsed, and flagged `is_encoding_problem` too. Its contents are decoded already.
 #[test]
@@ -718,14 +739,14 @@ fn test_attached_message_decoded_by_mail_parser_is_not_decoded_again() {
         );
     }
 
-    fn flagged_decoded_parts<'a>(
-        message: &'a mail_parser::Message<'a>,
-        out: &mut Vec<&'a mail_parser::MessagePart<'a>>,
-    ) {
+    type OwnedPart<'a> = (&'a mail_parser::Message<'a>, &'a mail_parser::MessagePart<'a>);
+    fn flagged_decoded_parts<'a>(message: &'a mail_parser::Message<'a>, out: &mut Vec<OwnedPart<'a>>) {
         for part in &message.parts {
             match &part.body {
                 mail_parser::PartType::Message(nested) => flagged_decoded_parts(nested, out),
-                _ if part.is_encoding_problem && part.encoding == mail_parser::Encoding::Base64 => out.push(part),
+                _ if part.is_encoding_problem && part.encoding == mail_parser::Encoding::Base64 => {
+                    out.push((message, part))
+                }
                 _ => {}
             }
         }
@@ -739,12 +760,13 @@ fn test_attached_message_decoded_by_mail_parser_is_not_decoded_again() {
         1,
         "expected the innermost message to be decoded but not parsed"
     );
+    let (owner, part) = flagged[0];
     assert!(
-        flagged[0].contents().starts_with(b"From: inner@example.com"),
+        part.contents().starts_with(b"From: inner@example.com"),
         "got {:?}",
-        String::from_utf8_lossy(flagged[0].contents())
+        String::from_utf8_lossy(part.contents())
     );
-    assert_eq!(recover_base64_contents(flagged[0]), None);
+    assert_eq!(recover_base64_contents(owner, part), None);
 }
 
 /// The base64 of this PDF has a `>` in its last line, and after it one symbol is left on its own,
