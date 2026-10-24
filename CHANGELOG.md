@@ -58,6 +58,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Read a two-up sheet one page at a time when a page sets code beside its explanation.**
+  Since 1.3.0 a line with a wide internal gap counted as no prose at all, so a page of code beside its notes on shared
+  baselines left too few prose lines for its side, and the sheet was read across both pages line by line. On a sheet
+  whose pages are kept apart by an empty corridor at least one inch wide, the runs either side of such a gap are now
+  judged on their own; on any other page the gapped line is still left out. (#2227)
+
 - **(markdown): Keep bracketed link labels and image alt text in their original sentence position in plain output.**
   Link and image destinations remain available as URI metadata, and embedded image bytes are retained.
   Empty image labels no longer leave a doubled word gap. (#2233, #2235)

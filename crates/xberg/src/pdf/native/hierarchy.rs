@@ -28,6 +28,10 @@ const MIN_PROSE_LINE_WORDS: usize = 3;
 const MIN_PROSE_ALPHA_RATIO: f32 = 0.55;
 const MIN_VERTICAL_OVERLAP_RATIO: f32 = 0.35;
 const PROSE_LINE_Y_TOLERANCE_PTS: f32 = 4.0;
+// GH#2227: two pages printed side by side are kept apart by both pages' margins, an empty
+// corridor no text crosses. One inch is two half-inch margins; the gutter of a two-column
+// body is usually a fraction of it. ~keep
+const MIN_TWO_UP_CORRIDOR_PTS: f32 = 72.0;
 const INLINE_SCRIPT_LOOKBACK: usize = 8;
 const INLINE_SCRIPT_MIN_FONT_RATIO: f32 = 0.5;
 const INLINE_SCRIPT_MAX_FONT_RATIO: f32 = 0.8;
@@ -207,21 +211,61 @@ fn line_has_internal_gap(line: &[&xberg_native_pdf::layout::TextSpan]) -> bool {
         .any(|pair| pair[1].bbox.x - (pair[0].bbox.x + pair[0].bbox.width) >= MIN_COLUMN_GUTTER_PTS)
 }
 
+/// Split `line` at the gaps `line_has_internal_gap` looks for, so that each run can be
+/// judged as prose on its own.
+///
+/// GH#2227: on a two-up sheet each side is a whole page, which may set columns of its own.
+/// Dropping its gapped lines left a page of code beside its explanation, on shared
+/// baselines, with 3 prose lines, under `MIN_PROSE_LINES_PER_SIDE`, so both pages were read
+/// top to bottom together. The split is confined to two-up sheets: on one page the same
+/// gaps sit between a line number and its code, a symbol and its subscript, or a label and
+/// its value, and the runs either side are not column evidence. ~keep
+fn gap_free_runs<'line, 'span>(
+    line: &'line [&'span xberg_native_pdf::layout::TextSpan],
+) -> impl Iterator<Item = &'line [&'span xberg_native_pdf::layout::TextSpan]> {
+    line.chunk_by(|left, right| right.bbox.x - (left.bbox.x + left.bbox.width) < MIN_COLUMN_GUTTER_PTS)
+}
+
+/// True if no span crosses `gutter_x` and the empty corridor around it is at least
+/// `MIN_TWO_UP_CORRIDOR_PTS` wide: two pages printed side by side.
+fn is_two_up_sheet(spans: &[&xberg_native_pdf::layout::TextSpan], gutter_x: f32) -> bool {
+    let mut left_edge = f32::NEG_INFINITY;
+    let mut right_edge = f32::INFINITY;
+    for span in spans {
+        let (left, right) = (span.bbox.x, span.bbox.x + span.bbox.width);
+        if right <= gutter_x {
+            left_edge = left_edge.max(right);
+        } else if left >= gutter_x {
+            right_edge = right_edge.min(left);
+        } else {
+            return false;
+        }
+    }
+    right_edge - left_edge >= MIN_TWO_UP_CORRIDOR_PTS
+}
+
+fn prose_like_run(run: &[&xberg_native_pdf::layout::TextSpan]) -> bool {
+    let joined = run.iter().map(|span| span.text.as_str()).collect::<Vec<_>>().join(" ");
+    let monospace_count = run.iter().filter(|span| span.is_monospace).count();
+    prose_like(&joined, monospace_count, run.len())
+}
+
 /// GH#1806: `prose_like` wants three words and eight letters, and this used to ask it of
 /// each SPAN with `span_count` hardcoded to 1. A producer that writes every word as its
 /// own `Tm`+`TJ` therefore contributed ZERO prose lines and its two-column pages were
 /// never recognised. The unit is the line: spans are grouped into lines first, their text
 /// joined, and the line's real span and monospace counts passed through, so the
 /// monospace-majority test still fires correctly on a run of numbered code lines. ~keep
-fn side_support(spans: Vec<&xberg_native_pdf::layout::TextSpan>) -> SideSupport {
+fn side_support(spans: Vec<&xberg_native_pdf::layout::TextSpan>, two_up: bool) -> SideSupport {
     let lines = group_spans_into_lines(&spans);
     let mut prose_line_ys: Vec<f32> = lines
         .iter()
-        .filter(|line| !line_has_internal_gap(line))
         .filter(|line| {
-            let joined = line.iter().map(|span| span.text.as_str()).collect::<Vec<_>>().join(" ");
-            let monospace_count = line.iter().filter(|span| span.is_monospace).count();
-            prose_like(&joined, monospace_count, line.len())
+            if two_up {
+                gap_free_runs(line).any(prose_like_run)
+            } else {
+                !line_has_internal_gap(line) && prose_like_run(line)
+            }
         })
         .map(|line| line.first().map_or(0.0, |span| span.bbox.y))
         .collect();
@@ -277,17 +321,23 @@ fn select_reading_order(
         return ReadingOrder::TopToBottom;
     }
     let body: Vec<_> = usable
-        .into_iter()
+        .iter()
+        .copied()
         .filter(|span| span.bbox.width <= content_width * COLUMN_BRIDGE_FRACTION)
         .collect();
     let gutter_x = detect_gutter_x(&body).unwrap_or((content_min + content_max) * 0.5);
+    let two_up = is_two_up_sheet(&usable, gutter_x);
     let left = side_support(
         body.iter()
             .copied()
             .filter(|span| span.bbox.x + span.bbox.width <= gutter_x)
             .collect(),
+        two_up,
     );
-    let right = side_support(body.iter().copied().filter(|span| span.bbox.x >= gutter_x).collect());
+    let right = side_support(
+        body.iter().copied().filter(|span| span.bbox.x >= gutter_x).collect(),
+        two_up,
+    );
     if has_balanced_vertical_support(&left, &right) {
         ReadingOrder::ColumnAware
     } else {
@@ -1752,6 +1802,104 @@ mod tests {
         assert_eq!(
             super::select_reading_order(&spans, 595.0, 842.0),
             ReadingOrder::ColumnAware
+        );
+    }
+
+    const GH2227_PAGE_WIDTH: f32 = 842.0;
+    const GH2227_PAGE_HEIGHT: f32 = 595.0;
+
+    /// GH#2227 geometry on an 842 x 595 pt two-up sheet: the left page holds two slides, each
+    /// setting 5.7pt code (x 104) beside its explanation (x 202) on shared baselines; the
+    /// right page is body text in full 295pt lines (x 484). Every left line therefore opens
+    /// an internal gap. Spans come in top-to-bottom order across both pages, the
+    /// interleaving the issue reports. ~keep
+    fn gh2227_two_up_sheet() -> Vec<TextSpan> {
+        let sized = |text: &str, x: f32, y: f32, width: f32, height: f32| {
+            let mut span = text_span(text, x, y, width);
+            span.bbox.height = height;
+            span
+        };
+        let rows = [
+            ("class Student {", "Fields hold the state of an object"),
+            ("int age;", "and methods change that state"),
+            ("}", "so callers never touch a field"),
+            ("void main() {", "Every object keeps its own copy"),
+            ("s.age = 21;", "of the fields its class declares"),
+        ];
+        let mut spans = Vec::new();
+        for slide_top in [455.0, 255.0] {
+            for (row, (code, note)) in rows.iter().enumerate() {
+                let y = slide_top - row as f32 * 6.8;
+                spans.push(sized(code, 104.0, y, 80.0, 5.7));
+                spans.push(sized(note, 202.0, y, 100.0, 6.3));
+            }
+        }
+        for row in 0..12 {
+            spans.push(sized(
+                "Encapsulation keeps the state of an object behind the methods of its class",
+                484.0,
+                460.0 - row as f32 * 11.9,
+                295.0,
+                9.9,
+            ));
+        }
+        spans.sort_by(|left, right| {
+            right
+                .bbox
+                .y
+                .total_cmp(&left.bbox.y)
+                .then(left.bbox.x.total_cmp(&right.bbox.x))
+        });
+        spans
+    }
+
+    #[test]
+    fn two_up_sheet_with_code_beside_notes_uses_column_aware_gh2227() {
+        assert_eq!(
+            super::select_reading_order(&gh2227_two_up_sheet(), GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+            ReadingOrder::ColumnAware,
+            "a left page set in columns of its own must still count as prose beside the right page"
+        );
+    }
+
+    #[test]
+    fn element_path_reads_the_left_page_before_the_right_page_gh2227() {
+        let mut spans = gh2227_two_up_sheet();
+
+        super::reorder_page_reading_order(&mut spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT, 0);
+
+        let sides: Vec<bool> = spans.iter().map(|span| span.bbox.x > GH2227_PAGE_WIDTH / 2.0).collect();
+        let first_right = sides.iter().position(|&right| right).expect("the right page has spans");
+        assert!(
+            sides[first_right..].iter().all(|&right| right),
+            "the whole left page must be read before the right page, got sides {sides:?}"
+        );
+    }
+
+    #[test]
+    fn narrow_corridor_keeps_gapped_lines_out_of_prose_evidence_gh2227() {
+        let mut spans = gh2227_two_up_sheet();
+        for span in spans.iter_mut().filter(|span| span.bbox.x > GH2227_PAGE_WIDTH / 2.0) {
+            span.bbox.x = 362.0;
+        }
+        assert_eq!(
+            super::select_reading_order(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+            ReadingOrder::TopToBottom,
+            "a 60pt corridor is not two pages, so the left side's gapped lines are not prose evidence"
+        );
+    }
+
+    #[test]
+    fn line_crossing_the_gutter_keeps_gapped_lines_out_of_prose_evidence_gh2227() {
+        let mut spans = gh2227_two_up_sheet();
+        spans.insert(
+            0,
+            text_span("A running line set across the whole sheet", 104.0, 500.0, 600.0),
+        );
+        assert_eq!(
+            super::select_reading_order(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+            ReadingOrder::TopToBottom,
+            "text crossing the gutter makes it one page, so the left side's gapped lines are not prose evidence"
         );
     }
 
