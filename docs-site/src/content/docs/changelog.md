@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **(integrations): File locking uses filelock 4.2.4 on Python 3.11 and later to protect lock-file ownership.**
+  Python 3.10 retains the affected 4.1.0 branch; benchmark environments with upstream caps remain affected.
+- **(integrations): LlamaIndex and txtai use setuptools 84.2.1 to reject invalid legacy-wheel namespace paths.**
+  Resolves GHSA-xmj3-9gf7-h52w without changing supported Python versions.
 - **(benchmarks): Bound pypdf parsing work for malformed PDF references and cross-reference tables.**
   MinerU and Unstructured benchmark environments use pypdf 6.21.2 to resolve CVE-2026-115572, CVE-2026-115580
   and CVE-2026-115585.
