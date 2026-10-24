@@ -29,9 +29,17 @@ const MIN_PROSE_ALPHA_RATIO: f32 = 0.55;
 const MIN_VERTICAL_OVERLAP_RATIO: f32 = 0.35;
 const PROSE_LINE_Y_TOLERANCE_PTS: f32 = 4.0;
 // GH#2227: two pages printed side by side are kept apart by both pages' margins, an empty
-// corridor no text crosses. One inch is two half-inch margins; the gutter of a two-column
-// body is usually a fraction of it. ~keep
+// corridor no text crosses. One inch is two half-inch margins. ~keep
 const MIN_TWO_UP_CORRIDOR_PTS: f32 = 72.0;
+// GH#2227: two pages of one sheet meet near its middle; the reported sheet's gutter sits
+// 23pt, 2.7% of its width, off it. ~keep
+const MAX_TWO_UP_GUTTER_OFFSET_FRACTION: f32 = 0.1;
+// GH#2227: the half-point baseline tolerance `cross_gutter_row_pairing_fraction` pairs rows at. ~keep
+const TWO_UP_ROW_GRID_TOLERANCE_PTS: f32 = 0.5;
+// GH#2227: two pages share a baseline only by chance, about one row in 7 to 12 at that
+// tolerance on 7-12pt leading; the reported sheet pairs 0.056 of its rows. A table whose
+// cells wrap to two or three lines still pairs a half or a third. ~keep
+const MAX_TWO_UP_ROW_PAIRING_FRACTION: f32 = 0.25;
 const INLINE_SCRIPT_LOOKBACK: usize = 8;
 const INLINE_SCRIPT_MIN_FONT_RATIO: f32 = 0.5;
 const INLINE_SCRIPT_MAX_FONT_RATIO: f32 = 0.8;
@@ -211,61 +219,21 @@ fn line_has_internal_gap(line: &[&xberg_native_pdf::layout::TextSpan]) -> bool {
         .any(|pair| pair[1].bbox.x - (pair[0].bbox.x + pair[0].bbox.width) >= MIN_COLUMN_GUTTER_PTS)
 }
 
-/// Split `line` at the gaps `line_has_internal_gap` looks for, so that each run can be
-/// judged as prose on its own.
-///
-/// GH#2227: on a two-up sheet each side is a whole page, which may set columns of its own.
-/// Dropping its gapped lines left a page of code beside its explanation, on shared
-/// baselines, with 3 prose lines, under `MIN_PROSE_LINES_PER_SIDE`, so both pages were read
-/// top to bottom together. The split is confined to the short side of a two-up sheet: on
-/// one page the same gaps sit between a line number and its code, a symbol and its
-/// subscript, or a label and its value, and the runs either side are not column evidence. ~keep
-fn gap_free_runs<'line, 'span>(
-    line: &'line [&'span xberg_native_pdf::layout::TextSpan],
-) -> impl Iterator<Item = &'line [&'span xberg_native_pdf::layout::TextSpan]> {
-    line.chunk_by(|left, right| right.bbox.x - (left.bbox.x + left.bbox.width) < MIN_COLUMN_GUTTER_PTS)
-}
-
-/// True if no span crosses `gutter_x` and the empty corridor around it is at least
-/// `MIN_TWO_UP_CORRIDOR_PTS` wide: two pages printed side by side.
-fn is_two_up_sheet(spans: &[&xberg_native_pdf::layout::TextSpan], gutter_x: f32) -> bool {
-    let mut left_edge = f32::NEG_INFINITY;
-    let mut right_edge = f32::INFINITY;
-    for span in spans {
-        let (left, right) = (span.bbox.x, span.bbox.x + span.bbox.width);
-        if right <= gutter_x {
-            left_edge = left_edge.max(right);
-        } else if left >= gutter_x {
-            right_edge = right_edge.min(left);
-        } else {
-            return false;
-        }
-    }
-    right_edge - left_edge >= MIN_TWO_UP_CORRIDOR_PTS
-}
-
-fn prose_like_run(run: &[&xberg_native_pdf::layout::TextSpan]) -> bool {
-    let joined = run.iter().map(|span| span.text.as_str()).collect::<Vec<_>>().join(" ");
-    let monospace_count = run.iter().filter(|span| span.is_monospace).count();
-    prose_like(&joined, monospace_count, run.len())
-}
-
 /// GH#1806: `prose_like` wants three words and eight letters, and this used to ask it of
 /// each SPAN with `span_count` hardcoded to 1. A producer that writes every word as its
 /// own `Tm`+`TJ` therefore contributed ZERO prose lines and its two-column pages were
 /// never recognised. The unit is the line: spans are grouped into lines first, their text
 /// joined, and the line's real span and monospace counts passed through, so the
 /// monospace-majority test still fires correctly on a run of numbered code lines. ~keep
-fn side_support(spans: &[&xberg_native_pdf::layout::TextSpan], split_at_gaps: bool) -> SideSupport {
-    let lines = group_spans_into_lines(spans);
+fn side_support(spans: Vec<&xberg_native_pdf::layout::TextSpan>) -> SideSupport {
+    let lines = group_spans_into_lines(&spans);
     let mut prose_line_ys: Vec<f32> = lines
         .iter()
+        .filter(|line| !line_has_internal_gap(line))
         .filter(|line| {
-            if split_at_gaps {
-                gap_free_runs(line).any(prose_like_run)
-            } else {
-                !line_has_internal_gap(line) && prose_like_run(line)
-            }
+            let joined = line.iter().map(|span| span.text.as_str()).collect::<Vec<_>>().join(" ");
+            let monospace_count = line.iter().filter(|span| span.is_monospace).count();
+            prose_like(&joined, monospace_count, line.len())
         })
         .map(|line| line.first().map_or(0.0, |span| span.bbox.y))
         .collect();
@@ -321,30 +289,17 @@ fn select_reading_order(
         return ReadingOrder::TopToBottom;
     }
     let body: Vec<_> = usable
-        .iter()
-        .copied()
+        .into_iter()
         .filter(|span| span.bbox.width <= content_width * COLUMN_BRIDGE_FRACTION)
         .collect();
     let gutter_x = detect_gutter_x(&body).unwrap_or((content_min + content_max) * 0.5);
-    let left_spans: Vec<_> = body
-        .iter()
-        .copied()
-        .filter(|span| span.bbox.x + span.bbox.width <= gutter_x)
-        .collect();
-    let right_spans: Vec<_> = body.iter().copied().filter(|span| span.bbox.x >= gutter_x).collect();
-    let mut left = side_support(&left_spans, false);
-    let mut right = side_support(&right_spans, false);
-    // GH#2227: split only the short side, and only beside a side that is a column on its own.
-    // A table's rows open gaps on both sides, so neither side clears the floor unsplit. ~keep
-    if is_two_up_sheet(&usable, gutter_x) {
-        let left_short = left.prose_line_ys.len() < MIN_PROSE_LINES_PER_SIDE;
-        let right_short = right.prose_line_ys.len() < MIN_PROSE_LINES_PER_SIDE;
-        if left_short && !right_short {
-            left = side_support(&left_spans, true);
-        } else if right_short && !left_short {
-            right = side_support(&right_spans, true);
-        }
-    }
+    let left = side_support(
+        body.iter()
+            .copied()
+            .filter(|span| span.bbox.x + span.bbox.width <= gutter_x)
+            .collect(),
+    );
+    let right = side_support(body.iter().copied().filter(|span| span.bbox.x >= gutter_x).collect());
     if has_balanced_vertical_support(&left, &right) {
         ReadingOrder::ColumnAware
     } else {
@@ -352,7 +307,114 @@ fn select_reading_order(
     }
 }
 
-/// Reorder a page's spans into reading order for the element-based
+/// The gutter of a two-up sheet, two pages printed side by side on one landscape sheet,
+/// if `spans` lay out as one: the gutter sits near the middle of the sheet, no text
+/// crosses it, the empty corridor around it is at least `MIN_TWO_UP_CORRIDOR_PTS` wide,
+/// and the two sides do not pair row for row as a table's columns do.
+///
+/// GH#2227: such a sheet is read as two pages, each through the single-page path. A
+/// page that sets code beside its explanation leaves too few prose lines on its side
+/// for `select_reading_order`, and loosening that evidence instead admitted tables and
+/// code listings as columns. ~keep
+fn two_up_gutter(spans: &[xberg_native_pdf::layout::TextSpan], page_width: f32, page_height: f32) -> Option<f32> {
+    if !page_width.is_finite() || !page_height.is_finite() || page_width <= page_height {
+        return None;
+    }
+    let usable: Vec<_> = spans.iter().filter(|span| is_usable_span(span)).collect();
+    let (content_min, content_max) = content_bounds(&usable)?;
+    let content_width = content_max - content_min;
+    let body: Vec<_> = usable
+        .iter()
+        .copied()
+        .filter(|span| span.bbox.width <= content_width * COLUMN_BRIDGE_FRACTION)
+        .collect();
+    let gutter_x = detect_gutter_x(&body)?;
+    if (gutter_x - page_width * 0.5).abs() > page_width * MAX_TWO_UP_GUTTER_OFFSET_FRACTION {
+        return None;
+    }
+    let mut left_edge = f32::NEG_INFINITY;
+    let mut right_edge = f32::INFINITY;
+    for span in &usable {
+        let (left, right) = (span.bbox.x, span.bbox.x + span.bbox.width);
+        if right <= gutter_x {
+            left_edge = left_edge.max(right);
+        } else if left >= gutter_x {
+            right_edge = right_edge.min(left);
+        } else {
+            return None;
+        }
+    }
+    if right_edge - left_edge < MIN_TWO_UP_CORRIDOR_PTS {
+        return None;
+    }
+    let usable_indices: Vec<usize> = (0..spans.len())
+        .filter(|&index| is_usable_span(&spans[index]))
+        .collect();
+    if super::text::cross_gutter_row_pairing_fraction(spans, &usable_indices, gutter_x)
+        > MAX_TWO_UP_ROW_PAIRING_FRACTION
+    {
+        return None;
+    }
+    let line_ys = |side: Vec<&xberg_native_pdf::layout::TextSpan>| -> Vec<f32> {
+        group_spans_into_lines(&side)
+            .iter()
+            .filter_map(|line| line.first().map(|span| span.bbox.y))
+            .collect()
+    };
+    let left_ys = line_ys(usable.iter().copied().filter(|span| span.bbox.x < gutter_x).collect());
+    let right_ys = line_ys(usable.iter().copied().filter(|span| span.bbox.x >= gutter_x).collect());
+    (!shares_row_grid(&left_ys, &right_ys) && !shares_row_grid(&right_ys, &left_ys)).then_some(gutter_x)
+}
+
+/// True unless most of `other`'s lines miss `grid`'s row grid: its first line plus whole
+/// multiples of its median leading. Also true when `grid` has too few lines to infer one.
+///
+/// GH#2227: a table whose rows leave cells empty pairs few rows across the gutter, yet
+/// every line on both sides still sits on one row grid. Two pages each keep their own
+/// leading and phase. ~keep
+fn shares_row_grid(grid: &[f32], other: &[f32]) -> bool {
+    let mut leadings: Vec<f32> = grid
+        .windows(2)
+        .map(|pair| (pair[0] - pair[1]).abs())
+        .filter(|&leading| leading > TWO_UP_ROW_GRID_TOLERANCE_PTS)
+        .collect();
+    if leadings.len() < 2 || other.is_empty() {
+        return true;
+    }
+    leadings.sort_by(f32::total_cmp);
+    let leading = leadings[leadings.len() / 2];
+    let on_grid = other
+        .iter()
+        .filter(|&&y| {
+            let offset = (grid[0] - y).rem_euclid(leading);
+            offset <= TWO_UP_ROW_GRID_TOLERANCE_PTS || leading - offset <= TWO_UP_ROW_GRID_TOLERANCE_PTS
+        })
+        .count();
+    on_grid * 2 > other.len()
+}
+
+/// Reorder a page's spans into reading order for the element-based extraction path,
+/// reading a two-up sheet (`two_up_gutter`) as its left page, then its right page.
+fn reorder_page_reading_order(
+    spans: &mut Vec<xberg_native_pdf::layout::TextSpan>,
+    page_width: f32,
+    page_height: f32,
+    page_index: usize,
+) {
+    let Some(gutter_x) = two_up_gutter(spans, page_width, page_height) else {
+        reorder_single_page_reading_order(spans, page_width, page_height, page_index);
+        return;
+    };
+    let (mut left, mut right): (Vec<_>, Vec<_>) = spans
+        .drain(..)
+        .partition(|span| span.bbox.x + span.bbox.width * 0.5 < gutter_x);
+    reorder_single_page_reading_order(&mut left, gutter_x, page_height, page_index);
+    reorder_single_page_reading_order(&mut right, page_width - gutter_x, page_height, page_index);
+    spans.extend(left);
+    spans.extend(right);
+}
+
+/// Reorder one page's spans into reading order for the element-based
 /// extraction path (GH#1397).
 ///
 /// Applies the guarded sparse-column repair unconditionally, then attempts
@@ -373,7 +435,7 @@ fn select_reading_order(
 /// table-shaped columns, an undetectable gutter, etc.) the previous
 /// heuristic-selected XY-Cut fallback runs exactly as before, so non-dense
 /// pages are unaffected.
-fn reorder_page_reading_order(
+fn reorder_single_page_reading_order(
     spans: &mut Vec<xberg_native_pdf::layout::TextSpan>,
     page_width: f32,
     page_height: f32,
@@ -1815,17 +1877,17 @@ mod tests {
     const GH2227_PAGE_WIDTH: f32 = 842.0;
     const GH2227_PAGE_HEIGHT: f32 = 595.0;
 
+    fn sized_span(text: &str, x: f32, y: f32, width: f32, height: f32) -> TextSpan {
+        let mut span = text_span(text, x, y, width);
+        span.bbox.height = height;
+        span
+    }
+
     /// GH#2227 geometry on an 842 x 595 pt two-up sheet: the left page holds two slides, each
     /// setting 5.7pt code (x 104) beside its explanation (x 202) on shared baselines; the
-    /// right page is body text in full 295pt lines (x 484). Every left line therefore opens
-    /// an internal gap. Spans come in top-to-bottom order across both pages, the
-    /// interleaving the issue reports. ~keep
+    /// right page is body text in full 295pt lines (x 484). Spans come in top-to-bottom order
+    /// across both pages, the interleaving the issue reports. ~keep
     fn gh2227_two_up_sheet() -> Vec<TextSpan> {
-        let sized = |text: &str, x: f32, y: f32, width: f32, height: f32| {
-            let mut span = text_span(text, x, y, width);
-            span.bbox.height = height;
-            span
-        };
         let rows = [
             ("class Student {", "Fields hold the state of an object"),
             ("int age;", "and methods change that state"),
@@ -1837,12 +1899,12 @@ mod tests {
         for slide_top in [455.0, 255.0] {
             for (row, (code, note)) in rows.iter().enumerate() {
                 let y = slide_top - row as f32 * 6.8;
-                spans.push(sized(code, 104.0, y, 80.0, 5.7));
-                spans.push(sized(note, 202.0, y, 100.0, 6.3));
+                spans.push(sized_span(code, 104.0, y, 80.0, 5.7));
+                spans.push(sized_span(note, 202.0, y, 100.0, 6.3));
             }
         }
         for row in 0..12 {
-            spans.push(sized(
+            spans.push(sized_span(
                 "Encapsulation keeps the state of an object behind the methods of its class",
                 484.0,
                 460.0 - row as f32 * 11.9,
@@ -1860,12 +1922,27 @@ mod tests {
         spans
     }
 
+    /// Four rows of a landscape table whose middle corridor is uncrossed and 100pt wide;
+    /// `right_cells` are the `(x, width)` cells right of it. ~keep
+    fn landscape_table(right_cells: &[(f32, f32)]) -> Vec<TextSpan> {
+        let mut spans = Vec::new();
+        for row in 0..4 {
+            let y = 500.0 - row as f32 * 18.0;
+            spans.push(text_span("Regional revenue growth", 50.0, y, 150.0));
+            spans.push(text_span("annual total amount", 220.0, y, 150.0));
+            for &(x, width) in right_cells {
+                spans.push(text_span("Operating expense growth this year", x, y, width));
+            }
+        }
+        spans
+    }
+
     #[test]
-    fn two_up_sheet_with_code_beside_notes_uses_column_aware_gh2227() {
-        assert_eq!(
-            super::select_reading_order(&gh2227_two_up_sheet(), GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
-            ReadingOrder::ColumnAware,
-            "a left page set in columns of its own must still count as prose beside the right page"
+    fn two_up_sheet_is_split_at_its_gutter_gh2227() {
+        let gutter = super::two_up_gutter(&gh2227_two_up_sheet(), GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT);
+        assert!(
+            gutter.is_some_and(|x| x > 302.0 && x < 484.0),
+            "the gutter must fall between the two pages, got {gutter:?}"
         );
     }
 
@@ -1888,48 +1965,136 @@ mod tests {
         );
     }
 
-    /// `table_grid_is_not_prose_column_evidence`'s geometry with three-word labels: the
-    /// 100pt central corridor is uncrossed, and every cell passes `prose_like` on its own. ~keep
     #[test]
-    fn wide_table_with_prose_cells_is_not_prose_column_evidence_gh2227() {
+    fn row_aligned_tables_on_a_landscape_sheet_are_not_two_up_gh2227() {
+        for (name, right_cells) in [
+            ("four columns", vec![(470.0, 150.0), (640.0, 150.0)]),
+            ("three columns, the right one wide", vec![(470.0, 320.0)]),
+        ] {
+            assert_eq!(
+                super::two_up_gutter(&landscape_table(&right_cells), GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+                None,
+                "{name}: every row pairs across the gutter, so this is one table"
+            );
+        }
+    }
+
+    /// Two landscape tables each table signal catches alone: rows that alternate sides
+    /// pair one row in eight, yet every line sits on one row grid; wrapped left cells
+    /// break the grid, yet every row starts on a shared baseline. ~keep
+    #[test]
+    fn alternating_and_wrapped_landscape_tables_are_not_two_up_gh2227() {
+        let mut alternating = Vec::new();
+        for row in 0..8 {
+            let y = 500.0 - row as f32 * 18.0;
+            if row % 2 == 0 {
+                alternating.push(text_span("Regional revenue growth", 50.0, y, 396.0));
+            }
+            if row % 2 == 1 || row == 0 {
+                alternating.push(text_span("Operating expense growth", 544.0, y, 198.0));
+            }
+        }
+        let mut wrapped = Vec::new();
+        for row in 0..6 {
+            let y = 500.0 - row as f32 * 30.0;
+            wrapped.push(text_span("Regional revenue growth across", 50.0, y, 300.0));
+            wrapped.push(text_span("every branch office today", 50.0, y - 11.0, 300.0));
+            wrapped.push(text_span("Operating expense growth", 470.0, y, 300.0));
+        }
+        for (name, spans) in [("alternating", alternating), ("wrapped", wrapped)] {
+            assert_eq!(
+                super::two_up_gutter(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+                None,
+                "{name} table"
+            );
+        }
+    }
+
+    /// The reviewer's portrait controls for the same tables: three-word cells pass
+    /// `prose_like` one by one, and the page must stay on `main`'s verdict. ~keep
+    #[test]
+    fn portrait_tables_with_prose_cells_stay_top_to_bottom_gh2227() {
+        for right_cells in [vec![(340.0, 90.0), (450.0, 80.0)], vec![(340.0, 190.0)]] {
+            let mut spans = Vec::new();
+            for row in 0..4 {
+                let y = 700.0 - row as f32 * 18.0;
+                spans.push(text_span("Regional revenue growth", 50.0, y, 90.0));
+                spans.push(text_span("annual total amount", 160.0, y, 80.0));
+                for &(x, width) in &right_cells {
+                    spans.push(text_span("Operating expense growth", x, y, width));
+                }
+            }
+            assert_eq!(
+                super::select_reading_order(&spans, 612.0, 792.0),
+                ReadingOrder::TopToBottom
+            );
+            assert_eq!(super::two_up_gutter(&spans, 612.0, 792.0), None);
+        }
+    }
+
+    #[test]
+    fn code_beside_margin_notes_on_a_portrait_page_is_not_two_up_gh2227() {
         let mut spans = Vec::new();
-        for row in 0..4 {
-            let y = 700.0 - row as f32 * 18.0;
-            spans.push(text_span("Regional revenue growth", 50.0, y, 90.0));
-            spans.push(text_span("annual total amount", 160.0, y, 80.0));
-            spans.push(text_span("Operating expense growth", 340.0, y, 90.0));
-            spans.push(text_span("annual total amount", 450.0, y, 80.0));
+        for row in 0..20 {
+            let y = 700.0 - row as f32 * 12.0;
+            spans.push(sized_span("mov ebp, esp", 72.0, y, 60.0, 8.0));
+            spans.push(sized_span("push the frame pointer", 150.0, y, 120.0, 8.0));
         }
-        assert_eq!(
-            super::select_reading_order(&spans, 612.0, 792.0),
-            ReadingOrder::TopToBottom
-        );
+        for row in 0..8 {
+            spans.push(sized_span(
+                "A margin note explains this listing",
+                400.0,
+                700.0 - row as f32 * 13.0,
+                160.0,
+                8.0,
+            ));
+        }
+        assert_eq!(super::two_up_gutter(&spans, 612.0, 792.0), None);
     }
 
     #[test]
-    fn narrow_corridor_keeps_gapped_lines_out_of_prose_evidence_gh2227() {
+    fn narrow_corridor_is_not_two_up_gh2227() {
+        // Both pages moved inward around the middle: a 60pt corridor centred at x 421.
         let mut spans = gh2227_two_up_sheet();
-        for span in spans.iter_mut().filter(|span| span.bbox.x > GH2227_PAGE_WIDTH / 2.0) {
-            span.bbox.x = 362.0;
+        for span in &mut spans {
+            if span.bbox.x > GH2227_PAGE_WIDTH / 2.0 {
+                span.bbox.x = 451.0;
+            } else {
+                span.bbox.x += 89.0;
+            }
         }
         assert_eq!(
-            super::select_reading_order(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
-            ReadingOrder::TopToBottom,
-            "a 60pt corridor is not two pages, so the left side's gapped lines are not prose evidence"
+            super::two_up_gutter(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+            None
         );
     }
 
     #[test]
-    fn line_crossing_the_gutter_keeps_gapped_lines_out_of_prose_evidence_gh2227() {
+    fn line_crossing_the_gutter_is_not_two_up_gh2227() {
         let mut spans = gh2227_two_up_sheet();
         spans.insert(
             0,
             text_span("A running line set across the whole sheet", 104.0, 500.0, 600.0),
         );
         assert_eq!(
-            super::select_reading_order(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
-            ReadingOrder::TopToBottom,
-            "text crossing the gutter makes it one page, so the left side's gapped lines are not prose evidence"
+            super::two_up_gutter(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+            None
+        );
+    }
+
+    #[test]
+    fn gutter_far_from_the_middle_is_not_two_up_gh2227() {
+        let mut spans = gh2227_two_up_sheet();
+        for span in spans.iter_mut().filter(|span| span.bbox.x > GH2227_PAGE_WIDTH / 2.0) {
+            span.bbox.x += 150.0;
+            span.bbox.width = 100.0;
+        }
+        for span in spans.iter_mut().filter(|span| span.bbox.x < GH2227_PAGE_WIDTH / 2.0) {
+            span.bbox.x += 150.0;
+        }
+        assert_eq!(
+            super::two_up_gutter(&spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT),
+            None
         );
     }
 

@@ -2330,7 +2330,7 @@ fn region_rows(spans: &[xberg_native_pdf::layout::TextSpan], region: &[usize]) -
 /// GH#1655: only inked spans count as pairing evidence -- a whitespace span on the
 /// far side of `split_x` (the number-to-title tab of a hanging-number heading) must
 /// not be able to fake a row pairing and suppress a legitimate reorder. ~keep
-fn cross_gutter_row_pairing_fraction(
+pub(super) fn cross_gutter_row_pairing_fraction(
     spans: &[xberg_native_pdf::layout::TextSpan],
     band: &[usize],
     split_x: f32,
