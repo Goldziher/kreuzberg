@@ -56,6 +56,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(mathml): Write `^` and `~` from math text as `\hat{}` and `\sim`.**
+  A `^` or `~` in element text reached the LaTeX raw, where TeX reads them as a superscript and a space, so
+  `<msup><mi>x</mi><mo>^</mo></msup>` gave `x^{^}`, which does not parse. They are now escaped where math text is
+  written, which covers DOCX equations too, since they share that escape.
+- **(mathml): Drop invisible operators from the LaTeX.**
+  Function application, invisible times, separator and plus (U+2061 to U+2064) were copied into the LaTeX, which TeX
+  engines reject. They are now spaces in math and dropped from `mtext` and `ms`, and an `mfenced` that holds one groups
+  its children without separators. `mfenced` open and close attributes are trimmed, and private-use characters are
+  stripped from direct text as they already were from element text.
+- **(mathml): Convert `mmultiscripts`.**
+  The element had no conversion, so its scripts ran into the base and a carbon-14 isotope read `C614`. Pre- and
+  post-scripts are now written as `{}_{6}^{14}C` and `R_{i}{}^{j}`.
+- **(mathml): Write limits on big operators and limit-taking names as `_{...}^{...}`.**
+  `munder`, `mover` and `munderover` always stacked, so a sum read `\overset{n}{\underset{i=1}{\sum }}` and `lim` read
+  `\underset{n}{lim}`. They now read `\sum_{i=1}^{n}` and `\lim_{n}`, integrals take `\limits`, and an operator with
+  `movablelimits="false"` keeps its limits stacked. `munderover` now applies accent scripts as `munder` and `mover`
+  already did, an `accent` or `accentunder` of `false` (on the element or its script's `mo`) keeps a script a visible
+  script, a `semantics` wrapper no longer hides `movablelimits="false"`, and content MathML names such as `arg` and
+  `coth` read `\arg` and `\coth`. An overbar or arrow accent no longer renders its base twice, which made nested
+  accents cost 2^depth.
 - **(pdf): A missing table structure model no longer drops the document's structure.**
   When layout detection found a table and the configured table model (TATR or SLANeXT) could not be loaded, the
   extraction fell back to plain text, without its layout-detected tables, headings or layout regions, and with no
