@@ -84,6 +84,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(ocr): `ocr.backend = "vlm"` works on mixed PDFs with layout detection on.**
   Every page the mixed route OCR'd failed with "VLM OCR requires vlm_config to be set", because the one-stage pipeline
   built for layout dropped the OCR config's `vlm_config`.
+- **(pdf): Crop VLM regions from the detected pixel box.**
+  The crop was cut from the layout hint's PDF-point box read as pixels, so at the default 150 dpi the region came out
+  at about half its size and shifted down the page: one at the top of a Letter page was cut from below the middle. It
+  is now cut from the pixel-space layout detection the hint was converted from.
+- **(pdf): Give a VLM region on a page with no text layer its own page break.**
+  A region answer for a scanned page with no elements was spliced next to a neighbouring page's content with no
+  break between them, so page markers placed it, or the content after it, on the wrong page.
+- **(pdf): Recognise formulas on scanned pages that Tesseract OCRs page by page.**
+  In builds with PaddleOCR, a default Tesseract config with `layout.formula_model` set took the per-page pipeline
+  branch, which returned before formula recognition, so scanned pages produced no LaTeX.
+- **(layout): Run markdown layout detection on the page's CropBox only.**
+  Pages went to the layout model at their full MediaBox, so bleed, trim and registration marks outside a smaller
+  CropBox shrank the page the model saw. Inference now runs on the CropBox and the detections are shifted back into
+  the page raster. Rotated pages and the OCR layout pass are unchanged.
+- **(pdf): Formula and VLM region recognition keep their rasters when the layout gate skips a page.**
+  With the auto layout strategy, a page the gate skipped made the markdown layout rasters unusable for OCR, and they
+  were dropped for the whole document, so formula recognition and VLM regions did nothing on the pages that did run
+  layout. The native path now keeps them when a formula model or VLM regions are configured; a document with any
+  rotated page still drops them.
 - **(toml): Print a date or time as its TOML text instead of under a `$__toml_private_datetime` key.**
   The TOML value went through `serde_json::to_value`, which turned every datetime into
   `{"$__toml_private_datetime": "2025-02-05"}`, so the text read `created_date` and then

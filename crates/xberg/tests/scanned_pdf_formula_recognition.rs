@@ -9,6 +9,8 @@
 //! Ignored by default: the run downloads the RT-DETR layout model and the
 //! RapidLaTeXOCR model set (~310 MB combined) and needs tesseract. Run with:
 //! `cargo test -p xberg --features pdf,ocr,formula-recognition --test scanned_pdf_formula_recognition -- --ignored`
+//! Add `paddle-ocr` to cover the per-page OCR route, which this configuration
+//! takes under `cfg(paddle_ocr)`.
 
 #![allow(clippy::print_stdout, clippy::print_stderr)] // ~keep: test binaries print by design
 #![cfg(all(feature = "pdf", feature = "ocr", feature = "formula-recognition"))]

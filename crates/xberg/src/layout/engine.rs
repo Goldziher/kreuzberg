@@ -692,3 +692,13 @@ mod cache_key_tests {
         assert_ne!(base, acceleration);
     }
 }
+
+#[cfg(test)]
+#[cfg(all(
+    feature = "pdf",
+    feature = "layout-detection",
+    feature = "ocr",
+    feature = "liter-llm",
+    feature = "tokio-runtime"
+))]
+mod auto_gate_vlm_region_tests;
