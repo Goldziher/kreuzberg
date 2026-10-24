@@ -31,12 +31,12 @@
   "pi": {
     "prompts": ["./plugin/.pi/prompts/xberg-extract.md", "./plugin/.pi/prompts/xberg-ocr.md"],
     "skills": [
-      "./plugin/.pi/skills/batch-extraction",
-      "./plugin/.pi/skills/chunking",
-      "./plugin/.pi/skills/extracting-keywords",
-      "./plugin/.pi/skills/extracting-tables",
-      "./plugin/.pi/skills/extracting-with-ocr",
-      "./plugin/.pi/skills/picking-a-format",
+      "./plugin/.pi/skills/xberg-batch-extraction",
+      "./plugin/.pi/skills/xberg-chunking",
+      "./plugin/.pi/skills/xberg-extracting-keywords",
+      "./plugin/.pi/skills/xberg-extracting-tables",
+      "./plugin/.pi/skills/xberg-extracting-with-ocr",
+      "./plugin/.pi/skills/xberg-picking-a-format",
       "./plugin/.pi/skills/xberg"
     ]
   }
