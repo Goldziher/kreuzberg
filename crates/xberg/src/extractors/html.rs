@@ -1,5 +1,7 @@
 //! HTML document extractor.
 
+mod encoding;
+
 use crate::Result;
 use crate::core::config::{ExtractionConfig, OutputFormat};
 use crate::extractors::SyncExtractor;
@@ -16,6 +18,7 @@ use crate::types::uri::{ExtractedUri, classify_uri};
 use crate::types::{HtmlMetadata, Metadata};
 use async_trait::async_trait;
 use bytes::Bytes;
+use encoding::declared_html_encoding;
 use html_to_markdown_rs::InlineImageFormat;
 use std::borrow::Cow;
 #[cfg(feature = "tokio-runtime")]
@@ -619,12 +622,19 @@ impl SyncExtractor for HtmlExtractor {
     fn extract_sync(&self, content: &[u8], mime_type: &str, config: &ExtractionConfig) -> Result<InternalDocument> {
         let _span = tracing::debug_span!("extract_html", element_count = tracing::field::Empty,).entered();
 
-        // A non-UTF-8 page still extracts, but every undecodable byte has already become
-        // U+FFFD by the time anything downstream sees it. Remember that here so the caller
-        // is told the text was mangled instead of being handed silent mojibake (#171).
+        // A page that is not UTF-8 is decoded in the encoding its byte order mark or `<meta>`
+        // declares. Without a declaration it still extracts, but every undecodable byte has
+        // become U+FFFD by the time anything downstream sees it, so the caller is told the text
+        // was mangled instead of being handed silent mojibake (#171). ~keep
         let (html, decoded_lossily) = match utf8_validation::from_utf8(content) {
             Ok(valid) => (valid.to_string(), false),
-            Err(_) => (String::from_utf8_lossy(content).into_owned(), true),
+            Err(_) => match declared_html_encoding(content) {
+                Some(encoding) => {
+                    let (text, _, had_errors) = encoding.decode(content);
+                    (text.into_owned(), had_errors)
+                }
+                None => (String::from_utf8_lossy(content).into_owned(), true),
+            },
         };
 
         let html_options =
