@@ -217,9 +217,9 @@ fn line_has_internal_gap(line: &[&xberg_native_pdf::layout::TextSpan]) -> bool {
 /// GH#2227: on a two-up sheet each side is a whole page, which may set columns of its own.
 /// Dropping its gapped lines left a page of code beside its explanation, on shared
 /// baselines, with 3 prose lines, under `MIN_PROSE_LINES_PER_SIDE`, so both pages were read
-/// top to bottom together. The split is confined to two-up sheets: on one page the same
-/// gaps sit between a line number and its code, a symbol and its subscript, or a label and
-/// its value, and the runs either side are not column evidence. ~keep
+/// top to bottom together. The split is confined to the short side of a two-up sheet: on
+/// one page the same gaps sit between a line number and its code, a symbol and its
+/// subscript, or a label and its value, and the runs either side are not column evidence. ~keep
 fn gap_free_runs<'line, 'span>(
     line: &'line [&'span xberg_native_pdf::layout::TextSpan],
 ) -> impl Iterator<Item = &'line [&'span xberg_native_pdf::layout::TextSpan]> {
@@ -256,12 +256,12 @@ fn prose_like_run(run: &[&xberg_native_pdf::layout::TextSpan]) -> bool {
 /// never recognised. The unit is the line: spans are grouped into lines first, their text
 /// joined, and the line's real span and monospace counts passed through, so the
 /// monospace-majority test still fires correctly on a run of numbered code lines. ~keep
-fn side_support(spans: Vec<&xberg_native_pdf::layout::TextSpan>, two_up: bool) -> SideSupport {
-    let lines = group_spans_into_lines(&spans);
+fn side_support(spans: &[&xberg_native_pdf::layout::TextSpan], split_at_gaps: bool) -> SideSupport {
+    let lines = group_spans_into_lines(spans);
     let mut prose_line_ys: Vec<f32> = lines
         .iter()
         .filter(|line| {
-            if two_up {
+            if split_at_gaps {
                 gap_free_runs(line).any(prose_like_run)
             } else {
                 !line_has_internal_gap(line) && prose_like_run(line)
@@ -326,18 +326,25 @@ fn select_reading_order(
         .filter(|span| span.bbox.width <= content_width * COLUMN_BRIDGE_FRACTION)
         .collect();
     let gutter_x = detect_gutter_x(&body).unwrap_or((content_min + content_max) * 0.5);
-    let two_up = is_two_up_sheet(&usable, gutter_x);
-    let left = side_support(
-        body.iter()
-            .copied()
-            .filter(|span| span.bbox.x + span.bbox.width <= gutter_x)
-            .collect(),
-        two_up,
-    );
-    let right = side_support(
-        body.iter().copied().filter(|span| span.bbox.x >= gutter_x).collect(),
-        two_up,
-    );
+    let left_spans: Vec<_> = body
+        .iter()
+        .copied()
+        .filter(|span| span.bbox.x + span.bbox.width <= gutter_x)
+        .collect();
+    let right_spans: Vec<_> = body.iter().copied().filter(|span| span.bbox.x >= gutter_x).collect();
+    let mut left = side_support(&left_spans, false);
+    let mut right = side_support(&right_spans, false);
+    // GH#2227: split only the short side, and only beside a side that is a column on its own.
+    // A table's rows open gaps on both sides, so neither side clears the floor unsplit. ~keep
+    if is_two_up_sheet(&usable, gutter_x) {
+        let left_short = left.prose_line_ys.len() < MIN_PROSE_LINES_PER_SIDE;
+        let right_short = right.prose_line_ys.len() < MIN_PROSE_LINES_PER_SIDE;
+        if left_short && !right_short {
+            left = side_support(&left_spans, true);
+        } else if right_short && !left_short {
+            right = side_support(&right_spans, true);
+        }
+    }
     if has_balanced_vertical_support(&left, &right) {
         ReadingOrder::ColumnAware
     } else {
@@ -1865,14 +1872,37 @@ mod tests {
     #[test]
     fn element_path_reads_the_left_page_before_the_right_page_gh2227() {
         let mut spans = gh2227_two_up_sheet();
+        let mut expected: Vec<String> = spans.iter().map(|span| span.text.clone()).collect();
 
         super::reorder_page_reading_order(&mut spans, GH2227_PAGE_WIDTH, GH2227_PAGE_HEIGHT, 0);
 
+        let mut texts: Vec<String> = spans.iter().map(|span| span.text.clone()).collect();
+        expected.sort();
+        texts.sort();
+        assert_eq!(texts, expected, "reordering must keep every span");
         let sides: Vec<bool> = spans.iter().map(|span| span.bbox.x > GH2227_PAGE_WIDTH / 2.0).collect();
         let first_right = sides.iter().position(|&right| right).expect("the right page has spans");
         assert!(
             sides[first_right..].iter().all(|&right| right),
             "the whole left page must be read before the right page, got sides {sides:?}"
+        );
+    }
+
+    /// `table_grid_is_not_prose_column_evidence`'s geometry with three-word labels: the
+    /// 100pt central corridor is uncrossed, and every cell passes `prose_like` on its own. ~keep
+    #[test]
+    fn wide_table_with_prose_cells_is_not_prose_column_evidence_gh2227() {
+        let mut spans = Vec::new();
+        for row in 0..4 {
+            let y = 700.0 - row as f32 * 18.0;
+            spans.push(text_span("Regional revenue growth", 50.0, y, 90.0));
+            spans.push(text_span("annual total amount", 160.0, y, 80.0));
+            spans.push(text_span("Operating expense growth", 340.0, y, 90.0));
+            spans.push(text_span("annual total amount", 450.0, y, 80.0));
+        }
+        assert_eq!(
+            super::select_reading_order(&spans, 612.0, 792.0),
+            ReadingOrder::TopToBottom
         );
     }
 
