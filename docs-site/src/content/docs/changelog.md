@@ -60,6 +60,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): Read a two-up sheet as two pages, left then right.**
+  Two pages printed side by side on one landscape sheet were read across both pages line by line when one page set
+  code beside its explanation, since that page left too few prose lines for the two-column check. A sheet whose
+  gutter sits near its middle, with an empty corridor at least one inch wide that no text crosses and whose sides
+  share no row grid the way a table's columns do, is now split at the gutter and each half is ordered as its own
+  page. (#2227)
+
 - **(markdown): Keep bracketed link labels and image alt text in their original sentence position in plain output.**
   Link and image destinations remain available as URI metadata, and embedded image bytes are retained.
   Empty image labels no longer leave a doubled word gap. (#2233, #2235)
