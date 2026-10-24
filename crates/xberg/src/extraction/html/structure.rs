@@ -192,6 +192,9 @@ struct HtmlWalker<'a, 'b> {
     figure: Option<FigureContext>,
     in_head: bool,
     meta_entries: Vec<(String, String)>,
+    /// Closing tags that do not occur after the walker's position. The walker only moves
+    /// forward, so they never will, and they are not searched for again.
+    missing_close_tags: Vec<String>,
 
     pending_classes: Option<String>,
 }
@@ -220,6 +223,7 @@ impl<'a, 'b> HtmlWalker<'a, 'b> {
             figure: None,
             in_head: false,
             meta_entries: Vec::new(),
+            missing_close_tags: Vec::new(),
             pending_classes: None,
         }
     }
