@@ -5,6 +5,8 @@
 //! arrows, set notation, etc.) so a given symbol always maps to the same LaTeX
 //! command regardless of which source format it came from.
 
+use std::borrow::Cow;
+
 /// Render run text, mapping Unicode math symbols to LaTeX commands and
 /// escaping TeX structural characters.
 ///
@@ -98,6 +100,9 @@ fn wrap_trailing_atom(cmd: &str, out: &mut String) {
 }
 
 /// Escape a TeX structural character appearing as literal content.
+///
+/// Math mode has no escape for `^` and `~`: raw they start a superscript or set a space, so each becomes the
+/// glyph it shows.
 pub(crate) fn escape_tex_structural(ch: char) -> Option<&'static str> {
     match ch {
         '{' => Some("\\{"),
@@ -108,6 +113,8 @@ pub(crate) fn escape_tex_structural(ch: char) -> Option<&'static str> {
         '$' => Some("\\$"),
         '_' => Some("\\_"),
         '\\' => Some("\\backslash "),
+        '^' => Some("\\hat{}"),
+        '~' => Some("\\sim "),
         _ => None,
     }
 }
@@ -258,8 +265,55 @@ fn letter_like_and_delimiter_to_latex(ch: char) -> Option<&'static str> {
     }
 }
 
+/// The LaTeX command of a named operator (`sin`, `lim`, `det`), and whether it takes its under and over
+/// scripts as limits (`\lim_{n}`). Whitespace is ignored, since producers write `\liminf` as `lim inf`.
+pub(crate) fn operator_name_to_latex(name: &str) -> Option<(&'static str, bool)> {
+    let name: Cow<'_, str> = if name.chars().any(char::is_whitespace) {
+        Cow::Owned(name.chars().filter(|c| !c.is_whitespace()).collect())
+    } else {
+        Cow::Borrowed(name)
+    };
+    let latex = match name.as_ref() {
+        "lim" => ("\\lim", true),
+        "liminf" => ("\\liminf", true),
+        "limsup" => ("\\limsup", true),
+        "max" => ("\\max", true),
+        "min" => ("\\min", true),
+        "sup" => ("\\sup", true),
+        "inf" => ("\\inf", true),
+        "det" => ("\\det", true),
+        "gcd" => ("\\gcd", true),
+        // Only presentation MathML reaches this case-sensitive arm; content names arrive lowercased.
+        "Pr" => ("\\Pr", true),
+        "sin" => ("\\sin", false),
+        "cos" => ("\\cos", false),
+        "tan" => ("\\tan", false),
+        "cot" => ("\\cot", false),
+        "sec" => ("\\sec", false),
+        "csc" => ("\\csc", false),
+        "arcsin" => ("\\arcsin", false),
+        "arccos" => ("\\arccos", false),
+        "arctan" => ("\\arctan", false),
+        "sinh" => ("\\sinh", false),
+        "cosh" => ("\\cosh", false),
+        "tanh" => ("\\tanh", false),
+        "coth" => ("\\coth", false),
+        "exp" => ("\\exp", false),
+        "ln" => ("\\ln", false),
+        "lg" => ("\\lg", false),
+        "log" => ("\\log", false),
+        "deg" => ("\\deg", false),
+        "dim" => ("\\dim", false),
+        "hom" => ("\\hom", false),
+        "ker" => ("\\ker", false),
+        "arg" => ("\\arg", false),
+        _ => return None,
+    };
+    Some(latex)
+}
+
 /// N-ary big operators (sums, products, integrals, and their "big" logic/set variants).
-fn big_operator_to_latex(ch: char) -> Option<&'static str> {
+pub(crate) fn big_operator_to_latex(ch: char) -> Option<&'static str> {
     match ch {
         '\u{2211}' => Some("\\sum "),
         '\u{220F}' => Some("\\prod "),

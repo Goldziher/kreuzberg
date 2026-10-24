@@ -27,6 +27,155 @@ fn table_model_preflight_uses_selected_slanet_variant() {
     assert_eq!(slanet_variant_for_table_model(TableModel::Disabled), None);
 }
 
+#[cfg(feature = "layout-detection")]
+fn table_hint_page(heading: &str, body: &str, rows: &[[&str; 3]]) -> Vec<SegmentData> {
+    let mut page = heading_page(heading, 18.0, body);
+    for (row_index, row) in rows.iter().enumerate() {
+        let baseline_y = 260.0 - row_index as f32 * 20.0;
+        for (column_index, cell) in row.iter().enumerate() {
+            let mut segment = seg(cell, 50.0 + column_index as f32 * 200.0, 30.0);
+            segment.y = baseline_y;
+            segment.baseline_y = baseline_y;
+            page.push(segment);
+        }
+    }
+    page
+}
+
+#[cfg(feature = "layout-detection")]
+fn table_hint_document(
+    table_model: crate::core::config::layout::TableModel,
+    hint_class: LayoutHintClass,
+) -> crate::types::internal::InternalDocument {
+    let pages = vec![
+        table_hint_page(
+            "Quarterly results overview",
+            "Revenue grew in every region this quarter.",
+            &[
+                ["AA", "DD", "GG"],
+                ["BB", "EE", "HH"],
+                ["CC", "FF", "II"],
+                ["AB", "DE", "GH"],
+                ["BC", "EF", "HI"],
+            ],
+        ),
+        table_hint_page(
+            "Regional breakdown by market",
+            "Each region is listed in the table below.",
+            &[
+                ["JJ", "MM", "PP"],
+                ["KK", "NN", "QQ"],
+                ["LL", "OO", "RR"],
+                ["JK", "MN", "PQ"],
+                ["KL", "NO", "QR"],
+            ],
+        ),
+    ];
+    let table_hint = LayoutHint {
+        class_name: hint_class,
+        confidence: 0.95,
+        left: 0.0,
+        bottom: 100.0,
+        right: 500.0,
+        top: 300.0,
+    };
+    let layout_hints = vec![vec![table_hint.clone()], vec![table_hint]];
+
+    build_document_structure(
+        pages,
+        SegmentStructureConfig {
+            k_clusters: 4,
+            tables: &[],
+            outline_entries: &[],
+            strip_repeating_text: false,
+            include_headers: true,
+            include_footers: true,
+            include_footnotes: true,
+            include_watermarks: true,
+            used_structure_tree: false,
+            image_positions: &[],
+            images: None,
+            inject_placeholders: false,
+            layout_hints: Some(&layout_hints),
+            allow_single_column: true,
+            cancel_token: None,
+            layout_images: None,
+            layout_results: None,
+            table_model,
+            table_overlap_preference: crate::core::config::layout::TableOverlapPreference::Content,
+            acceleration: None,
+            session_thread_budget: 0,
+        },
+        |_, _, _| false,
+    )
+    .expect("a missing table model must not fail the structure pass")
+}
+
+#[cfg(feature = "layout-detection")]
+#[test]
+fn unavailable_table_model_warns_and_keeps_document_structure() {
+    use crate::core::config::layout::TableModel;
+
+    let document = table_hint_document(TableModel::Tatr, LayoutHintClass::Table);
+    let expected = table_hint_document(TableModel::Disabled, LayoutHintClass::Table);
+
+    // Two table pages, so a warning raised per page rather than per document shows up as a second one.
+    let table_warnings: Vec<_> = document
+        .processing_warnings
+        .iter()
+        .filter(|warning| warning.source == "pdf_tables")
+        .collect();
+    assert_eq!(table_warnings.len(), 1, "got {:?}", document.processing_warnings);
+    assert!(
+        table_warnings[0].message.contains("TATR"),
+        "got {:?}",
+        table_warnings[0]
+    );
+
+    assert!(
+        expected.processing_warnings.is_empty(),
+        "a disabled table model must not warn: got {:?}",
+        expected.processing_warnings
+    );
+
+    // Without the empty check, two documents that both dropped their tables would compare equal.
+    assert!(
+        !expected.tables.is_empty(),
+        "the heuristic path must read the hinted grid as a table"
+    );
+    let table_contents = |document: &crate::types::internal::InternalDocument| {
+        document
+            .tables
+            .iter()
+            .map(|table| (table.page_number, table.cells.clone(), table.markdown.clone()))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(table_contents(&document), table_contents(&expected));
+    assert_eq!(document.elements, expected.elements);
+    assert!(matches!(
+        element_kind_for(&document, "Quarterly results overview"),
+        Some(crate::types::internal::ElementKind::Heading { .. })
+    ));
+}
+
+/// Layout is on but no region is a table, so a missing table model has nothing to degrade.
+#[cfg(feature = "layout-detection")]
+#[test]
+fn unavailable_table_model_without_table_hints_does_not_warn() {
+    use crate::core::config::layout::TableModel;
+
+    let document = table_hint_document(TableModel::Tatr, LayoutHintClass::Text);
+
+    assert!(
+        !document
+            .processing_warnings
+            .iter()
+            .any(|warning| warning.source == "pdf_tables"),
+        "got {:?}",
+        document.processing_warnings
+    );
+}
+
 /// Helper: a table at `bbox` on `page` whose only content is `markdown`
 /// (so content weight == markdown length; empty cells).
 fn ov_table(page: u32, bbox: (f64, f64, f64, f64), markdown: &str) -> crate::types::Table {

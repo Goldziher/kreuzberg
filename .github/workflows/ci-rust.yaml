@@ -13,6 +13,7 @@ on:
       - "Cargo.lock"
       - "rust-toolchain.toml"
       - ".github/workflows/ci-rust.yaml"
+      - ".task/languages/rust.yml"
       - "scripts/ci/rust/**"
       - "scripts/ci/install-system-deps/**"
       - ".github/actions/install-system-deps/**"
@@ -171,6 +172,11 @@ jobs:
 
       - name: Verify MIME handling without tree-sitter
         run: task rust:test:mime
+        shell: bash
+
+      - name: Verify native VLM auto gate without formula recognition
+        if: matrix.os == 'ubuntu-latest'
+        run: task rust:test:vlm-auto-gate
         shell: bash
 
       - name: Run tests

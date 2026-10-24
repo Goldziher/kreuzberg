@@ -341,8 +341,13 @@ async fn test_native_epub_features_mathml_converts_to_latex() {
         result.content
     );
     assert!(
-        result.content.contains("\\sum "),
-        "Expected the summation MathML to convert to \\sum, got: {}",
+        result.content.contains("\\sum_{n=1}^{\\infty"),
+        "Expected the summation MathML to convert to \\sum with its limits, got: {}",
+        result.content
+    );
+    assert!(
+        result.content.contains("\\sum\\limits_{"),
+        "Expected the movablelimits=\"false\" summation to keep stacked \\limits, got: {}",
         result.content
     );
     assert!(

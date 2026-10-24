@@ -156,6 +156,12 @@ tasks:
       - cmd: bash scripts/ci/rust/run-mime-tests.sh
         platforms: [linux, darwin]
 
+  test:vlm-auto-gate:
+    desc: "Verify native VLM layout restoration without formula recognition"
+    cmds:
+      - cmd: bash scripts/ci/rust/run-vlm-auto-gate-tests.sh
+        platforms: [linux, darwin]
+
   test:quick:
     desc: "Run fast Rust tests (unit tests only)"
     cmds:

@@ -2949,6 +2949,14 @@ impl ImageExtractor {
         .await?;
         #[cfg(target_arch = "wasm32")]
         let ocr_result = backend.process_image(ocr_input, &ocr_config_with_format).await?;
+        let ocr_result = {
+            let mut result = ocr_result;
+            crate::extraction::derive::adopt_public_ocr_document(
+                &mut result,
+                config.security_limits.as_ref().unwrap_or(&Default::default()),
+            )?;
+            result
+        };
         #[cfg(feature = "ocr-pipeline")]
         let ocr_result = {
             let mut ocr_result = ocr_result;
@@ -2958,6 +2966,8 @@ impl ImageExtractor {
             ocr_result
         };
 
+        #[cfg(feature = "ocr")]
+        let has_public_ocr_structure = ocr_result.document.is_some();
         // Only the GH#1789 numeric repair below mutates this, and that is gated on
         // `ocr` + `pdf`; an unconditional `mut` is a dead `mut` on every narrower leg,
         // which the formula-recognition+pdf clippy gate rejects. Same shape as
@@ -2969,6 +2979,7 @@ impl ImageExtractor {
         let ocr_metadata = ocr_result.metadata;
         let ocr_elements = ocr_result.ocr_elements;
         let ocr_formulas = ocr_result.formulas;
+        let ocr_llm_usage = ocr_result.llm_usage;
         let processing_warnings = ocr_result.processing_warnings;
         // `ExtractedDocument::tables` (tables reconstructed by OCR table
         // detection) used to be dropped here entirely: nothing on the
@@ -2982,7 +2993,7 @@ impl ImageExtractor {
         let mut ocr_internal_document = ocr_result.ocr_internal_document;
         #[cfg(all(feature = "ocr", not(feature = "pdf")))]
         let ocr_tables = ocr_result.tables;
-        #[cfg(all(feature = "ocr", not(feature = "pdf")))]
+        #[cfg(not(all(feature = "ocr", feature = "pdf")))]
         let ocr_internal_document = ocr_result.ocr_internal_document;
 
         // GH#1789: opt-in, same gate and rationale as the PDF mixed-OCR route
@@ -3048,6 +3059,9 @@ impl ImageExtractor {
             let hocr_has_content_or_tables =
                 |internal_doc: &InternalDocument| !internal_doc.elements.is_empty() || !ocr_tables.is_empty();
             let mut doc = match &ocr_internal_document {
+                Some(internal_doc) if has_public_ocr_structure => {
+                    build_image_ocr_document(Some(internal_doc.clone()), &ocr_extraction_result.content)
+                }
                 Some(internal_doc) if use_hocr_headings && hocr_has_content_or_tables(internal_doc) => {
                     build_image_internal_document_from_hocr_elements(&internal_doc.elements)
                 }
@@ -3055,6 +3069,7 @@ impl ImageExtractor {
             };
             doc.metadata = ocr_metadata;
             doc.formulas = ocr_formulas;
+            doc.llm_usage = ocr_llm_usage;
             doc.processing_warnings = processing_warnings;
             Self::mark_ocr_extraction(&mut doc);
 
@@ -3105,9 +3120,10 @@ impl ImageExtractor {
         #[cfg(not(feature = "ocr"))]
         {
             let _ = mime_type;
-            let mut doc = build_image_internal_document(Some(&ocr_content), None);
+            let mut doc = build_image_ocr_document(ocr_internal_document, &ocr_content);
             doc.metadata = ocr_metadata;
             doc.formulas = ocr_formulas;
+            doc.llm_usage = ocr_llm_usage;
             doc.processing_warnings = processing_warnings;
             Self::mark_ocr_extraction(&mut doc);
             doc.prebuilt_ocr_elements = ocr_elements;
@@ -3202,8 +3218,13 @@ impl ImageExtractor {
         // the pipeline's elements, formulas, usage, and — crucially — any processing
         // warnings, so a fallback backend that failed is visible to the caller
         // rather than silently swapped for the classical result (issue #1339).
-        let prose = strip_embedded_gfm_tables(&text, &tables);
-        let mut doc = build_image_internal_document(Some(&prose), None);
+        let prose = crate::extractors::pdf::ocr::strip_embedded_gfm_tables(&text, tables.iter());
+        let mut pipeline_doc = pipeline_doc;
+        let mut doc = if pipeline_doc.as_ref().is_some_and(|doc| !doc.elements.is_empty()) {
+            build_image_ocr_document(pipeline_doc.take(), &prose)
+        } else {
+            build_image_internal_document(Some(&prose), None)
+        };
         Self::mark_ocr_extraction(&mut doc);
         if !ocr_elements.is_empty() {
             doc.prebuilt_ocr_elements = Some(ocr_elements);
@@ -3221,7 +3242,11 @@ impl ImageExtractor {
 
         let page_tables: Vec<std::sync::Arc<crate::types::Table>> = tables
             .into_iter()
-            .map(|table| {
+            .enumerate()
+            .map(|(index, table)| {
+                if doc.elements.iter().any(|element| matches!(element.kind, crate::types::internal::ElementKind::Table { table_index } if table_index as usize == index)) {
+                    return std::sync::Arc::new(table);
+                }
                 let bbox = table.bounding_box;
                 let table_index = doc.push_table(table.clone());
                 let mut element = crate::types::internal::InternalElement::text(
@@ -3466,12 +3491,25 @@ fn push_image_placeholder(builder: &mut InternalDocumentBuilder) {
     });
 }
 
-/// Build a simple `InternalDocument` for an image extraction result.
-///
-/// If OCR text is available, preserves its blank-line-delimited paragraphs. Always pushes
-/// the image itself as an `Image` node. When `image_data` is provided,
-/// the binary data is stored in `InternalDocument::images` and the
-/// element references it by index.
+/// Keep the standalone source-image envelope while adopting the OCR contribution.
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+fn build_image_ocr_document(document: Option<InternalDocument>, transcript: &str) -> InternalDocument {
+    let Some(mut doc) = document else {
+        return build_image_internal_document(Some(transcript), None);
+    };
+    doc.source_format = "image".into();
+    if !doc.elements.iter().any(|element| {
+        matches!(
+            element.kind,
+            crate::types::internal::ElementKind::Image { image_index: 0 }
+        )
+    }) {
+        doc.elements.extend(build_image_internal_document(None, None).elements);
+    }
+    doc
+}
+
+/// Build image paragraphs and the source-image reference, optionally with its bytes.
 fn build_image_internal_document(
     ocr_text: Option<&str>,
     image_data: Option<crate::types::ExtractedImage>,
@@ -3490,50 +3528,6 @@ fn build_image_internal_document(
         push_image_placeholder(&mut builder);
     }
     builder.build()
-}
-
-#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
-fn gfm_row_cells(line: &str) -> Option<Vec<String>> {
-    let inner = line.trim().strip_prefix('|')?.strip_suffix('|')?;
-    Some(inner.split('|').map(|cell| cell.trim().to_owned()).collect())
-}
-
-#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
-fn is_gfm_separator_row(cells: &[String]) -> bool {
-    cells
-        .iter()
-        .all(|cell| !cell.is_empty() && cell.trim_matches(':').chars().all(|c| c == '-'))
-}
-
-#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
-/// Remove GFM table blocks from OCR text when `tables` already carries the same cells, so the
-/// structured table renders once instead of also surviving as a collapsed pipe paragraph.
-/// Blocks that match no returned table stay in the text untouched.
-fn strip_embedded_gfm_tables(text: &str, tables: &[crate::types::Table]) -> String {
-    if tables.is_empty() {
-        return text.to_owned();
-    }
-    let lines: Vec<&str> = text.lines().collect();
-    let mut kept: Vec<&str> = Vec::with_capacity(lines.len());
-    let mut index = 0;
-    while index < lines.len() {
-        let mut end = index;
-        let mut rows: Vec<Vec<String>> = Vec::new();
-        while end < lines.len() {
-            let Some(cells) = gfm_row_cells(lines[end]) else { break };
-            if !is_gfm_separator_row(&cells) {
-                rows.push(cells);
-            }
-            end += 1;
-        }
-        if !rows.is_empty() && tables.iter().any(|table| table.cells == rows) {
-            index = end;
-        } else {
-            kept.push(lines[index]);
-            index += 1;
-        }
-    }
-    kept.join("\n")
 }
 
 fn split_ocr_paragraphs(text: &str) -> Vec<String> {
