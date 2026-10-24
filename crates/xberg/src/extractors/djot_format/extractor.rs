@@ -633,6 +633,10 @@ impl DjotExtractor {
                     }
                 }
                 Event::Str(s) => {
+                    // An image in a caption or cell keeps its alt text there and in its metadata.
+                    if in_image && (in_table_caption || in_table_cell) {
+                        image_alt.push_str(s);
+                    }
                     if in_table_caption {
                         table_caption.push_str(s);
                     } else if in_table_cell {
@@ -679,6 +683,16 @@ impl DjotExtractor {
                 Event::Hardbreak => {
                     if in_code_block {
                         code_text.push('\n');
+                    } else if in_table_caption {
+                        table_caption.push('\n');
+                    } else if in_heading {
+                        heading_text.push('\n');
+                    } else if in_list_item > 0 {
+                        list_item_text.push('\n');
+                    } else if in_description_term {
+                        description_term_text.push('\n');
+                    } else if in_description_details {
+                        description_details_text.push('\n');
                     } else if in_paragraph {
                         paragraph_text.push('\n');
                     }
@@ -1214,5 +1228,61 @@ mod tests {
             .position(|e| e.text == "After.")
             .expect("paragraph after");
         assert!(table_idx < caption_idx && caption_idx < after_idx);
+    }
+
+    /// A hard line break ran its two lines together in table captions, list items, headings and
+    /// definitions.
+    #[tokio::test]
+    async fn should_keep_hard_breaks_in_every_block_djot() {
+        for djot in [
+            &b"| Name |\n|------|\n| Alice |\n\n^ first\\\nsecond\n"[..],
+            &b"- first\\\n  second\n"[..],
+            &b"# first\\\nsecond\n"[..],
+            &b": term\n\n  first\\\n  second\n"[..],
+        ] {
+            let doc = DjotExtractor::new()
+                .extract_content(djot, "text/djot", &ExtractionConfig::default())
+                .await
+                .expect("djot with a hard break should extract");
+
+            let texts: Vec<&str> = doc.elements.iter().map(|e| e.text.as_str()).collect();
+            assert!(
+                texts.contains(&"first\nsecond"),
+                "{:?} must keep its hard break, got {texts:?}",
+                String::from_utf8_lossy(djot)
+            );
+        }
+    }
+
+    /// An image in a table caption or cell lost its alt text from the image element and its URI.
+    #[tokio::test]
+    async fn should_keep_image_alt_text_in_table_captions_and_cells_djot() {
+        let djot = b"| Chart |\n|-------|\n| ![sales chart](chart.png) |\n\n^ Regions on the ![region map](map.png)\n";
+        let doc = DjotExtractor::new()
+            .extract_content(djot, "text/djot", &ExtractionConfig::default())
+            .await
+            .expect("djot table with images should extract");
+
+        for (url, alt) in [("chart.png", "sales chart"), ("map.png", "region map")] {
+            let uri = doc
+                .uris
+                .iter()
+                .find(|u| u.url == url)
+                .unwrap_or_else(|| panic!("{url} missing from {:?}", doc.uris));
+            assert_eq!(uri.label.as_deref(), Some(alt), "label of {url}");
+            assert!(
+                doc.elements
+                    .iter()
+                    .any(|e| matches!(e.kind, ElementKind::Image { .. }) && e.text == alt),
+                "image element with text {alt:?} missing from {:?}",
+                doc.elements
+            );
+        }
+        assert_eq!(doc.tables[0].cells[1], vec!["sales chart"]);
+        assert!(
+            doc.elements.iter().any(|e| e.text == "Regions on the region map"),
+            "caption text must keep the alt text, got {:?}",
+            doc.elements
+        );
     }
 }
