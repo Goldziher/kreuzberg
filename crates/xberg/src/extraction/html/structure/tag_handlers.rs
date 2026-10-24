@@ -290,26 +290,25 @@ impl HtmlWalker<'_, '_> {
         }
     }
 
-    /// Offset of `close_tag` from the walker's position. Every unclosed `<script>`, `<style>`,
-    /// `<title>`, `<video>`, `<audio>` or `<math>` used to search the rest of the document for its
-    /// closing tag again, so a run of them took quadratic time. A closing tag that is missing once
-    /// is now not searched for again.
-    fn find_close_tag(&mut self, close_tag: &str) -> Option<usize> {
-        if self.missing_close_tags.iter().any(|missing| missing == close_tag) {
+    /// Start and end, from the walker's position, of the closing tag of a `<script>`, `<style>`,
+    /// `<title>`, `<video>`, `<audio>` or `<math>`. Every unclosed one used to search the rest of
+    /// the document for its closing tag again, so a run of them took quadratic time. A closing tag
+    /// that is missing once is now not searched for again.
+    fn find_close_tag(&mut self, tag: &str) -> Option<(usize, usize)> {
+        if self.missing_close_tags.iter().any(|missing| missing == tag) {
             return None;
         }
-        let found = self.src[self.pos..].find(close_tag);
+        let found = find_closing_tag(&self.src[self.pos..], tag);
         if found.is_none() {
-            self.missing_close_tags.push(close_tag.to_string());
+            self.missing_close_tags.push(tag.to_string());
         }
         found
     }
 
     fn handle_open_raw_block(&mut self, tag: &str) {
-        let close_tag = format!("</{tag}>");
-        if let Some(close_pos) = self.find_close_tag(&close_tag) {
-            let block_content = &self.src[self.pos..self.pos + close_pos];
-            self.pos += close_pos + close_tag.len();
+        if let Some((close_start, close_end)) = self.find_close_tag(tag) {
+            let block_content = &self.src[self.pos..self.pos + close_start];
+            self.pos += close_end;
             if !block_content.trim().is_empty() {
                 self.builder.push_raw_block(tag, block_content.trim(), None);
             }
@@ -317,9 +316,8 @@ impl HtmlWalker<'_, '_> {
     }
 
     fn handle_open_media(&mut self, tag: &str) {
-        let close_tag = format!("</{tag}>");
-        if let Some(close_pos) = self.find_close_tag(&close_tag) {
-            self.pos += close_pos + close_tag.len();
+        if let Some((_, close_end)) = self.find_close_tag(tag) {
+            self.pos += close_end;
         }
     }
 
@@ -328,17 +326,16 @@ impl HtmlWalker<'_, '_> {
         if is_self_closing {
             return;
         }
-        let close_tag = "</math>";
-        let Some(close_pos) = self.find_close_tag(close_tag) else {
+        let Some((close_start, close_end)) = self.find_close_tag("math") else {
             return;
         };
-        let inner = &self.src[self.pos..self.pos + close_pos];
+        let inner = &self.src[self.pos..self.pos + close_start];
         let raw_xml = if attrs_str.is_empty() {
             format!("<math>{inner}</math>")
         } else {
             format!("<math {attrs_str}>{inner}</math>")
         };
-        self.pos += close_pos + close_tag.len();
+        self.pos += close_end;
         if let Some(latex) = convert_math_subtree_to_latex(&raw_xml) {
             self.builder.push_formula(&latex, None);
         }
@@ -513,4 +510,36 @@ impl HtmlWalker<'_, '_> {
             self.builder.push_metadata_block(entries, None);
         }
     }
+}
+
+/// Start and end of the first closing tag for `tag` in `html`. As in HTML, the name matches in any
+/// ASCII case and may be followed by whitespace or `/` before the `>` (`</TITLE >`), so a later
+/// exact `</title>`, such as an SVG's, is not taken for it. Each `</` is looked at once and the
+/// whitespace after a name is not rescanned, so the search stays linear.
+fn find_closing_tag(html: &str, tag: &str) -> Option<(usize, usize)> {
+    let bytes = html.as_bytes();
+    let mut from = 0;
+    while let Some(offset) = html[from..].find("</") {
+        let start = from + offset;
+        let name_end = start + 2 + tag.len();
+        if bytes
+            .get(start + 2..name_end)
+            .is_some_and(|name| name.eq_ignore_ascii_case(tag.as_bytes()))
+        {
+            let mut end = name_end;
+            while bytes
+                .get(end)
+                .is_some_and(|byte| byte.is_ascii_whitespace() || *byte == b'/')
+            {
+                end += 1;
+            }
+            if bytes.get(end) == Some(&b'>') {
+                return Some((start, end + 1));
+            }
+            from = end;
+        } else {
+            from = start + 2;
+        }
+    }
+    None
 }
