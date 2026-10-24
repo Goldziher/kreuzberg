@@ -184,8 +184,10 @@ pub(super) fn build_email_attachments(
                 (data, raw_message.len())
             }
             _ => {
-                let contents = attachment.contents();
-                (Some(Bytes::copy_from_slice(contents)), contents.len())
+                let contents = recover_base64_contents(message, attachment)
+                    .map(Cow::Owned)
+                    .unwrap_or(Cow::Borrowed(attachment.contents()));
+                (Some(Bytes::copy_from_slice(&contents)), contents.len())
             }
         };
 
@@ -201,6 +203,70 @@ pub(super) fn build_email_attachments(
         });
     }
     attachments
+}
+
+/// Base64 without padding, keeping the bits of a last, incomplete group.
+const LENIENT_BASE64: base64::engine::GeneralPurpose = base64::engine::GeneralPurpose::new(
+    &base64::alphabet::STANDARD,
+    base64::engine::GeneralPurposeConfig::new()
+        .with_decode_padding_mode(base64::engine::DecodePaddingMode::RequireNone)
+        .with_decode_allow_trailing_bits(true),
+);
+
+/// The bytes of a base64 part that `mail-parser` could not decode.
+///
+/// `mail-parser` gives up on a base64 body at the first character outside the base64 alphabet,
+/// such as a stray `>`, and keeps the still-encoded text as the part's contents: it flags the part
+/// `is_encoding_problem` and resets its `encoding` to `None`. That text then came out as the body
+/// or as the text of an attachment. RFC 2045, section 6.8, has a decoder ignore those characters,
+/// so the text is decoded here without them, up to the first `=`, which the RFC also takes as the
+/// end of the data. A last symbol left on its own holds six bits, no whole byte, and is dropped.
+///
+/// `None` for any other part, including an attached message that `mail-parser` decoded but could
+/// not parse: it is flagged too, but keeps its `Base64` encoding and its decoded contents.
+///
+/// The encoded text is read from `message`, the message that owns `part`, at the part's body
+/// offsets. The contents of a text part are already decoded with its charset, so the base64 of a
+/// UTF-16 body came back as unrelated characters there and filtered down to nothing.
+pub(super) fn recover_base64_contents(
+    message: &mail_parser::Message<'_>,
+    part: &mail_parser::MessagePart<'_>,
+) -> Option<Vec<u8>> {
+    use base64::Engine as _;
+
+    let declares_base64 = part
+        .content_transfer_encoding()
+        .is_some_and(|encoding| encoding.trim().eq_ignore_ascii_case("base64"));
+    if !part.is_encoding_problem || part.encoding != mail_parser::Encoding::None || !declares_base64 {
+        return None;
+    }
+    let encoded = message
+        .raw_message
+        .get(part.offset_body as usize..part.offset_end as usize)?;
+    let mut symbols: Vec<u8> = encoded
+        .iter()
+        .copied()
+        .take_while(|&byte| byte != b'=')
+        .filter(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/'))
+        .collect();
+    if symbols.len() % 4 == 1 {
+        symbols.pop();
+    }
+    LENIENT_BASE64.decode(symbols).ok()
+}
+
+/// The text of a body part, decoded from base64 by [`recover_base64_contents`] where
+/// `mail-parser` could not, in the charset the part declares.
+fn recover_base64_text(message: &mail_parser::Message<'_>, part: &mail_parser::MessagePart<'_>) -> Option<String> {
+    let bytes = recover_base64_contents(message, part)?;
+    let decoder = part
+        .content_type()
+        .and_then(|content_type| content_type.attribute("charset"))
+        .and_then(|charset| mail_parser::decoders::charsets::map::charset_decoder(charset.as_bytes()));
+    Some(match decoder {
+        Some(decode) => decode(&bytes),
+        None => String::from_utf8_lossy(&bytes).into_owned(),
+    })
 }
 
 /// Fold the threading headers, sender display name, raw headers, and a compact
@@ -258,7 +324,12 @@ pub(super) fn extract_email_bodies(
         let mut all_text = Vec::new();
         let mut i = 0;
         while let Some(text) = message.body_text(i) {
-            all_text.push(text.to_string());
+            let recovered = message
+                .text_body
+                .get(i)
+                .and_then(|&part_id| message.parts.get(part_id as usize))
+                .and_then(|part| recover_base64_text(message, part));
+            all_text.push(recovered.unwrap_or_else(|| text.to_string()));
             i += 1;
         }
         collect_nested_message_text(message, &mut all_text);

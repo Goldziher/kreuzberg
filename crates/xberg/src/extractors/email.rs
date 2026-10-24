@@ -878,6 +878,28 @@ Attachment body\r\n\
         assert!(plain.contains(children[0].result.content.trim()));
     }
 
+    /// The PDF in this fixture is base64 with a stray `>`. Against the unfixed code its
+    /// still-encoded text (`JVBERi0x…`) was sniffed as `text/plain` and came out as the
+    /// attachment's content.
+    #[cfg(feature = "tokio-runtime")]
+    #[tokio::test]
+    async fn test_async_email_does_not_extract_undecoded_base64_as_attachment_text() {
+        let Some(data) = crate::utils::read_test_fixture("email/mailgun_pdf_attachment.eml") else {
+            return;
+        };
+        let doc = EmailExtractor::new()
+            .extract_content(&data, "message/rfc822", &ExtractionConfig::default())
+            .await
+            .unwrap();
+        let plain = crate::rendering::render_plain(&doc);
+
+        assert!(plain.contains("Test - body content"), "got: {plain:?}");
+        assert!(
+            !plain.contains("JVBERi0x"),
+            "the attachment's base64 leaked into the text: {plain:?}"
+        );
+    }
+
     #[cfg(feature = "tokio-runtime")]
     #[tokio::test]
     async fn test_async_email_skips_attachment_inline_when_combined_content_exceeds_limit() {

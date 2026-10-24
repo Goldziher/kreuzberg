@@ -671,6 +671,119 @@ fn test_eml_attachment_details_metadata() {
     assert!(details.contains("application/pdf"), "Should contain mime type");
 }
 
+/// `mail-parser` stops decoding base64 at the first character outside its alphabet and keeps the
+/// encoded text. Against the unfixed code the body and the attachment below both came out as
+/// `SGVsbG8gQm9iLCB0aGUgZmln…>`.
+#[test]
+fn test_base64_with_a_stray_character_is_decoded() {
+    // "Hello Bob, the figures are attached." with a `>` after the last symbol
+    let encoded = "SGVsbG8gQm9iLCB0aGUgZmln\r\ndXJlcyBhcmUgYXR0YWNoZWQu>\r\n";
+
+    let body = format!(
+        "From: alice@example.com\r\nSubject: Figures\r\nMIME-Version: 1.0\r\n\
+         Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n{encoded}"
+    );
+    let result = parse_eml_content(body.as_bytes()).unwrap();
+    assert_eq!(result.content.trim(), "Hello Bob, the figures are attached.");
+
+    let attachment = format!(
+        "From: alice@example.com\r\nSubject: Figures\r\nMIME-Version: 1.0\r\n\
+         Content-Type: multipart/mixed; boundary=\"BOUNDARY\"\r\n\r\n\
+         --BOUNDARY\r\nContent-Type: text/plain\r\n\r\nSee the note.\r\n\
+         --BOUNDARY\r\nContent-Type: text/plain; name=\"note.txt\"\r\n\
+         Content-Disposition: attachment; filename=\"note.txt\"\r\n\
+         Content-Transfer-Encoding: base64\r\n\r\n{encoded}--BOUNDARY--\r\n"
+    );
+    let result = parse_eml_content(attachment.as_bytes()).unwrap();
+    let note = &result.attachments[0];
+    assert_eq!(note.data.as_deref(), Some(&b"Hello Bob, the figures are attached."[..]));
+    assert_eq!(note.size, Some(36));
+}
+
+/// The contents of a text part are already decoded with its charset, so a UTF-16 body has to be
+/// recovered from the message's raw bytes.
+#[test]
+fn test_utf16_base64_with_a_stray_character_is_decoded() {
+    // "Hi" in UTF-16LE is `SABpAA==`; the `>` stops mail-parser's decoder
+    let body = "From: alice@example.com\r\nSubject: Hi\r\nMIME-Version: 1.0\r\n\
+                Content-Type: text/plain; charset=utf-16le\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+                SA>BpAA==\r\n";
+    let result = parse_eml_content(body.as_bytes()).unwrap();
+    assert_eq!(result.content.trim(), "Hi");
+
+    let attachment = "From: alice@example.com\r\nSubject: Hi\r\nMIME-Version: 1.0\r\n\
+                      Content-Type: multipart/mixed; boundary=\"BOUNDARY\"\r\n\r\n\
+                      --BOUNDARY\r\nContent-Type: text/plain\r\n\r\nSee the note.\r\n\
+                      --BOUNDARY\r\nContent-Type: text/plain; charset=utf-16le; name=\"hi.txt\"\r\n\
+                      Content-Disposition: attachment; filename=\"hi.txt\"\r\n\
+                      Content-Transfer-Encoding: base64\r\n\r\nSA>BpAA==\r\n--BOUNDARY--\r\n";
+    let result = parse_eml_content(attachment.as_bytes()).unwrap();
+    assert_eq!(result.attachments[0].data.as_deref(), Some(&b"H\0i\0"[..]));
+}
+
+/// An attached message nested deeper than `mail-parser` parses base64 messages is decoded but
+/// not parsed, and flagged `is_encoding_problem` too. Its contents are decoded already.
+#[test]
+fn test_attached_message_decoded_by_mail_parser_is_not_decoded_again() {
+    use base64::Engine as _;
+
+    let mut message = "From: inner@example.com\r\nSubject: Inner\r\n\r\nInner body\r\n".to_string();
+    for level in 0..4 {
+        let encoded = base64::engine::general_purpose::STANDARD.encode(&message);
+        message = format!(
+            "From: level{level}@example.com\r\nSubject: Level {level}\r\nMIME-Version: 1.0\r\n\
+             Content-Type: multipart/mixed; boundary=\"B{level}\"\r\n\r\n\
+             --B{level}\r\nContent-Type: text/plain\r\n\r\nLevel {level}\r\n\
+             --B{level}\r\nContent-Type: message/rfc822\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+             {encoded}\r\n--B{level}--\r\n"
+        );
+    }
+
+    type OwnedPart<'a> = (&'a mail_parser::Message<'a>, &'a mail_parser::MessagePart<'a>);
+    fn flagged_decoded_parts<'a>(message: &'a mail_parser::Message<'a>, out: &mut Vec<OwnedPart<'a>>) {
+        for part in &message.parts {
+            match &part.body {
+                mail_parser::PartType::Message(nested) => flagged_decoded_parts(nested, out),
+                _ if part.is_encoding_problem && part.encoding == mail_parser::Encoding::Base64 => {
+                    out.push((message, part))
+                }
+                _ => {}
+            }
+        }
+    }
+    let parsed = mail_parser::MessageParser::default().parse(message.as_bytes()).unwrap();
+    let mut flagged = Vec::new();
+    flagged_decoded_parts(&parsed, &mut flagged);
+
+    assert_eq!(
+        flagged.len(),
+        1,
+        "expected the innermost message to be decoded but not parsed"
+    );
+    let (owner, part) = flagged[0];
+    assert!(
+        part.contents().starts_with(b"From: inner@example.com"),
+        "got {:?}",
+        String::from_utf8_lossy(part.contents())
+    );
+    assert_eq!(recover_base64_contents(owner, part), None);
+}
+
+/// The base64 of this PDF has a `>` in its last line, and after it one symbol is left on its own,
+/// since the message was cut off in the middle of the file.
+#[test]
+fn test_truncated_base64_attachment_is_decoded_as_far_as_it_goes() {
+    let eml_data = std::fs::read(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../test_documents/email/mailgun_pdf_attachment.eml"
+    ))
+    .expect("mailgun_pdf_attachment.eml should exist");
+    let result = parse_eml_content(&eml_data).unwrap();
+    let pdf = result.attachments[0].data.as_deref().expect("attachment data");
+    assert!(pdf.starts_with(b"%PDF-1.3"), "got {:?}", &pdf[..pdf.len().min(16)]);
+    assert_eq!(pdf.len(), 411);
+}
+
 #[test]
 fn test_extract_raw_headers_function() {
     let data = b"From: alice@example.com\r\n\

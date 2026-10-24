@@ -60,6 +60,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(email): Decode a base64 body or attachment that holds a character outside the base64 alphabet.**
+  `mail-parser` gives up on such a part, for example one with a stray `>` or a line of plain text, and keeps
+  the encoded text, which then came out as the body or as the text of the attachment (`JVBERi0x…` for a PDF).
+  The part is now decoded without those characters, as RFC 2045 asks.
 - **(markdown): Keep bracketed link labels and image alt text in their original sentence position in plain output.**
   Link and image destinations remain available as URI metadata, and embedded image bytes are retained.
   Empty image labels no longer leave a doubled word gap. (#2233, #2235)
