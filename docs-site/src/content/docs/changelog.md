@@ -53,6 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **(pdf): A missing table structure model no longer drops the document's structure.**
+  When layout detection found a table and the configured table model (TATR or SLANeXT) could not be loaded, the
+  extraction fell back to plain text, without its layout-detected tables, headings or layout regions, and with no
+  warning. The structure is now kept, table regions are read without the model, and a `pdf_tables` processing
+  warning names it.
+- **(ocr): `ocr.backend = "vlm"` works on mixed PDFs with layout detection on.**
+  Every page the mixed route OCR'd failed with "VLM OCR requires vlm_config to be set", because the one-stage pipeline
+  built for layout dropped the OCR config's `vlm_config`.
 - **(pdf): Crop VLM regions from the detected pixel box.**
   The crop was cut from the layout hint's PDF-point box read as pixels, so at the default 150 dpi the region came out
   at about half its size and shifted down the page: one at the top of a Letter page was cut from below the middle. It
@@ -72,14 +80,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were dropped for the whole document, so formula recognition and VLM regions did nothing on the pages that did run
   layout. The native path now keeps them when a formula model or VLM regions are configured; a document with any
   rotated page still drops them.
-- **(pdf): A missing table structure model no longer drops the document's structure.**
-  When layout detection found a table and the configured table model (TATR or SLANeXT) could not be loaded, the
-  extraction fell back to plain text, without its layout-detected tables, headings or layout regions, and with no
-  warning. The structure is now kept, table regions are read without the model, and a `pdf_tables` processing
-  warning names it.
-- **(ocr): `ocr.backend = "vlm"` works on mixed PDFs with layout detection on.**
-  Every page the mixed route OCR'd failed with "VLM OCR requires vlm_config to be set", because the one-stage pipeline
-  built for layout dropped the OCR config's `vlm_config`.
 - **(toml): Print a date or time as its TOML text instead of under a `$__toml_private_datetime` key.**
   The TOML value went through `serde_json::to_value`, which turned every datetime into
   `{"$__toml_private_datetime": "2025-02-05"}`, so the text read `created_date` and then
