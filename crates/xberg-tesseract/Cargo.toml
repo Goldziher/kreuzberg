@@ -57,7 +57,7 @@ system-linking = ["dynamic-linking"]
 thiserror = { workspace = true }
 
 [build-dependencies]
-cc = { version = "^1.9.0", optional = true }
+cc = { version = "^1.10.0", optional = true }
 cmake = { version = "0.1.58", optional = true }
 libc = { workspace = true }
 pkg-config = { version = "0.3.34", optional = true }

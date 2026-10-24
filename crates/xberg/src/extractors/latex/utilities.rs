@@ -89,7 +89,7 @@ pub(crate) fn extract_env_name(line: &str) -> Option<String> {
 ///
 /// Handles common LaTeX escape sequences like \\&, \\#, \\\_, etc.
 pub(crate) fn clean_text(text: &str) -> String {
-    tie_to_nbsp(text)
+    tie_to_nbsp(&resolve_text_symbols(text))
         .replace("\\\\", "\n")
         .replace("\\&", "&")
         .replace("\\#", "#")
@@ -99,6 +99,227 @@ pub(crate) fn clean_text(text: &str) -> String {
         .replace("\\%", "%")
         .trim()
         .to_string()
+}
+
+/// The combining mark an accent command puts on its letter, as in `\'e` or `\c{c}`. ~keep
+fn accent_mark(command: &str) -> Option<char> {
+    Some(match command {
+        "`" => '\u{300}',
+        "'" => '\u{301}',
+        "^" => '\u{302}',
+        "~" => '\u{303}',
+        "=" => '\u{304}',
+        "u" => '\u{306}',
+        "." => '\u{307}',
+        "\"" => '\u{308}',
+        "r" => '\u{30A}',
+        "H" => '\u{30B}',
+        "v" => '\u{30C}',
+        "d" => '\u{323}',
+        "c" => '\u{327}',
+        "k" => '\u{328}',
+        "b" => '\u{331}',
+        _ => return None,
+    })
+}
+
+/// Letters that LaTeX writes as a command, such as `\ss` or `\o`. ~keep
+fn letter_command(command: &str) -> Option<char> {
+    Some(match command {
+        "ss" => 'ß',
+        "o" => 'ø',
+        "O" => 'Ø',
+        "ae" => 'æ',
+        "AE" => 'Æ',
+        "oe" => 'œ',
+        "OE" => 'Œ',
+        "aa" => 'å',
+        "AA" => 'Å',
+        "l" => 'ł',
+        "L" => 'Ł',
+        "i" => 'ı',
+        "j" => 'ȷ',
+        _ => return None,
+    })
+}
+
+/// Bytes of spaces and tabs at the start of `text`, which TeX skips after a command word. ~keep
+fn skipped_spaces(text: &str) -> usize {
+    text.len() - text.trim_start_matches([' ', '\t']).len()
+}
+
+/// The letter an accent applies to, with the bytes it takes: a letter, or `\i` / `\j` for an
+/// undotted i or j, bare or alone in braces. Only a few bytes are looked at, so an unclosed
+/// brace never makes the scan run to the end of the text. ~keep
+fn accent_argument(text: &str) -> Option<(char, usize)> {
+    let (inner, braced) = match text.strip_prefix('{') {
+        Some(inner) => (inner, true),
+        None => (text, false),
+    };
+    let dotless = [("\\i", 'i'), ("\\j", 'j')].into_iter().find(|(command, _)| {
+        inner
+            .strip_prefix(command)
+            .is_some_and(|after| !after.starts_with(|c: char| c.is_ascii_alphabetic()))
+    });
+    let (base, mut len) = match dotless {
+        Some((command, letter)) => (letter, command.len()),
+        None => {
+            let letter = inner.chars().next().filter(|c| c.is_alphabetic())?;
+            (letter, letter.len_utf8())
+        }
+    };
+    if braced {
+        return inner[len..].starts_with('}').then_some((base, len + 2));
+    }
+    if dotless.is_some() {
+        len += skipped_spaces(&inner[len..]);
+    }
+    Some((base, len))
+}
+
+/// The text that an accent command (`\"o`, `\'{e}`, `\c c`, `\'\i`), a letter command (`\ss`,
+/// `\o`) or a control space (`\ `) at the start of `text` prints, with the bytes it takes. ~keep
+fn symbol_command(text: &str) -> Option<(String, usize)> {
+    let after = text.strip_prefix('\\')?;
+    if after.starts_with(' ') {
+        return Some((" ".to_string(), 2));
+    }
+    let word_len = after.len() - after.trim_start_matches(|c: char| c.is_ascii_alphabetic()).len();
+    let command_len = if word_len > 0 {
+        word_len
+    } else {
+        after.chars().next()?.len_utf8()
+    };
+    let command = &after[..command_len];
+    let after_command = &after[command_len..];
+    if let Some(mark) = accent_mark(command) {
+        let skip = if word_len > 0 { skipped_spaces(after_command) } else { 0 };
+        let (base, len) = accent_argument(&after_command[skip..])?;
+        let printed = match unicode_normalization::char::compose(base, mark) {
+            Some(composed) => composed.to_string(),
+            None => [base, mark].iter().collect(),
+        };
+        return Some((printed, 1 + command_len + skip + len));
+    }
+    if word_len == 0 {
+        return None;
+    }
+    let letter = letter_command(command)?;
+    let terminator = if after_command.starts_with("{}") {
+        2
+    } else {
+        skipped_spaces(after_command)
+    };
+    Some((letter.to_string(), 1 + command_len + terminator))
+}
+
+fn opening_argument_len(text: &str) -> usize {
+    let spaces = text.len() - text.trim_start_matches(char::is_whitespace).len();
+    if text[spaces..].starts_with('{') { spaces + 1 } else { 0 }
+}
+
+fn math_span_len(text: &str) -> Option<usize> {
+    let (open, close) = [("$$", "$$"), ("$", "$"), ("\\[", "\\]"), ("\\(", "\\)")]
+        .into_iter()
+        .find(|(open, _)| text.starts_with(open))?;
+    let mut escaped = false;
+    for (index, ch) in text[open.len()..].char_indices() {
+        if !escaped && text[open.len() + index..].starts_with(close) {
+            return Some(open.len() + index + close.len());
+        }
+        escaped = ch == '\\' && !escaped;
+    }
+    Some(text.len())
+}
+
+/// Link targets are literal; only the following `\href` label may decode text symbols. ~keep
+fn url_span_len(text: &str) -> Option<usize> {
+    let command = ["\\url", "\\href"].into_iter().find(|command| {
+        text.strip_prefix(command)
+            .is_some_and(|after| !after.starts_with(|c: char| c.is_ascii_alphabetic()))
+    })?;
+    let argument = opening_argument_len(&text[command.len()..]);
+    if argument == 0 {
+        return None;
+    }
+    let start = command.len() + argument;
+    let mut depth = 1;
+    for (index, ch) in text[start..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => depth -= 1,
+            _ => {}
+        }
+        if depth == 0 {
+            let end = start + index + 1;
+            return Some(if command == "\\href" {
+                end + opening_argument_len(&text[end..])
+            } else {
+                end
+            });
+        }
+    }
+    Some(text.len())
+}
+
+/// Preserve an argument's opening brace so a sole accent does not erase its command syntax. ~keep
+fn unchanged_command_len(text: &str) -> usize {
+    let after = &text[1..];
+    let word_len = after.len() - after.trim_start_matches(|c: char| c.is_ascii_alphabetic()).len();
+    let command_len = if word_len > 0 {
+        word_len
+    } else {
+        after.chars().next().map_or(0, char::len_utf8)
+    };
+    let argument = if word_len > 0 {
+        opening_argument_len(&after[command_len..])
+    } else {
+        0
+    };
+    1 + command_len + argument
+}
+
+/// Standalone symbol groups collapse, while command arguments, math, URLs and verbatim keep
+/// the syntax their downstream parsers require. ~keep
+pub(crate) fn resolve_text_symbols(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut index = 0;
+    while let Some(offset) = text[index..].find(['\\', '$', '{']) {
+        out.push_str(&text[index..index + offset]);
+        index += offset;
+        let rest = &text[index..];
+        if let Some(len) = math_span_len(rest)
+            .or_else(|| verb_span_len(rest))
+            .or_else(|| url_span_len(rest))
+        {
+            out.push_str(&rest[..len]);
+            index += len;
+            continue;
+        }
+        if let Some(group) = rest.strip_prefix('{') {
+            match symbol_command(group) {
+                Some((printed, len)) if group[len..].starts_with('}') => {
+                    out.push_str(&printed);
+                    index += len + 2;
+                }
+                _ => {
+                    out.push('{');
+                    index += 1;
+                }
+            }
+            continue;
+        }
+        if let Some((printed, len)) = symbol_command(rest) {
+            out.push_str(&printed);
+            index += len;
+            continue;
+        }
+        let len = unchanged_command_len(rest);
+        out.push_str(&rest[..len]);
+        index += len;
+    }
+    out.push_str(&text[index..]);
+    out
 }
 
 /// `\~` is an accent command, so only unescaped ties become no-break spaces. ~keep

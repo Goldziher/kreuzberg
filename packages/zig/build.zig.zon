@@ -1,6 +1,6 @@
 .{
     .name = .xberg,
-    .version = "1.3.11",
+    .version = "1.4.0",
     .fingerprint = 0x1e6c85dfae465d89,
     .minimum_zig_version = "0.17.0",
     .dependencies = .{},

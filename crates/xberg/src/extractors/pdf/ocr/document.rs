@@ -56,6 +56,7 @@ pub(super) fn mixed_route_geometry_points_per_pixel(page_height_pt: f32, image_h
 #[cfg(all(any(feature = "ocr", feature = "ocr-pipeline"), feature = "pdf"))]
 pub(super) fn assemble_mixed_ocr_page_document(
     mut doc: crate::types::internal::InternalDocument,
+    preserve_structure: bool,
     page_number: u32,
     page_height: u32,
     geometry_points_per_pixel: f32,
@@ -65,6 +66,12 @@ pub(super) fn assemble_mixed_ocr_page_document(
     Vec<crate::pdf::structure::types::PdfParagraph>,
     OcrMarginFilterOutcome,
 ) {
+    if preserve_structure {
+        let outcome = filter_structured_ocr_page_by_page_margins(&mut doc, page_height as f32, margins);
+        flip_document_bboxes_to_bottom_left(&mut doc, f64::from(page_height));
+        normalize_mixed_ocr_document_page(&mut doc, page_number);
+        return (doc, Vec::new(), outcome);
+    }
     // `doc.elements[].bbox` is already in PDF points by the time this runs (the caller
     // rescales it via `rescale_ocr_bboxes_to_page_points` before calling this), and
     // `page_height` is the page's own height in points, so the bbox-height font-size
@@ -213,14 +220,7 @@ pub(super) fn rescale_ocr_bboxes_to_page_points(
     let scale_y = f64::from(page_height_pt) / f64::from(image_height_px);
 
     if let Some(doc) = doc {
-        for element in &mut doc.elements {
-            if let Some(bbox) = element.bbox.as_mut() {
-                bbox.x0 *= scale_x;
-                bbox.x1 *= scale_x;
-                bbox.y0 *= scale_y;
-                bbox.y1 *= scale_y;
-            }
-        }
+        rescale_document_bboxes(doc, scale_x, scale_y);
     }
 
     let page_height_pt_f64 = f64::from(page_height_pt);
@@ -237,6 +237,66 @@ pub(super) fn rescale_ocr_bboxes_to_page_points(
         }
     }
 }
+/// ~keep Coordinate contract of the consumer of a public OCR contribution.
+/// Detached PDF stages use the same bottom-left raster frame as assembled hOCR;
+/// their page owner subsequently scales that canonical frame to PDF points.
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+pub(super) enum PublicOcrOutputFrame {
+    ImagePixels,
+    PdfRaster { processed: (u32, u32), raster: (u32, u32) },
+    PdfPage { raster: (u32, u32), points: (f32, f32) },
+}
+
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+pub(super) fn place_public_ocr_bboxes(doc: &mut crate::types::internal::InternalDocument, frame: PublicOcrOutputFrame) {
+    let height = match frame {
+        PublicOcrOutputFrame::ImagePixels => return,
+        PublicOcrOutputFrame::PdfRaster { processed, raster } => {
+            if processed.0 != 0 && processed.1 != 0 {
+                rescale_document_bboxes(
+                    doc,
+                    f64::from(raster.0) / f64::from(processed.0),
+                    f64::from(raster.1) / f64::from(processed.1),
+                );
+            }
+            f64::from(raster.1)
+        }
+        PublicOcrOutputFrame::PdfPage { raster, points } => {
+            rescale_ocr_bboxes_to_page_points(Some(doc), &mut [], raster.0, raster.1, points.0, points.1);
+            f64::from(points.1)
+        }
+    };
+    flip_document_bboxes_to_bottom_left(doc, height);
+}
+
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+fn flip_document_bboxes_to_bottom_left(doc: &mut crate::types::internal::InternalDocument, height: f64) {
+    for element in &mut doc.elements {
+        if let Some(bbox) = element.bbox.as_mut() {
+            flip_bbox_to_bottom_left(bbox, height);
+        }
+    }
+}
+
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+fn rescale_document_bboxes(doc: &mut crate::types::internal::InternalDocument, scale_x: f64, scale_y: f64) {
+    for element in &mut doc.elements {
+        if let Some(bbox) = element.bbox.as_mut() {
+            bbox.x0 *= scale_x;
+            bbox.x1 *= scale_x;
+            bbox.y0 *= scale_y;
+            bbox.y1 *= scale_y;
+        }
+    }
+}
+
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+fn flip_bbox_to_bottom_left(bbox: &mut crate::types::BoundingBox, height: f64) {
+    let top = bbox.y0;
+    bbox.y0 = height - bbox.y1;
+    bbox.y1 = height - top;
+}
+
 /// Undo a single quarter-turn on one point, mapping a backend's post-auto-rotate
 /// pixel space back to the pre-rotation raster it was actually given.
 ///
@@ -414,15 +474,21 @@ pub(super) fn build_mixed_ocr_page_document(
     let geometry_points_per_pixel = mixed_route_geometry_points_per_pixel(page_height_pt, image_height_px);
     let (mut assembled, paragraphs, outcome) = assemble_mixed_ocr_page_document(
         doc,
+        result.document.is_some(),
         page_number,
         page_height_rounded_pt,
         geometry_points_per_pixel,
         margins,
     );
     if outcome.removed {
-        result.content = ocr_paragraphs_plain_text(&paragraphs);
+        result.content = if result.document.is_some() {
+            crate::rendering::render_plain(&assembled)
+        } else {
+            ocr_paragraphs_plain_text(&paragraphs)
+        };
     }
-    if (outcome.missing_geometry || (paragraphs.is_empty() && !result.content.trim().is_empty()))
+    if (outcome.missing_geometry
+        || (result.document.is_none() && paragraphs.is_empty() && !result.content.trim().is_empty()))
         && (margins.top != 0.0 || margins.bottom != 0.0)
     {
         assembled
@@ -494,9 +560,7 @@ pub(super) fn flip_table_element_bboxes_to_bottom_left(
         if matches!(element.kind, crate::types::internal::ElementKind::Table { .. })
             && let Some(bbox) = element.bbox.as_mut()
         {
-            let (top, bottom) = (bbox.y0, bbox.y1);
-            bbox.y0 = page_height_pt - bottom;
-            bbox.y1 = page_height_pt - top;
+            flip_bbox_to_bottom_left(bbox, page_height_pt);
         }
     }
 }
@@ -578,7 +642,8 @@ pub(super) fn build_pipeline_ocr_page_document(
 /// [`extract_with_ocr_for_page`]'s pixel-space layout classification -- instead of this
 /// route's own raw `backend.process_image_owned` fast path, which never accepted layout
 /// detections at all (#665: `--layout` alone produced byte-identical mixed-route output).
-/// Mirrors the `classical_stage` construction in [`crate::core::config::ocr::OcrConfig::effective_pipeline`].
+/// Mirrors the `classical_stage` construction in [`crate::core::config::ocr::OcrConfig::effective_pipeline`],
+/// except that it keeps the configured `vlm_config`, which the runner copies over the OCR config.
 ///
 /// Only used when this call actually has layout detections to offer (see
 /// `layout_detections_for_mixed` in [`extract_mixed_ocr_native`]); the plain single-backend
@@ -604,7 +669,7 @@ pub(super) fn single_stage_pipeline_for_layout(
             tesseract_config: ocr_config.tesseract_config.clone(),
             paddle_ocr_config: None,
             paddle_ocr_settings: None,
-            vlm_config: None,
+            vlm_config: ocr_config.vlm_config.clone(),
             backend_options: ocr_config.backend_options.clone(),
         }],
         quality_thresholds: ocr_config.effective_thresholds(),
@@ -857,8 +922,10 @@ pub(crate) fn merge_structured_ocr_pages_into_internal_document(
         &anchors,
         &mut assets,
     );
-    let (rebuilt, old_to_new) = rebuild_planned_elements(planned, doc.elements.len());
+    let (rebuilt, old_to_new, planned_to_new) = rebuild_planned_elements(planned, doc.elements.len());
     remap_relationships(&mut doc.relationships, &old_to_new, &rebuilt);
+    remap_relationships(&mut assets.relationships, &planned_to_new, &rebuilt);
+    doc.relationships.extend(assets.relationships);
     doc.elements = rebuilt;
     doc.tables.extend(assets.tables);
     doc.images.extend(assets.images);
@@ -900,6 +967,7 @@ pub(super) struct MergedOcrAssets {
     pub(super) tables: Vec<crate::types::Table>,
     pub(super) images: Vec<crate::types::ExtractedImage>,
     pub(super) ocr_elements: Vec<crate::types::OcrElement>,
+    relationships: Vec<crate::types::internal::Relationship>,
 }
 #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
 impl MergedOcrAssets {
@@ -910,6 +978,7 @@ impl MergedOcrAssets {
             tables: Vec::new(),
             images: Vec::new(),
             ocr_elements: Vec::new(),
+            relationships: Vec::new(),
         }
     }
 
@@ -1010,7 +1079,21 @@ pub(super) fn append_ocr_replacements(
                     .any(|element| !matches!(element.kind, ElementKind::PageBreak) && !element.text.trim().is_empty())
         });
         if let Some(structured_page) = structured_page {
-            let elements = reindex_structured_ocr_page(structured_page, page, assets);
+            let (elements, local_to_new) = reindex_structured_ocr_page(structured_page, page, assets);
+            {
+                let mut relationships = structured_page.relationships.clone();
+                remap_relationships(&mut relationships, &local_to_new, &elements);
+                let offset = planned.len() as u32;
+                assets
+                    .relationships
+                    .extend(relationships.into_iter().map(|mut relationship| {
+                        relationship.source += offset;
+                        if let crate::types::internal::RelationshipTarget::Index(target) = &mut relationship.target {
+                            *target += offset;
+                        }
+                        relationship
+                    }));
+            }
             planned.extend(elements.into_iter().map(|element| PlannedOcrElement {
                 element,
                 old_index: None,
@@ -1050,7 +1133,7 @@ pub(super) fn reindex_structured_ocr_page(
     page_doc: &crate::types::internal::InternalDocument,
     page: u32,
     assets: &mut MergedOcrAssets,
-) -> Vec<crate::types::internal::InternalElement> {
+) -> (Vec<crate::types::internal::InternalElement>, Vec<Option<u32>>) {
     use crate::types::internal::{ElementKind, InternalElement};
 
     let table_base = assets.next_table_index();
@@ -1079,7 +1162,8 @@ pub(super) fn reindex_structured_ocr_page(
     let mut referenced_tables = vec![false; page_doc.tables.len()];
     let mut referenced_images = vec![false; page_doc.images.len()];
     let mut elements = Vec::with_capacity(page_doc.elements.len());
-    for element in &page_doc.elements {
+    let mut local_to_new = vec![None; page_doc.elements.len()];
+    for (local_index, element) in page_doc.elements.iter().enumerate() {
         if matches!(element.kind, ElementKind::PageBreak) {
             continue;
         }
@@ -1107,6 +1191,7 @@ pub(super) fn reindex_structured_ocr_page(
             _ => {}
         }
         element.page = Some(page);
+        local_to_new[local_index] = Some(elements.len() as u32);
         elements.push(element);
     }
 
@@ -1139,17 +1224,22 @@ pub(super) fn reindex_structured_ocr_page(
         }
     }
 
-    elements
+    (elements, local_to_new)
 }
 #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
 pub(super) fn rebuild_planned_elements(
     planned: Vec<PlannedOcrElement>,
     old_len: usize,
-) -> (Vec<crate::types::internal::InternalElement>, Vec<Option<u32>>) {
+) -> (
+    Vec<crate::types::internal::InternalElement>,
+    Vec<Option<u32>>,
+    Vec<Option<u32>>,
+) {
     use crate::types::internal::{ElementKind, InternalElement};
 
     let mut old_to_new = vec![None; old_len];
     let mut rebuilt = Vec::with_capacity(planned.len());
+    let mut planned_to_new = Vec::with_capacity(planned.len());
     let mut previous_page = None;
     for planned_element in planned {
         if let (Some(previous), Some(current)) = (previous_page, planned_element.page)
@@ -1163,12 +1253,13 @@ pub(super) fn rebuild_planned_elements(
         if let Some(old_index) = planned_element.old_index {
             old_to_new[old_index] = Some(rebuilt.len() as u32);
         }
+        planned_to_new.push(Some(rebuilt.len() as u32));
         rebuilt.push(planned_element.element);
     }
     for (index, element) in rebuilt.iter_mut().enumerate() {
         *element = element.clone().with_index(index as u32);
     }
-    (rebuilt, old_to_new)
+    (rebuilt, old_to_new, planned_to_new)
 }
 #[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
 pub(super) fn remap_relationships(
@@ -1703,6 +1794,40 @@ pub(super) fn assemble_ocr_page_paragraphs(
 pub(super) struct OcrMarginFilterOutcome {
     pub(super) removed: bool,
     pub(super) missing_geometry: bool,
+}
+#[cfg(all(any(feature = "ocr", feature = "ocr-pipeline"), feature = "pdf"))]
+pub(super) fn filter_structured_ocr_page_by_page_margins(
+    doc: &mut crate::types::internal::InternalDocument,
+    page_height: f32,
+    margins: crate::pdf::native::text::PageMarginFractions,
+) -> OcrMarginFilterOutcome {
+    if margins.top == 0.0 && margins.bottom == 0.0 {
+        return OcrMarginFilterOutcome::default();
+    }
+    let original = std::mem::take(&mut doc.elements);
+    let mut map = vec![None; original.len()];
+    let mut outcome = OcrMarginFilterOutcome::default();
+    for (index, element) in original.into_iter().enumerate() {
+        let keep = if let Some(bbox) = element.bbox {
+            crate::pdf::native::text::baseline_is_inside_page_margins(
+                page_height - bbox.y1 as f32,
+                0.0,
+                page_height,
+                margins,
+            )
+        } else {
+            outcome.missing_geometry = true;
+            true
+        };
+        if keep {
+            map[index] = Some(doc.elements.len() as u32);
+            doc.elements.push(element);
+        } else {
+            outcome.removed = true;
+        }
+    }
+    remap_relationships(&mut doc.relationships, &map, &doc.elements);
+    outcome
 }
 #[cfg(all(any(feature = "ocr", feature = "ocr-pipeline"), feature = "pdf"))]
 pub(super) fn filter_ocr_paragraphs_by_page_margins(
@@ -2322,6 +2447,341 @@ pub(super) fn recognized_table_to_public_table(
         table_id: Some(format!("table-{}", table_index + 1)),
         columns: recognized.cells.first().cloned(),
         cell_styles: Vec::new(),
+    }
+}
+
+#[cfg(all(test, feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+mod public_ocr_handoff_tests {
+    use super::*;
+    use crate::extraction::derive::{adopt_public_ocr_document, derive_extraction_result};
+    use crate::types::document_structure::{AnnotationKind, NodeContent, TextAnnotation};
+    use crate::types::internal::{
+        ElementKind, InternalDocument, InternalElement, Relationship, RelationshipKind, RelationshipTarget,
+    };
+    use crate::types::{BoundingBox, ExtractedDocument, ExtractedImage, PageBoundary, Table};
+
+    const TABLE: &str =
+        "<table><tr><td rowspan=\"2\">A</td><td colspan=\"2\">B</td></tr><tr><td>C</td><td>D</td></tr></table>";
+    const STALE: &str = "Superseded native page text.";
+    const APPENDIX: &str = "Native appendix remains.";
+
+    fn public_result() -> ExtractedDocument {
+        let node = |content| serde_json::json!({"content": content, "content_layer": "body"});
+        ExtractedDocument {
+            content: "OCR opening paragraph.\n\nA B C D\n\nTable caption outside the table.".into(),
+            document: Some(
+                serde_json::from_value(serde_json::json!({
+                    "nodes": [
+                        node(serde_json::json!({"node_type": "paragraph", "text": "OCR opening paragraph."})),
+                        node(serde_json::json!({"node_type": "raw_block", "format": "html", "content": TABLE})),
+                        node(serde_json::json!({"node_type": "paragraph", "text": "Table caption outside the table."}))
+                    ],
+                    "relationships": [{"source": 2, "target": 1, "kind": "caption"}]
+                }))
+                .unwrap(),
+            ),
+            ..Default::default()
+        }
+    }
+
+    fn adopted_page(
+        result: &mut ExtractedDocument,
+        margins: crate::pdf::native::text::PageMarginFractions,
+    ) -> InternalDocument {
+        adopt_public_ocr_document(result, &Default::default()).unwrap();
+        let (page, paragraphs) =
+            build_mixed_ocr_page_document(result, &Default::default(), 1, 400, 800, 200.0, 400.0, margins).unwrap();
+        assert!(
+            paragraphs.is_empty(),
+            "explicit public nodes must not be offered for paragraph reconstruction"
+        );
+        page
+    }
+
+    fn native_document() -> InternalDocument {
+        let mut doc = InternalDocument::new("pdf");
+        doc.append_ocr_text = true;
+        doc.tables.push(Table {
+            cells: vec![vec!["native inventory cell".into()]],
+            markdown: "| native inventory cell |".into(),
+            page_number: 1,
+            ..Default::default()
+        });
+        let nested_ocr = ExtractedDocument {
+            content: "OCR opening paragraph.".into(),
+            ..Default::default()
+        };
+        doc.images.push(ExtractedImage {
+            image_index: 0,
+            page_number: Some(1),
+            ocr_result: Some(Box::new(nested_ocr)),
+            ..Default::default()
+        });
+        doc.annotations = Some(vec![
+            serde_json::from_value(serde_json::json!({
+                "annotation_type": "text", "content": "Native review note", "page_number": 1, "author": "Reviewer"
+            }))
+            .unwrap(),
+        ]);
+        doc.push_element(InternalElement::text(ElementKind::Paragraph, STALE, 0).with_page(1));
+        doc.push_element(InternalElement::text(ElementKind::Table { table_index: 0 }, "", 0).with_page(1));
+        doc.push_element(InternalElement::text(ElementKind::Image { image_index: 0 }, "", 0).with_page(1));
+        doc.push_element(InternalElement::text(ElementKind::PageBreak, "", 0));
+        let mut appendix = InternalElement::text(ElementKind::Paragraph, APPENDIX, 0).with_page(2);
+        appendix.annotations.push(TextAnnotation {
+            start: 0,
+            end: 6,
+            kind: AnnotationKind::Bold,
+        });
+        doc.push_element(appendix);
+        for (source, target) in [(4, 2), (0, 2), (4, 1)] {
+            doc.relationships.push(Relationship {
+                source,
+                target: RelationshipTarget::Index(target),
+                kind: RelationshipKind::Caption,
+            });
+        }
+        doc
+    }
+
+    fn selected_replacements(text: &str) -> ahash::AHashMap<u32, String> {
+        let native_text = format!("{STALE}\n\n{APPENDIX}");
+        let boundaries = [
+            PageBoundary {
+                byte_start: 0,
+                byte_end: STALE.len(),
+                page_number: 1,
+            },
+            PageBoundary {
+                byte_start: STALE.len() + 2,
+                byte_end: native_text.len(),
+                page_number: 2,
+            },
+        ];
+        accepted_ocr_page_replacements(
+            &native_text,
+            &boundaries,
+            &ahash::AHashMap::from_iter([(1, text.into())]),
+            &Default::default(),
+        )
+    }
+
+    #[test]
+    fn public_ocr_handoff_selected_hybrid_replaces_flow_but_retains_native_assets_and_surviving_references() {
+        let mut native = native_document();
+        let assets_before = serde_json::to_value((&native.tables, &native.images, &native.annotations)).unwrap();
+        let mut result = public_result();
+        let page = adopted_page(&mut result, Default::default());
+        let accepted = selected_replacements(&result.content);
+        assert!(accepted.contains_key(&1));
+        merge_structured_ocr_pages_into_internal_document(
+            &mut native,
+            &accepted,
+            &ahash::AHashMap::from_iter([(1, page)]),
+        );
+        assert_eq!(
+            serde_json::to_value((&native.tables, &native.images, &native.annotations)).unwrap(),
+            assets_before
+        );
+        assert!(
+            !native
+                .elements
+                .iter()
+                .any(|element| element.text == STALE || matches!(element.kind, ElementKind::Table { .. }))
+        );
+        let appendix = native.elements.iter().find(|element| element.text == APPENDIX).unwrap();
+        assert_eq!(appendix.annotations.len(), 1);
+        assert_eq!(
+            native.relationships.len(),
+            2,
+            "only the surviving native reference and adopted caption remain"
+        );
+        for relationship in &native.relationships {
+            assert!((relationship.source as usize) < native.elements.len());
+            let RelationshipTarget::Index(target) = relationship.target else {
+                panic!("fixture references must stay resolved");
+            };
+            assert!((target as usize) < native.elements.len());
+        }
+        assert!(native.relationships.iter().any(|relationship| {
+            let RelationshipTarget::Index(target) = relationship.target else {
+                return false;
+            };
+            native.elements[relationship.source as usize].text == APPENDIX
+                && matches!(native.elements[target as usize].kind, ElementKind::Image { .. })
+        }));
+        let derived = derive_extraction_result(native, true, crate::core::config::OutputFormat::Markdown);
+        let markdown = derived
+            .formatted_content
+            .as_ref()
+            .expect("Markdown output must be rendered");
+        assert_eq!(markdown.matches(TABLE).count(), 1, "{markdown}");
+        assert_eq!(
+            markdown.matches("OCR opening paragraph.").count(),
+            1,
+            "nested image OCR must not render twice"
+        );
+        assert!(!markdown.contains(STALE) && !markdown.contains("native inventory cell"));
+        assert!(markdown.contains("**Native** appendix remains."), "{markdown}");
+        assert!(markdown.find(TABLE).unwrap() < markdown.find("Table caption outside").unwrap());
+        assert_eq!(derived.tables.len(), 1);
+        assert_eq!(derived.images.as_ref().unwrap().len(), 1);
+        assert_eq!(
+            derived.annotations.as_ref().unwrap()[0].content.as_deref(),
+            Some("Native review note")
+        );
+        let structure = derived.document.unwrap();
+        let appendix = structure
+            .nodes
+            .iter()
+            .find(|node| matches!(&node.content, NodeContent::Paragraph { text } if text == APPENDIX))
+            .unwrap();
+        assert_eq!(
+            appendix.annotations,
+            vec![TextAnnotation {
+                start: 0,
+                end: 6,
+                kind: AnnotationKind::Bold
+            }]
+        );
+        assert_eq!(structure.relationships.len(), 2);
+        assert!(structure.relationships.iter().any(|relationship| matches!(
+            structure.nodes[relationship.target.0 as usize].content,
+            NodeContent::RawBlock { .. }
+        )));
+    }
+
+    #[test]
+    fn public_ocr_handoff_rejected_page_leaves_native_document_and_assets_unchanged() {
+        let mut native = native_document();
+        let before = serde_json::to_value(&native).unwrap();
+        let rendered_before = crate::rendering::render_markdown(&native);
+        let mut result = public_result();
+        let mut page = adopted_page(&mut result, Default::default());
+        // ~keep Failure injection at the composition boundary, not support for public asset
+        // inventories: even an unselected page carrying assets must not leak them.
+        page.tables.push(Table {
+            cells: vec![vec!["rejected table".into()]],
+            ..Default::default()
+        });
+        page.images.push(ExtractedImage {
+            image_index: 0,
+            ..Default::default()
+        });
+        let accepted = selected_replacements("");
+        assert!(accepted.is_empty());
+        merge_structured_ocr_pages_into_internal_document(
+            &mut native,
+            &accepted,
+            &ahash::AHashMap::from_iter([(1, page)]),
+        );
+        assert_eq!(serde_json::to_value(&native).unwrap(), before);
+        let rendered = crate::rendering::render_markdown(&native);
+        assert_eq!(rendered, rendered_before);
+        assert!(rendered.contains(STALE));
+        assert!(!rendered.contains(TABLE) && !rendered.contains("rejected table"));
+    }
+
+    #[test]
+    fn public_ocr_handoff_supplied_bboxes_are_filtered_scaled_and_flipped_without_losing_structure() {
+        let mut result = public_result();
+        let structure = result.document.as_mut().unwrap();
+        let mut footer = structure.nodes[0].clone();
+        footer.content = NodeContent::Paragraph {
+            text: "Bottom margin prose.".into(),
+        };
+        structure.nodes.push(footer);
+        for (node, bbox) in structure.nodes.iter_mut().zip([
+            BoundingBox {
+                x0: 20.0,
+                y0: 0.0,
+                x1: 200.0,
+                y1: 40.0,
+            },
+            BoundingBox {
+                x0: 80.0,
+                y0: 200.0,
+                x1: 360.0,
+                y1: 400.0,
+            },
+            BoundingBox {
+                x0: 80.0,
+                y0: 410.0,
+                x1: 360.0,
+                y1: 450.0,
+            },
+            BoundingBox {
+                x0: 20.0,
+                y0: 760.0,
+                x1: 200.0,
+                y1: 790.0,
+            },
+        ]) {
+            node.bbox = Some(bbox);
+        }
+        let page = adopted_page(
+            &mut result,
+            crate::pdf::native::text::PageMarginFractions { top: 0.1, bottom: 0.1 },
+        );
+        assert_eq!(page.elements.len(), 2);
+        assert!(matches!(page.elements[0].kind, ElementKind::RawBlock));
+        assert_eq!(page.elements[0].text, TABLE);
+        assert_eq!(
+            page.elements[0].bbox,
+            Some(BoundingBox {
+                x0: 40.0,
+                y0: 200.0,
+                x1: 180.0,
+                y1: 300.0
+            })
+        );
+        assert_eq!(
+            page.elements[1].bbox,
+            Some(BoundingBox {
+                x0: 40.0,
+                y0: 175.0,
+                x1: 180.0,
+                y1: 195.0
+            })
+        );
+        assert!(
+            page.processing_warnings.is_empty(),
+            "complete supplied geometry must not report a missing-geometry capability"
+        );
+        assert_eq!(
+            page.relationships,
+            vec![Relationship {
+                source: 1,
+                target: RelationshipTarget::Index(0),
+                kind: RelationshipKind::Caption
+            }]
+        );
+        assert!(page.elements.iter().all(|element| element.page == Some(1)
+            && element.ocr_geometry.is_none()
+            && element.ocr_confidence.is_none()));
+        assert!(!result.content.contains("OCR opening paragraph.") && !result.content.contains("Bottom margin prose."));
+        assert_eq!(crate::rendering::render_markdown(&page).matches(TABLE).count(), 1);
+    }
+
+    #[test]
+    fn public_ocr_handoff_absent_bboxes_remain_absent_and_report_margin_capability() {
+        let mut result = public_result();
+        let transcript = result.content.clone();
+        let page = adopted_page(
+            &mut result,
+            crate::pdf::native::text::PageMarginFractions { top: 0.1, bottom: 0.1 },
+        );
+        assert_eq!(page.elements.len(), 3);
+        assert_eq!(result.content, transcript);
+        assert!(page.elements.iter().all(|element| element.bbox.is_none()
+            && element.ocr_geometry.is_none()
+            && element.ocr_confidence.is_none()));
+        assert_eq!(page.processing_warnings.len(), 1);
+        let warning = ocr_margin_filter_capability_warning();
+        assert_eq!(page.processing_warnings[0].source, warning.source);
+        assert_eq!(page.processing_warnings[0].message, warning.message);
+        assert_eq!(crate::rendering::render_markdown(&page).matches(TABLE).count(), 1);
+        assert_eq!(page.relationships.len(), 1);
     }
 }
 

@@ -125,3 +125,86 @@ pub(crate) fn decode_data_uri_image(uri: &str, index: u32) -> Option<ExtractedIm
         data_base64: None,
     })
 }
+
+/// Prefer CommonMark links over wikilinks when their labels contain brackets. ~keep
+pub(crate) fn markdown_events(content: &str) -> Vec<pulldown_cmark::Event<'_>> {
+    use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+    let options = super::markdown::markdown_options();
+    if !content.contains("[[") {
+        return Parser::new_ext(content, options).collect();
+    }
+    let mut in_link = false;
+    let mut escaped = Vec::new();
+    for (event, range) in Parser::new_ext(content, options - Options::ENABLE_WIKILINKS).into_offset_iter() {
+        match event {
+            Event::Start(Tag::Link { .. }) => in_link = true,
+            Event::End(TagEnd::Link) => in_link = false,
+            Event::Text(_) if in_link && matches!(&content[range.clone()], "[" | "]") => {
+                escaped.push(range.start);
+            }
+            _ => {}
+        }
+    }
+    if escaped.is_empty() {
+        return Parser::new_ext(content, options).collect();
+    }
+    let mut protected = String::with_capacity(content.len() + escaped.len());
+    let mut consumed = 0;
+    for offset in escaped {
+        protected.push_str(&content[consumed..offset]);
+        protected.push('\\');
+        consumed = offset;
+    }
+    protected.push_str(&content[consumed..]);
+    Parser::new_ext(&protected, options).map(Event::into_static).collect()
+}
+
+/// Image text waits for its containing block; formatted text stays unchanged. ~keep
+#[derive(Default)]
+pub(crate) struct PendingInlineImages(Vec<(FootnoteRefHolder, usize, String)>);
+
+impl PendingInlineImages {
+    pub(crate) fn hold(&mut self, holder: FootnoteRefHolder, offset: usize, alt: &str) {
+        self.0.push((holder, offset, alt.to_string()));
+    }
+
+    pub(crate) fn contains(&self, holder: FootnoteRefHolder) -> bool {
+        self.0.iter().any(|(owner, _, _)| *owner == holder)
+    }
+
+    pub(crate) fn flush(
+        &mut self,
+        builder: &mut InternalDocumentBuilder,
+        holder: FootnoteRefHolder,
+        index: u32,
+        raw_text: &str,
+    ) {
+        if !self.contains(holder) {
+            return;
+        }
+        let mut text = String::with_capacity(raw_text.len());
+        let mut consumed = 0;
+        let mut entries = self.0.iter().filter(|(owner, _, _)| *owner == holder).peekable();
+        while let Some((_, offset, alt)) = entries.next() {
+            let mut label = alt.clone();
+            while let Some((_, _, next_alt)) = entries.next_if(|(_, next_offset, _)| next_offset == offset) {
+                label.push_str(next_alt);
+            }
+            text.push_str(&raw_text[consumed..*offset]);
+            text.push_str(&label);
+            // Remove only the doubled bridge at an omitted image, never global whitespace. ~keep
+            consumed = if label.is_empty() && text.ends_with(' ') && raw_text[*offset..].starts_with(' ') {
+                offset + 1
+            } else {
+                *offset
+            };
+        }
+        text.push_str(&raw_text[consumed..]);
+        builder.merge_attribute(
+            index,
+            crate::types::internal::MARKDOWN_PLAIN_TEXT_ATTRIBUTE,
+            text.trim(),
+        );
+        self.0.retain(|(owner, _, _)| *owner != holder);
+    }
+}

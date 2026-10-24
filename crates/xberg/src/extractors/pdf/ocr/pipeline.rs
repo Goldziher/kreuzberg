@@ -504,9 +504,9 @@ enum AllPagesFailedPolicy {
 // variant is dead on a `layout-detection + ocr-pipeline` leg without `paddle_ocr`; a
 // union-of-consumers `cfg` here is what drifted and failed the 1.3.0 publish (GH#1951).
 #[allow(dead_code)]
-enum MixedLayoutInputs {
+enum MixedLayoutInputs<'a> {
     Resolve,
-    Prepared(Option<PreparedLayoutInputs>),
+    Prepared(Option<&'a PreparedLayoutInputs>),
 }
 
 #[cfg(all(
@@ -596,7 +596,7 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
     content: &[u8],
     config: &ExtractionConfig,
     all_pages_failed_policy: AllPagesFailedPolicy,
-    #[cfg(feature = "layout-detection")] layout_inputs: MixedLayoutInputs,
+    #[cfg(feature = "layout-detection")] layout_inputs: MixedLayoutInputs<'_>,
 ) -> OcrRunResult<MixedOcrOutput> {
     let ocr_set: std::collections::HashSet<u32> = pages
         .ocr
@@ -668,9 +668,9 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
     // duplicate layout work while keeping selected-page layout classification. `page_idx` is the
     // document-wide 0-based index the layout pass uses. ~keep
     #[cfg(feature = "layout-detection")]
-    let (layout_inputs_for_mixed, layout_pass_warning, layout_pass_glyph_drop_warnings): MixedLayoutOutcome =
-        if let MixedLayoutInputs::Prepared(inputs) = layout_inputs {
-            (inputs, None, Vec::new())
+    let (resolved_layout_inputs, layout_pass_warning, layout_pass_glyph_drop_warnings): MixedLayoutOutcome =
+        if let MixedLayoutInputs::Prepared(_) = layout_inputs {
+            (None, None, Vec::new())
         } else if let Some(layout_config) = config.resolved_layout_config() {
             let layout_thread_budget =
                 crate::core::config::concurrency::resolve_thread_budget(config.concurrency.as_ref());
@@ -730,11 +730,14 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
             (None, None, Vec::new())
         };
     #[cfg(feature = "layout-detection")]
-    let layout_detections_for_mixed = layout_inputs_for_mixed
-        .as_ref()
-        .map(|(_, detections)| detections.as_slice());
+    let layout_inputs_for_mixed = match layout_inputs {
+        MixedLayoutInputs::Prepared(inputs) => inputs,
+        MixedLayoutInputs::Resolve => resolved_layout_inputs.as_ref(),
+    };
     #[cfg(feature = "layout-detection")]
-    let layout_images_for_mixed = layout_inputs_for_mixed.as_ref().map(|(images, _)| images.as_slice());
+    let layout_detections_for_mixed = layout_inputs_for_mixed.map(|(_, detections)| detections.as_slice());
+    #[cfg(feature = "layout-detection")]
+    let layout_images_for_mixed = layout_inputs_for_mixed.map(|(images, _)| images.as_slice());
     #[cfg(feature = "layout-detection")]
     let mixed_route_layout_active = layout_inputs_for_mixed.is_some();
     #[cfg(not(feature = "layout-detection"))]
@@ -1422,6 +1425,10 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
                         continue;
                     }
                 };
+                crate::extraction::derive::adopt_public_ocr_document(
+                    &mut extraction_result,
+                    config.security_limits.as_ref().unwrap_or(&Default::default()),
+                )?;
                 if let Some(metadata) = extraction_result.metadata.image_preprocessing.clone() {
                     preprocessing_by_page.insert((page_idx + 1) as u32, metadata);
                 }
@@ -1564,6 +1571,10 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
                         continue;
                     }
                 };
+                crate::extraction::derive::adopt_public_ocr_document(
+                    &mut extraction_result,
+                    config.security_limits.as_ref().unwrap_or(&Default::default()),
+                )?;
                 if let Some(metadata) = extraction_result.metadata.image_preprocessing.clone() {
                     preprocessing_by_page.insert((*page_idx + 1) as u32, metadata);
                 }
@@ -1876,6 +1887,9 @@ async fn extract_mixed_ocr_native_with_layout_inputs(
             let Some(existing) = structured_ocr_pages.get(page_number) else {
                 continue;
             };
+            if !ocr_page_paragraphs.contains_key(page_number) {
+                continue;
+            }
             let new_page_doc = match split_pages.remove(page_number) {
                 // The heuristic's combined document has no notion of the backend's raw
                 // per-word OCR elements, this page's earlier warnings, or its OCR coordinate
@@ -1982,10 +1996,7 @@ pub(crate) async fn extract_full_document_ocr_pipeline_per_page(
     config: &ExtractionConfig,
     _path: Option<&std::path::Path>,
     page_ocr_hints: Option<PageOcrHints>,
-    #[cfg(feature = "layout-detection")] prepared_layout_inputs: Option<(
-        Vec<image::DynamicImage>,
-        Vec<crate::layout::DetectionResult>,
-    )>,
+    #[cfg(feature = "layout-detection")] prepared_layout_inputs: Option<&PreparedLayoutInputs>,
 ) -> OcrRunResult<(
     String,
     Vec<crate::types::Table>,
@@ -2569,6 +2580,7 @@ pub(super) async fn extract_with_ocr_for_page(
     // paragraphs of a rejected page must be dropped along with its text.
     let mut rejected_pages = vec![false; total_pages];
     let mut all_page_paragraphs: Vec<Option<Vec<crate::pdf::structure::types::PdfParagraph>>> = vec![None; total_pages];
+    let mut public_ocr_pages = ahash::AHashMap::new();
     // Written only by the two OCR-paragraph assembly blocks below (`layout-detection`
     // *with* `ocr`/`ocr-wasm`, or `not(layout-detection)`); still read unconditionally by
     // the document-global heuristic. `layout-detection` without either OCR frontend (the
@@ -3075,6 +3087,10 @@ pub(super) async fn extract_with_ocr_for_page(
             let document_page_idx = page_index_offset + page_idx;
             let document_page_number = (document_page_idx + 1) as u32;
             let mut ocr_result = batch_ocr_results[offset].take().expect("OCR result missing for page");
+            crate::extraction::derive::adopt_public_ocr_document(
+                &mut ocr_result,
+                config.security_limits.as_ref().unwrap_or(&Default::default()),
+            )?;
             if let Some(psm) = effective_tesseract_psm(&ocr_result.metadata, &backend_name) {
                 page_segmentation_modes.insert(document_page_number, psm);
             }
@@ -3113,6 +3129,49 @@ pub(super) async fn extract_with_ocr_for_page(
                 accumulated_llm_usage.extend(usage);
             }
 
+            if let Some(document) = ocr_result
+                .ocr_internal_document
+                .as_mut()
+                .filter(|_| ocr_result.document.is_some())
+            {
+                let (width, height) = resolved_ocr_layout_dimensions(
+                    &ocr_result.metadata,
+                    encoded_batch[offset].2,
+                    encoded_batch[offset].3,
+                );
+                let outcome =
+                    super::document::filter_structured_ocr_page_by_page_margins(document, height as f32, page_margins);
+                if outcome.removed {
+                    ocr_result.content = crate::rendering::render_plain(document);
+                }
+                if outcome.missing_geometry {
+                    crate::core::diagnostics::push_warning_deduped(
+                        &mut margin_filter_warnings,
+                        ocr_margin_filter_capability_warning(),
+                    );
+                }
+                let mut document = document.clone();
+                use super::document::PublicOcrOutputFrame;
+                let frame = if let Some((pdf, _, _)) = lazy_pdf_render_state.as_ref() {
+                    PublicOcrOutputFrame::PdfPage {
+                        raster: (width, height),
+                        points: page_dimensions_pt(pdf, page_idx),
+                    }
+                } else if xobject_document.is_some() {
+                    // ~keep A detached stage has no PDF bytes/lazy render state, but its
+                    // explicit PDF owner still requires the canonical bottom-left
+                    // raster frame. build_pipeline_ocr_page_document scales it once.
+                    PublicOcrOutputFrame::PdfRaster {
+                        processed: (width, height),
+                        raster: (encoded_batch[offset].2, encoded_batch[offset].3),
+                    }
+                } else {
+                    PublicOcrOutputFrame::ImagePixels
+                };
+                super::document::place_public_ocr_bboxes(&mut document, frame);
+                super::document::normalize_mixed_ocr_document_page(&mut document, document_page_number);
+                public_ocr_pages.insert(document_page_number, document);
+            }
             let mut backend_tables = std::mem::take(&mut ocr_result.tables);
             for table in &mut backend_tables {
                 table.page_number = document_page_number;
@@ -3743,9 +3802,32 @@ pub(super) async fn extract_with_ocr_for_page(
             refill_texts.to_mut()[page_idx] = text_outside_tables;
         }
     }
+    // ~keep Detached PDF pages retain their PDF document; only standalone images reach
+    // this fallback without either PDF source. Remove legacy table transcripts before
+    // paragraph synthesis, preserving the raw OCR text and authoritative public nodes.
+    if content.is_none() && xobject_document.is_none() {
+        for (page_idx, paragraphs) in all_page_paragraphs.iter().enumerate() {
+            let page = (page_index_offset + page_idx + 1) as u32;
+            if paragraphs.as_ref().is_some_and(|paragraphs| !paragraphs.is_empty())
+                || public_ocr_pages.contains_key(&page)
+                || rejected_pages[page_idx]
+            {
+                continue;
+            }
+            let text = &refill_texts[page_idx];
+            let prose = super::strip_embedded_gfm_tables(
+                text,
+                collected_tables.iter().filter(|table| table.page_number == page),
+            );
+            if prose != *text {
+                pages_text_claimed_by_tables[page_idx] = prose.trim().is_empty();
+                refill_texts.to_mut()[page_idx] = prose;
+            }
+        }
+    }
     fill_unstructured_ocr_pages(&mut all_page_paragraphs, &refill_texts, &pages_text_claimed_by_tables);
 
-    let (ocr_doc, raw_page_paragraphs) = {
+    let (ocr_doc, mut raw_page_paragraphs) = {
         let has_structured =
             all_page_paragraphs
                 .iter()
@@ -3837,6 +3919,32 @@ pub(super) async fn extract_with_ocr_for_page(
         } else {
             (None, Vec::new())
         }
+    };
+
+    // Public nodes are already semantic structure. Do not offer flattened copies
+    // to the mixed route's document-global paragraph reconstruction pass.
+    for page in public_ocr_pages.keys() {
+        if let Some(index) = (*page as usize).checked_sub(page_index_offset + 1)
+            && let Some(paragraphs) = raw_page_paragraphs.get_mut(index)
+        {
+            paragraphs.clear();
+        }
+    }
+    let ocr_doc = if public_ocr_pages.is_empty() {
+        ocr_doc
+    } else {
+        let accepted: ahash::AHashMap<u32, String> = page_texts
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| !rejected_pages[*index])
+            .filter_map(|(index, text)| {
+                let page = (page_index_offset + index + 1) as u32;
+                public_ocr_pages.contains_key(&page).then(|| (page, text.clone()))
+            })
+            .collect();
+        let mut document = ocr_doc.unwrap_or_else(|| crate::types::internal::InternalDocument::new("pdf"));
+        super::document::merge_structured_ocr_pages_into_internal_document(&mut document, &accepted, &public_ocr_pages);
+        Some(document)
     };
 
     #[cfg(feature = "pdf")]
@@ -4994,6 +5102,9 @@ async fn run_ocr_pipeline_stages(
                 }
             }
             Err(failed_stage) => {
+                if crate::extraction::derive::is_invalid_public_ocr_document(&failed_stage.error) {
+                    return Err(failed_stage);
+                }
                 tracing::warn!(
                     backend = %stage.backend,
                     error = %failed_stage.error,

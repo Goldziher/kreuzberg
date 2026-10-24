@@ -1,6 +1,6 @@
 name: xberg
 description: High-performance document intelligence library
-version: 1.3.11
+version: 1.4.0
 repository: https://github.com/xberg-io/xberg
 homepage: https://xberg.io
 environment:
