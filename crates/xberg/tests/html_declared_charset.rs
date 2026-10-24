@@ -46,6 +46,21 @@ async fn should_read_a_page_in_the_charset_its_meta_declares() {
 }
 
 #[tokio::test]
+async fn should_skip_commented_out_and_unsupported_charset_declarations() {
+    for head in [
+        r#"<!-- <meta charset=shift_jis> --><meta charset="windows-1252">"#,
+        // As in the HTML standard's prescan, `<!-->` is a whole comment.
+        r#"<!--><meta charset="windows-1252">"#,
+        r#"<meta charset="x-no-such-charset"><meta charset="windows-1252">"#,
+    ] {
+        let bytes = encoding_rs::WINDOWS_1252.encode(&page(head)).0.into_owned();
+        let (content, warnings) = extract(&bytes).await;
+        assert_eq!(content.trim(), TEXT, "{head}");
+        assert!(warnings.is_empty(), "{head}: no character was lost, got {warnings:?}");
+    }
+}
+
+#[tokio::test]
 async fn should_read_a_utf16_page_by_its_byte_order_mark() {
     let mut bytes = vec![0xFF, 0xFE];
     for unit in page("").encode_utf16() {
