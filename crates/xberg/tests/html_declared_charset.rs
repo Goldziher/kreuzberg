@@ -79,3 +79,99 @@ async fn should_keep_reading_a_valid_utf8_page_as_utf8_whatever_it_declares() {
     assert_eq!(content.trim(), TEXT);
     assert!(warnings.is_empty(), "{warnings:?}");
 }
+
+#[tokio::test]
+async fn should_find_charset_after_misleading_tags_and_attributes() {
+    for head in [
+        r#"<meta data-charset=shift_jis charset=windows-1252>"#,
+        r#"<meta-data charset=shift_jis><meta charset=windows-1252>"#,
+        r#"<meta:note charset=shift_jis><meta charset=windows-1252>"#,
+        r#"<meta content="charset=shift_jis"><meta charset=windows-1252>"#,
+        r#"<meta http-equiv=refresh content="charset=shift_jis"><meta charset=windows-1252>"#,
+        r#"<meta data-extra=">" charset=windows-1252>"#,
+        r#"<div data-x='<meta charset=shift_jis>'></div><meta charset=windows-1252>"#,
+    ] {
+        let bytes = encoding_rs::WINDOWS_1252.encode(&page(head)).0.into_owned();
+        let (content, warnings) = extract(&bytes).await;
+        assert_eq!(content.trim(), TEXT, "{head}");
+        assert_eq!(warnings, Vec::<String>::new(), "{head}");
+    }
+}
+
+#[tokio::test]
+async fn should_prefer_direct_charset_in_either_attribute_order() {
+    for head in [
+        r#"<meta content="charset=shift_jis" http-equiv=content-type charset=windows-1252>"#,
+        r#"<meta charset=windows-1252 http-equiv=content-type content="charset=shift_jis">"#,
+        r#"<meta content="charset=shift_jis" charset=invalid http-equiv=content-type><meta charset=windows-1252>"#,
+        r#"<meta charset=invalid content="charset=shift_jis" http-equiv=content-type><meta charset=windows-1252>"#,
+    ] {
+        let bytes = encoding_rs::WINDOWS_1252.encode(&page(head)).0.into_owned();
+        let (content, warnings) = extract(&bytes).await;
+        assert_eq!(content.trim(), TEXT, "{head}");
+        assert_eq!(warnings, Vec::<String>::new(), "{head}");
+    }
+}
+
+#[tokio::test]
+async fn should_keep_first_duplicate_encoding_attributes() {
+    for head in [
+        r#"<meta charset=invalid charset=shift_jis><meta charset=windows-1252>"#,
+        r#"<meta http-equiv=refresh HTTP-EQUIV=content-type content="charset=shift_jis"><meta charset=windows-1252>"#,
+        concat!(
+            r#"<meta http-equiv=content-type content="charset=invalid" CONTENT="charset=shift_jis">"#,
+            "<meta charset=windows-1252>"
+        ),
+    ] {
+        let bytes = encoding_rs::WINDOWS_1252.encode(&page(head)).0.into_owned();
+        let (content, warnings) = extract(&bytes).await;
+        assert_eq!(content.trim(), TEXT, "{head}");
+        assert_eq!(warnings, Vec::<String>::new(), "{head}");
+    }
+}
+
+#[tokio::test]
+async fn should_keep_lossy_text_and_warning_without_eligible_charset() {
+    let text_bytes = encoding_rs::WINDOWS_1252.encode(TEXT).0;
+    let expected = String::from_utf8_lossy(&text_bytes);
+    for head in [
+        "<meta content='charset=windows-1252'>",
+        "<meta http-equiv=refresh content='charset=windows-1252'>",
+        "<meta data-charset=windows-1252>",
+        "<meta charset='windows-1252 garbage'>",
+        "<meta-data charset=windows-1252>",
+        "<meta:note charset=windows-1252>",
+        "<div data-x='<meta charset=windows-1252>'>",
+        "<meta charset=invalid charset=windows-1252>",
+    ] {
+        let bytes = encoding_rs::WINDOWS_1252.encode(&page(head)).0.into_owned();
+        assert!(std::str::from_utf8(&bytes).is_err(), "{head}");
+        let (content, warnings) = extract(&bytes).await;
+        assert_eq!(content.trim(), expected, "{head}");
+        assert_eq!(warnings, ["html"], "{head}");
+    }
+}
+
+#[tokio::test]
+async fn should_finish_meta_attributes_before_the_prescan_limit() {
+    const PRESCAN_BYTES: usize = 1024;
+    let text_bytes = encoding_rs::WINDOWS_1252.encode(TEXT).0;
+    let lossy = String::from_utf8_lossy(&text_bytes);
+    for (prefix, suffix, eligible) in [
+        ("<meta charset=\"windows-1252\">", "", true),
+        ("<meta charset=\"windows-1252", "\">", false),
+        ("<meta charset=windows-1252", ">", false),
+        ("<meta charset=\"windows-1252\"", ">", false),
+    ] {
+        let mut html = " ".repeat(PRESCAN_BYTES - prefix.len());
+        html.push_str(prefix);
+        assert_eq!(html.len(), PRESCAN_BYTES);
+        html.push_str(suffix);
+        html.push_str(&format!("<p>{TEXT}</p>"));
+        let bytes = encoding_rs::WINDOWS_1252.encode(&html).0.into_owned();
+        let (content, warnings) = extract(&bytes).await;
+        assert_eq!(content.trim(), if eligible { TEXT } else { &lossy }, "{prefix}{suffix}");
+        let expected_warnings: &[&str] = if eligible { &[] } else { &["html"] };
+        assert_eq!(warnings, expected_warnings, "{prefix}{suffix}");
+    }
+}

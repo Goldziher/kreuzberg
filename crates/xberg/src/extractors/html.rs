@@ -1,5 +1,7 @@
 //! HTML document extractor.
 
+mod encoding;
+
 use crate::Result;
 use crate::core::config::{ExtractionConfig, OutputFormat};
 use crate::extractors::SyncExtractor;
@@ -16,6 +18,7 @@ use crate::types::uri::{ExtractedUri, classify_uri};
 use crate::types::{HtmlMetadata, Metadata};
 use async_trait::async_trait;
 use bytes::Bytes;
+use encoding::declared_html_encoding;
 use html_to_markdown_rs::InlineImageFormat;
 use std::borrow::Cow;
 #[cfg(feature = "tokio-runtime")]
@@ -613,56 +616,6 @@ impl Plugin for HtmlExtractor {
     fn shutdown(&self) -> Result<()> {
         Ok(())
     }
-}
-
-/// A `<meta charset>`, or a `charset=` in a `<meta http-equiv>` `content`, as a browser's
-/// prescan finds it in the first 1024 bytes. ~keep
-static META_CHARSET_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-    regex::Regex::new(r#"(?i)<meta\b[^>]*?charset\s*=\s*["']?\s*([a-z0-9_.:-]+)"#).expect("valid regex")
-});
-
-/// The `<!-- ... -->` ranges of a prescanned head. As in the HTML standard's prescan, the `--`
-/// of the opener can close it (`<!-->`), and an unclosed comment runs to the end. ~keep
-fn html_comment_ranges(head: &str) -> Vec<std::ops::Range<usize>> {
-    let mut ranges = Vec::new();
-    let mut from = 0;
-    while let Some(start) = head[from..].find("<!--").map(|offset| from + offset) {
-        let end = head[start + 2..]
-            .find("-->")
-            .map_or(head.len(), |offset| start + 2 + offset + 3);
-        ranges.push(start..end);
-        from = end;
-    }
-    ranges
-}
-
-/// The encoding a non-UTF-8 HTML page declares: its byte order mark, or else a `<meta>` charset
-/// in its first 1024 bytes. As in the HTML standard's prescan, a declared UTF-16 is read as
-/// UTF-8 (it could not have been declared in ASCII) and `x-user-defined` as windows-1252. ~keep
-fn declared_html_encoding(content: &[u8]) -> Option<&'static encoding_rs::Encoding> {
-    if let Some((encoding, _)) = encoding_rs::Encoding::for_bom(content) {
-        return Some(encoding);
-    }
-    let head = String::from_utf8_lossy(&content[..content.len().min(1024)]);
-    // The prescan skips comments and keeps looking past a label it does not support. ~keep
-    let comments = html_comment_ranges(&head);
-    let encoding = META_CHARSET_RE
-        .captures_iter(&head)
-        .filter(|captures| {
-            captures
-                .get(0)
-                .is_some_and(|declaration| !comments.iter().any(|range| range.contains(&declaration.start())))
-        })
-        .find_map(|captures| encoding_rs::Encoding::for_label(captures.get(1)?.as_str().as_bytes()))?;
-    Some(
-        if encoding == encoding_rs::UTF_16LE || encoding == encoding_rs::UTF_16BE {
-            encoding_rs::UTF_8
-        } else if encoding == encoding_rs::X_USER_DEFINED {
-            encoding_rs::WINDOWS_1252
-        } else {
-            encoding
-        },
-    )
 }
 
 impl SyncExtractor for HtmlExtractor {

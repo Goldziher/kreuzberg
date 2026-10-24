@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Every non-UTF-8 page was decoded as UTF-8, so a `<meta charset>` or `<meta http-equiv>` declaration was ignored
   and each non-ASCII character of a windows-1252, Latin-1 or Shift_JIS page became U+FFFD, with a lossy-decode
   warning. A page without a declaration is still decoded and flagged as before.
+  Meta declarations respect quoted attributes, the content-type pragma, and the first 1,024 bytes of the page.
 - **(markdown): Keep bracketed link labels and image alt text in their original sentence position in plain output.**
   Link and image destinations remain available as URI metadata, and embedded image bytes are retained.
   Empty image labels no longer leave a doubled word gap. (#2233, #2235)
