@@ -131,6 +131,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The mark stayed in front of the first line, so a leading heading came out as a paragraph with its `#`, `*` or `=`
   marker, the mark leaked into the text, and a notebook failed with a JSON parse error. It is now skipped, as the
   plain text, CSV and AsciiDoc extractors already did.
+- **(jupyter): Drop ANSI escape codes from the plain text of `execute_result` and `display_data` outputs.**
+  A kernel that colours its `text/plain`, such as IJulia for a `DataFrame`, left `\x1b[1m` and `\x1b[0m` in the
+  text. These outputs now get the same terminal handling as stream and error outputs.
 - **(url): Standalone Rust binding and end-to-end graphs resolve browser ingestion consistently.**
   Their libc selections match Crawlberg 1.11.1's published iOS constraint.
 - **(excel): Round float cells to Excel's 15 significant digits when the result stays finite.**
