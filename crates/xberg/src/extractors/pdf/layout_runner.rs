@@ -111,7 +111,13 @@ struct RenderedLayoutPage {
     /// normalization, or PNG decode failed for this page (#196). `None` for
     /// gate-skipped pages, which have no render attempt and no failure.
     render_failure: Option<String>,
+    /// The CropBox in raster pixels when it trims the rendered MediaBox; the model sees only it.
+    inference_crop: Option<PixelRect>,
 }
+
+/// A raster rectangle `(x, y, width, height)` in pixels, y down.
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+type PixelRect = (u32, u32, u32, u32);
 
 #[cfg(all(feature = "pdf", feature = "layout-detection"))]
 struct AssembledLayoutPage {
@@ -424,6 +430,11 @@ fn render_layout_chunk(
                 }
             };
 
+            let inference_crop = if normalize_for_ocr || rotation % 360 != 0 {
+                None
+            } else {
+                image.as_ref().and_then(|image| visible_crop_px(doc, page_index, image))
+            };
             RenderedLayoutPage {
                 page_index,
                 page_width_pts,
@@ -432,9 +443,128 @@ fn render_layout_chunk(
                 image,
                 run_inference,
                 render_failure,
+                inference_crop,
             }
         })
         .collect()
+}
+
+/// The CropBox of an unrotated page in raster pixels, when it trims the rendered MediaBox, so the
+/// model does not see bleed and printer's marks around a shrunken page.
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+fn visible_crop_px(
+    doc: &xberg_native_pdf::PdfDocument,
+    page_index: usize,
+    image: &image::RgbImage,
+) -> Option<PixelRect> {
+    let info = doc.get_page_info(page_index).ok()?;
+    visible_crop_rect(info.media_box, info.crop_box?, image.dimensions())
+}
+
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+fn visible_crop_rect(
+    media: xberg_native_pdf::geometry::Rect,
+    crop: xberg_native_pdf::geometry::Rect,
+    (width, height): (u32, u32),
+) -> Option<PixelRect> {
+    // `Rect::from_points` keeps a reversed box's negative extent.
+    let span = |origin: f32, extent: f32| (origin.min(origin + extent), origin.max(origin + extent));
+    let ((m_x0, m_x1), (m_y0, m_y1)) = (span(media.x, media.width), span(media.y, media.height));
+    let ((c_x0, c_x1), (c_y0, c_y1)) = (span(crop.x, crop.width), span(crop.y, crop.height));
+    let (c_x0, c_y0, c_x1, c_y1) = (c_x0.max(m_x0), c_y0.max(m_y0), c_x1.min(m_x1), c_y1.min(m_y1));
+    let (media_w, media_h) = (m_x1 - m_x0, m_y1 - m_y0);
+    if media_w <= 0.0 || media_h <= 0.0 || c_x1 <= c_x0 || c_y1 <= c_y0 {
+        return None;
+    }
+    // A CropBox that keeps over 98% of both axes is not worth a copy.
+    if (c_x1 - c_x0) / media_w > 0.98 && (c_y1 - c_y0) / media_h > 0.98 {
+        return None;
+    }
+    let sx = width as f32 / media_w;
+    let sy = height as f32 / media_h;
+    let x = ((c_x0 - m_x0) * sx).round().max(0.0) as u32;
+    let y = ((m_y1 - c_y1) * sy).round().max(0.0) as u32;
+    let w = (((c_x1 - c_x0) * sx).round() as u32).min(width.saturating_sub(x));
+    let h = (((c_y1 - c_y0) * sy).round() as u32).min(height.saturating_sub(y));
+    (w > 0 && h > 0).then_some((x, y, w, h))
+}
+
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+fn inference_crop_image(page: &RenderedLayoutPage) -> Option<image::RgbImage> {
+    let (x, y, w, h) = page.inference_crop?;
+    let image = page.image.as_ref()?;
+    Some(image::imageops::crop_imm(image, x, y, w, h).to_image())
+}
+
+/// Decoded bytes of the inference crops `inference_crop_image` would copy for these pages.
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+fn inference_crop_bytes(pages: &[RenderedLayoutPage], positions: &[usize]) -> Result<u64> {
+    positions.iter().try_fold(0_u64, |total, &position| {
+        let page = &pages[position];
+        let Some((_, _, w, h)) = page.inference_crop.filter(|_| page.image.is_some()) else {
+            return Ok(total);
+        };
+        let bytes = crate::extraction::image_decode::decoded_byte_count(w, h, 3)?;
+        checked_add_live(total, bytes, w, h)
+    })
+}
+
+/// The engine's batch capacity, lowered until a batch that size fits with every page charged the
+/// chunk's largest inference crop. Only one batch's crops are live at a time, so charging the
+/// whole chunk's crops at once refuses chunks that split into valid batches.
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+fn inference_batch_capacity(
+    pages: &[RenderedLayoutPage],
+    rendered_positions: &[usize],
+    current_live_bytes: u64,
+    (width, height): (u32, u32),
+    security_limits: &crate::extractors::security::SecurityLimits,
+) -> Result<usize> {
+    let capacity = crate::layout::engine::layout_inference_batch_capacity(
+        width,
+        height,
+        current_live_bytes,
+        rendered_positions.len(),
+        security_limits,
+    )?;
+    let largest_crop = rendered_positions.iter().try_fold(0_u64, |largest, &position| {
+        inference_crop_bytes(pages, &[position]).map(|bytes| largest.max(bytes))
+    })?;
+    if largest_crop == 0 {
+        return Ok(capacity);
+    }
+    let fits = |batch_len: usize| {
+        u64::try_from(batch_len)
+            .ok()
+            .and_then(|count| largest_crop.checked_mul(count))
+            .and_then(|crops| current_live_bytes.checked_add(crops))
+            .is_some_and(|live| {
+                crate::layout::engine::validate_layout_inference_peak(width, height, live, batch_len, security_limits)
+                    .is_ok()
+            })
+    };
+    // One when nothing fits, so the per-batch check reports the page that does not.
+    Ok((1..=capacity).rev().find(|&batch_len| fits(batch_len)).unwrap_or(1))
+}
+
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+fn checked_add_live(a: u64, b: u64, width: u32, height: u32) -> Result<u64> {
+    a.checked_add(b)
+        .ok_or_else(|| crate::extraction::image_decode::image_dimension_error(width, height, u64::MAX, u64::MAX))
+}
+
+#[cfg(all(feature = "pdf", feature = "layout-detection"))]
+fn shift_into_page_frame(page: &RenderedLayoutPage, detection: &mut crate::layout::DetectionResult) {
+    let (Some((x, y, _, _)), Some(image)) = (page.inference_crop, page.image.as_ref()) else {
+        return;
+    };
+    for d in &mut detection.detections {
+        d.bbox.x1 += x as f32;
+        d.bbox.x2 += x as f32;
+        d.bbox.y1 += y as f32;
+        d.bbox.y2 += y as f32;
+    }
+    (detection.page_width, detection.page_height) = image.dimensions();
 }
 
 #[cfg(all(feature = "pdf", feature = "layout-detection"))]
@@ -553,30 +683,45 @@ fn detect_layout_chunk(
     // caller sets it. ~keep
     let current_live_bytes =
         crate::layout::engine::live_raster_bytes(pages.iter().filter_map(|page| page.image.as_ref()), width, height)?;
-    let capacity = crate::layout::engine::layout_inference_batch_capacity(
-        width,
-        height,
+    let capacity = inference_batch_capacity(
+        pages,
+        &rendered_positions,
         current_live_bytes,
-        all_chunk_images.len(),
+        (width, height),
         security_limits,
     )?;
     for position_chunk in rendered_positions.chunks(capacity) {
-        let images: Vec<&image::RgbImage> = position_chunk
-            .iter()
-            .map(|&position| pages[position].image.as_ref().expect("filtered to rendered pages"))
-            .collect();
+        let batch_live_bytes = checked_add_live(
+            current_live_bytes,
+            inference_crop_bytes(pages, position_chunk)?,
+            width,
+            height,
+        )?;
         crate::layout::engine::validate_layout_inference_peak(
             width,
             height,
-            current_live_bytes,
-            images.len(),
+            batch_live_bytes,
+            position_chunk.len(),
             security_limits,
         )?;
+        let cropped: Vec<Option<image::RgbImage>> = position_chunk
+            .iter()
+            .map(|&position| inference_crop_image(&pages[position]))
+            .collect();
+        let images: Vec<&image::RgbImage> = position_chunk
+            .iter()
+            .zip(&cropped)
+            .map(|(&position, crop)| {
+                crop.as_ref()
+                    .unwrap_or_else(|| pages[position].image.as_ref().expect("filtered to rendered pages"))
+            })
+            .collect();
         let results = engine
             .detect_batch(&images)
             .map_err(|error| XbergError::Other(format!("layout runner: batch detection failed: {error}")))?;
         validate_batch_cardinality(images.len(), results.len())?;
-        for (&position, (detection, _timings)) in position_chunk.iter().zip(results) {
+        for (&position, (mut detection, _timings)) in position_chunk.iter().zip(results) {
+            shift_into_page_frame(&pages[position], &mut detection);
             detections[position] = Some(detection);
         }
     }
@@ -1236,6 +1381,7 @@ mod tests {
             image: Some(image::RgbImage::new(width, 20)),
             run_inference: true,
             render_failure: None,
+            inference_crop: None,
         }
     }
 
@@ -1557,6 +1703,76 @@ mod tests {
         let decisions = vec![gate_decision(false), gate_decision(true)];
         assert!(!gate_selects_page(Some(&decisions), 0));
         assert!(gate_selects_page(Some(&decisions), 1));
+    }
+
+    fn letter_page_pdf(crop_box: Option<[i64; 4]>) -> Vec<u8> {
+        use lopdf::{Document, Object, Stream, dictionary};
+
+        let mut document = Document::with_version("1.5");
+        let pages_id = document.new_object_id();
+        let page_id = document.new_object_id();
+        let content_id = document.add_object(Stream::new(dictionary! {}, Vec::new()));
+        let mut page = dictionary! {
+            "Type" => "Page",
+            "Parent" => pages_id,
+            "MediaBox" => vec![0.into(), 0.into(), 612.into(), 792.into()],
+            "Resources" => dictionary! {},
+            "Contents" => content_id,
+        };
+        if let Some(crop_box) = crop_box {
+            page.set("CropBox", crop_box.iter().map(|&v| Object::from(v)).collect::<Vec<_>>());
+        }
+        document.objects.insert(page_id, Object::Dictionary(page));
+        document.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! {
+                "Type" => "Pages",
+                "Kids" => vec![page_id.into()],
+                "Count" => 1,
+            }),
+        );
+        let catalog_id = document.add_object(dictionary! {
+            "Type" => "Catalog",
+            "Pages" => pages_id,
+        });
+        document.trailer.set("Root", catalog_id);
+
+        let mut bytes = Vec::new();
+        document.save_to(&mut bytes).expect("fixture PDF must serialize");
+        bytes
+    }
+
+    /// The OCR route and a page without a CropBox keep the whole raster.
+    #[test]
+    fn should_infer_markdown_layout_on_the_cropbox_only() {
+        let render = |bytes: Vec<u8>, gated_handling: GatedPageHandling| {
+            let doc = xberg_native_pdf::PdfDocument::from_bytes(bytes).expect("fixture PDF must open");
+            render_layout_chunk(
+                &doc,
+                &[0],
+                0,
+                1,
+                None,
+                gated_handling,
+                RenderBudget {
+                    security_limits: &crate::extractors::security::SecurityLimits::default(),
+                    images_config: None,
+                },
+            )
+            .remove(0)
+        };
+        let cropped = letter_page_pdf(Some([50, 102, 562, 742]));
+
+        let page = render(cropped.clone(), GatedPageHandling::SkipRender);
+        let image = page.image.as_ref().expect("the page renders");
+        assert_eq!(image.dimensions(), (1_275, 1_650), "Letter at the default 150 dpi");
+        assert_eq!(page.inference_crop, Some((104, 104, 1_067, 1_333)));
+
+        let ocr_page = render(cropped, GatedPageHandling::RenderWithoutInference);
+        assert_eq!(ocr_page.inference_crop, None, "the OCR route keeps the whole page");
+
+        let uncropped = render(letter_page_pdf(None), GatedPageHandling::SkipRender);
+        assert_eq!(uncropped.inference_crop, None);
     }
 
     /// SkipRender must not rasterise gated pages; RenderWithoutInference must.
@@ -1995,5 +2211,105 @@ mod tests {
             "the markdown-structure render must be unaffected and keep the 150 dpi default \
              (100pt * 150/72 rounds to 209px)"
         );
+    }
+
+    /// The crop is measured from the MediaBox's own corner, not the origin, and clamps to it.
+    #[test]
+    fn should_measure_visible_crop_rect_from_the_mediabox_corner() {
+        use xberg_native_pdf::geometry::Rect;
+
+        // MediaBox [-9 -9 621 801] rendered at 2 px per point.
+        let media = Rect::new(-9.0, -9.0, 630.0, 810.0);
+        let raster = (1_260, 1_620);
+        assert_eq!(
+            super::visible_crop_rect(media, Rect::new(41.0, 41.0, 530.0, 710.0), raster),
+            Some((100, 100, 1_060, 1_420))
+        );
+        assert_eq!(
+            super::visible_crop_rect(media, Rect::from_points(571.0, 751.0, 41.0, 41.0), raster),
+            Some((100, 100, 1_060, 1_420)),
+            "a reversed CropBox reads as the same box"
+        );
+        assert_eq!(
+            super::visible_crop_rect(media, Rect::new(-50.0, 41.0, 621.0, 710.0), raster),
+            Some((0, 100, 1_160, 1_420))
+        );
+        assert_eq!(super::visible_crop_rect(media, media, raster), None);
+    }
+
+    #[test]
+    fn should_shift_inference_crop_detections_back_into_the_page_raster() {
+        let mut raster = image::RgbImage::new(1_260, 1_620);
+        raster.put_pixel(150, 130, image::Rgb([255, 0, 0]));
+        let page = RenderedLayoutPage {
+            image: Some(raster),
+            inference_crop: Some((100, 100, 1_060, 1_420)),
+            ..rendered_page(0, 1, 612.0)
+        };
+        let crop = super::inference_crop_image(&page).expect("the page has an inference crop");
+        assert_eq!(crop.dimensions(), (1_060, 1_420));
+        assert_eq!(crop.get_pixel(50, 30), &image::Rgb([255, 0, 0]));
+
+        let mut detection = crate::layout::DetectionResult {
+            page_width: 1_060,
+            page_height: 1_420,
+            detections: vec![crate::layout::LayoutDetection::new(
+                crate::layout::LayoutClass::Formula,
+                0.9,
+                crate::layout::BBox::new(50.0, 30.0, 60.0, 40.0),
+            )],
+        };
+        super::shift_into_page_frame(&page, &mut detection);
+        let bbox = &detection.detections[0].bbox;
+        assert_eq!((bbox.x1, bbox.y1, bbox.x2, bbox.y2), (150.0, 130.0, 160.0, 140.0));
+        assert_eq!((detection.page_width, detection.page_height), (1_260, 1_620));
+
+        let uncropped = rendered_page(0, 1_260, 612.0);
+        assert!(super::inference_crop_image(&uncropped).is_none());
+        super::shift_into_page_frame(&uncropped, &mut detection);
+        assert_eq!(
+            detection.detections[0].bbox.x1, 150.0,
+            "an uncropped page keeps the model's frame"
+        );
+    }
+
+    /// Only one batch's crops are live at a time; charging the whole chunk's crops refused this chunk.
+    #[test]
+    fn default_limits_split_eight_cropped_letter_pages_into_valid_subbatches() {
+        let limits = crate::extractors::security::SecurityLimits::default();
+        let letter_pages = |inference_crop| -> Vec<RenderedLayoutPage> {
+            (0..8)
+                .map(|page_index| RenderedLayoutPage {
+                    page_height_pts: 792.0,
+                    image: Some(image::RgbImage::new(1_275, 1_650)),
+                    inference_crop,
+                    ..rendered_page(page_index, 1, 612.0)
+                })
+                .collect()
+        };
+        let positions: Vec<usize> = (0..8).collect();
+        let capacity_of = |pages: &[RenderedLayoutPage]| {
+            let live = crate::layout::engine::live_raster_bytes(
+                pages.iter().filter_map(|page| page.image.as_ref()),
+                1_275,
+                1_650,
+            )
+            .expect("eight page rasters");
+            let capacity = super::inference_batch_capacity(pages, &positions, live, (1_275, 1_650), &limits)
+                .expect("default limits must support at least one inference page");
+            for batch in positions.chunks(capacity) {
+                let crops = super::inference_crop_bytes(pages, batch).expect("crop bytes");
+                crate::layout::engine::validate_layout_inference_peak(1_275, 1_650, live + crops, batch.len(), &limits)
+                    .expect("every batch must fit default limits");
+            }
+            capacity
+        };
+
+        assert_eq!(
+            capacity_of(&letter_pages(None)),
+            2,
+            "uncropped pages keep the engine's capacity"
+        );
+        assert_eq!(capacity_of(&letter_pages(Some((104, 104, 1_067, 1_333)))), 1);
     }
 }

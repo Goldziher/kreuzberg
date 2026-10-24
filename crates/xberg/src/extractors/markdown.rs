@@ -15,7 +15,7 @@ use super::annotation_utils::adjust_annotations_for_trim;
 use super::frontmatter_utils::{
     extract_frontmatter_with_warning, extract_metadata_from_yaml, extract_title_from_content,
 };
-use super::markdown_utils::{FootnoteRefHolder, PendingFootnoteRefs};
+use super::markdown_utils::{FootnoteRefHolder, PendingFootnoteRefs, PendingInlineImages};
 use crate::Result;
 use crate::core::config::ExtractionConfig;
 use crate::extractors::security::SecurityBudget;
@@ -25,7 +25,7 @@ use crate::types::internal_builder::InternalDocumentBuilder;
 use crate::types::uri::{ExtractedUri, UriKind, classify_uri};
 use crate::types::{Metadata, Table};
 use async_trait::async_trait;
-use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{Event, Options, Tag, TagEnd};
 #[cfg(not(feature = "notebook"))]
 use std::borrow::Cow;
 
@@ -191,6 +191,7 @@ impl MarkdownExtractor {
         let mut blockquote_stack: Vec<Option<u32>> = Vec::new();
         let mut pending_anchor: Option<String> = None;
         let mut pending_footnote_refs = PendingFootnoteRefs::default();
+        let mut inline_images = PendingInlineImages::default();
 
         let mut annotation_starts: Vec<AnnotationEntry> = Vec::new();
 
@@ -218,14 +219,20 @@ impl MarkdownExtractor {
                 if in_list_item > 0 {
                     let trimmed = list_item_text.trim();
                     if let Some(ordered) = list_stack.last().copied()
-                        && !trimmed.is_empty()
+                        && (!trimmed.is_empty() || inline_images.contains(FootnoteRefHolder::ListItem(in_list_item)))
                     {
                         let annotations = adjust_annotations_for_trim(
                             std::mem::take(&mut list_item_annotations),
                             &list_item_text,
                             trimmed,
                         );
-                        b.push_list_item(trimmed, ordered, annotations, None, None);
+                        let idx = b.push_list_item(trimmed, ordered, annotations, None, None);
+                        inline_images.flush(
+                            &mut b,
+                            FootnoteRefHolder::ListItem(in_list_item),
+                            idx,
+                            &list_item_text,
+                        );
                     }
                     pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(in_list_item));
                     list_item_text.clear();
@@ -284,13 +291,14 @@ impl MarkdownExtractor {
                 Event::End(TagEnd::Paragraph) if in_paragraph => {
                     in_paragraph = false;
                     let trimmed = paragraph_text.trim();
-                    if !trimmed.is_empty() {
+                    if !trimmed.is_empty() || inline_images.contains(FootnoteRefHolder::Paragraph) {
                         let annotations = adjust_annotations_for_trim(
                             std::mem::take(&mut paragraph_annotations),
                             &paragraph_text,
                             trimmed,
                         );
                         let idx = b.push_paragraph(trimmed, annotations, None, None);
+                        inline_images.flush(&mut b, FootnoteRefHolder::Paragraph, idx, &paragraph_text);
                         apply_pending_anchor(&mut b, &mut pending_anchor, idx);
                     }
                     pending_footnote_refs.flush(&mut b, FootnoteRefHolder::Paragraph);
@@ -578,14 +586,15 @@ impl MarkdownExtractor {
                     in_list_item = in_list_item.saturating_sub(1);
                     let trimmed = list_item_text.trim();
                     if let Some(ordered) = list_stack.last().copied()
-                        && !trimmed.is_empty()
+                        && (!trimmed.is_empty() || inline_images.contains(FootnoteRefHolder::ListItem(item_depth)))
                     {
                         let annotations = adjust_annotations_for_trim(
                             std::mem::take(&mut list_item_annotations),
                             &list_item_text,
                             trimmed,
                         );
-                        b.push_list_item(trimmed, ordered, annotations, None, None);
+                        let idx = b.push_list_item(trimmed, ordered, annotations, None, None);
+                        inline_images.flush(&mut b, FootnoteRefHolder::ListItem(item_depth), idx, &list_item_text);
                     }
                     pending_footnote_refs.flush(&mut b, FootnoteRefHolder::ListItem(item_depth));
                     list_item_text.clear();
@@ -647,10 +656,26 @@ impl MarkdownExtractor {
                     // Plain-URL images have no bytes to attach, and a placeholder element with an
                     // unresolvable index is silently dropped by every renderer, so their
                     // reference is preserved as visible text instead. ~keep
-                    if let Some(mut image) = decoded_image {
+                    let project_inline = !in_heading
+                        && !in_table_cell
+                        && !in_code_block
+                        && footnote_def_label.is_none()
+                        && !in_def_title
+                        && !in_def_desc;
+                    let holder = if project_inline && in_paragraph {
+                        Some((FootnoteRefHolder::Paragraph, paragraph_text.len()))
+                    } else if project_inline && in_list_item > 0 {
+                        Some((FootnoteRefHolder::ListItem(in_list_item), list_item_text.len()))
+                    } else {
+                        None
+                    };
+                    if let Some((holder, offset)) = holder {
+                        inline_images.hold(holder, offset, trimmed);
+                    }
+                    let image_element = if let Some(mut image) = decoded_image {
                         image_counter += 1;
                         image.description = desc.map(str::to_string);
-                        b.push_image(desc, image, None, None);
+                        Some(b.push_image(desc, image, None, None))
                     } else {
                         let display = match (&url, desc) {
                             (Some(u), Some(d)) => format!("[Image: {d} ({u})]"),
@@ -661,7 +686,19 @@ impl MarkdownExtractor {
                         if !display.is_empty() {
                             let idx = b.push_paragraph(&display, vec![], None, None);
                             apply_pending_anchor(&mut b, &mut pending_anchor, idx);
+                            Some(idx)
+                        } else {
+                            None
                         }
+                    };
+                    if holder.is_some()
+                        && let Some(index) = image_element
+                    {
+                        b.merge_attribute(
+                            index,
+                            crate::types::internal::MARKDOWN_IMAGE_REFERENCE_ATTRIBUTE,
+                            "true",
+                        );
                     }
 
                     if let Some(url) = url {
@@ -991,8 +1028,7 @@ impl InternalDocumentExtractor for MarkdownExtractor {
             None
         };
         let parser_content = preprocessed_content.as_deref().unwrap_or(&remaining_content);
-        let parser = Parser::new_ext(parser_content, markdown_options());
-        let events: Vec<Event> = parser.collect();
+        let events = super::markdown_utils::markdown_events(parser_content);
 
         // Images (including data-URI decoding) are handled in-line inside
         // `build_internal_document`, which pushes a correctly-indexed image element for each

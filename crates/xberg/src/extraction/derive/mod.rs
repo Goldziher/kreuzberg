@@ -20,9 +20,15 @@ use crate::types::internal::{ElementKind, InternalDocument, InternalElement, Rel
 use crate::types::tables::Table;
 
 mod formulas;
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+mod ocr_document;
 mod pages;
 use formulas::derive_formulas;
 pub(crate) use formulas::strip_math_delimiters;
+#[cfg(any(feature = "ocr", feature = "ocr-pipeline"))]
+pub(crate) use ocr_document::adopt_public_ocr_document;
+#[cfg(all(feature = "pdf", any(feature = "ocr", feature = "ocr-pipeline")))]
+pub(crate) use ocr_document::is_invalid_public_ocr_document;
 #[cfg(test)]
 use pages::build_pages;
 pub(crate) use pages::reconcile_page_boundaries;

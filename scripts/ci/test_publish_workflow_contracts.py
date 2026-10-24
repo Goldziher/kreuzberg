@@ -21,7 +21,7 @@ RUST_UNIT_SCRIPT = Path(__file__).parent / "rust" / "run-unit-tests.sh"
 PHP_ABI_SCRIPT = Path(__file__).parent / "verify-php-linux-abi.sh"
 PHP_STAGE_SCRIPT = Path(__file__).parent / "stage-php-linux-ort.sh"
 PUBLISHER_BOT = "xberg-dev-publisher[bot]"
-PUBLISH_PUB_SHA = "a25ae95253ee755ac5f691f7e1053dcb104cdee7"
+PUBLISH_PUB_SHA = "793d3a4d37a17009d91cce29f2825eda570d2abd"
 
 
 def job_block(workflow: str, job: str) -> str:
@@ -299,8 +299,9 @@ def test_release_finalization_requires_successful_asset_verification() -> None:
 
 def test_pubdev_publish_action_is_pinned_to_problem_matcher_fix() -> None:
     workflow = PUBDEV_WORKFLOW.read_text()
-    assert f"xberg-io/actions/publish-pub@{PUBLISH_PUB_SHA} # v1.8.146" in workflow
+    assert f"xberg-io/actions/publish-pub@{PUBLISH_PUB_SHA} # v1.27.1" in workflow
     assert "xberg-io/actions/publish-pub@v1" not in workflow
+    assert "          expected-version: ${{ github.ref_name }}" in workflow
 
 
 def test_homebrew_push_rebases_after_concurrent_non_conflicting_push() -> None:

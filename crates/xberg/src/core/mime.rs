@@ -3514,8 +3514,17 @@ mod tests {
         assert!(SUPPORTED_MIME_TYPES.contains("text/x-julia"), "Julia source alias");
     }
 
-    /// Every alias in [`FORMATS`] must route to the same extractor as its canonical MIME
-    /// type.
+    #[cfg(not(feature = "tree-sitter"))]
+    const LEGACY_SOURCE_MIME_ALIASES: [&str; 5] = [
+        "text/x-python",
+        "text/x-r-source",
+        "text/x-julia",
+        "text/vnd.graphviz",
+        "text/x-plantuml",
+    ];
+
+    /// Aliases route to the canonical extractor except legacy source aliases without
+    /// `tree-sitter`, which retain their feature requirement (#2208). ~keep
     ///
     /// `validate_mime_type` accepts an alias verbatim — it does not normalize it to the
     /// canonical form — and `DocumentExtractorRegistry::get` resolves by exact string with
@@ -3523,21 +3532,31 @@ mod tests {
     /// is advertised as supported by `list_supported_formats()` and then rejected as
     /// `UnsupportedFormat` at extraction time (#229, and #289 for the same shape).
     ///
-    /// Formats whose canonical MIME has no registered extractor are skipped, so this stays
-    /// valid under any feature set: it only ever asserts that an alias is no worse off than
-    /// the canonical name beside it.
+    /// Formats without a canonical extractor are skipped; legacy source aliases are
+    /// checked for deliberate unavailability instead of same-extractor routing. ~keep
     #[test]
     fn every_declared_alias_resolves_to_the_same_extractor_as_its_canonical_mime() {
         crate::extractors::ensure_initialized().expect("failed to initialize default extractors");
         let registry = crate::plugins::registry::get_document_extractor_registry();
         let registry = registry.read();
-
+        #[cfg(not(feature = "tree-sitter"))]
+        let mut checked_legacy_aliases = 0;
         let mut unclaimed = Vec::new();
         for format in FORMATS {
             let Ok(canonical) = registry.get(format.mime_type) else {
                 continue;
             };
             for alias in format.aliases {
+                #[cfg(not(feature = "tree-sitter"))]
+                if format.mime_type == SOURCE_CODE_MIME_TYPE && LEGACY_SOURCE_MIME_ALIASES.contains(alias) {
+                    assert_eq!(validate_mime_type(alias).unwrap(), *alias);
+                    assert!(
+                        registry.get(alias).is_err(),
+                        "legacy alias {alias} must require tree-sitter"
+                    );
+                    checked_legacy_aliases += 1;
+                    continue;
+                }
                 match validate_mime_type(alias).and_then(|mime| registry.get(&mime)) {
                     Ok(aliased) if aliased.name() == canonical.name() => {}
                     Ok(aliased) => unclaimed.push(format!(
@@ -3554,6 +3573,8 @@ mod tests {
             }
         }
 
+        #[cfg(not(feature = "tree-sitter"))]
+        assert_eq!(checked_legacy_aliases, LEGACY_SOURCE_MIME_ALIASES.len());
         assert!(
             unclaimed.is_empty(),
             "declared alias MIME types are advertised as supported but unroutable:\n  {}",
